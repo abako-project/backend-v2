@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "verified_on": "2026-08-10",
+  "models": {
+    "kimi": {
+      "model_id": "kimi-k2.5",
+      "display_name": "Kimi K2.5",
+      "vendor": "Moonshot AI",
+      "verified_access": [
+        "Qwen Code Alibaba Cloud Coding Plan"
+      ],
+      "sources": [
+        "https://platform.moonshot.ai/docs/guide/prompt-best-practice",
+        "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/"
+      ]
+    },
+    "deepseek": {
+      "model_id": "deepseek-v4-flash",
+      "display_name": "DeepSeek V4 Flash",
+      "vendor": "DeepSeek",
+      "openai_base_url": "https://api.deepseek.com",
+      "anthropic_base_url": "https://api.deepseek.com/anthropic",
+      "sources": [
+        "https://api-docs.deepseek.com/quick_start/pricing"
+      ]
+    },
+    "glm": {
+      "model_id": "glm-5.1",
+      "display_name": "GLM-5.1",
+      "vendor": "Z.AI",
+      "openai_base_url": "https://api.z.ai/api/paas/v4/",
+      "sources": [
+        "https://docs.z.ai/guides/llm/glm-5.1"
+      ]
+    },
+    "qwen": {
+      "model_id": "qwen3.7-plus",
+      "display_name": "Qwen 3.7 Plus",
+      "vendor": "Alibaba Cloud",
+      "verified_access": [
+        "Qwen Code Alibaba Cloud Coding Plan"
+      ],
+      "sources": [
+        "https://qwenlm.github.io/qwen-code-docs/en/users/configuration/model-providers/"
+      ]
+    }
+  }
+}

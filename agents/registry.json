@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "canonical_contract": "AGENTS.md",
+  "agents": [
+    {
+      "id": "planner",
+      "role": "agents/planner.md",
+      "description": "Clarifies the problem and produces a bounded, evidence-based plan without implementing code.",
+      "access": "read-only",
+      "worktree": false,
+      "skills": [
+        "project-discovery",
+        "spec-driven-development",
+        "graph-orchestration",
+        "documentation-writing"
+      ]
+    },
+    {
+      "id": "spec-writer",
+      "role": "agents/spec-writer.md",
+      "description": "Turns approved product intent into testable specifications and Gherkin acceptance scenarios.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "spec-driven-development",
+        "gherkin-specification",
+        "documentation-writing"
+      ]
+    },
+    {
+      "id": "architect",
+      "role": "agents/architect.md",
+      "description": "Defines bounded contexts, contracts, data ownership, and architecture decisions before implementation.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "rust-workspace-architecture",
+        "graph-orchestration",
+        "rust-dependency-selection",
+        "documentation-writing"
+      ]
+    },
+    {
+      "id": "orchestrator",
+      "role": "agents/orchestrator.md",
+      "description": "Builds the task graph, assigns isolated work, and coordinates parallel agents without overlapping ownership.",
+      "access": "coordinator",
+      "worktree": false,
+      "skills": [
+        "graph-orchestration",
+        "worktree-isolation",
+        "github-delivery",
+        "agent-harness-portability"
+      ]
+    },
+    {
+      "id": "backend",
+      "role": "agents/backend.md",
+      "description": "Implements approved Rust backend behavior with Axum, Tokio, contracts, and bounded service ownership.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "rust-quality",
+        "rust-error-handling",
+        "tokio-concurrency",
+        "axum-service",
+        "graphql-contract",
+        "grpc-tonic",
+        "realtime-channel",
+        "performance-engineering"
+      ]
+    },
+    {
+      "id": "frontend",
+      "role": "agents/frontend.md",
+      "description": "Implements approved Leptos frontend behavior and browser contracts with accessible, testable state flow.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "leptos-ui",
+        "serialization-contracts",
+        "graphql-contract",
+        "realtime-channel",
+        "rust-quality"
+      ]
+    },
+    {
+      "id": "database-migrations",
+      "role": "agents/database-migrations.md",
+      "description": "Owns PostgreSQL schema changes, SQLx migrations, rollout safety, and migration verification.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "sqlx-postgres",
+        "postgres-migration",
+        "rust-testing"
+      ]
+    },
+    {
+      "id": "messaging",
+      "role": "agents/messaging.md",
+      "description": "Implements reliable RabbitMQ event flows, outbox behavior, idempotency, retries, and versioned event contracts.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "rabbitmq-reliability",
+        "serialization-contracts",
+        "tokio-concurrency",
+        "observability"
+      ]
+    },
+    {
+      "id": "middleware-security",
+      "role": "agents/middleware-security.md",
+      "description": "Implements authentication, authorization, middleware, secret handling, and security boundaries from approved decisions.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "security-crypto",
+        "axum-service",
+        "rust-error-handling",
+        "observability"
+      ]
+    },
+    {
+      "id": "build-container",
+      "role": "agents/build-container.md",
+      "description": "Builds reproducible Rust container images and local container workflows without hiding Cargo commands.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "containerized-development",
+        "docker-build",
+        "rust-quality"
+      ]
+    },
+    {
+      "id": "ci-release",
+      "role": "agents/ci-release.md",
+      "description": "Implements CI gates, GitHub delivery automation, artifact verification, and controlled release workflows.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "github-delivery",
+        "rust-testing",
+        "rust-quality",
+        "containerized-development"
+      ]
+    },
+    {
+      "id": "deployment",
+      "role": "agents/deployment.md",
+      "description": "Defines deploy, rollback, observability, recovery, and production change procedures for the approved target.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "docker-build",
+        "observability",
+        "github-delivery",
+        "documentation-writing"
+      ]
+    },
+    {
+      "id": "reviewer",
+      "role": "agents/reviewer.md",
+      "description": "Reviews changes against the specification, contracts, Rust quality rules, security boundaries, and evidence.",
+      "access": "read-only",
+      "worktree": false,
+      "skills": [
+        "rust-quality",
+        "rust-testing",
+        "security-crypto",
+        "performance-engineering"
+      ]
+    },
+    {
+      "id": "test-verifier",
+      "role": "agents/test-verifier.md",
+      "description": "Runs independent verification and reports observed results without silently repairing implementation defects.",
+      "access": "read-only",
+      "worktree": false,
+      "skills": [
+        "rust-testing",
+        "gherkin-specification",
+        "performance-engineering"
+      ]
+    },
+    {
+      "id": "integrator",
+      "role": "agents/integrator.md",
+      "description": "Owns shared integration files, resolves approved cross-task changes, runs final gates, and prepares the merge.",
+      "access": "integration",
+      "worktree": true,
+      "skills": [
+        "rust-workspace-architecture",
+        "rust-dependency-selection",
+        "rust-testing",
+        "github-delivery",
+        "worktree-isolation"
+      ]
+    },
+    {
+      "id": "documentation-researcher",
+      "role": "agents/documentation-researcher.md",
+      "description": "Finds current primary sources and produces concise, source-backed dependency and tooling guidance.",
+      "access": "write",
+      "worktree": true,
+      "skills": [
+        "documentation-writing",
+        "rust-dependency-selection",
+        "model-selection"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "modelProviders": {
+    "openai": {
+      "protocol": "openai",
+      "models": [
+        {
+          "id": "deepseek-v4-flash",
+          "name": "DeepSeek V4 Flash",
+          "description": "DeepSeek V4 Flash through the official OpenAI-compatible API.",
+          "envKey": "DEEPSEEK_API_KEY",
+          "baseUrl": "https://api.deepseek.com"
+        },
+        {
+          "id": "glm-5.1",
+          "name": "GLM-5.1",
+          "description": "GLM-5.1 through the official Z.AI OpenAI-compatible API.",
+          "envKey": "ZAI_API_KEY",
+          "baseUrl": "https://api.z.ai/api/paas/v4/"
+        },
+        {
+          "id": "kimi-k2.5",
+          "name": "Kimi K2.5",
+          "description": "Kimi K2.5 through Alibaba Cloud Coding Plan.",
+          "envKey": "BAILIAN_CODING_PLAN_API_KEY",
+          "baseUrl": "{{CODING_PLAN_BASE_URL}}"
+        },
+        {
+          "id": "qwen3.7-plus",
+          "name": "Qwen 3.7 Plus",
+          "description": "Qwen 3.7 Plus through Alibaba Cloud Coding Plan.",
+          "envKey": "BAILIAN_CODING_PLAN_API_KEY",
+          "baseUrl": "{{CODING_PLAN_BASE_URL}}"
+        }
+      ]
+    }
+  }
+}

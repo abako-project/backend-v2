@@ -1,0 +1,11 @@
+[profile.default]
+retries = 0
+status-level = "pass"
+final-status-level = "fail"
+slow-timeout = { period = "60s", terminate-after = 2 }
+
+[profile.ci]
+fail-fast = false
+status-level = "skip"
+final-status-level = "fail"
+junit = { path = "junit.xml" }

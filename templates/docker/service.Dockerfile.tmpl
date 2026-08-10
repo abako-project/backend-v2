@@ -1,0 +1,17 @@
+# syntax=docker/dockerfile:1
+FROM rust:{{RUST_VERSION}} AS builder
+WORKDIR /workspace
+COPY . .
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/workspace/target \
+    cargo build --release --locked -p {{CRATE_NAME}}
+
+FROM debian:stable-slim AS runtime
+RUN useradd --system --uid 10001 app
+COPY --from=builder /workspace/target/release/{{BINARY_NAME}} /usr/local/bin/{{BINARY_NAME}}
+USER 10001
+ENTRYPOINT ["/usr/local/bin/{{BINARY_NAME}}"]
+
+FROM scratch AS export
+COPY --from=builder /workspace/target/release/{{BINARY_NAME}} /

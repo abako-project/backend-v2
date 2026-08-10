@@ -1,0 +1,6 @@
+# Replace placeholders with real GitHub users or teams during configuration.
+# /AGENTS.md                    @owner
+# /.github/                     @platform-team
+# /contracts/                   @architecture-team
+# /docs/security/               @security-team
+# /migrations/                  @database-team

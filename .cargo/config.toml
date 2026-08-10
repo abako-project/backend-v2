@@ -1,0 +1,8 @@
+[alias]
+check-all = "check --workspace --all-targets --all-features --locked"
+clippy-all = "clippy --workspace --all-targets --all-features --locked -- -D warnings"
+test-all = "nextest run --workspace --all-features"
+doc-test = "test --workspace --doc"
+
+[net]
+retry = 2

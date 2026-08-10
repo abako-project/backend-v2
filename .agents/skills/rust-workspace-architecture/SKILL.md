@@ -1,0 +1,45 @@
+---
+name: rust-workspace-architecture
+description: Design a Cargo workspace with deployable services, applications, workers, and stable shared technical crates.
+license: Apache-2.0 OR MIT
+compatibility: Codex, OpenCode, Claude Code, and Qwen Code
+metadata:
+  audience: software-engineering-agents
+  maturity: production-oriented
+---
+
+# Purpose
+
+Use a library-plus-thin-binary pattern for services. Keep domain ownership local. Share generated contracts and stable technical primitives, not database entities or a universal domain model.
+
+# Required Inputs
+
+- The approved specification and its status file.
+- The assigned issue or task contract.
+- The exact allowed-path set.
+- Relevant architecture decisions and versioned contracts.
+- Measurable completion criteria.
+
+# Operating Rules
+
+1. Read authoritative repository artifacts before implementation.
+2. Make the smallest coherent change that satisfies the approved behavior.
+3. Do not invent business rules, service boundaries, or security policy.
+4. Prefer deterministic verification over subjective confidence.
+5. Record decisions, commands, evidence, limitations, and blockers.
+6. Stop when required information is missing or the task leaves its scope.
+
+# Verification
+
+- The implementation is traceable to requirement and scenario identifiers.
+- Relevant focused tests pass before broader workspace gates run.
+- Public contracts, migrations, and operational behavior are documented.
+- The handoff contains reproducible commands and observed results.
+
+# Failure Modes
+
+- Hidden assumptions replacing explicit requirements.
+- Changes outside the assigned paths.
+- New dependencies without a recorded review.
+- Unbounded retries, queues, tasks, payloads, or resource use.
+- Declaring completion without machine-checkable evidence.

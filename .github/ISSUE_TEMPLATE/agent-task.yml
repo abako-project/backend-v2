@@ -1,0 +1,47 @@
+name: Agent task
+description: Create an isolated implementation or verification task
+title: "[TASK] "
+labels: ["agent-task"]
+body:
+  - type: input
+    id: spec
+    attributes:
+      label: Approved specification
+      placeholder: SPEC-0001
+    validations:
+      required: true
+  - type: input
+    id: role
+    attributes:
+      label: Primary role
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Required outcome
+    validations:
+      required: true
+  - type: textarea
+    id: paths
+    attributes:
+      label: Allowed paths
+      description: One glob or path per line
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+  - type: textarea
+    id: scenarios
+    attributes:
+      label: Requirements and scenarios
+    validations:
+      required: true
+  - type: textarea
+    id: gates
+    attributes:
+      label: Required commands and completion gates
+    validations:
+      required: true
