@@ -1,53 +1,7 @@
 # Cloud and Deployment Policy
 
-## Environments
+Only local Docker Compose is implemented and approved. [infra/README.md](../../infra/README.md) describes it. There is no approved cloud provider, Kubernetes deployment, production database topology or automated release/promotion workflow.
 
-To be completed from approved project requirements.
+The local gateway publishes loopback HTTP. Backend services use private networks, separate database mounts, selected secret files, non-root users and read-only root filesystems. Local HTTP cookies and development image tags are not production settings.
 
-## Immutable Artifacts
-
-To be completed from approved project requirements.
-
-## Container Policy
-
-To be completed from approved project requirements.
-
-## Configuration and Secrets
-
-To be completed from approved project requirements.
-
-## Network Policy
-
-To be completed from approved project requirements.
-
-## Database Deployment
-
-To be completed from approved project requirements.
-
-## RabbitMQ Deployment
-
-To be completed from approved project requirements.
-
-## Rollout
-
-To be completed from approved project requirements.
-
-## Rollback and Forward Repair
-
-To be completed from approved project requirements.
-
-## Observability
-
-To be completed from approved project requirements.
-
-## Resilience
-
-To be completed from approved project requirements.
-
-## Backup and Recovery
-
-To be completed from approved project requirements.
-
-## Deployment Authority
-
-To be completed from approved project requirements.
+Before production deployment, define and verify TLS, workload authentication, key management, image digests and supply-chain evidence, storage/recovery, monitoring and release/rollback procedures. HSM and envelope encryption have been discussed but are not integrated. Production deployment still requires the approval specified by AGENTS.md.

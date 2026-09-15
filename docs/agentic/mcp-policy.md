@@ -8,7 +8,7 @@ Give each role the smallest useful tool set. Broad tool access increases ambigui
 
 - Codebase-memory tools: locate relevant code and prior decisions; verify results against current files.
 - Context7 or equivalent documentation retrieval: use only when current framework or crate documentation is needed.
-- GitHub: planners may read and create scoped issues; task agents update their issue and PR; integration and release roles own merge and release actions.
+- GitHub: not part of the local workflow; remote writes and publishing require explicit authorization.
 - Database tools: disposable local or CI databases only for coding agents.
 - Docker tools: local build and integration environments.
 
@@ -19,3 +19,6 @@ Give each role the smallest useful tool set. Broad tool access increases ambigui
 - Do not install overlapping MCPs without a documented use case.
 - Prefer official primary documentation for version-sensitive technical decisions.
 - Record material external evidence in the specification, ADR, dependency review, or source notes.
+
+RTK is disabled until the user requests it again. Agents, human instructions and
+verification scripts use native commands. Sandbox prompts name the restricted resource.

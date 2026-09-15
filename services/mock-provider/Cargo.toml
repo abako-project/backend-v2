@@ -1,0 +1,34 @@
+[package]
+name = "mock-provider"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = ["storage-sqlite", "mock-seed"]
+storage-memory = []
+storage-sqlite = ["dep:sqlx"]
+mock-seed = []
+
+[dependencies]
+domain-primitives.workspace = true
+generated-contracts.workspace = true
+axum.workspace = true
+tokio.workspace = true
+sqlx = { workspace = true, optional = true }
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+getrandom.workspace = true
+rand.workspace = true
+subxt-signer.workspace = true
+parity-scale-codec.workspace = true
+sha2.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+reqwest.workspace = true
+
+[lints]
+workspace = true

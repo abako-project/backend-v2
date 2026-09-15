@@ -147,6 +147,36 @@ Feature: Custodial wallet signing
       When workers process both operations
       Then neither wallet waits for the other wallet's critical section
 
+  Rule: Execution remains safe across preparation failures and provider resets
+
+    @REQ_007 @REQ_008 @instance_isolation
+    Scenario: Reject a signature from a previous disposable provider instance
+      Given a correctly signed call for a previous provider instance
+      When the call is submitted to a freshly reset mock
+      Then no contract state changes
+
+    @REQ_008 @expired_replay
+    Scenario: Recover a successful receipt after call expiration
+      Given a signed call was executed and its reply was lost
+      And the call has since expired
+      When the identical call is authenticated and submitted again
+      Then the original receipt is returned
+      And no business effect is repeated
+
+    @REQ_009 @unknown_outcome
+    Scenario: Preserve uncertainty after submission retries are exhausted
+      Given a provider may have executed an operation
+      And its response cannot be retrieved
+      When the submission retry budget is exhausted
+      Then the operation is OutcomeUnknown
+      And no new business attempt is created automatically
+
+    @REQ_008 @side_effect_free_preparation
+    Scenario: Preparing bytes does not execute a command
+      Given an authorized application action
+      When its signing payload is prepared but signing fails
+      Then no provider business state changes
+
   Rule: Secrets do not cross the custody boundary
 
     @REQ_002 @REQ_012 @security

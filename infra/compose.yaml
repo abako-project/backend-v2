@@ -1,0 +1,161 @@
+name: kunveno-local
+
+x-backend: &backend
+  user: "${LOCAL_UID:?Set LOCAL_UID to your non-root user ID}:${LOCAL_GID:?Set LOCAL_GID to your group ID}"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+  stop_grace_period: 20s
+
+services:
+  wallet:
+    <<: *backend
+    image: kunveno-wallet:local
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+      target: wallet
+    environment:
+      BIND_ADDR: 0.0.0.0:8081
+      CUSTODY_DATABASE_URL: sqlite:///data/custody.sqlite?mode=rwc
+      CUSTODY_MASTER_KEY_FILE: /run/secrets/master-key.hex
+      CUSTODY_ROOT_SEED_FILE: /run/secrets/root-seed.hex
+      INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
+    secrets: [master-key.hex, root-seed.hex, service-token]
+    volumes:
+      - type: bind
+        source: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/data/custody
+        target: /data
+        bind: {create_host_path: false}
+    networks: [backend]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8081/health]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
+  mock-provider:
+    <<: *backend
+    image: kunveno-mock-provider:local
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+      target: mock-provider
+    environment:
+      BIND_ADDR: 0.0.0.0:8082
+      MOCK_STORAGE: sqlite
+      MOCK_DATABASE_URL: sqlite:///data/mock.sqlite?mode=rwc
+      MOCK_ROOT_ACCOUNT_FILE: /run/secrets/root-account.hex
+      INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
+    secrets: [root-account.hex, service-token]
+    volumes:
+      - type: bind
+        source: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/data/mock
+        target: /data
+        bind: {create_host_path: false}
+    networks: [backend]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8082/health]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
+  adapter-api:
+    <<: *backend
+    image: kunveno-adapter-api:local
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+      target: adapter-api
+    environment:
+      BIND_ADDR: 0.0.0.0:8080
+      ADAPTER_DATABASE_URL: sqlite:///data/adapter.sqlite?mode=rwc
+      OPENAPI_PATH: /app/contracts/openapi.json
+      CUSTODY_URL: http://wallet:8081
+      MOCK_PROVIDER_URL: http://mock-provider:8082
+      INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
+      BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/bootstrap-admin-password
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8088,http://127.0.0.1:8088}
+      COOKIE_SECURE: "false"
+    secrets: [service-token, bootstrap-admin-password]
+    volumes:
+      - type: bind
+        source: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/data/adapter
+        target: /data
+        bind: {create_host_path: false}
+    networks: [edge, backend]
+    depends_on:
+      wallet: {condition: service_healthy}
+      mock-provider: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8080/health]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
+  frontend:
+    image: kunveno-leptos-web:local
+    build:
+      context: ..
+      dockerfile: infra/frontend.Dockerfile
+    user: "101:101"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m"]
+    networks: [edge]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/health]
+      interval: 5s
+      timeout: 3s
+      start_period: 5s
+      retries: 12
+
+  gateway:
+    image: nginx:1.28.3-alpine
+    user: "101:101"
+    entrypoint: [nginx]
+    command: [-g, "daemon off;"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m"]
+    ports: ["127.0.0.1:8088:8080"]
+    volumes:
+      - type: bind
+        source: ./nginx/gateway.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [edge]
+    depends_on:
+      adapter-api: {condition: service_healthy}
+      frontend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/]
+      interval: 5s
+      timeout: 3s
+      start_period: 5s
+      retries: 12
+
+networks:
+  edge: {}
+  backend: {internal: true}
+
+secrets:
+  master-key.hex:
+    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/master-key.hex
+  root-seed.hex:
+    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/root-seed.hex
+  root-account.hex:
+    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/root-account.hex
+  service-token:
+    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/service-token
+  bootstrap-admin-password:
+    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/bootstrap-admin-password

@@ -1,0 +1,61 @@
+# SPEC-0003: Transactional marketplace proof of concept
+
+Status: APPROVED
+
+## Scope and authority
+
+Implement the approved product in Rust. SPEC-0001 covers custody, SPEC-0002 the independent REST/SSE browser boundary, and ADR-0001 the deployment boundaries. This specification consolidates the business decisions approved in conversation, including planning-price negotiation on 2026-09-08. The legacy worktree at `d408641` is evidence for catalogs and task vocabulary, not authority for legacy defects.
+
+## Ownership and storage
+
+- DOM-001: A modular mock provider owns all business truth: catalogs, workers, calendar instances, projects, proposals, milestone task storages, reservations, reputation, balances, escrow, receipts, and domain events. The adapter owns authentication/session data, pending transport operations, and notification read state. Custody alone owns private signing keys.
+- DOM-002: Every provider command runs to completion against one current state and atomically commits its domain effects, nonce, receipt, and events. Failed domain execution leaves no partial business changes. Preparing a signing payload is read-only. No cross-service transaction or adapter mutex establishes business atomicity.
+- DOM-003: Cargo features `storage-memory` and `storage-sqlite` provide interchangeable mock storage. SQLite is the default. Both features may compile together; runtime configuration selects a compiled backend. State need not survive mock reset. Both backends have the same rollback, replay, and reservation behavior. One provider instance ID is stable for retained state and changes on reset.
+- DOM-004: Feature `mock-seed` loads missing catalog entries on startup without replacing edits. Preserve the 9 roles and 33 skill IDs from the legacy seed, including the skill named graphql; this does not introduce a GraphQL API. Role ID 1, named coordinator, cannot be renamed or deleted. Catalog edits require the configured system origin.
+
+## Workers, calendars, and assignment
+
+- WORK-001: A worker owns exactly one calendar instance created atomically with registration. Qualifications reference provider-owned skill and role IDs. Roles remain metadata; team matching does not compare them.
+- WORK-002: A worker has one active mode, Worker or Coordinator, and separate reputation for each. Only system authority may grant coordinator eligibility. A normal registration cannot self-promote. Existing commitments are not silently discarded by a mode change.
+- CAL-001: Store default weekly capacity, per-week overrides, and reservations separately. Capacity and work durations use integer minutes; the UI may show hours. A week is a validated ISO week-year plus week number. Instants use Unix seconds. Absence of an override uses the default indefinitely, without materializing an infinite calendar.
+- CAL-002: Availability equals effective weekly capacity minus reserved/consumed minutes. Changing capacity must not erase reservations; reject a change that would make a reserved week overcommitted. Completion does not restore hours already spent. Cancellation/dispute does not automatically release reservations whose disposition has not been agreed.
+- CAL-003: A quoted work window explicitly identifies inclusive start/end weeks. Reserve earliest available weekly buckets inside that window; reject if the complete requested duration does not fit. This is a business scheduling window, not a configurable matching benchmark or worker-search limit.
+- MATCH-001: Process requirements in their declared order. Obtain candidates by intersection of every required skill index, filter the required active mode and sufficient weekly capacity, choose the highest relevant score, and choose uniformly among exact ties. Do not scan every worker when the skill index identifies candidates. Do not match the role field. Every requirement is one person/slot; distinct slots in a milestone use distinct workers.
+- MATCH-002: Selection and reservation happen in the same provider transaction, including all affected calendars. A competing approval observes committed reservations. Failure to fill the complete proposal rolls back its assignments, reservations, and execution funding. Greedy order is deliberately not a guarantee of finding a feasible global matching whenever one exists.
+- MATCH-003: Initial coordinator selection uses Coordinator mode, coordinator score, and available capacity; its actual quoted planning duration is reserved when the client accepts the planning quote. Milestone coordination duration is explicit in the proposal and reserved along with the team's work.
+
+## Planning agreement and proposal
+
+- PLAN-001: The client creates a work request and receives an automatically selected eligible coordinator. The coordinator quotes a fixed planning fee and an explicit work duration/window. The client must accept the quote before paid planning begins. Acceptance locks the planning fee and reserves planning capacity atomically.
+- PLAN-002: The coordinator creates a Draft proposal with its milestones. Creation atomically creates one task storage per milestone. The coordinator does not independently create or replace those attached storages. The coordinator can update/delete a draft proposal and edit its tasks while the project is not cancelled.
+- PLAN-003: Submitting the plan moves the proposal to PendingApproval and records delivery. The client separately accepts planning delivery, releasing the agreed planning fee to the coordinator exactly once. Uploading a document is not acceptance. Accepting delivery does not authorize execution. Disagreement freezes the unreleased planning fee; resolution is outside the initial POC.
+- PLAN-004: The client can decline to contract execution after accepting and paying for planning. Execution approval is a separate signed action requiring an accepted planning delivery and a PendingApproval proposal.
+- PLAN-005: Each milestone quotes an explicit coordinator fee and duration and an explicit budget and duration per requirement. Its total is the checked sum of those prices. There is no universal coordinator percentage or DAO pricing mechanism in the POC. Execution approval locks the full quoted execution total and performs assignment/reservation atomically.
+- PLAN-006: Keep proposal states Draft, PendingApproval, Approved, Cancelled. A request for changes returns a pending proposal to Draft with the supplied change-request reference. Do not port the duplicated legacy scope/tasks model. Do not invent further proposal immutability machinery beyond guards needed to protect accepted prices and executed state.
+
+## Milestones, tracking, scores, and funds
+
+- MILE-001: Execution states are InProgress, CompletionRequested, Completed, Disputed. Before execution approval there is no execution state. The coordinator requests completion and supplies a score for each assigned worker. The client accepts completion and rates the coordinator and team, or delegates team rating to the coordinator. A disputed milestone cannot pay out until a separately approved resolution exists.
+- TASK-001: Tasks retain Feature/Bug/Task/Epic/Story types, six legacy priorities, and To Do/Open/In Progress/In Review/Done/Closed statuses. Task IDs are provider-generated u32 keys, not an embedded mutable task field. Provider owns reporter and Unix creation/update timestamps. Use non-negative integer estimated/logged minutes; a missing due date is explicit rather than an undocumented zero sentinel.
+- TASK-002: Coordinators create/edit tasks; assignees may change only status and logged minutes; clients read only. Tracking edits and reassignment do not silently change contractual assignments, calendar reservations, or payouts. Cancelled projects reject task writes. No task deletion is exposed initially.
+- SCORE-001: Scores range from 0 to 10. Worker contribution is the configured percentage-weighted coordinator score and client team score. Default weights are 50/50; they are integer percentages summing to 100 and system-authority configurable. If the client delegates team scoring, use the coordinator's individual worker score without blending it with a fabricated client vote.
+- SCORE-002: Historical reputation is weighted by committed requirement minutes, not money or unilaterally edited logged time. Coordinator reputation uses the client's coordinator score and committed milestone coordination minutes. Unrated score is 5. Preserve exact weighted accumulators and compare rational scores before display rounding. A completed milestone contributes once, never again on replay.
+- MONEY-001: Seed asset ID 1, KVN. Amounts are non-negative integer token units with checked arithmetic and decimal-string JSON representation. Do not invent a decimal display scale or other seeded asset. Quoted planning and milestone line items specify their actual amounts; zero-cost work is representable without transfers.
+- MONEY-002: A planning acceptance debits available balance into planning escrow. Planning delivery acceptance transfers that escrow to the quoted coordinator once. Execution approval debits the full execution budget into execution escrow. Milestone completion acceptance pays its quoted coordinator fee and each requirement budget to the assigned worker, and records scores in the same provider transaction. Escrow conservation and non-negative balances are mandatory.
+- MONEY-003: Cancellation or dispute freezes unreleased funds; it does not trigger an automatic refund or payment. Already completed payments are not reversed. Refund/arbitration policies, worker resignation, firing, and acceptance of assignments remain out of scope.
+- MONEY-003A: The project client and its assigned coordinator may cancel the project or open a planning/milestone dispute. Other workers and unrelated principals may not. This authorization was explicitly approved on 2026-09-09; it does not grant either party unilateral fund resolution or alter settled payments.
+- MONEY-004: A dev-only system-authority funding command may mint mock units when mock seeding is compiled. It cannot exist as an unauthenticated production faucet. Mock balances, contracts, keys, and state never migrate to production.
+
+## Construction and validation
+
+Use domain-owned private fields/newtypes for validated quantities and IDs, exhaustive enums, and typestate for construction or transitions where it makes a real restriction enforceable. Validate every deserialization and persisted state boundary; typestate is not a substitute for authorization, transaction isolation, or runtime input checks. Share wire contracts, not SQLite rows or a universal mutable entity model.
+
+## Initial security and deployment
+
+Classic username/password login and opaque HttpOnly cookie sessions serve both frontends. Hash passwords with Argon2id off the Tokio core thread, generate salts/seeds/session secrets with OS randomness, and keep credential changes independent of wallets. Credentialed mutations require a session-bound CSRF token and allowed Origin when a browser supplies one. Exact CORS origins are configurable; wildcard credentialed CORS is forbidden. Production cookies require Secure; unrelated cross-site hosting requires an explicitly documented cookie/TLS deployment choice, not relaxed defaults.
+
+Provision a separate system wallet for privileged operations. Its principal binding cannot be requested through public registration. Bootstrap administrator and custody/provider credentials are runtime secrets, never hardcoded production values. Domain mutation authorization is enforced again from the verified provider origin. Public endpoints never accept raw signing bytes, a spoofed actor, or an arbitrary provider message.
+
+## Acceptance evidence
+
+Run the same domain/storage suite against both memory and SQLite. Cover concurrent approvals, failed payment rollback, capacity overrides preserving reservations, different provider instances, duplicate completion, delegation, mode-specific score selection, and unauthorized task/catalog writes. Exercise a real signed HTTP flow through adapter and custody into the provider, including a lost response and SSE replay. Leptos is a separate static build; Nginx forwards only public REST/SSE routes. No production-readiness claim is made by a local POC.

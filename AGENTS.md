@@ -1,5 +1,9 @@
 # Project Agent Contract
 
+RTK is disabled until the user explicitly requests it again. Agents, documentation
+and public verification scripts use ordinary commands. When sandbox escalation is
+necessary, identify the underlying restricted resource and operation.
+
 This file is the shared source of truth for every coding agent in this repository. Tool-specific adapters may add permissions or model settings. They must not redefine project rules.
 
 ## 1. Authority

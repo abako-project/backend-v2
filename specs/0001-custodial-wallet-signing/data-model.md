@@ -44,7 +44,7 @@ The adapter owns principals, sessions, authorization, and provider-operation sta
 | `PayloadHash` | 32 bytes | SHA-256 over the exact signable bytes |
 | `WalletLifecycle` | `Provisioning`, `Active`, `Suspended`, `Retired` | Forward transitions only |
 | `SigningJobStatus` | `Pending`, `Signed`, `Rejected` | Terminal after signing or rejection |
-| `ProviderOperationStatus` | `AwaitingSignature`, `ReadyToSubmit`, `Submitted`, `Finalized`, `Rejected`, `Expired` | Controlled type-state transitions |
+| `ProviderOperationStatus` | `AwaitingSignature`, `ReadyToSubmit`, `Submitted`, `OutcomeUnknown`, `Finalized`, `Rejected`, `Expired` | Controlled transitions; finality and execution outcome are distinct |
 
 ## SQLite Tables and Constraints
 
@@ -68,6 +68,7 @@ The adapter owns principals, sessions, authorization, and provider-operation sta
 | Column | Constraint |
 |---|---|
 | `operation_id` | Primary key |
+| `creation_sequence` | Unique monotonic insertion sequence; queue order does not depend on timestamp precision or random IDs |
 | `wallet_id` | Foreign key to custody-owned wallet |
 | `payload_version` | Positive integer |
 | `signable_payload` | Non-empty bounded blob |
@@ -111,9 +112,11 @@ Adapter and mock tables belong to their own specifications. They do not referenc
 
 Wallet provisioning generates and encrypts a seed before a transaction inserts the wallet. A uniqueness conflict reads and returns the existing wallet without replacing its key.
 
-Job creation inserts or compares the existing payload hash in one transaction. Claiming assigns a lease conditionally while respecting per-wallet order. Completion updates a job only when its lease token still matches.
+Job creation inserts or compares the existing exact payload bytes and hash in one transaction. Claiming assigns a lease conditionally while respecting per-wallet creation sequence. Completion updates a job only when its lease token still matches.
 
 The mock verifies the envelope and writes domain state, next nonce, receipt, and durable event in one transaction in its own database. No transaction crosses a service or database boundary.
+
+The signed envelope binds a fixed signing domain and a provider instance ID. A fresh instance ID is generated when mock state is reset. The adapter retains the instance ID with every operation and never silently retargets signed bytes after a reset. An authenticated exact duplicate is reconciled before expiration or next-nonce validation for new execution.
 
 ## Migration Plan
 

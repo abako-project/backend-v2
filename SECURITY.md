@@ -2,7 +2,10 @@
 
 ## Reporting
 
-Do not disclose suspected vulnerabilities in public issues. Use the private reporting channel configured by the project owner. Replace this paragraph during project configuration with the actual contact and response expectations.
+No public security contact or response SLA has been published for this local POC.
+Report suspected vulnerabilities privately to the project owner through the existing
+collaboration channel without sending secrets. Establish a public reporting contact
+before public distribution.
 
 ## Security Boundaries
 

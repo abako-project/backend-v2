@@ -1,12 +1,12 @@
 # SPEC-0001: Custodial wallet signing
 
-Status: DRAFT
+Status: APPROVED
 
 Owner: Kunveno product owner
 
 Created: 2026-09-02
 
-Last updated: 2026-09-02
+Last updated: 2026-09-08
 
 Target milestone: Rust proof of concept
 
@@ -80,15 +80,15 @@ At most one provider operation per wallet shall be in the signing or submission 
 
 ### REQ-007: Sign a versioned mock envelope
 
-The mock call shall contain `PayloadVersion`, `OperationId`, `AccountId32` origin, contract instance, message, nonce, Unix expiration time, and payload. The custody service shall sign the complete SCALE encoding of the unsigned call. The signed form shall contain the unchanged call and its `sr25519` signature.
+The mock call shall contain a fixed mock-signing domain, provider instance ID, `PayloadVersion`, `OperationId`, `AccountId32` origin, contract instance, message, nonce, Unix expiration time, and payload. The provider instance ID shall change whenever disposable mock state is reset, and remain stable while that state is retained. The custody service shall sign the complete SCALE encoding of the unsigned call. The signed form shall contain the unchanged call and its `sr25519` signature. A call for another domain or provider instance shall never execute.
 
 ### REQ-008: Verify and execute atomically
 
-The mock provider shall verify the encoding version, signature, origin, expiration, next expected nonce, and idempotency record before execution. It shall commit contract state, the incremented account nonce, the operation receipt, and the resulting durable event in one SQLite transaction.
+The mock provider shall verify the signing domain, provider instance, encoding version, signature, and origin. It shall then check for an existing receipt bound to identical unsigned call bytes before applying freshness and next-nonce checks to a new execution. An authenticated exact replay shall return its receipt even after the original expiration. Contract authorization shall be checked in the provider, not entrusted solely to the adapter. Successful execution shall commit all affected contract state, the incremented account nonce, receipt, and durable events in one transaction. Preparing signable bytes shall have no business side effects.
 
 ### REQ-009: Recover bounded background work
 
-A signing job shall be `Pending`, `Signed`, or `Rejected`. A provider operation shall be `AwaitingSignature`, `ReadyToSubmit`, `Submitted`, `Finalized`, `Rejected`, or `Expired`. Workers shall claim work with expiring leases. A transient failure shall retain the current state, increment the attempt count, and schedule a bounded retry. A terminal validation failure shall produce `Rejected`.
+A signing job shall be `Pending`, `Signed`, or `Rejected`. A provider operation shall be `AwaitingSignature`, `ReadyToSubmit`, `Submitted`, `OutcomeUnknown`, `Finalized`, `Rejected`, or `Expired`. Workers shall claim work with expiring leases. A transient failure shall retain the current state, increment the attempt count, and schedule a bounded retry. A terminal validation failure shall produce `Rejected` only when non-execution is established. Submission timeouts and exhausted submission retries shall preserve an unknown outcome until reconciled against provider receipts. Expiration after a possible submission does not prove non-execution. Finalization shall include a separate execution outcome; finalization alone does not establish business success.
 
 ### REQ-010: Enforce wallet lifecycle
 
@@ -104,7 +104,7 @@ Wallet provisioning, lifecycle changes, signing requests, signing outcomes, subm
 
 ### REQ-013: Forbid browser-supplied signing payloads
 
-The browser API shall not accept an extrinsic, raw bytes, contract target, nonce, or arbitrary message for signing. Only a typed domain action that the adapter has authorized may create a provider operation and subsequent signing job.
+The browser API shall not accept an extrinsic, raw signing bytes, caller-supplied nonce, or arbitrary contract message for signing. A typed domain endpoint may accept its documented resource identifier, but the adapter shall derive the allowed provider target and message from that endpoint. Only an authorized typed action may create a provider operation and subsequent signing job.
 
 Rationale: Authentication alone must not turn the adapter into an unrestricted signing oracle.
 
@@ -141,7 +141,8 @@ Rationale: Authentication recovery must not silently change an on-chain identity
 | Internal network or provider is unavailable | Current stage is retained and retried within its bound | Yes | Attempt, stage, and redacted error class |
 | Signature, origin, nonce, or expiration is invalid | Mock call rejected without state mutation | No | Operation and stable validation code |
 | Exact finalized call is repeated | Previous receipt returned without another state change | No | Duplicate observation |
-| Retry budget is exhausted | Operation becomes `Rejected` with a stable failure code | No | Attempt count and terminal code |
+| Submission retry budget is exhausted | Operation remains `OutcomeUnknown`; reconcile before another business attempt | Reconciliation only | Attempt count and unresolved outcome |
+| Provider instance changes after a possible submission | Preserve the old instance and unresolved history; never replay against the new instance | No automatic replay | Old/new instance IDs and affected operation |
 
 ## Acceptance Behavior
 
@@ -149,9 +150,9 @@ Executable scenarios are in `acceptance.feature`.
 
 ## Contract Impact
 
-### GraphQL
+### REST
 
-Adapter domain mutations may return an operation reference and asynchronous status. The browser contract exposes neither raw-signature operations nor fields that accept arbitrary signable bytes.
+Typed adapter REST commands return an operation reference and asynchronous status. Both the external frontend and Leptos use the same documented HTTP contract. No GraphQL endpoint or Leptos server-function protocol is required. The browser contract exposes neither raw-signature operations nor fields that accept arbitrary signable bytes.
 
 ### gRPC
 
@@ -162,11 +163,12 @@ None.
 - `POST /internal/signing-jobs`: create or retrieve an idempotent job.
 - `GET /internal/signing-jobs/{operation_id}`: read status and signed output when available.
 - `POST /internal/contracts/call`: submit a signed call to the mock provider.
+- Provider discovery, account nonce, operation receipt, and cursor-based event reads shall be documented before implementing reconciliation.
 - No webhooks are introduced.
 
 ### Published Events
 
-The mock records a durable domain event in the same transaction as a successful call. Existing adapter event ingestion and SSE delivery publish the user-visible notification after ingestion.
+The mock records durable domain events in the same transaction as successful execution. An adapter-owned ingestor reads them by cursor and commits its cursor together with idempotent notification inserts. SSE reads persisted notifications and supports resume. The legacy in-memory broadcaster is not an existing implementation of this recovery pipeline. Delivery does not mark a notification read.
 
 ### Consumed Events
 
@@ -250,18 +252,18 @@ Security: tampering, replay, unauthorized calls, inactive wallets, ciphertext sw
 
 | Question | Owner | Blocking | Resolution |
 |---|---|---:|---|
-| Are the proposed local operational bounds acceptable? | Architecture | Yes | Values are specified above; pending written approval |
+| Are the proposed local operational bounds acceptable? | Architecture | No | Local implementation approved 2026-09-08; these are transport safeguards, not configurable matching benchmarks |
 | How long should signing payloads and audit records be retained in production? | Product and security | No for POC | Required before production use |
-| Is XChaCha20-Poly1305 through `chacha20poly1305` 0.11 acceptable? | Security | Yes | Proposed after dependency review; pending written approval |
+| Is XChaCha20-Poly1305 through `chacha20poly1305` 0.11 acceptable? | Security | No | Local custody implementation approved 2026-09-08; verify dependency metadata and tests |
 
 ## Approval
 
-Product: Individual decisions approved in conversation; consolidated text pending review.
+Product: Approved 2026-09-08 following review and explicit instruction to implement.
 
-Architecture: Pending written review.
+Architecture: Accepted review corrections and ADR-0001.
 
-Security: Pending written review.
+Security: Local POC only; executable verification remains required before handoff.
 
-Data: Pending written review.
+Data: Separate custody, adapter, and transactional mock ownership.
 
-Approval date: Not yet approved.
+Approval date: 2026-09-08.

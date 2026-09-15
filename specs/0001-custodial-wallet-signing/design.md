@@ -78,6 +78,8 @@ The conceptual signed types are:
 
 ```rust
 struct UnsignedContractCallV1 {
+    signing_domain: MockSigningDomain,
+    provider_instance_id: ProviderInstanceId,
     payload_version: PayloadVersion,
     operation_id: OperationId,
     origin: AccountId32,
@@ -100,11 +102,15 @@ The custody API accepts the operation ID, wallet ID, payload version, signable b
 
 ## Failure and Retry Model
 
-Signing jobs use `Pending`, `Signed`, and `Rejected`. Provider operations use `AwaitingSignature`, `ReadyToSubmit`, `Submitted`, `Finalized`, `Rejected`, and `Expired`.
+Signing jobs use `Pending`, `Signed`, and `Rejected`. Provider operations use `AwaitingSignature`, `ReadyToSubmit`, `Submitted`, `OutcomeUnknown`, `Finalized`, `Rejected`, and `Expired`. Finalized receipts separately report execution success or failure. A timeout, exhausted submission retries, or expiration after possible submission does not establish rejection: reconcile the existing operation before any new business attempt.
 
 Leases are metadata on pending work, not a durable business state. A worker may update a leased row only when its lease token still matches. Expired leases may be reclaimed. Transient failures schedule a bounded retry at the current stage. Terminal validation failures become `Rejected`.
 
 The provider persists signed bytes before network submission. A transport retry resends identical bytes. A duplicate successful mock submission returns the stored receipt. A conflicting `OperationId` never executes.
+
+Receipt lookup for a verified exact replay precedes new-execution expiration and nonce checks. Mock reset changes its instance ID, invalidating old calls without silently erasing the adapter's unresolved operation history. Preparing a call never mutates contract state. Provider-side authorization is mandatory even when the adapter already authorized the action.
+
+The browser boundary is REST and SSE, shared by independent frontends. Durable provider-event ingestion is an adapter task, not a separate deployable service. It commits its cursor and derived notifications together before SSE delivery. See SPEC-0002 and ADR-0001.
 
 ## Concurrency and Backpressure
 

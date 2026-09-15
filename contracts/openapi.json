@@ -1,0 +1,4885 @@
+{
+  "openapi": "3.1.1",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "info": {
+    "title": "Kunveno public REST API",
+    "version": "0.1.0",
+    "description": "Independent external and Leptos frontends use this REST/JSON API and authenticated SSE; no GraphQL or frontend-specific server functions. All business mutations return an asynchronous operation reference. JSON fields are camelCase; enum values are PascalCase. KVN amounts are exact decimal strings in integer token units. Both browser clients send credentials: include and X-CSRF-Token from SessionView for authenticated mutations. Configure an exact Origin allowlist; wildcard credentialed CORS is forbidden. Default cookie is kunveno_session, HttpOnly, SameSite=Lax, Path=/api, 24 hours, Secure outside local HTTP. Separate same-site origins are supported; unrelated cross-site deployment needs an explicit TLS/cookie policy, not relaxed defaults. HTTP errors are ApiError; asynchronously rejected business actions appear in OperationView. No public route accepts raw signatures, signable bytes, nonces, arbitrary provider commands or actor spoofing. Local proof of concept only; no production funds or keys."
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "Same-origin Nginx deployment; external frontends configure their backend base URL independently."
+    }
+  ],
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication"
+    },
+    {
+      "name": "Workers"
+    },
+    {
+      "name": "Marketplace"
+    },
+    {
+      "name": "Operations"
+    },
+    {
+      "name": "Notifications"
+    },
+    {
+      "name": "Administration"
+    },
+    {
+      "name": "Contract"
+    }
+  ],
+  "paths": {
+    "/api/auth/register": {
+      "post": {
+        "operationId": "register",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Register a classic principal",
+        "description": "Creates the independent login identity and custodial wallet, then sets an opaque HttpOnly session cookie. Rejects privileged fields and disallowed browser Origin. Credentials never derive the wallet seed.",
+        "security": [],
+        "responses": {
+          "201": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "description": "kunveno_session=<opaque>; HttpOnly; SameSite=Lax; Path=/api; Max-Age=86400. Secure is required outside local HTTP development. Cookie is not available to JavaScript.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "login",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Log in with classic credentials",
+        "description": "Sets kunveno_session; send credentials: include from either allowed frontend. Registration/login have no existing CSRF token, but a supplied Origin must be allowed.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            },
+            "headers": {
+              "Set-Cookie": {
+                "description": "kunveno_session=<opaque>; HttpOnly; SameSite=Lax; Path=/api; Max-Age=86400. Secure is required outside local HTTP development. Cookie is not available to JavaScript.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/session": {
+      "get": {
+        "operationId": "getSession",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Read current session",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "logout",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "End the current session",
+        "description": "Requires the current session-bound CSRF token; clears/revokes the session.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed without a response body."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/auth/password": {
+      "post": {
+        "operationId": "changePassword",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Change login password without changing the wallet",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Completed without a response body."
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangePasswordRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/catalog": {
+      "get": {
+        "operationId": "getCatalog",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Read roles, skills and reputation weights",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/workers": {
+      "get": {
+        "operationId": "listWorkers",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Read worker profiles and calendar views",
+        "description": "Requires a session. The calendar contains capacity and checked weekly committed-minute totals, never other projects' reservation IDs. Assignment eligibility and available capacity are rechecked atomically in the provider.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkerSummaryView"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "registerWorker",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Register the caller as a worker",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterWorkerRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/me/qualifications": {
+      "put": {
+        "operationId": "updateQualifications",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Update the caller's qualification metadata",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateQualificationsRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/me/calendar": {
+      "put": {
+        "operationId": "setCalendar",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Replace capacity definition without erasing reservations",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarDefinition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workers/me/mode": {
+      "put": {
+        "operationId": "setWorkerMode",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Change the caller's active worker mode",
+        "description": "Coordinator mode requires privileged promotion. Existing commitments are never silently discarded.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetWorkerModeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "operationId": "listProjects",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "List authorized projects",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ProjectView"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createProject",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Create a work request and select its coordinator",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProjectRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}": {
+      "get": {
+        "operationId": "getProject",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read an authorized project",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ]
+      }
+    },
+    "/api/projects/{projectId}/planning/quote": {
+      "post": {
+        "operationId": "quotePlanning",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Quote the fixed planning fee and capacity",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanningQuote"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/planning/accept": {
+      "post": {
+        "operationId": "acceptPlanningQuote",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Accept the reviewed planning quote",
+        "description": "Use project.planning.revision from the reviewed quote. Atomically locks the fee and reserves planning minutes. A stale revision causes revision_conflict without these business effects.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/planning/accept-delivery": {
+      "post": {
+        "operationId": "acceptPlanningDelivery",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Accept delivery and settle planning only",
+        "description": "Use project.planning.revision from the delivered plan. Releases the planning fee once. Does not approve or fund execution.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/planning/dispute": {
+      "post": {
+        "operationId": "disputePlanning",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Dispute planning delivery and freeze unreleased fees",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/proposals": {
+      "post": {
+        "operationId": "createProposal",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Create a draft and its milestone task storages",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalDefinition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}": {
+      "put": {
+        "operationId": "updateProposal",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Update a draft proposal",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalDefinition"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteProposal",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Delete a draft proposal",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}/submit": {
+      "post": {
+        "operationId": "submitProposal",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Deliver a proposal for client approval",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}/approve": {
+      "post": {
+        "operationId": "approveExecution",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Approve the reviewed proposal for execution",
+        "description": "Use proposal.revision. Requires accepted planning delivery and a pending proposal. Funds all execution line items and assigns/reserves all workers atomically; an unfilled requirement rolls back business effects.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}/changes": {
+      "post": {
+        "operationId": "requestProposalChanges",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Request changes to a pending proposal",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestChangesRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/cancel": {
+      "post": {
+        "operationId": "cancelProject",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Cancel the project and freeze unreleased funds",
+        "description": "Does not refund escrow automatically, reverse completed payments, or silently release unresolved reservations. Cancelled projects reject task writes.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/milestones/{milestoneId}/request-completion": {
+      "post": {
+        "operationId": "requestMilestoneCompletion",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Request completion with each worker's rating",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MilestoneId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestMilestoneCompletionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/milestones/{milestoneId}/accept-completion": {
+      "post": {
+        "operationId": "acceptMilestoneCompletion",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Accept completion, pay and score the team",
+        "description": "Coordinator score plus client team rating or delegation. Settlement and reputation updates occur together once; exact replay does not score or pay again.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MilestoneId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptMilestoneCompletionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/milestones/{milestoneId}/dispute": {
+      "post": {
+        "operationId": "disputeMilestone",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Dispute a milestone and freeze its unreleased funds",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MilestoneId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/task-storages/{storageId}/tasks": {
+      "post": {
+        "operationId": "createTask",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Create coordinator-controlled task tracking",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskDefinition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}": {
+      "put": {
+        "operationId": "editTask",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Edit coordinator-controlled task tracking",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/TaskId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskDefinition"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}/progress": {
+      "patch": {
+        "operationId": "updateTaskProgress",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Update task status and logged minutes as an assignee",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/TaskId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskProgressRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/balance": {
+      "get": {
+        "operationId": "getBalance",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read the caller's available mock KVN balance",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/operations/{operationId}": {
+      "get": {
+        "operationId": "getOperation",
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Read the caller's asynchronous operation",
+        "description": "Another principal's operation returns 404. OutcomeUnknown is unresolved, not rejected. Inspect receipt.outcome for finalized execution success/failure before updating the UI.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperationId"
+          }
+        ]
+      }
+    },
+    "/api/notifications": {
+      "get": {
+        "operationId": "listNotifications",
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Read a page of notifications without marking them read",
+        "description": "Returns at most 100 session-owned notifications after the adapter cursor. No limit query is exposed. Delivery and replay leave readAt unchanged.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/After"
+          }
+        ]
+      }
+    },
+    "/api/notifications/{notificationId}/read": {
+      "post": {
+        "operationId": "markNotificationRead",
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark one session-owned notification as read",
+        "description": "Idempotent explicit read-state update; not a blockchain command.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/NotificationId"
+          }
+        ]
+      }
+    },
+    "/api/events": {
+      "get": {
+        "operationId": "streamNotifications",
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Stream session-owned notifications with replay",
+        "description": "Authenticated SSE. Event name: notification; id: adapter notificationId; data: one JSON NotificationView. Last-Event-ID overrides after; both must be valid unsigned cursors when used. Reconnect with the last received ID; do not mark a notification read merely because it arrives. Exact replay is allowed, so deduplicate by notificationId. Use EventSource(url, { withCredentials: true }) across allowed origins. SSE is a delivery channel, not the only way to read an operation outcome.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Long-lived event stream with buffering disabled. Data frames contain NotificationView JSON.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "Prevents caching of session-owned event data."
+              }
+            },
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-event-schema": {
+                  "$ref": "#/components/schemas/NotificationView"
+                },
+                "example": "id: 1\nevent: notification\ndata: {\"notificationId\":1,\"event\":{\"providerInstanceId\":\"0x01010101010101010101010101010101\",\"cursor\":1,\"operationId\":\"0x02020202020202020202020202020202\",\"kind\":\"ProjectCreated\",\"projectId\":\"0x03030303030303030303030303030303\",\"entityId\":\"0x03030303030303030303030303030303\",\"recipients\":[\"0x0404040404040404040404040404040404040404040404040404040404040404\"],\"occurredAt\":1788912000},\"readAt\":null}\n\n"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/LastEventId"
+          },
+          {
+            "$ref": "#/components/parameters/After"
+          }
+        ]
+      }
+    },
+    "/api/admin/coordinators": {
+      "post": {
+        "operationId": "promoteCoordinator",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Grant coordinator eligibility",
+        "description": "Requires administrator session; adapter selects the system wallet. Public request cannot select or impersonate system origin.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromoteCoordinatorRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/catalog": {
+      "put": {
+        "operationId": "upsertCatalogEntry",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Create or rename a catalog entry",
+        "description": "Administrator only. Coordinator role ID 1 cannot be renamed. Provider enforces references and fixed entries.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpsertCatalogEntryRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/catalog/{kind}/{id}": {
+      "delete": {
+        "operationId": "deleteCatalogEntry",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Delete an unprotected catalog entry",
+        "description": "Administrator only. kind is Role or Skill. Provider enforces references and rejects coordinator role ID 1.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CatalogKind"
+          },
+          {
+            "$ref": "#/components/parameters/CatalogId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ]
+      }
+    },
+    "/api/admin/score-policy": {
+      "put": {
+        "operationId": "setScorePolicy",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Set integer coordinator/client score weights",
+        "description": "Administrator only. Percentages must sum to exactly 100; does not rewrite previously committed score contributions.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScorePolicy"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/fund": {
+      "post": {
+        "operationId": "fundAccount",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Mint mock-only KVN units",
+        "description": "Administrator only and provider mock-seed feature required. Local testing only, never a production faucet.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FundAccountRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/openapi.json": {
+      "get": {
+        "operationId": "getOpenApi",
+        "tags": [
+          "Contract"
+        ],
+        "summary": "Read this public REST contract",
+        "description": "Served from OPENAPI_PATH (default contracts/openapi.json). Does not expose custody or provider-internal endpoints.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Successful request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "OpenAPI 3.1 document."
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "kunveno_session",
+        "description": "Opaque session set by registration/login. HttpOnly; SameSite=Lax; Path=/api; 24-hour lifetime. Browser fetch uses credentials: include."
+      },
+      "csrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token",
+        "description": "Exact session-bound token from SessionView; required together with sessionCookie on authenticated mutations."
+      }
+    },
+    "parameters": {
+      "IdempotencyKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "$ref": "#/components/schemas/OperationId"
+        },
+        "description": "Client-generated operation identity. Reuse unchanged for retries of the same authenticated typed action; different content conflicts. Keep the same key after uncertain transport outcomes. Omission lets the adapter generate one but cannot deduplicate an unacknowledged retry."
+      },
+      "After": {
+        "name": "after",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615,
+          "format": "uint64",
+          "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER.",
+          "default": 0
+        },
+        "description": "Exclusive adapter notification cursor. Defaults to 0; not a provider event cursor."
+      },
+      "LastEventId": {
+        "name": "Last-Event-ID",
+        "in": "header",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "description": "Last received adapter notification ID, a u64 decimal string. Overrides after. Native EventSource sends it on reconnection."
+      },
+      "ProjectId": {
+        "name": "projectId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
+      },
+      "ProposalId": {
+        "name": "proposalId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
+      },
+      "MilestoneId": {
+        "name": "milestoneId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
+      },
+      "StorageId": {
+        "name": "storageId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
+      },
+      "TaskId": {
+        "name": "taskId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        }
+      },
+      "OperationId": {
+        "name": "operationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/OperationId"
+        }
+      },
+      "NotificationId": {
+        "name": "notificationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 18446744073709551615,
+          "format": "uint64",
+          "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+        }
+      },
+      "CatalogKind": {
+        "name": "kind",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/CatalogKind"
+        }
+      },
+      "CatalogId": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Malformed input, unknown fields, invalid cursor, invalid primitive or structural constraint.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "invalid_request",
+              "message": "Malformed input, unknown fields, invalid cursor, invalid primitive or structural constraint."
+            }
+          }
+        }
+      },
+      "Unauthenticated": {
+        "description": "Missing/expired session or incorrect login credentials.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "invalid_credentials",
+              "message": "Missing/expired session or incorrect login credentials."
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "Permission denied, mismatched CSRF token, or disallowed supplied browser Origin.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "forbidden",
+              "message": "Permission denied, mismatched CSRF token, or disallowed supplied browser Origin."
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "Resource not found or not visible to this principal.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "not_found",
+              "message": "Resource not found or not visible to this principal."
+            }
+          }
+        }
+      },
+      "Conflict": {
+        "description": "Conflicting idempotency identity, username already taken, or current-state conflict before enqueue.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "idempotency_conflict",
+              "message": "Conflicting idempotency identity, username already taken, or current-state conflict before enqueue."
+            }
+          }
+        }
+      },
+      "TooLarge": {
+        "description": "Request exceeds transport payload limit.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "request_too_large",
+              "message": "Request exceeds transport payload limit."
+            }
+          }
+        }
+      },
+      "CapacityExceeded": {
+        "description": "Bounded pending-work capacity is full. Do not create a different operation to retry.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "capacity_exceeded",
+              "message": "Bounded pending-work capacity is full. Do not create a different operation to retry."
+            }
+          }
+        }
+      },
+      "Unavailable": {
+        "description": "Required dependency is unavailable. If submission may have happened, reconcile the existing operation rather than repeating business intent.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "dependency_unavailable",
+              "message": "Required dependency is unavailable. If submission may have happened, reconcile the existing operation rather than repeating business intent."
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "Unexpected failure; response and logs are sanitized.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ApiError"
+            },
+            "example": {
+              "code": "internal_error",
+              "message": "Unexpected failure; response and logs are sanitized."
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "AccountId32": {
+        "type": "string",
+        "pattern": "^(0x)?[0-9a-fA-F]{64}$",
+        "description": "32-byte identifier. Requests also accept unprefixed hexadecimal; responses use lowercase 0x-prefixed hexadecimal."
+      },
+      "EntityId": {
+        "type": "string",
+        "pattern": "^(0x)?[0-9a-fA-F]{32}$",
+        "description": "16-byte identifier. Requests also accept unprefixed hexadecimal; responses use lowercase 0x-prefixed hexadecimal."
+      },
+      "PrincipalId": {
+        "type": "string",
+        "pattern": "^(0x)?[0-9a-fA-F]{32}$",
+        "description": "16-byte identifier. Requests also accept unprefixed hexadecimal; responses use lowercase 0x-prefixed hexadecimal."
+      },
+      "OperationId": {
+        "type": "string",
+        "pattern": "^(0x)?[0-9a-fA-F]{32}$",
+        "description": "16-byte identifier. Requests also accept unprefixed hexadecimal; responses use lowercase 0x-prefixed hexadecimal."
+      },
+      "ProviderInstanceId": {
+        "type": "string",
+        "pattern": "^(0x)?[0-9a-fA-F]{32}$",
+        "description": "16-byte identifier. Requests also accept unprefixed hexadecimal; responses use lowercase 0x-prefixed hexadecimal."
+      },
+      "Money": {
+        "type": "string",
+        "pattern": "^(0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]{1}|1844674407370955161[0-4]|18446744073709551615)$",
+        "description": "Exact integer KVN token units, from 0 through 18446744073709551615. Canonical decimal string, no sign, leading zero, fraction, or implicit decimal display scale.",
+        "examples": [
+          "0",
+          "250",
+          "18446744073709551615"
+        ]
+      },
+      "Minutes": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 4294967295,
+        "description": "Non-negative integer minutes. Display conversion to hours is a frontend concern."
+      },
+      "UnixSeconds": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 18446744073709551615,
+        "format": "uint64",
+        "description": "Non-negative UTC Unix timestamp in whole seconds; preserve exact integer."
+      },
+      "Revision": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 18446744073709551615,
+        "format": "uint64",
+        "description": "Provider-owned revision starting at zero, incremented with checked arithmetic. Accept the revision actually reviewed; do not refresh it silently."
+      },
+      "Score": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 10
+      },
+      "Percentage": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 100
+      },
+      "Week": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "isoYear",
+          "week"
+        ],
+        "properties": {
+          "isoYear": {
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647
+          },
+          "week": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 53
+          }
+        },
+        "description": "Validated ISO week-year and week. Week 53 is valid only for ISO years that contain it, and the date must be representable by the provider calendar. ISO year is not necessarily the calendar year.",
+        "examples": [
+          {
+            "isoYear": 2026,
+            "week": 40
+          }
+        ]
+      },
+      "WeekWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "$ref": "#/components/schemas/Week"
+          },
+          "end": {
+            "$ref": "#/components/schemas/Week"
+          }
+        },
+        "description": "Inclusive scheduling window. End must not precede start. Capacity is reserved from earliest available weekly buckets inside the window."
+      },
+      "WorkerMode": {
+        "type": "string",
+        "enum": [
+          "Worker",
+          "Coordinator"
+        ]
+      },
+      "ProposalStatus": {
+        "type": "string",
+        "enum": [
+          "Draft",
+          "PendingApproval",
+          "Approved",
+          "Cancelled"
+        ]
+      },
+      "MilestoneStatus": {
+        "type": "string",
+        "enum": [
+          "InProgress",
+          "CompletionRequested",
+          "Completed",
+          "Disputed"
+        ]
+      },
+      "PlanningStatus": {
+        "type": "string",
+        "enum": [
+          "AwaitingQuote",
+          "Quoted",
+          "Accepted",
+          "Delivered",
+          "Completed",
+          "Disputed"
+        ]
+      },
+      "TaskType": {
+        "type": "string",
+        "enum": [
+          "Feature",
+          "Bug",
+          "Task",
+          "Epic",
+          "Story"
+        ]
+      },
+      "TaskPriority": {
+        "type": "string",
+        "enum": [
+          "Lowest",
+          "Low",
+          "Medium",
+          "High",
+          "Highest",
+          "Blocker"
+        ]
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "ToDo",
+          "Open",
+          "InProgress",
+          "InReview",
+          "Done",
+          "Closed"
+        ]
+      },
+      "CatalogKind": {
+        "type": "string",
+        "enum": [
+          "Role",
+          "Skill"
+        ]
+      },
+      "ProviderOperationStatus": {
+        "type": "string",
+        "enum": [
+          "AwaitingSignature",
+          "ReadyToSubmit",
+          "Submitted",
+          "OutcomeUnknown",
+          "Finalized",
+          "Rejected",
+          "Expired"
+        ],
+        "description": "202 is durable acceptance, not execution success. OutcomeUnknown is unresolved submission, never evidence of rejection. Finalized must be interpreted with receipt.outcome."
+      },
+      "Qualifications": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "roleIds",
+          "skillIds"
+        ],
+        "properties": {
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "uniqueItems": true
+          },
+          "skillIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "uniqueItems": true
+          }
+        },
+        "description": "Every referenced role/skill must exist. Roles remain metadata; assignment intersects all requirement skill IDs."
+      },
+      "WeekOverride": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "week",
+          "capacity"
+        ],
+        "properties": {
+          "week": {
+            "$ref": "#/components/schemas/Week"
+          },
+          "capacity": {
+            "$ref": "#/components/schemas/Minutes"
+          }
+        }
+      },
+      "CalendarDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "defaultWeeklyMinutes",
+          "overrides"
+        ],
+        "properties": {
+          "defaultWeeklyMinutes": {
+            "$ref": "#/components/schemas/Minutes"
+          },
+          "overrides": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeekOverride"
+            }
+          }
+        },
+        "description": "At most one override per week. Missing overrides use the default indefinitely. Changes must preserve reservations and may not reduce capacity below committed minutes."
+      },
+      "RegisterWorkerRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "displayName",
+          "qualifications",
+          "calendar"
+        ],
+        "properties": {
+          "displayName": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          },
+          "qualifications": {
+            "$ref": "#/components/schemas/Qualifications"
+          },
+          "calendar": {
+            "$ref": "#/components/schemas/CalendarDefinition"
+          }
+        },
+        "description": "Registers the authenticated account in Worker mode and creates its owned calendar. It cannot grant coordinator eligibility."
+      },
+      "UpdateQualificationsRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "qualifications"
+        ],
+        "properties": {
+          "qualifications": {
+            "$ref": "#/components/schemas/Qualifications"
+          }
+        }
+      },
+      "SetWorkerModeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "mode"
+        ],
+        "properties": {
+          "mode": {
+            "$ref": "#/components/schemas/WorkerMode"
+          }
+        }
+      },
+      "PromoteCoordinatorRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountId32"
+          }
+        }
+      },
+      "UpsertCatalogEntryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "kind",
+          "id",
+          "name"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/CatalogKind"
+          },
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "name": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          }
+        }
+      },
+      "FundAccountRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account",
+          "amount"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "description": "Administrator-only mock funding; requires provider mock-seed feature. Never a production faucet."
+      },
+      "ScorePolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "coordinatorPercent",
+          "clientPercent"
+        ],
+        "properties": {
+          "coordinatorPercent": {
+            "$ref": "#/components/schemas/Percentage"
+          },
+          "clientPercent": {
+            "$ref": "#/components/schemas/Percentage"
+          }
+        },
+        "description": "Integer percentages must sum to exactly 100. Initial policy is 50/50.",
+        "examples": [
+          {
+            "coordinatorPercent": 50,
+            "clientPercent": 50
+          }
+        ]
+      },
+      "CreateProjectRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "description": "Client and eligible coordinator are derived by the backend, never selected through spoofed actor fields."
+      },
+      "PlanningQuote": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "fee",
+          "minutes",
+          "window"
+        ],
+        "properties": {
+          "fee": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "minutes": {
+            "$ref": "#/components/schemas/Minutes"
+          },
+          "window": {
+            "$ref": "#/components/schemas/WeekWindow"
+          }
+        },
+        "description": "Fixed planning fee plus committed planning duration/window. Does not start planning or authorize a transfer before client acceptance.",
+        "examples": [
+          {
+            "fee": "250",
+            "minutes": 120,
+            "window": {
+              "start": {
+                "isoYear": 2026,
+                "week": 40
+              },
+              "end": {
+                "isoYear": 2026,
+                "week": 40
+              }
+            }
+          }
+        ]
+      },
+      "RevisionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevision"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "$ref": "#/components/schemas/Revision"
+          }
+        },
+        "description": "Planning acceptance and delivery use PlanningView.revision. Execution approval uses ProposalView.revision. A mismatch fails with revision_conflict before business effects.",
+        "examples": [
+          {
+            "expectedRevision": 7
+          }
+        ]
+      },
+      "RequirementDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "roleId",
+          "skillIds",
+          "minutes",
+          "budget"
+        ],
+        "properties": {
+          "key": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "roleId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "skillIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "minutes": {
+            "$ref": "#/components/schemas/Minutes"
+          },
+          "budget": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "description": "One person/slot. Keys must be unique inside the milestone; assignment requires every skill. Role is retained but not matched."
+      },
+      "MilestoneDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "title",
+          "window",
+          "coordinatorFee",
+          "coordinatorMinutes",
+          "requirements"
+        ],
+        "properties": {
+          "key": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "title": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          },
+          "window": {
+            "$ref": "#/components/schemas/WeekWindow"
+          },
+          "coordinatorFee": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "coordinatorMinutes": {
+            "$ref": "#/components/schemas/Minutes"
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequirementDefinition"
+            }
+          }
+        },
+        "description": "Checked total equals coordinatorFee plus every requirement budget. Distinct slots in this milestone receive distinct workers."
+      },
+      "ProposalDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description",
+          "milestones"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          },
+          "description": {
+            "type": "string"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MilestoneDefinition"
+            },
+            "minItems": 1
+          }
+        },
+        "description": "Milestone keys must be unique. Provider creates one attached task storage per milestone; callers cannot supply its identity.",
+        "examples": [
+          {
+            "title": "Delivery plan",
+            "description": "One milestone",
+            "milestones": [
+              {
+                "key": 1,
+                "title": "First delivery",
+                "window": {
+                  "start": {
+                    "isoYear": 2026,
+                    "week": 40
+                  },
+                  "end": {
+                    "isoYear": 2026,
+                    "week": 40
+                  }
+                },
+                "coordinatorFee": "100",
+                "coordinatorMinutes": 60,
+                "requirements": [
+                  {
+                    "key": 1,
+                    "roleId": 2,
+                    "skillIds": [
+                      1,
+                      2
+                    ],
+                    "minutes": 600,
+                    "budget": "1200"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "RequestChangesRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reference"
+        ],
+        "properties": {
+          "reference": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          }
+        }
+      },
+      "ReasonRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "reason"
+        ],
+        "properties": {
+          "reason": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          }
+        },
+        "description": "Cancellation/dispute freezes unreleased funds; this text is not an instruction to refund or pay."
+      },
+      "TaskDefinition": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "description",
+          "taskType",
+          "priority",
+          "status",
+          "assignees",
+          "estimatedMinutes",
+          "loggedMinutes"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          },
+          "description": {
+            "type": "string"
+          },
+          "taskType": {
+            "$ref": "#/components/schemas/TaskType"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TaskPriority"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "assignees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountId32"
+            },
+            "uniqueItems": true
+          },
+          "estimatedMinutes": {
+            "$ref": "#/components/schemas/Minutes"
+          },
+          "loggedMinutes": {
+            "$ref": "#/components/schemas/Minutes"
+          },
+          "dueAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UnixSeconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "Task tracking does not change contractual assignments, reservations, or payout amounts. Task IDs, reporter, and timestamps are provider-owned. Omitted dueAt and null both mean no due date.",
+        "examples": [
+          {
+            "title": "Implement first task",
+            "description": "Tracking only",
+            "taskType": "Task",
+            "priority": "Medium",
+            "status": "ToDo",
+            "assignees": [
+              "0x0202020202020202020202020202020202020202020202020202020202020202"
+            ],
+            "estimatedMinutes": 60,
+            "loggedMinutes": 0,
+            "dueAt": null
+          }
+        ]
+      },
+      "TaskProgressRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status",
+          "loggedMinutes"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "loggedMinutes": {
+            "$ref": "#/components/schemas/Minutes"
+          }
+        },
+        "description": "The only changes an assigned worker can make to task tracking."
+      },
+      "WorkerRating": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "worker",
+          "score"
+        ],
+        "properties": {
+          "worker": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "score": {
+            "$ref": "#/components/schemas/Score"
+          }
+        }
+      },
+      "RequestMilestoneCompletionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "workerRatings"
+        ],
+        "properties": {
+          "workerRatings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkerRating"
+            }
+          }
+        },
+        "description": "Exactly one rating for each contractually assigned worker, without duplicate worker accounts."
+      },
+      "TeamRating": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "score"
+            ],
+            "properties": {
+              "type": {
+                "const": "Client",
+                "type": "string"
+              },
+              "score": {
+                "$ref": "#/components/schemas/Score"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "DelegateToCoordinator",
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "description": "Client gives one team score, or delegates each worker rating to the coordinator without inventing a client vote.",
+        "examples": [
+          {
+            "type": "Client",
+            "score": 8
+          },
+          {
+            "type": "DelegateToCoordinator"
+          }
+        ]
+      },
+      "AcceptMilestoneCompletionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "coordinatorScore",
+          "teamRating"
+        ],
+        "properties": {
+          "coordinatorScore": {
+            "$ref": "#/components/schemas/Score"
+          },
+          "teamRating": {
+            "$ref": "#/components/schemas/TeamRating"
+          }
+        },
+        "description": "Client acceptance settles quoted payments and contributes mode-specific reputation once. Reputation weight is committed minutes, not money or edited logged minutes."
+      },
+      "Username": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 64,
+        "pattern": "^[A-Za-z0-9._-]+$",
+        "description": "ASCII username, normalized to lowercase by the adapter."
+      },
+      "Password": {
+        "type": "string",
+        "format": "password",
+        "writeOnly": true,
+        "minLength": 3,
+        "maxLength": 1024,
+        "description": "12 through 1024 UTF-8 bytes, not characters. JSON Schema length counts Unicode characters; the exact byte bound is enforced by the adapter. Never derives a wallet key."
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "password",
+          "displayName"
+        ],
+        "properties": {
+          "username": {
+            "$ref": "#/components/schemas/Username"
+          },
+          "password": {
+            "$ref": "#/components/schemas/Password"
+          },
+          "displayName": {
+            "type": "string",
+            "pattern": "\\S",
+            "description": "Must contain a non-whitespace character."
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "$ref": "#/components/schemas/Username"
+          },
+          "password": {
+            "$ref": "#/components/schemas/Password"
+          }
+        }
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "$ref": "#/components/schemas/Password"
+          },
+          "newPassword": {
+            "$ref": "#/components/schemas/Password"
+          }
+        },
+        "description": "Changes login credentials without changing the custodial account. Never export a private key."
+      },
+      "SessionView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "principalId",
+          "accountId",
+          "displayName",
+          "csrfToken",
+          "isAdmin"
+        ],
+        "properties": {
+          "principalId": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "accountId": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "csrfToken": {
+            "type": "string"
+          },
+          "isAdmin": {
+            "type": "boolean"
+          }
+        },
+        "description": "Cookie secret is never returned in JSON. Keep csrfToken private and send it as X-CSRF-Token on authenticated mutations.",
+        "examples": [
+          {
+            "principalId": "0x01010101010101010101010101010101",
+            "accountId": "0x0202020202020202020202020202020202020202020202020202020202020202",
+            "displayName": "Example user",
+            "csrfToken": "example-only-not-a-real-session-token",
+            "isAdmin": false
+          }
+        ]
+      },
+      "CatalogEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "fixed"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "name": {
+            "type": "string"
+          },
+          "fixed": {
+            "type": "boolean"
+          }
+        },
+        "description": "Role ID 1 (coordinator) is fixed and cannot be renamed or removed."
+      },
+      "CatalogView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "roles",
+          "skills",
+          "scorePolicy"
+        ],
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogEntry"
+            }
+          },
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CatalogEntry"
+            }
+          },
+          "scorePolicy": {
+            "$ref": "#/components/schemas/ScorePolicy"
+          }
+        }
+      },
+      "ReputationView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "weightedScoreSum",
+          "ratedMinutes"
+        ],
+        "properties": {
+          "weightedScoreSum": {
+            "type": "string",
+            "pattern": "^[0-9]+$",
+            "description": "Exact u128 accumulator, at most 340282366920938463463374607431768211455. Responses are canonical decimal; deserialization also accepts leading zeros."
+          },
+          "ratedMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 18446744073709551615,
+            "format": "uint64",
+            "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+          }
+        },
+        "description": "Mean score is weightedScoreSum / (100 * ratedMinutes). Unrated score is 5. Use exact rational comparison before display rounding."
+      },
+      "AssignmentView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requirementKey",
+          "worker"
+        ],
+        "properties": {
+          "requirementKey": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "worker": {
+            "$ref": "#/components/schemas/AccountId32"
+          }
+        }
+      },
+      "TaskView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskId",
+          "reporter",
+          "createdAt",
+          "updatedAt",
+          "task"
+        ],
+        "properties": {
+          "taskId": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "reporter": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "task": {
+            "$ref": "#/components/schemas/TaskDefinition"
+          }
+        }
+      },
+      "TaskStorageView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "taskStorageId",
+          "milestoneId",
+          "tasks"
+        ],
+        "properties": {
+          "taskStorageId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "milestoneId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskView"
+            }
+          }
+        }
+      },
+      "MilestoneView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "milestoneId",
+          "definition",
+          "status",
+          "assignments",
+          "workerRatings",
+          "taskStorage",
+          "frozen"
+        ],
+        "properties": {
+          "milestoneId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/MilestoneDefinition"
+          },
+          "status": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/MilestoneStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentView"
+            }
+          },
+          "workerRatings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkerRating"
+            }
+          },
+          "taskStorage": {
+            "$ref": "#/components/schemas/TaskStorageView"
+          },
+          "frozen": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ProposalView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "proposalId",
+          "revision",
+          "title",
+          "description",
+          "status",
+          "milestones",
+          "changeRequest"
+        ],
+        "properties": {
+          "proposalId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "revision": {
+            "$ref": "#/components/schemas/Revision"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProposalStatus"
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MilestoneView"
+            }
+          },
+          "changeRequest": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "PlanningView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "revision",
+          "status",
+          "quote",
+          "escrow",
+          "frozen"
+        ],
+        "properties": {
+          "revision": {
+            "$ref": "#/components/schemas/Revision"
+          },
+          "status": {
+            "$ref": "#/components/schemas/PlanningStatus"
+          },
+          "quote": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PlanningQuote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "escrow": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "frozen": {
+            "type": "boolean"
+          }
+        },
+        "description": "Planning delivery acceptance is distinct from execution approval and pays only the agreed planning fee."
+      },
+      "ProjectView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "client",
+          "coordinator",
+          "title",
+          "description",
+          "planning",
+          "proposals",
+          "executionEscrow",
+          "cancelled"
+        ],
+        "properties": {
+          "projectId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "client": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "coordinator": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "planning": {
+            "$ref": "#/components/schemas/PlanningView"
+          },
+          "proposals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProposalView"
+            }
+          },
+          "executionEscrow": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "cancelled": {
+            "type": "boolean"
+          }
+        },
+        "description": "Only visible to authorized project participants. Cancellation freezes unreleased escrow and does not reverse completed transfers.",
+        "examples": [
+          {
+            "projectId": "0x01010101010101010101010101010101",
+            "client": "0x0202020202020202020202020202020202020202020202020202020202020202",
+            "coordinator": "0x0303030303030303030303030303030303030303030303030303030303030303",
+            "title": "Example request",
+            "description": "A plan to review",
+            "planning": {
+              "revision": 2,
+              "status": "Delivered",
+              "quote": {
+                "fee": "250",
+                "minutes": 120,
+                "window": {
+                  "start": {
+                    "isoYear": 2026,
+                    "week": 40
+                  },
+                  "end": {
+                    "isoYear": 2026,
+                    "week": 40
+                  }
+                }
+              },
+              "escrow": "250",
+              "frozen": false
+            },
+            "proposals": [
+              {
+                "proposalId": "0x04040404040404040404040404040404",
+                "revision": 1,
+                "title": "Delivery plan",
+                "description": "One milestone",
+                "status": "PendingApproval",
+                "milestones": [
+                  {
+                    "milestoneId": "0x05050505050505050505050505050505",
+                    "definition": {
+                      "key": 1,
+                      "title": "First delivery",
+                      "window": {
+                        "start": {
+                          "isoYear": 2026,
+                          "week": 40
+                        },
+                        "end": {
+                          "isoYear": 2026,
+                          "week": 40
+                        }
+                      },
+                      "coordinatorFee": "100",
+                      "coordinatorMinutes": 60,
+                      "requirements": [
+                        {
+                          "key": 1,
+                          "roleId": 2,
+                          "skillIds": [
+                            1,
+                            2
+                          ],
+                          "minutes": 600,
+                          "budget": "1200"
+                        }
+                      ]
+                    },
+                    "status": null,
+                    "assignments": [],
+                    "workerRatings": [],
+                    "taskStorage": {
+                      "taskStorageId": "0x06060606060606060606060606060606",
+                      "milestoneId": "0x05050505050505050505050505050505",
+                      "tasks": []
+                    },
+                    "frozen": false
+                  }
+                ],
+                "changeRequest": null
+              }
+            ],
+            "executionEscrow": "0",
+            "cancelled": false
+          }
+        ]
+      },
+      "BalanceView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account",
+          "assetId",
+          "available"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "assetId": {
+            "type": "integer",
+            "const": 1
+          },
+          "available": {
+            "$ref": "#/components/schemas/Money"
+          }
+        },
+        "description": "Own available KVN asset 1 balance, excluding locked escrow."
+      },
+      "ExecutionOutcome": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Success"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "code"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "Failed"
+              },
+              "code": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "description": "Execution outcome is distinct from finality. Failed finalization is not business success."
+      },
+      "OperationReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "providerInstanceId",
+          "origin",
+          "nonce",
+          "outcome",
+          "createdEntityId",
+          "firstEventCursor",
+          "lastEventCursor",
+          "finalizedAt"
+        ],
+        "properties": {
+          "operationId": {
+            "$ref": "#/components/schemas/OperationId"
+          },
+          "providerInstanceId": {
+            "$ref": "#/components/schemas/ProviderInstanceId"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "nonce": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 18446744073709551615,
+            "format": "uint64",
+            "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+          },
+          "outcome": {
+            "$ref": "#/components/schemas/ExecutionOutcome"
+          },
+          "createdEntityId": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EntityId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "firstEventCursor": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615,
+                "format": "uint64",
+                "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lastEventCursor": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 18446744073709551615,
+                "format": "uint64",
+                "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finalizedAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          }
+        }
+      },
+      "OperationRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "status"
+        ],
+        "properties": {
+          "operationId": {
+            "$ref": "#/components/schemas/OperationId"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProviderOperationStatus"
+          }
+        },
+        "examples": [
+          {
+            "operationId": "0x01010101010101010101010101010101",
+            "status": "AwaitingSignature"
+          }
+        ]
+      },
+      "OperationView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operationId",
+          "status",
+          "receipt",
+          "errorCode"
+        ],
+        "properties": {
+          "operationId": {
+            "$ref": "#/components/schemas/OperationId"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ProviderOperationStatus"
+          },
+          "receipt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OperationReceipt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "errorCode": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "Poll independently of SSE. Domain failure codes appear here or in receipt.outcome, after the original HTTP 202. Only owner can read.",
+        "examples": [
+          {
+            "operationId": "0x01010101010101010101010101010101",
+            "status": "OutcomeUnknown",
+            "receipt": null,
+            "errorCode": null
+          },
+          {
+            "operationId": "0x01010101010101010101010101010101",
+            "status": "Finalized",
+            "receipt": {
+              "operationId": "0x01010101010101010101010101010101",
+              "providerInstanceId": "0x01010101010101010101010101010101",
+              "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+              "nonce": 0,
+              "outcome": {
+                "type": "Success"
+              },
+              "createdEntityId": "0x01010101010101010101010101010101",
+              "firstEventCursor": 1,
+              "lastEventCursor": 1,
+              "finalizedAt": 1788912000
+            },
+            "errorCode": null
+          }
+        ]
+      },
+      "ApiError": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "message"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "description": "Stable machine-readable error code and sanitized human message. Never includes passwords, tokens, seeds, or signing bytes."
+      },
+      "DomainEventKind": {
+        "type": "string",
+        "enum": [
+          "WorkerRegistered",
+          "WorkerUpdated",
+          "CalendarUpdated",
+          "CatalogUpdated",
+          "CoordinatorPromoted",
+          "ScorePolicyUpdated",
+          "AccountFunded",
+          "ProjectCreated",
+          "PlanningQuoted",
+          "PlanningAccepted",
+          "ProposalCreated",
+          "ProposalUpdated",
+          "ProposalDeleted",
+          "ProposalSubmitted",
+          "PlanningCompleted",
+          "ExecutionApproved",
+          "ProposalChangesRequested",
+          "ProjectCancelled",
+          "PlanningDisputed",
+          "MilestoneDisputed",
+          "TaskCreated",
+          "TaskUpdated",
+          "MilestoneCompletionRequested",
+          "MilestoneCompleted"
+        ]
+      },
+      "DomainEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerInstanceId",
+          "cursor",
+          "operationId",
+          "kind",
+          "projectId",
+          "entityId",
+          "recipients",
+          "occurredAt"
+        ],
+        "properties": {
+          "providerInstanceId": {
+            "$ref": "#/components/schemas/ProviderInstanceId"
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 18446744073709551615,
+            "format": "uint64",
+            "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+          },
+          "operationId": {
+            "$ref": "#/components/schemas/OperationId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DomainEventKind"
+          },
+          "projectId": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EntityId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entityId": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EntityId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountId32"
+            }
+          },
+          "occurredAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          }
+        },
+        "description": "Provider cursor is scoped to its instance and is not the browser notification cursor."
+      },
+      "NotificationView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "notificationId",
+          "event",
+          "readAt"
+        ],
+        "properties": {
+          "notificationId": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 18446744073709551615,
+            "format": "uint64",
+            "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+          },
+          "event": {
+            "$ref": "#/components/schemas/DomainEvent"
+          },
+          "readAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UnixSeconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "Session-owned notification. Only explicit read mutation sets readAt; fetching or SSE delivery does not.",
+        "examples": [
+          {
+            "notificationId": 1,
+            "event": {
+              "providerInstanceId": "0x01010101010101010101010101010101",
+              "cursor": 1,
+              "operationId": "0x01010101010101010101010101010101",
+              "kind": "ProjectCreated",
+              "projectId": "0x01010101010101010101010101010101",
+              "entityId": "0x01010101010101010101010101010101",
+              "recipients": [
+                "0x0202020202020202020202020202020202020202020202020202020202020202"
+              ],
+              "occurredAt": 1788912000
+            },
+            "readAt": null
+          }
+        ]
+      },
+      "NotificationsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "notifications",
+          "nextCursor"
+        ],
+        "properties": {
+          "notifications": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationView"
+            }
+          },
+          "nextCursor": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 18446744073709551615,
+            "format": "uint64",
+            "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
+          }
+        },
+        "description": "Up to 100 notifications for the session owner. nextCursor is an adapter notification cursor.",
+        "examples": [
+          {
+            "notifications": [
+              {
+                "notificationId": 1,
+                "event": {
+                  "providerInstanceId": "0x01010101010101010101010101010101",
+                  "cursor": 1,
+                  "operationId": "0x01010101010101010101010101010101",
+                  "kind": "ProjectCreated",
+                  "projectId": "0x01010101010101010101010101010101",
+                  "entityId": "0x01010101010101010101010101010101",
+                  "recipients": [
+                    "0x0202020202020202020202020202020202020202020202020202020202020202"
+                  ],
+                  "occurredAt": 1788912000
+                },
+                "readAt": null
+              }
+            ],
+            "nextCursor": 1
+          }
+        ]
+      },
+      "WeeklyCommitment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "week",
+          "minutes"
+        ],
+        "properties": {
+          "week": {
+            "$ref": "#/components/schemas/Week"
+          },
+          "minutes": {
+            "$ref": "#/components/schemas/Minutes"
+          }
+        },
+        "description": "Checked aggregate of committed minutes for a week, without project or milestone IDs."
+      },
+      "CalendarSummaryView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "calendarId",
+          "owner",
+          "definition",
+          "committedMinutes"
+        ],
+        "properties": {
+          "calendarId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/CalendarDefinition"
+          },
+          "committedMinutes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WeeklyCommitment"
+            }
+          }
+        },
+        "description": "At most one commitment total per week. Does not expose another project's reservation identifiers."
+      },
+      "WorkerSummaryView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account",
+          "displayName",
+          "qualifications",
+          "mode",
+          "coordinatorEligible",
+          "calendar",
+          "workerScore",
+          "coordinatorScore"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "qualifications": {
+            "$ref": "#/components/schemas/Qualifications"
+          },
+          "mode": {
+            "$ref": "#/components/schemas/WorkerMode"
+          },
+          "coordinatorEligible": {
+            "type": "boolean"
+          },
+          "calendar": {
+            "$ref": "#/components/schemas/CalendarSummaryView"
+          },
+          "workerScore": {
+            "$ref": "#/components/schemas/ReputationView"
+          },
+          "coordinatorScore": {
+            "$ref": "#/components/schemas/ReputationView"
+          }
+        },
+        "examples": [
+          {
+            "account": "0x0202020202020202020202020202020202020202020202020202020202020202",
+            "displayName": "Example worker",
+            "qualifications": {
+              "roleIds": [
+                2
+              ],
+              "skillIds": [
+                1,
+                2
+              ]
+            },
+            "mode": "Worker",
+            "coordinatorEligible": false,
+            "calendar": {
+              "calendarId": "0x01010101010101010101010101010101",
+              "owner": "0x0202020202020202020202020202020202020202020202020202020202020202",
+              "definition": {
+                "defaultWeeklyMinutes": 2400,
+                "overrides": []
+              },
+              "committedMinutes": [
+                {
+                  "week": {
+                    "isoYear": 2026,
+                    "week": 40
+                  },
+                  "minutes": 600
+                }
+              ]
+            },
+            "workerScore": {
+              "weightedScoreSum": "0",
+              "ratedMinutes": 0
+            },
+            "coordinatorScore": {
+              "weightedScoreSum": "0",
+              "ratedMinutes": 0
+            }
+          }
+        ]
+      }
+    }
+  },
+  "externalDocs": {
+    "description": "OpenAPI 3.1.1 specification used for this document.",
+    "url": "https://spec.openapis.org/oas/v3.1.1.html"
+  }
+}
+

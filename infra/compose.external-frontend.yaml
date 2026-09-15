@@ -1,0 +1,7 @@
+# Requires Compose >= 2.24.4 for !reset. Keep the service name/port stable.
+services:
+  frontend:
+    image: ${EXTERNAL_FRONTEND_IMAGE:?Set the independently built frontend image}
+    build: !reset null
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/]

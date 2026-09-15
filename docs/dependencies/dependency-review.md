@@ -1,5 +1,8 @@
 # Dependency Review: `<crate>`
 
+Reusable form for future reviews. Current evidence is in `poc-baseline.md` and
+`poc-audit-2026-09-10.md`; empty fields below are not an active task.
+
 Status: Proposed  
 Owner: ...  
 Date: ...

@@ -1,6 +1,9 @@
 # Rust Crate Catalog and Selection Policy
 
-Versions are intentionally not hardcoded in this reusable template. Query the registry and official documentation during project initialization, review the result, minimize features, and commit `Cargo.lock`.
+This retained template catalog lists candidates, not installed dependencies or
+project approval. Cargo.toml/Cargo.lock and [poc-baseline.md](poc-baseline.md) describe
+the current stack. PostgreSQL, RabbitMQ and GraphQL rows below are not current choices.
+Verify registry and primary documentation before adopting a new dependency.
 
 | Crate or tool | Default decision | Use | Important constraint |
 |---|---|---|---|

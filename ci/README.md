@@ -1,7 +1,15 @@
-# CI and Delivery Gates
+# Verification and delivery
 
-Pull requests normally run formatting, check, Clippy, Nextest, documentation tests, contract compatibility, migration checks, dependency policy, and container validation relevant to changed paths.
+This is a local POC. No remote pipeline execution or release is claimed.
 
-Nightly or scheduled jobs may run Miri subsets, Loom models, fuzzing, slow integration suites, and broader feature matrices.
+Run `bash scripts/verify.sh` for Cargo gates and the mock feature matrix,
+`python3 scripts/poc-e2e.py` after building for real-service E2E, and
+`python3 infra/verify.py` for Compose/Nginx checks. RTK is not required.
+The full gate script needs Nextest, cargo-deny, cargo-audit and the wasm32 target.
 
-Release jobs produce immutable artifacts, SBOM, scans, provenance, and signatures where supported. Deployment jobs promote the exact reviewed artifact through protected environments.
+Dependency policy currently fails under the checked-in configuration. See
+[dependency evidence](../docs/dependencies/poc-audit-2026-09-10.md).
+POC-07 and TASK-005 still require final independent evidence.
+
+Remote CI, signed release artifacts, image scans and production promotion require
+an approved setup. Template workflows do not establish production readiness.

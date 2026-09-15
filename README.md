@@ -1,10 +1,46 @@
-# Agentic Rust Production Template
+# Kunveno Rust POC
 
-A Cargo-first operating template for Rust projects built with coding agents.
+Local Rust implementation of Kunveno's marketplace: REST adapter, full custodial signing, transactional mock provider, and independent Leptos frontend. Mock funds, contracts and keys are disposable development data, never production assets.
 
-It keeps one engineering contract, one role system, and one skill library while supporting Codex, OpenCode, Claude Code, and Qwen Code through thin adapters.
+## Run locally
 
-The repository contains no active project `Cargo.toml`. Configure the product first, then let the workspace bootstrap create only the members the product needs.
+Use Rust 1.96.1. The [Compose guide](infra/README.md) creates private runtime secrets and starts the services behind Nginx at `http://localhost:8088`. RTK is used only by coding agents; users run ordinary Cargo, Python and Docker commands. No GitHub repository or production deployment is required.
+
+For a disposable end-to-end test without containers:
+
+```sh
+cargo build --workspace --all-features --locked
+python3 scripts/poc-e2e.py
+```
+
+The test starts real adapter, custody, and provider processes with fresh secrets. It exercises both mock storage backends, signed operations, planning fees, execution escrow, assignment, scores, a lost submission reply, and SSE replay. It stops its processes and removes its own temporary data afterward, without touching an existing deployment. It covers one milestone and one worker through settlement; it is not the legacy four-milestone, multi-worker scenario or a browser-driven full-stack test. See the [porting and test coverage review](docs/project/porting-coverage.md).
+
+## Applications and contracts
+
+| Project | Responsibility |
+|---|---|
+| `services/adapter-api` | Public REST, login, sessions, operation queue, notifications and SSE |
+| `services/wallet` | Encrypted custodial seeds and durable sr25519 signing jobs; no submission |
+| `services/mock-provider` | Authoritative business state, signed execution, calendars, escrow, scores, receipts and events |
+| `apps/leptos-web` | Independent browser application using the public REST API |
+| `crates/domain-primitives` | Validated IDs, integer quantities and week ranges |
+| `crates/generated-contracts` | Wire DTOs and immutable signable call construction |
+
+Contract instances are domain objects inside one atomic mock runtime, not one process per worker or proposal. SQLite is the default backend. Cargo features `storage-memory` and `storage-sqlite` may compile together; `MOCK_STORAGE` selects the backend. `mock-seed` initializes missing catalog entries and enables authenticated development funding.
+
+Both frontends consume `/api`, without GraphQL or Leptos server functions. Start with the [HTTP contract](crates/generated-contracts/API.md) and [OpenAPI document](contracts/openapi.json), also served at `/api/openapi.json`. The [deployment guide](infra/README.md#another-frontend) covers the team's separate frontend.
+
+Authenticate with the HttpOnly cookie and send `X-CSRF-Token` on authenticated mutations. Business mutations return `202 OperationRef`, not business success: poll the operation and inspect its receipt's execution outcome. Supply an `Idempotency-Key` for retry safety. SSE cursors do not mark notifications read. Custody and provider endpoints remain internal.
+
+## Verification
+
+```sh
+bash scripts/verify.sh
+python3 infra/verify.py
+python3 scripts/poc-e2e.py
+```
+
+These cover workspace gates, mock feature variants, WASM compilation, dependency policy, Nginx isolation and the real signed flow. Actual results and remaining work belong in [progress/handoffs](progress/handoffs/); listing commands is not a claim that every gate has passed.
 
 ## Core Layout
 
@@ -37,26 +73,9 @@ scripts/                  bootstrap, worktree, verification, adapter utilities
 - Verification evidence decides completion.
 - Documentation follows simplicity, brevity, clarity, and humanity.
 
-## First Use
+## Agent tooling
 
-```bash
-./scripts/setup-tool-links.sh
-python3 scripts/generate-agent-adapters.py
-./scripts/verify-template.sh
-./scripts/configure-project.sh
-./scripts/init-workspace.sh
-./scripts/install-dev-tools.sh
-```
-
-Initialize Git before creating task worktrees:
-
-```bash
-git init
-git add .
-git commit -m "chore: initialize agentic Rust project"
-```
-
-Give `prompts/00-adapt-template.md` to the planner. Review its proposal before project-specific governance changes.
+The workspace is already configured. Do not rerun template bootstrap scripts over the application. Shared engineering rules live in `AGENTS.md`; reusable skills live in `.agents/skills/`.
 
 Create the first specification:
 
@@ -84,15 +103,10 @@ Implementation starts only after the authorized owner changes the feature state 
 
 The snapshot is dated. Verify provider availability before treating any model ID as permanent. See `docs/agentic/model-provider-setup.md` for provider setup.
 
-## GitHub
+## Delivery
 
-```bash
-gh auth login
-./scripts/pin-github-actions.sh
-```
-
-Review generated workflow changes before committing them.
+Work remains local. Do not create remote repositories, issues, pull requests or releases without a separate request.
 
 ## Production Readiness
 
-This template provides production-oriented controls. A real application still needs verified domain requirements, a threat model, service objectives, data lifecycle rules, deployment ownership, backup restoration tests, and release evidence before it can be called production-ready.
+This is not production custody or a blockchain implementation. Real deployment still requires reviewed chain-specific payload validation, TLS/workload identity, managed key storage, recovery procedures and release approval. Replacing the mock requires a blockchain provider implementation, not merely relabeling its endpoint.

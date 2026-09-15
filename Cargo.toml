@@ -1,0 +1,65 @@
+[workspace]
+resolver = "3"
+members = [
+  "crates/domain-primitives",
+  "crates/generated-contracts",
+  "services/mock-provider",
+  "services/wallet",
+  "services/adapter-api",
+  "apps/leptos-web",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.96.1"
+license = "Apache-2.0"
+repository = "https://example.invalid/kunveno-local-only"
+
+[workspace.dependencies]
+domain-primitives = { version = "0.1.0", path = "crates/domain-primitives" }
+generated-contracts = { version = "0.1.0", path = "crates/generated-contracts" }
+axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "net", "sync", "time", "signal"] }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite-bundled"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+thiserror = "2.0.20"
+reqwest = { version = "0.13.4", default-features = false, features = ["json", "query"] }
+tower-http = { version = "0.6.11", default-features = false, features = ["cors", "trace", "limit"] }
+tokio-stream = { version = "0.1.18", features = ["sync", "time"] }
+uuid = { version = "1.24.1", default-features = false, features = ["std", "serde"] }
+getrandom = "0.4.3"
+rand = "0.10.2"
+subxt-signer = { version = "0.50.1", default-features = false, features = ["sr25519", "std"] }
+parity-scale-codec = { version = "3.7.5", features = ["derive"] }
+chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc", "zeroize"] }
+zeroize = { version = "1.9.0", features = ["derive"] }
+argon2 = { version = "0.5.3", default-features = false, features = ["std", "zeroize"] }
+sha2 = "0.10.9"
+chrono = { version = "0.4.45", default-features = false, features = ["std"] }
+leptos = { version = "0.8.19", default-features = false, features = ["csr"] }
+gloo-net = { version = "0.7.0", default-features = false, features = ["http", "json"] }
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unreachable_pub = "warn"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+unwrap_used = "deny"
+expect_used = "warn"
+panic = "warn"
+print_stdout = "warn"
+print_stderr = "warn"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
+
+[profile.dev.package."*"]
+opt-level = 1
