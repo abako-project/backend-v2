@@ -3,7 +3,7 @@
 ## 2026.09.15
 
 - Updated POC documentation, native deployment commands and legacy coverage accounting.
-- Removed RTK as a dependency of user-facing verification scripts.
+- Verification scripts use native Cargo, Python and Docker commands.
 - Kept independent verification and key-rotation scope explicitly open.
 
 ## 2026.09.14

@@ -22,14 +22,14 @@ Write scope: `services/mock-provider/**` and this handoff. Shared lockfile exclu
 All commands run in the task worktree:
 
 ```sh
-rtk proxy cargo fmt -p mock-provider -- --check
-rtk proxy cargo clippy -p mock-provider --all-targets --all-features --offline -- -D warnings
-rtk proxy cargo test -p mock-provider --all-features --offline
-rtk proxy cargo test -p mock-provider --no-default-features --features storage-memory,mock-seed --offline
-rtk proxy cargo test -p mock-provider --no-default-features --features storage-sqlite,mock-seed --offline
-rtk proxy cargo check -p mock-provider --no-default-features --features storage-memory --offline
-rtk proxy cargo check -p mock-provider --no-default-features --features storage-sqlite --offline
-rtk proxy git diff --check
+cargo fmt -p mock-provider -- --check
+cargo clippy -p mock-provider --all-targets --all-features --offline -- -D warnings
+cargo test -p mock-provider --all-features --offline
+cargo test -p mock-provider --no-default-features --features storage-memory,mock-seed --offline
+cargo test -p mock-provider --no-default-features --features storage-sqlite,mock-seed --offline
+cargo check -p mock-provider --no-default-features --features storage-memory --offline
+cargo check -p mock-provider --no-default-features --features storage-sqlite --offline
+git diff --check
 ```
 
 All returned zero. All-features: 4 unit and 12 integration tests passed; memory-only:

@@ -14,10 +14,10 @@ The static build uses `/config.js` and `window.KUNVENO_API_BASE` (default `/api`
 
 ## Verification observed 2026-09-10
 
-- `rtk proxy cargo fmt -p leptos-web -- --check`: passed.
-- `rtk proxy cargo test -p leptos-web --locked`: 3 tests passed (week/catalog validation, finality versus outcome, exact reputation display).
-- `rtk proxy cargo clippy -p leptos-web --target wasm32-unknown-unknown --locked -- -D warnings`: exit 0. Existing root clippy MSRV mismatch warning remains for the integrator's root configuration update.
-- From `apps/leptos-web`: `rtk proxy env -u NO_COLOR trunk build --release --locked`: passed, including WASM binding and static distribution.
-- `rtk proxy python3 apps/leptos-web/tests/browser_smoke.py`: passed with local-socket sandbox escalation. Real Chromium mounted the built WASM and verified login cookie, CSRF, typed worker payload, idempotency key, unknown outcome followed by successful polling, SSE duplicate/read behavior, and logout cleanup.
+- `cargo fmt -p leptos-web -- --check`: passed.
+- `cargo test -p leptos-web --locked`: 3 tests passed (week/catalog validation, finality versus outcome, exact reputation display).
+- `cargo clippy -p leptos-web --target wasm32-unknown-unknown --locked -- -D warnings`: exit 0. Existing root clippy MSRV mismatch warning remains for the integrator's root configuration update.
+- From `apps/leptos-web`: `env -u NO_COLOR trunk build --release --locked`: passed, including WASM binding and static distribution.
+- `python3 apps/leptos-web/tests/browser_smoke.py`: passed with local-socket sandbox escalation. Real Chromium mounted the built WASM and verified login cookie, CSRF, typed worker payload, idempotency key, unknown outcome followed by successful polling, SSE duplicate/read behavior, and logout cleanup.
 
 Browser smoke uses an explicit HTTP fixture, not actual custody/provider processes. Full-stack domain and proxy verification belong to integration. No production-readiness claim.

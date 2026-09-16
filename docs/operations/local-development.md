@@ -1,6 +1,6 @@
 # Local Development
 
-Use the [local deployment guide](../../infra/README.md) for the complete startup, generated-secret and independent-frontend instructions. Run its commands from the repository root. RTK is an optional agent tool, not a prerequisite for users or deployment.
+Use the [local deployment guide](../../infra/README.md) for the complete startup, generated-secret and independent-frontend instructions. Run its commands from the repository root.
 
 The stack contains Nginx, independent Leptos, adapter-api, wallet and mock-provider. The gateway listens on localhost:8088. Docker builds the images; native Rust commands use rust-toolchain.toml. PostgreSQL and RabbitMQ are not required.
 

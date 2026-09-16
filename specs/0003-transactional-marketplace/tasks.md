@@ -5,7 +5,7 @@ POC-07 independent verification remains open. The similarly named frontend-build
 handoff is not POC-07 completion. See `status.md` and
 `../../docs/project/porting-coverage.md` for the remaining coverage and parity gaps.
 
-Each writer uses its own local branch/worktree and preserves other writers' changes. Agent shell commands use RTK; human instructions and public scripts do not require it. The root integrator owns shared manifests, lockfile, requirements, and final integration. The six completed implementation worktrees have been removed.
+Each writer preserves other writers' changes. The root integrator owns shared manifests, lockfile, requirements, and final integration. The six completed implementation worktrees have been removed.
 
 | Task | Writer | Scope | Dependency |
 |---|---|---|---|

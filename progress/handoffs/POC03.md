@@ -23,9 +23,9 @@ Write scope: `services/wallet/**` and this handoff. The integrator owns the lock
 
 ## Verification (2026-09-10)
 
-All commands ran from this worktree with `rtk proxy`:
+All commands ran from the task worktree:
 
-| Command after `rtk proxy` | Observed result |
+| Command | Observed result |
 |---|---|
 | `cargo fmt -p wallet -- --check` | Pass |
 | `cargo check -p wallet --all-targets --all-features --offline --locked` | Pass |

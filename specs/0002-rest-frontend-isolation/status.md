@@ -29,7 +29,7 @@ were added. See `../../docs/dependencies/poc-audit-2026-09-10.md`.
 Related work: Custody is specified in SPEC-0001; the approved planning-price
 negotiation is specified in SPEC-0003. Neither approval implies production readiness.
 
-Human deployment and verification commands now use native tools without RTK.
+Human deployment and verification commands use native tools.
 The real-service E2E passed again for both backends on 2026-09-15; it remains a
 single-milestone API scenario, separate from the browser fixture smoke.
 The owner accepted maintenance-advisory deferral; applying that policy is pending.

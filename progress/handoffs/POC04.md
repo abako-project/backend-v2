@@ -10,8 +10,8 @@ private operation lookup, durable event ingestion, SSE replay, explicit read
 state, administrator operations, and public worker-calendar privacy filtering.
 Only the project client or assigned coordinator may cancel or open disputes.
 
-Checks: `rtk proxy cargo test -p adapter-api --offline` and
-`rtk proxy cargo clippy -p adapter-api --all-targets --offline -- -D warnings`.
+Checks: `cargo test -p adapter-api --offline` and
+`cargo clippy -p adapter-api --all-targets --offline -- -D warnings`.
 Focused checks cover HTTP authentication/CORS/CSRF/password changes, idempotency
 ownership, ordered leases and stale holders, lost submission replies, exhausted
 submission retries and provider resets, cancellation/dispute permissions,

@@ -20,5 +20,5 @@ Give each role the smallest useful tool set. Broad tool access increases ambigui
 - Prefer official primary documentation for version-sensitive technical decisions.
 - Record material external evidence in the specification, ADR, dependency review, or source notes.
 
-RTK is disabled until the user requests it again. Agents, human instructions and
-verification scripts use native commands. Sandbox prompts name the restricted resource.
+Agents, human instructions and verification scripts use native commands. Sandbox
+prompts name the restricted resource.

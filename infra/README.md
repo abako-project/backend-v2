@@ -4,7 +4,7 @@ This Compose stack implements REST-007/008 and ADR-0001. It is a local POC, not 
 
 ## Start
 
-Run from the workspace root on Linux with Docker Compose 2.24.4 or newer and a running Docker daemon accessible to your user. Host Rust 1.96.1 is used to generate development secrets. Container builds install their own toolchain and wasm-bindgen-cli 0.2.128. RTK is an agent tool and is not required to deploy or test this project.
+Run from the workspace root on Linux with Docker Compose 2.24.4 or newer and a running Docker daemon accessible to your user. Host Rust 1.96.1 is used to generate development secrets. Container builds install their own toolchain and wasm-bindgen-cli 0.2.128.
 
 ```sh
 export LOCAL_UID="$(id -u)"

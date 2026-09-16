@@ -41,12 +41,12 @@ NotificationView JSON. Last-Event-ID overrides after. Notification page size is
 
 ## Verification
 
-- `rtk proxy cargo test -p generated-contracts --locked`: 7 unit tests and 3 new
+- `cargo test -p generated-contracts --locked`: 7 unit tests and 3 new
   OpenAPI integration tests passed; doc tests passed (none defined).
-- `rtk proxy cargo clippy -p generated-contracts --all-targets --locked -- -D warnings`:
+- `cargo clippy -p generated-contracts --all-targets --locked -- -D warnings`:
   passed after correcting a documentation-markdown lint in the new test.
-- `rtk proxy cargo fmt -p generated-contracts -- --check`: passed.
-- `rtk proxy git diff --check`: passed before handoff.
+- `cargo fmt -p generated-contracts -- --check`: passed.
+- `git diff --check`: passed before handoff.
 - Node's native RegExp and BigInt checked the Money regex against zero, u64 bounds,
   malformed decimal forms, and 2,000 deterministic values up to 10^21: passed.
 

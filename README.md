@@ -4,7 +4,7 @@ Local Rust implementation of Kunveno's marketplace: REST adapter, full custodial
 
 ## Run locally
 
-Use Rust 1.96.1. The [Compose guide](infra/README.md) creates private runtime secrets and starts the services behind Nginx at `http://localhost:8088`. RTK is used only by coding agents; users run ordinary Cargo, Python and Docker commands. No GitHub repository or production deployment is required.
+Use Rust 1.96.1. The [Compose guide](infra/README.md) creates private runtime secrets and starts the services behind Nginx at `http://localhost:8088`. Users and agents run ordinary Cargo, Python and Docker commands. No production deployment exists.
 
 For a disposable end-to-end test without containers:
 
@@ -13,7 +13,7 @@ cargo build --workspace --all-features --locked
 python3 scripts/poc-e2e.py
 ```
 
-The test starts real adapter, custody, and provider processes with fresh secrets. It exercises both mock storage backends, signed operations, planning fees, execution escrow, assignment, scores, a lost submission reply, and SSE replay. It stops its processes and removes its own temporary data afterward, without touching an existing deployment. It covers one milestone and one worker through settlement; it is not the legacy four-milestone, multi-worker scenario or a browser-driven full-stack test. See the [porting and test coverage review](docs/project/porting-coverage.md).
+The test starts real adapter, custody, and provider processes with fresh secrets. It runs both mock storage backends and two isolated scenarios: the original security/SSE flow and four milestones with teams of 5/3/4/2 workers. It checks signed operations, planning fees, escrow, assignments, payouts and scores, then removes its temporary data. This is a backend E2E, not a browser-driven full-stack test. See the [porting and test coverage review](docs/project/porting-coverage.md).
 
 ## Applications and contracts
 
@@ -41,6 +41,19 @@ python3 scripts/poc-e2e.py
 ```
 
 These cover workspace gates, mock feature variants, WASM compilation, dependency policy, Nginx isolation and the real signed flow. Actual results and remaining work belong in [progress/handoffs](progress/handoffs/); listing commands is not a claim that every gate has passed.
+
+## Port status
+
+The transactional marketplace, custodial signing, mock storage backends, REST/SSE
+adapter and independent frontend are implemented. Each proposal milestone owns one
+task storage created with the draft; draft edits preserve that storage when the
+milestone key is preserved. The E2E covers four milestones with teams of 5/3/4/2.
+
+This is not complete legacy compatibility. Auxiliary Virto membership/governance,
+Bramp, rich profiles and several legacy wrapper APIs remain unimplemented or require
+a product decision. Dispute opening is only a reason plus frozen funds today; the
+formal dispute expediente described in `Disputas.md` is planned separately. See the
+[current port review](docs/project/porting-coverage.md).
 
 ## Core Layout
 
@@ -105,7 +118,8 @@ The snapshot is dated. Verify provider availability before treating any model ID
 
 ## Delivery
 
-Work remains local. Do not create remote repositories, issues, pull requests or releases without a separate request.
+`master` is published to the configured origin. Do not create issues, pull requests,
+releases or production deployments without a separate request.
 
 ## Production Readiness
 

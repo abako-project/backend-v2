@@ -6,8 +6,8 @@ Approved by the product owner on 2026-09-08: architecture review, REST/frontend 
 
 Last updated: 2026-09-15.
 
-Implementation: POC-00 through POC-06 are integrated at `3ab2b58` on
-`feat/rust-rest-poc`. All six temporary task worktrees were checked and removed
+Implementation: POC-00 through POC-06 are integrated into `master` at `ed6e4f8`.
+All six temporary task worktrees were checked and removed
 after confirming integration; none contains outstanding implementation work.
 
 Recorded verification: 46 workspace tests, memory-only and SQLite-only mock tests,
@@ -34,11 +34,16 @@ the approved POC scope; they are not unfinished implementation tasks for this sp
 
 Requirements remain APPROVED. Full verification and task closure remain open.
 
-Port review: the real-service E2E passed again on 2026-09-15 for SQLite and memory,
-but has one milestone/worker. Multi-team legacy coverage, detailed profiles, catalog
-associations, explicit project completion and sequential milestone activation are
-not equivalent in the Rust port. See `../../docs/project/porting-coverage.md`.
-These findings do not silently change approved requirements.
+Port review: the owner requested legacy-scale E2E coverage on 2026-09-15. The
+script now includes four milestones with teams of 5/3/4/2 in a separate scenario;
+the original security/SSE flow is retained. Detailed profiles, catalog associations,
+explicit project completion and sequential activation remain non-equivalent.
+See `../../docs/project/porting-coverage.md`. This test expansion does not change
+approved domain rules or close independent verification.
+
+Expanded E2E verified on 2026-09-15: both original and multi-team scenarios passed
+against both SQLite and memory after rebuilding current service binaries. Evidence:
+`../../progress/handoffs/E2E-legacy-scale.md`.
 
 The owner accepted deferring the two maintenance advisories for this POC. The
 checked-in dependency policy has not yet been changed or passed with that decision.

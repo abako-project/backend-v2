@@ -25,6 +25,5 @@ A pull request must identify the specification, requirements, scenarios, migrati
 
 ## Human commands and agent tools
 
-Users and agents run Cargo, Docker and Python directly. RTK is disabled until the
-user requests it again; it is not a build or deployment dependency. Sandbox prompts
-must identify the restricted resource (Docker, sockets, downloads or Git metadata).
+Users and agents run Cargo, Docker and Python directly. Sandbox prompts identify the
+restricted resource (Docker, sockets, downloads or Git metadata).

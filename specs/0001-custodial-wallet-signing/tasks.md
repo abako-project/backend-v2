@@ -4,7 +4,7 @@ Status update 2026-09-15: implementation commits are integrated into
 `feat/rust-rest-poc` and temporary implementation worktrees are removed. TASK-005
 remains open; see `status.md` for missing acceptance/security evidence and the
 rotation scope discrepancy. Paths below describe task ownership, not existing
-verification reports. Current human test commands do not require RTK.
+verification reports. Human test commands use native tools.
 
 ## Graph Rules
 

@@ -1,15 +1,14 @@
 # Porting and E2E coverage
 
-Reviewed 2026-09-15 against Rust implementation commit `3ab2b58` plus documentation
-and native-command corrections. This is a port of the approved marketplace redesign,
+Reviewed 2026-09-16 against Rust `master` plus the current working E2E changes and
+legacy `main` commit `3e2b929`. This is a port of the approved marketplace redesign,
 not a complete compatibility port of the legacy backend or all mock endpoints.
 
 ## Source baseline
 
-The original repository is `legacy backend repository` (main `45a4f79`
-at review). The owner selected its development worktree `legacy task-storage worktree`,
-branch `feat/68-provider-owned-proposals-task-storages`, commit `d408641`, for the port.
-The Rust repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
+Legacy `main` now includes `feat/68-provider-owned-proposals-task-storages` through
+merge commit `3e2b929`; the feature implementation is commit `d408641`. The Rust
+repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
 
 ## Functional comparison
 
@@ -28,6 +27,31 @@ The Rust repository remains separate. Legacy `/v1` clients need adaptation to `/
 | Storage | Mock memory/SQLite features, SQLite default, missing-only mock catalog seeding |
 | Auth/signing/events | Classic cookie login, real sr25519 custody signatures, durable operations, event ingestion and SSE |
 
+## Milestone task storage
+
+This area is implemented in the Rust provider and covered by the expanded E2E:
+
+- Creating a proposal atomically creates one task storage for every milestone.
+- The storage has its own generated ID and records its owning milestone ID. Provider
+  validation rejects duplicate IDs or a storage attached to the wrong milestone.
+- Updating a draft preserves the milestone, storage ID and tasks when its stable
+  milestone key remains. A new key creates a new milestone/storage; removing a key
+  removes that storage with the draft aggregate. Deleting the draft removes all its
+  storages in the same provider transaction.
+- Only the coordinator creates or fully edits tasks. Assigned workers may update
+  status and logged minutes. Clients are read-only. Cancelled projects reject writes.
+- Tracking assignees and logged time do not alter contractual assignments,
+  reservations, budgets or payouts. There is no task-delete command.
+- The four-milestone E2E proves four distinct storage IDs survive a draft edit and
+  execution approval, and that tasks do not leak between storages.
+
+One semantic difference remains undecided: legacy `main` requires at least one task
+in every milestone before proposal submission. SPEC-0003 does not require that, and
+the Rust provider currently permits an empty storage. Decide this explicitly before
+calling task-storage behavior fully equivalent. The legacy uses a separate in-memory
+storage map and header-based mock caller; Rust keeps the storage inside the signed,
+atomic project aggregate, which is an intentional architecture improvement.
+
 Not preserved or not equivalent:
 
 - Rich client/developer fields such as GitHub username, biography, background,
@@ -43,6 +67,8 @@ Not preserved or not equivalent:
   skills, mode, score and available capacity rather than preferring previous workers.
 - Virto WebAuthn, community membership/governance, Kreivo RPC and Bramp
   deposit/withdrawal compatibility mocks are not ported to the current API.
+  [SPEC-0004](../../specs/0004-virto-compatibility/plan.md) now inventories their
+  legacy operations and proposes implementation tasks. It is a draft, not delivery.
 - Generic standalone payment/refund/dispute-resolution endpoints are absent.
   Marketplace escrow is implemented; fund resolution is explicitly out of POC scope.
 
@@ -62,10 +88,15 @@ python3 scripts/poc-e2e.py
 The script defaults to both storage backends. Select one with `--storage sqlite` or
 `--storage memory`. It opens local ports, starts real wallet/provider/adapter binaries,
 generates disposable secrets and databases, and removes them after stopping its
-processes. It does not require Docker, RTK, a blockchain or real funds.
+  processes. It does not require Docker, a blockchain or real funds.
 
 Observed 2026-09-15: both `PASS sqlite` and `PASS memory`. The first sandboxed attempt
 could not create a socket; the unchanged test passed with local socket access.
+
+Expanded verification on the same date: `cargo build -p adapter-api -p wallet -p
+mock-provider --all-features --locked` and `python3 scripts/poc-e2e.py` passed.
+Both `exercise` and `exercise_multi_milestone` passed on SQLite and memory (four
+successful runs). See [the E2E handoff](../../progress/handoffs/E2E-legacy-scale.md).
 
 Covered flow: registration/login, catalog, worker registration, privileged coordinator
 promotion and funding, planning quote/acceptance/payment, proposal and task storage,
@@ -76,15 +107,20 @@ ingestion, SSE replay, explicit read state and logout.
 
 ## Coverage limits
 
-The Rust E2E uses one client, one coordinator, one worker, one outsider and one
-milestone with one requirement. It reaches settlement, but is not the full legacy
-scenario in `packages/adapter-api/test/projects-happy-path.e2e-spec.ts`.
+The Rust E2E retains the original one-client/coordinator/worker/outsider security
+scenario and adds a separately initialized scenario with 10 workers, 2 coordinators
+and 4 milestones with teams of 5/3/4/2 workers. Five workers have no available
+capacity. The test checks all required skills despite differing roles, individual
+task storages preserved through draft edits/approval, task progress, per-milestone payouts, exact replay, accumulated
+minute-weighted scores, delegated scoring and weekly commitments.
 
 The legacy scenario uses 10 workers, 2 coordinators and 4 milestones with 5/3/4/2
 workers, checking unavailable candidates, repeated assignment continuity, preserved
 storage identities during proposal edits, sequential activation and project completion.
-Rust provider tests add concurrent approvals/rollback, delegation, signature/replay,
-capacity and dispute checks, but do not supply an equivalent multi-team lifecycle.
+The expanded Rust test covers the multi-team lifecycle under the approved redesign,
+not legacy assignment-key continuity, sequential activation or explicit project
+completion. Rust provider tests separately add concurrent approvals/rollback,
+delegation, signature/replay, capacity and dispute checks.
 
 `apps/leptos-web/tests/browser_smoke.py` runs Chromium against an HTTP fixture using
 built static assets in `apps/leptos-web/dist`; it is separate from the real-service
@@ -109,7 +145,19 @@ python3 apps/leptos-web/tests/browser_smoke.py
 The browser smoke needs Chromium available as `chromium` or `chromium-browser`.
 These fixture assets are not required for the backend E2E or Compose deployment.
 
-Remaining test work: a multi-milestone/multi-worker scenario matching the approved
-semantics, complete diagnostic secret-marker checks, and independent POC-07/TASK-005
-acceptance/security reports. The key-rotation scope and dependency policy also remain
-open; this successful E2E does not close those gates.
+## Remaining work
+
+| Priority | Area | Status / next decision |
+|---|---|---|
+| P0 | Formal disputes | Current command only freezes a milestone and records one reason. No rejection history, immutable expediente, counterargument, communication channel or public view. A new plan is based on `Disputas.md` |
+| P0 | Verification closure | POC-07 and TASK-005 remain open; diagnostic secret-marker evidence, the key-rotation scope and dependency-policy gate still need closure |
+| P1 | Virto auxiliary compatibility | Membership/governance remark and Bramp are planned in SPEC-0004; permissions and settlement rules await approval |
+| P1 | Worker/client profiles | GitHub username, biography, background, proficiency, location and languages are absent |
+| P1 | Catalog relations | Skill-to-role associations and legacy free-text skill creation are absent |
+| P2 | Lifecycle parity choices | Sequential milestone activation, assignment-key continuity and explicit project completion need product decisions; current behavior follows SPEC-0003 |
+| P2 | Optional compatibility | Virto WebAuthn/password-derived login, generic Kreivo RPC, generic payments and old contract wrapper aliases need a named consumer before implementation |
+| P2 | Code structure | Large provider/adapter modules and remaining inline test modules need mechanical extraction without changing contracts |
+
+The standalone `services/calendar`, `services/task-storage`, `services/task` and
+similar directories are inactive scaffolds, not deployed microservices or workspace
+members. The approved runtime remains adapter, wallet and one atomic mock provider.

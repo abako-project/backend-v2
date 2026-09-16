@@ -331,7 +331,153 @@ def exercise(base, admin_password, proxy):
     client.request("GET", "/api/auth/session", expected=401)
 
 
-def run(storage, binaries):
+def exercise_multi_milestone(base, admin_password, _proxy):
+    """Legacy-sized teams, with the approved all-skills and weekly-capacity rules."""
+    admin = Client(base)
+    admin.authenticate("/api/auth/login", {"username": "admin", "password": admin_password})
+    people = []
+    password = secrets.token_urlsafe(24)
+    for index in range(13):  # Client, two coordinators, five available and five unavailable workers.
+        actor = Client(base, ORIGINS[index % 2])
+        actor.authenticate("/api/auth/register", {
+            "username": "teams" + secrets.token_hex(8), "password": password,
+            "displayName": f"Team participant {index}",
+        })
+        people.append(actor)
+    client = people[0]
+    coordinators, workers, unavailable = people[1:3], people[3:8], people[8:13]
+    for index, actor in enumerate(people[1:]):
+        # Every worker has the common skill, but only its own slot's second skill.
+        skills = list(range(1, 7)) if index < 2 else [1, 2 + (index - 2) % 5]
+        actor.command("POST", "/api/workers", {
+            "displayName": actor.session["displayName"],
+            "qualifications": {"roleIds": [3], "skillIds": skills},
+            "calendar": {"defaultWeeklyMinutes": 600 if index < 7 else 0, "overrides": []},
+        })
+    for actor in coordinators:
+        admin.command("POST", "/api/admin/coordinators", {"account": actor.session["accountId"]})
+        actor.command("PUT", "/api/workers/me/mode", {"mode": "Coordinator"})
+    admin.command("POST", "/api/admin/fund", {"account": client.session["accountId"], "amount": "20000"})
+    operation = client.command("POST", "/api/projects", {"title": "Four milestones", "description": "Teams 5/3/4/2"})
+    project_path = "/api/projects/" + operation["receipt"]["createdEntityId"]
+    project = client.request("GET", project_path)
+    coordinator = next(actor for actor in coordinators if actor.session["accountId"] == project["coordinator"])
+    teams = ((0, 1, 2, 3, 4), (0, 1, 2), (0, 1, 3, 4), (0, 2))
+    windows = []
+    for offset in range(4):
+        year, week_number, _ = (date.today() + timedelta(weeks=2 + offset)).isocalendar()
+        week = {"isoYear": year, "week": week_number}
+        windows.append({"start": week, "end": week})
+    coordinator.command("POST", project_path + "/planning/quote", {
+        "fee": "100", "minutes": 100, "window": windows[0],
+    })
+    project = client.request("GET", project_path)
+    client.command("POST", project_path + "/planning/accept", {"expectedRevision": project["planning"]["revision"]})
+    definition = {"title": "Multi-team implementation", "description": "Four independently tracked milestones", "milestones": []}
+    for index, team in enumerate(teams):
+        definition["milestones"].append({
+            "key": index + 1, "title": f"Milestone {index + 1}", "window": windows[index],
+            "coordinatorFee": "100", "coordinatorMinutes": 30 * (index + 1),
+            "requirements": [{"key": slot + 1, "roleId": 2, "skillIds": [1, slot + 2],
+                              "minutes": 60 * (index + 1), "budget": "900"} for slot in team],
+        })
+    coordinator.command("POST", project_path + "/proposals", definition)
+    project = client.request("GET", project_path)
+    proposal = project["proposals"][0]
+    proposal_path = project_path + "/proposals/" + proposal["proposalId"]
+    storages = [item["taskStorage"]["taskStorageId"] for item in proposal["milestones"]]
+    require(len(storages) == len(set(storages)) == 4, "milestones do not own four distinct task storages")
+    definition["description"] = "Updated draft retains its milestone storages"
+    coordinator.command("PUT", proposal_path, definition)
+    edited = client.request("GET", project_path)["proposals"][0]
+    require([item["taskStorage"]["taskStorageId"] for item in edited["milestones"]] == storages,
+            "draft editing replaced milestone storages")
+    for index, team in enumerate(teams):
+        for slot in team:
+            coordinator.command("POST", project_path + f"/task-storages/{storages[index]}/tasks", {
+                "title": f"Slot {slot + 1}", "description": "Contractual time is independent of logged time",
+                "taskType": "Task", "priority": "Medium", "status": "ToDo", "assignees": [],
+                "estimatedMinutes": 60 * (index + 1), "loggedMinutes": 0, "dueAt": None,
+            })
+    coordinator.command("POST", proposal_path + "/submit")
+    project = client.request("GET", project_path)
+    client.command("POST", project_path + "/planning/accept-delivery", {"expectedRevision": project["planning"]["revision"]})
+    project = client.request("GET", project_path)
+    client.command("POST", proposal_path + "/approve", {"expectedRevision": project["proposals"][0]["revision"]})
+    project = client.request("GET", project_path)
+    require(project["executionEscrow"] == "13000", "full four-milestone execution budget was not locked")
+    milestones = project["proposals"][0]["milestones"]
+    require([item["taskStorage"]["taskStorageId"] for item in milestones] == storages,
+            "approval replaced milestone storages")
+    require([len(item["assignments"]) for item in milestones] == [5, 3, 4, 2], "team sizes differ from 5/3/4/2")
+    expected_minutes = [0] * 5
+    expected_scores = [0] * 5
+    expected_balances = [0] * 5
+    escrow = 13000
+    for index, (milestone, team) in enumerate(zip(milestones, teams)):
+        expected = [{"requirementKey": slot + 1, "worker": workers[slot].session["accountId"]} for slot in team]
+        require(milestone["assignments"] == expected, "all-skills, mode, capacity or distinct-slot matching failed")
+        require(milestone["status"] == "InProgress", "approved milestone did not start execution")
+        tasks = milestone["taskStorage"]["tasks"]
+        require(len(tasks) == len(team), "tasks leaked between milestone storages")
+        for task, slot in zip(tasks, team):
+            path = project_path + f"/task-storages/{storages[index]}/tasks/{task['taskId']}"
+            definition = dict(task["task"])
+            definition["assignees"] = [workers[slot].session["accountId"]]
+            coordinator.command("PUT", path, definition)
+            workers[slot].command("PATCH", path + "/progress", {"status": "Done", "loggedMinutes": 999})
+        path = project_path + "/milestones/" + milestone["milestoneId"]
+        coordinator.command("POST", path + "/request-completion", {
+            "workerRatings": [{"worker": workers[slot].session["accountId"], "score": 8} for slot in team],
+        })
+        requested = client.request("GET", project_path)["proposals"][0]["milestones"][index]
+        require(requested["status"] == "CompletionRequested", "completion request was not recorded")
+        require(client.request("GET", project_path)["executionEscrow"] == str(escrow), "request prematurely paid escrow")
+        acceptance = {"coordinatorScore": 9, "teamRating": (
+            {"type": "DelegateToCoordinator"} if index == 3 else {"type": "Client", "score": 6})}
+        key = "0x" + secrets.token_hex(16)
+        first = client.command("POST", path + "/accept-completion", acceptance, key)
+        require(client.command("POST", path + "/accept-completion", acceptance, key) == first,
+                "multi-milestone acceptance replay changed receipt")
+        escrow -= 100 + 900 * len(team)
+        for slot in team:
+            minutes = 60 * (index + 1)
+            expected_minutes[slot] += minutes
+            expected_scores[slot] += minutes * (800 if index == 3 else 700)
+            expected_balances[slot] += 900
+        project = client.request("GET", project_path)
+        require(project["executionEscrow"] == str(escrow), "milestone settlement consumed the wrong escrow")
+        require([item["status"] for item in project["proposals"][0]["milestones"]]
+                == ["Completed"] * (index + 1) + ["InProgress"] * (3 - index), "settlement changed other milestone states")
+        balances = [int(actor.request("GET", "/api/balance")["available"]) for actor in people]
+        require(balances[0] == 6900 and sum(balances) + escrow == 20000, "multi-team token conservation failed")
+        require(balances[3:8] == expected_balances and balances[8:] == [0] * 5, "wrong workers received payments")
+        require(coordinator.request("GET", "/api/balance")["available"] == str(100 + 100 * (index + 1)),
+                "coordinator fee missing or duplicated")
+        directory = {entry["account"]: entry for entry in client.request("GET", "/api/workers")}
+        for slot, worker in enumerate(workers):
+            require(directory[worker.session["accountId"]]["workerScore"] == {
+                "weightedScoreSum": str(expected_scores[slot]), "ratedMinutes": expected_minutes[slot]},
+                "reputation did not accumulate committed minutes exactly once")
+        coordinator_minutes = sum(30 * (number + 1) for number in range(index + 1))
+        require(directory[coordinator.session["accountId"]]["coordinatorScore"] == {
+            "weightedScoreSum": str(900 * coordinator_minutes), "ratedMinutes": coordinator_minutes},
+            "coordinator reputation differs from accepted coordination minutes")
+    for slot, worker in enumerate(workers):
+        calendar = directory[worker.session["accountId"]]["calendar"]
+        expected = [{"week": windows[index]["start"], "minutes": 60 * (index + 1)}
+                    for index, team in enumerate(teams) if slot in team]
+        require(calendar["committedMinutes"] == expected, "weekly reservations differ from contractual team assignments")
+    for worker in unavailable:
+        require(directory[worker.session["accountId"]]["calendar"]["committedMinutes"] == [],
+                "unavailable worker was booked")
+    other_coordinator = next(actor for actor in coordinators if actor is not coordinator)
+    other = directory[other_coordinator.session["accountId"]]
+    require(other["calendar"]["committedMinutes"] == [] and other["coordinatorScore"] == {
+        "weightedScoreSum": "0", "ratedMinutes": 0}, "unselected coordinator acquired commitments or reputation")
+
+
+def run(storage, binaries, scenario=exercise):
     with ExitStack() as stack:
         directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="kunveno-e2e-")))
         secret_dir = directory / "secrets"
@@ -362,8 +508,8 @@ def run(storage, binaries):
             "BOOTSTRAP_ADMIN_PASSWORD_FILE": str(secret_dir / "bootstrap-admin-password"),
             "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),
         })
-        exercise(adapter.base, (secret_dir / "bootstrap-admin-password").read_text().strip(), proxy)
-        print(f"PASS {storage}: custody, REST, authorization, escrow, assignment, scores, lost reply, SSE")
+        scenario(adapter.base, (secret_dir / "bootstrap-admin-password").read_text().strip(), proxy)
+        print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle, escrow, assignment and scores")
 
 
 if __name__ == "__main__":
@@ -373,3 +519,4 @@ if __name__ == "__main__":
     arguments = parser.parse_args()
     for selected in (("sqlite", "memory") if arguments.storage == "both" else (arguments.storage,)):
         run(selected, arguments.binaries.resolve())
+        run(selected, arguments.binaries.resolve(), exercise_multi_milestone)

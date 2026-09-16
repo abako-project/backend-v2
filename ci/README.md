@@ -4,7 +4,7 @@ This is a local POC. No remote pipeline execution or release is claimed.
 
 Run `bash scripts/verify.sh` for Cargo gates and the mock feature matrix,
 `python3 scripts/poc-e2e.py` after building for real-service E2E, and
-`python3 infra/verify.py` for Compose/Nginx checks. RTK is not required.
+`python3 infra/verify.py` for Compose/Nginx checks.
 The full gate script needs Nextest, cargo-deny, cargo-audit and the wasm32 target.
 
 Dependency policy currently fails under the checked-in configuration. See
