@@ -71,7 +71,7 @@ agents/                   canonical agent roles and registry
 specs/                    approved behavior and Gherkin acceptance criteria
 docs/                     architecture, operations, security, research
 models/                   dated model profiles
-scripts/                  bootstrap, worktree, verification, adapter utilities
+scripts/                  worktree, verification, adapter utilities
 ```
 
 ## Principles
@@ -89,7 +89,7 @@ scripts/                  bootstrap, worktree, verification, adapter utilities
 
 ## Agent tooling
 
-The workspace is already configured. Do not rerun template bootstrap scripts over the application. Shared engineering rules live in `AGENTS.md`; reusable skills live in `.agents/skills/`.
+The workspace is already configured; no bootstrap step is required. Shared engineering rules live in `AGENTS.md`; reusable skills live in `.agents/skills/`.
 
 Create the first specification:
 

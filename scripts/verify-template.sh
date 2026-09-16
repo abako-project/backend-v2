@@ -11,7 +11,6 @@ required=(
   docs/agentic/writing-standard.md docs/agentic/portability.md docs/agentic/model-portability.md
   docs/agentic/model-provider-setup.md templates/qwen/model-providers.json.tmpl
   docs/dependencies/crate-catalog.md
-  scripts/configure-project.sh scripts/init-workspace.sh
   scripts/generate-agent-adapters.py scripts/setup-tool-links.sh scripts/configure-qwen-models.py
 )
 for path in "${required[@]}"; do

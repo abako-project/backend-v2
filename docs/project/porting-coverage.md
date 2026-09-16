@@ -166,6 +166,6 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 | P2 | Optional compatibility | Virto WebAuthn/password-derived login, generic Kreivo RPC, generic payments and old contract wrapper aliases need a named consumer before implementation |
 | Quality | Code structure | Provider domain and long mock integration scenarios were split; unit tests now live in `tests.rs`. The adapter and frontend were not split merely for line count; their flow and tests remain focused |
 
-The standalone `services/calendar`, `services/task-storage`, `services/task` and
-similar directories are inactive scaffolds, not deployed microservices or workspace
-members. The approved runtime remains adapter, wallet and one atomic mock provider.
+The unused service, worker and library scaffolds were removed. Calendar, tasks and
+task storage remain domain logic inside the atomic mock provider; SSE remains in the
+adapter. The approved backend runtime remains adapter, wallet and mock provider.

@@ -11,7 +11,7 @@ Cargo.toml contains six members:
 | services/adapter-api | Public REST/SSE, identity and delivery coordination |
 | apps/leptos-web | Independent browser frontend |
 
-Directories outside this member list are not evidence of deployed services. PostgreSQL/RabbitMQ service scaffolds are not part of the current POC topology.
+Only these six packages belong to the workspace. The unused service, worker and library scaffolds were removed; add a package only when an approved task needs it.
 
 Service implementations own their storage models. Shared contracts depend on domain primitives; the frontend consumes contracts without importing backend service code. Backend images build independently of browser tooling.
 
