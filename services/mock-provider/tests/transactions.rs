@@ -1,5 +1,4 @@
 //! The same contract suite exercises both storage implementations.
-#![allow(clippy::too_many_lines)]
 #![cfg(feature = "mock-seed")]
 
 use std::{
@@ -270,39 +269,75 @@ async fn lifecycle(provider: Provider) -> TestResult {
         approve(&provider, &client, id, proposal_id).await?.outcome,
         ExecutionOutcome::Success
     );
-    let view = project(&provider, id).await?;
+    let (milestone_id, storage_id) =
+        assert_assignment_and_calendar_guard(&provider, &worker, id).await?;
+    exercise_task_permissions(
+        &provider,
+        &coordinator,
+        &worker,
+        &client,
+        &intruder,
+        id,
+        storage_id,
+    )
+    .await?;
+    complete_milestone_and_assert_settlement(
+        &provider,
+        &coordinator,
+        &worker,
+        &client,
+        id,
+        milestone_id,
+    )
+    .await
+}
+
+async fn assert_assignment_and_calendar_guard(
+    provider: &Provider,
+    worker: &Keypair,
+    project_id: EntityId,
+) -> TestResult<(EntityId, EntityId)> {
+    let view = project(provider, project_id).await?;
     let milestone = &view.proposals[0].milestones[0];
-    assert_eq!(milestone.assignments[0].worker, account(&worker));
+    assert_eq!(milestone.assignments[0].worker, account(worker));
     let milestone_id = milestone.milestone_id;
     let storage_id = milestone.task_storage.task_storage_id;
     let reserved = provider.snapshot().await?.workers;
-    let failed = send(
-        &provider,
-        &worker,
-        ProviderCommand::SetCalendar(capacity(59)),
-    )
-    .await?;
+    let failed = send(provider, worker, ProviderCommand::SetCalendar(capacity(59))).await?;
     assert_eq!(
         failed.outcome,
         ExecutionOutcome::Failed("calendar_overcommitted".into())
     );
     assert_eq!(provider.snapshot().await?.workers, reserved);
+    Ok((milestone_id, storage_id))
+}
+
+async fn exercise_task_permissions(
+    provider: &Provider,
+    coordinator: &Keypair,
+    worker: &Keypair,
+    client: &Keypair,
+    intruder: &Keypair,
+    project_id: EntityId,
+    storage_id: EntityId,
+) -> TestResult {
+    let reserved = provider.snapshot().await?.workers;
     let task = TaskDefinition {
         title: "Build".into(),
         description: String::new(),
         task_type: TaskType::Feature,
         priority: TaskPriority::High,
         status: TaskStatus::ToDo,
-        assignees: vec![account(&worker)],
+        assignees: vec![account(worker)],
         estimated_minutes: Minutes::new(60),
         logged_minutes: Minutes::ZERO,
         due_at: None,
     };
     let client_task = send(
-        &provider,
-        &client,
+        provider,
+        client,
         ProviderCommand::CreateTask {
-            project_id: id,
+            project_id,
             task_storage_id: storage_id,
             task: task.clone(),
         },
@@ -313,26 +348,26 @@ async fn lifecycle(provider: Provider) -> TestResult {
         ExecutionOutcome::Failed("coordinator_required".into())
     );
     success(
-        &provider,
-        &coordinator,
+        provider,
+        coordinator,
         ProviderCommand::CreateTask {
-            project_id: id,
+            project_id,
             task_storage_id: storage_id,
             task: task.clone(),
         },
     )
     .await?;
-    let task_view = project(&provider, id).await?.proposals[0].milestones[0]
+    let task_view = project(provider, project_id).await?.proposals[0].milestones[0]
         .task_storage
         .tasks[0]
         .clone();
-    assert_eq!(task_view.reporter, account(&coordinator));
+    assert_eq!(task_view.reporter, account(coordinator));
     assert_eq!(task_view.created_at, NOW);
     success(
-        &provider,
-        &worker,
+        provider,
+        worker,
         ProviderCommand::UpdateTaskProgress {
-            project_id: id,
+            project_id,
             task_storage_id: storage_id,
             task_id: task_view.task_id,
             progress: TaskProgressRequest {
@@ -343,10 +378,10 @@ async fn lifecycle(provider: Provider) -> TestResult {
     )
     .await?;
     let unauthorized_edit = send(
-        &provider,
-        &worker,
+        provider,
+        worker,
         ProviderCommand::EditTask {
-            project_id: id,
+            project_id,
             task_storage_id: storage_id,
             task_id: task_view.task_id,
             task: task.clone(),
@@ -358,12 +393,12 @@ async fn lifecycle(provider: Provider) -> TestResult {
         ExecutionOutcome::Failed("coordinator_required".into())
     );
     let mut changed = task;
-    changed.assignees = vec![account(&intruder)];
+    changed.assignees = vec![account(intruder)];
     success(
-        &provider,
-        &coordinator,
+        provider,
+        coordinator,
         ProviderCommand::EditTask {
-            project_id: id,
+            project_id,
             task_storage_id: storage_id,
             task_id: task_view.task_id,
             task: changed,
@@ -371,95 +406,57 @@ async fn lifecycle(provider: Provider) -> TestResult {
     )
     .await?;
     assert_eq!(provider.snapshot().await?.workers, reserved);
+    Ok(())
+}
+
+async fn complete_milestone_and_assert_settlement(
+    provider: &Provider,
+    coordinator: &Keypair,
+    worker: &Keypair,
+    client: &Keypair,
+    project_id: EntityId,
+    milestone_id: EntityId,
+) -> TestResult {
     let requested = RequestMilestoneCompletionRequest {
         worker_ratings: vec![WorkerRating {
-            worker: account(&worker),
+            worker: account(worker),
             score: Score::new(9)?,
         }],
     };
     success(
-        &provider,
-        &coordinator,
+        provider,
+        coordinator,
         ProviderCommand::RequestMilestoneCompletion {
-            project_id: id,
+            project_id,
             milestone_id,
             request: requested,
         },
     )
     .await?;
     let command = ProviderCommand::AcceptMilestoneCompletion {
-        project_id: id,
+        project_id,
         milestone_id,
         request: AcceptMilestoneCompletionRequest {
             coordinator_score: Score::new(8)?,
             team_rating: TeamRating::Client(Score::new(7)?),
         },
     };
-    let signed = signed(&provider, &client, command.clone()).await?;
+    let signed = signed(provider, client, command.clone()).await?;
     let receipt = provider.execute(signed.clone(), NOW).await?;
     assert_eq!(receipt.outcome, ExecutionOutcome::Success);
     let snapshot = provider.snapshot().await?;
-    let worker_view = snapshot
-        .workers
-        .iter()
-        .find(|item| item.account == account(&worker))
-        .ok_or("missing worker")?;
+    assert_settlement_snapshot(&snapshot, coordinator, worker, client)?;
     assert_eq!(
-        worker_view.worker_score,
-        ReputationView {
-            weighted_score_sum: 48_000,
-            rated_minutes: 60
-        }
+        project(provider, project_id).await?.execution_escrow,
+        Money::ZERO
     );
-    assert_eq!(worker_view.calendar.reservations.len(), 1);
-    let coordinator_view = snapshot
-        .workers
-        .iter()
-        .find(|item| item.account == account(&coordinator))
-        .ok_or("missing coordinator")?;
-    assert_eq!(
-        coordinator_view.coordinator_score,
-        ReputationView {
-            weighted_score_sum: 8000,
-            rated_minutes: 10
-        }
-    );
-    assert_eq!(coordinator_view.worker_score.rated_minutes, 0);
-    assert_eq!(
-        snapshot
-            .balances
-            .iter()
-            .find(|balance| balance.account == account(&client))
-            .ok_or("client balance")?
-            .available,
-        Money::new(870)
-    );
-    assert_eq!(
-        snapshot
-            .balances
-            .iter()
-            .find(|balance| balance.account == account(&coordinator))
-            .ok_or("coordinator balance")?
-            .available,
-        Money::new(30)
-    );
-    assert_eq!(
-        snapshot
-            .balances
-            .iter()
-            .find(|balance| balance.account == account(&worker))
-            .ok_or("worker balance")?
-            .available,
-        Money::new(100)
-    );
-    assert_eq!(project(&provider, id).await?.execution_escrow, Money::ZERO);
     let replay = provider
         .execute(signed.clone(), UnixSeconds::new(NOW.get() + 1000))
         .await?;
     assert_eq!(receipt, replay);
     assert_eq!(snapshot, provider.snapshot().await?);
     assert_eq!(
-        send(&provider, &client, command).await?.outcome,
+        send(provider, client, command).await?.outcome,
         ExecutionOutcome::Failed("invalid_milestone_state".into())
     );
     assert_eq!(snapshot, provider.snapshot().await?);
@@ -473,6 +470,68 @@ async fn lifecycle(provider: Provider) -> TestResult {
             .ok_or("expected signature rejection")?
             .code(),
         "invalid_signature"
+    );
+    Ok(())
+}
+
+fn assert_settlement_snapshot(
+    snapshot: &ProviderSnapshot,
+    coordinator: &Keypair,
+    worker: &Keypair,
+    client: &Keypair,
+) -> TestResult {
+    let worker_view = snapshot
+        .workers
+        .iter()
+        .find(|item| item.account == account(worker))
+        .ok_or("missing worker")?;
+    assert_eq!(
+        worker_view.worker_score,
+        ReputationView {
+            weighted_score_sum: 48_000,
+            rated_minutes: 60
+        }
+    );
+    assert_eq!(worker_view.calendar.reservations.len(), 1);
+    let coordinator_view = snapshot
+        .workers
+        .iter()
+        .find(|item| item.account == account(coordinator))
+        .ok_or("missing coordinator")?;
+    assert_eq!(
+        coordinator_view.coordinator_score,
+        ReputationView {
+            weighted_score_sum: 8000,
+            rated_minutes: 10
+        }
+    );
+    assert_eq!(coordinator_view.worker_score.rated_minutes, 0);
+    assert_eq!(
+        snapshot
+            .balances
+            .iter()
+            .find(|balance| balance.account == account(client))
+            .ok_or("client balance")?
+            .available,
+        Money::new(870)
+    );
+    assert_eq!(
+        snapshot
+            .balances
+            .iter()
+            .find(|balance| balance.account == account(coordinator))
+            .ok_or("coordinator balance")?
+            .available,
+        Money::new(30)
+    );
+    assert_eq!(
+        snapshot
+            .balances
+            .iter()
+            .find(|balance| balance.account == account(worker))
+            .ok_or("worker balance")?
+            .available,
+        Money::new(100)
     );
     Ok(())
 }
@@ -577,9 +636,20 @@ async fn races_and_rollback(provider: Provider) -> TestResult {
 
 async fn security_and_revisions(provider: Provider) -> TestResult {
     let (root, coordinator, worker, client) = setup(&provider).await?;
+    assert_planning_revisions(&provider, &coordinator, &client).await?;
+    assert_coordinator_permissions(&provider, &root, &worker).await?;
+    assert_execution_revision(&provider, &coordinator, &client).await?;
+    assert_signed_call_integrity(&provider, &worker).await
+}
+
+async fn assert_planning_revisions(
+    provider: &Provider,
+    coordinator: &Keypair,
+    client: &Keypair,
+) -> TestResult {
     let quoted_id = success(
-        &provider,
-        &client,
+        provider,
+        client,
         ProviderCommand::CreateProject(CreateProjectRequest {
             title: "Reviewed quote".into(),
             description: String::new(),
@@ -590,8 +660,8 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
     .ok_or("project ID")?;
     for fee in [10, 20] {
         success(
-            &provider,
-            &coordinator,
+            provider,
+            coordinator,
             ProviderCommand::QuotePlanning {
                 project_id: quoted_id,
                 quote: PlanningQuote {
@@ -606,8 +676,8 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
     let before_quote = provider.snapshot().await?;
     assert_eq!(
         send(
-            &provider,
-            &client,
+            provider,
+            client,
             ProviderCommand::AcceptPlanningQuote {
                 project_id: quoted_id,
                 expected_revision: 1
@@ -619,17 +689,26 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
     );
     assert_eq!(provider.snapshot().await?, before_quote);
     success(
-        &provider,
-        &client,
+        provider,
+        client,
         ProviderCommand::AcceptPlanningQuote {
             project_id: quoted_id,
             expected_revision: 2,
         },
     )
     .await?;
+    assert_delivery_revision(provider, coordinator, client, quoted_id).await
+}
+
+async fn assert_delivery_revision(
+    provider: &Provider,
+    coordinator: &Keypair,
+    client: &Keypair,
+    quoted_id: EntityId,
+) -> TestResult {
     let quoted_proposal = success(
-        &provider,
-        &coordinator,
+        provider,
+        coordinator,
         ProviderCommand::CreateProposal {
             project_id: quoted_id,
             proposal: proposal()?,
@@ -639,18 +718,18 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
     .created_entity_id
     .ok_or("proposal ID")?;
     success(
-        &provider,
-        &coordinator,
+        provider,
+        coordinator,
         ProviderCommand::SubmitProposal {
             project_id: quoted_id,
             proposal_id: quoted_proposal,
         },
     )
     .await?;
-    let delivered_revision = project(&provider, quoted_id).await?.planning.revision;
+    let delivered_revision = project(provider, quoted_id).await?.planning.revision;
     success(
-        &provider,
-        &client,
+        provider,
+        client,
         ProviderCommand::RequestProposalChanges {
             project_id: quoted_id,
             proposal_id: quoted_proposal,
@@ -663,8 +742,8 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
     let before_delivery = provider.snapshot().await?;
     assert_eq!(
         send(
-            &provider,
-            &client,
+            provider,
+            client,
             ProviderCommand::AcceptPlanningDelivery {
                 project_id: quoted_id,
                 expected_revision: delivered_revision
@@ -675,11 +754,19 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
         ExecutionOutcome::Failed("revision_conflict".into())
     );
     assert_eq!(provider.snapshot().await?, before_delivery);
+    Ok(())
+}
+
+async fn assert_coordinator_permissions(
+    provider: &Provider,
+    root: &Keypair,
+    worker: &Keypair,
+) -> TestResult {
     let attempt = send(
-        &provider,
-        &worker,
+        provider,
+        worker,
         ProviderCommand::PromoteCoordinator(PromoteCoordinatorRequest {
-            account: account(&worker),
+            account: account(worker),
         }),
     )
     .await?;
@@ -689,8 +776,8 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
     );
     assert_eq!(
         send(
-            &provider,
-            &worker,
+            provider,
+            worker,
             ProviderCommand::SetWorkerMode(SetWorkerModeRequest {
                 mode: WorkerMode::Coordinator
             })
@@ -711,16 +798,24 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
         }),
     ] {
         assert_eq!(
-            send(&provider, &root, command).await?.outcome,
+            send(provider, root, command).await?.outcome,
             ExecutionOutcome::Failed("fixed_coordinator_role".into())
         );
     }
-    let (id, proposal_id) = delivered_plan(&provider, &coordinator, &client, proposal()?).await?;
+    Ok(())
+}
+
+async fn assert_execution_revision(
+    provider: &Provider,
+    coordinator: &Keypair,
+    client: &Keypair,
+) -> TestResult {
+    let (id, proposal_id) = delivered_plan(provider, coordinator, client, proposal()?).await?;
     let before = provider.snapshot().await?;
     assert_eq!(
         send(
-            &provider,
-            &client,
+            provider,
+            client,
             ProviderCommand::ApproveExecution {
                 project_id: id,
                 proposal_id,
@@ -732,8 +827,12 @@ async fn security_and_revisions(provider: Provider) -> TestResult {
         ExecutionOutcome::Failed("revision_conflict".into())
     );
     assert_eq!(before, provider.snapshot().await?);
+    Ok(())
+}
+
+async fn assert_signed_call_integrity(provider: &Provider, worker: &Keypair) -> TestResult {
     let command = ProviderCommand::SetCalendar(capacity(80));
-    let valid = signed(&provider, &worker, command.clone()).await?;
+    let valid = signed(provider, worker, command.clone()).await?;
     let mut invalid = valid.clone();
     invalid.call.provider_instance_id = ProviderInstanceId::from_bytes([99; 16]);
     invalid.signature =
@@ -875,147 +974,189 @@ async fn freezing_permissions(provider: Provider) -> TestResult {
         reason: "Needs agreed resolution".into(),
     };
     for actor in [&client, &coordinator] {
-        let planning_id = success(
+        assert_planning_dispute_freezes(&provider, &coordinator, &worker, &client, actor, &reason)
+            .await?;
+        assert_milestone_dispute_and_cancellation_freeze(
             &provider,
+            &coordinator,
+            &worker,
             &client,
-            ProviderCommand::CreateProject(CreateProjectRequest {
-                title: "Plan".into(),
-                description: String::new(),
-            }),
+            actor,
+            &reason,
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+async fn assert_planning_dispute_freezes(
+    provider: &Provider,
+    coordinator: &Keypair,
+    worker: &Keypair,
+    client: &Keypair,
+    actor: &Keypair,
+    reason: &ReasonRequest,
+) -> TestResult {
+    let planning_id = success(
+        provider,
+        client,
+        ProviderCommand::CreateProject(CreateProjectRequest {
+            title: "Plan".into(),
+            description: String::new(),
+        }),
+    )
+    .await?
+    .created_entity_id
+    .ok_or("project ID")?;
+    success(
+        provider,
+        coordinator,
+        ProviderCommand::QuotePlanning {
+            project_id: planning_id,
+            quote: PlanningQuote {
+                fee: Money::new(10),
+                minutes: Minutes::new(30),
+                window: window()?,
+            },
+        },
+    )
+    .await?;
+    success(
+        provider,
+        client,
+        ProviderCommand::AcceptPlanningQuote {
+            project_id: planning_id,
+            expected_revision: 1,
+        },
+    )
+    .await?;
+    let before = provider.snapshot().await?;
+    let dispute = ProviderCommand::DisputePlanning {
+        project_id: planning_id,
+        request: reason.clone(),
+    };
+    assert_eq!(
+        send(provider, worker, dispute.clone()).await?.outcome,
+        ExecutionOutcome::Failed("project_party_required".into())
+    );
+    assert_eq!(provider.snapshot().await?, before);
+    success(provider, actor, dispute).await?;
+    let view = project(provider, planning_id).await?;
+    assert_eq!(view.planning.status, PlanningStatus::Disputed);
+    assert_eq!(view.planning.escrow, Money::new(10));
+    assert!(view.planning.frozen);
+    assert_eq!(provider.snapshot().await?.balances, before.balances);
+    assert_eq!(provider.snapshot().await?.workers, before.workers);
+    assert_eq!(
+        send(
+            provider,
+            client,
+            ProviderCommand::AcceptPlanningDelivery {
+                project_id: planning_id,
+                expected_revision: view.planning.revision
+            }
         )
         .await?
-        .created_entity_id
-        .ok_or("project ID")?;
-        success(
-            &provider,
-            &coordinator,
-            ProviderCommand::QuotePlanning {
-                project_id: planning_id,
-                quote: PlanningQuote {
-                    fee: Money::new(10),
-                    minutes: Minutes::new(30),
-                    window: window()?,
-                },
-            },
-        )
-        .await?;
-        success(
-            &provider,
-            &client,
-            ProviderCommand::AcceptPlanningQuote {
-                project_id: planning_id,
-                expected_revision: 1,
-            },
-        )
-        .await?;
-        let before = provider.snapshot().await?;
-        let dispute = ProviderCommand::DisputePlanning {
-            project_id: planning_id,
-            request: reason.clone(),
-        };
-        assert_eq!(
-            send(&provider, &worker, dispute.clone()).await?.outcome,
-            ExecutionOutcome::Failed("project_party_required".into())
-        );
-        assert_eq!(provider.snapshot().await?, before);
-        success(&provider, actor, dispute).await?;
-        let view = project(&provider, planning_id).await?;
-        assert_eq!(view.planning.status, PlanningStatus::Disputed);
-        assert_eq!(view.planning.escrow, Money::new(10));
-        assert!(view.planning.frozen);
-        assert_eq!(provider.snapshot().await?.balances, before.balances);
-        assert_eq!(provider.snapshot().await?.workers, before.workers);
-        assert_eq!(
-            send(
-                &provider,
-                &client,
-                ProviderCommand::AcceptPlanningDelivery {
-                    project_id: planning_id,
-                    expected_revision: view.planning.revision
-                }
-            )
+        .outcome,
+        ExecutionOutcome::Failed("invalid_planning_state".into())
+    );
+    Ok(())
+}
+
+async fn assert_milestone_dispute_and_cancellation_freeze(
+    provider: &Provider,
+    coordinator: &Keypair,
+    worker: &Keypair,
+    client: &Keypair,
+    actor: &Keypair,
+    reason: &ReasonRequest,
+) -> TestResult {
+    let (project_id, proposal_id) =
+        delivered_plan(provider, coordinator, client, proposal()?).await?;
+    assert_eq!(
+        approve(provider, client, project_id, proposal_id)
             .await?
             .outcome,
-            ExecutionOutcome::Failed("invalid_planning_state".into())
-        );
-
-        let (project_id, proposal_id) =
-            delivered_plan(&provider, &coordinator, &client, proposal()?).await?;
-        assert_eq!(
-            approve(&provider, &client, project_id, proposal_id)
-                .await?
-                .outcome,
-            ExecutionOutcome::Success
-        );
-        let milestone_id =
-            project(&provider, project_id).await?.proposals[0].milestones[0].milestone_id;
-        success(
-            &provider,
-            &coordinator,
-            ProviderCommand::RequestMilestoneCompletion {
-                project_id,
-                milestone_id,
-                request: RequestMilestoneCompletionRequest {
-                    worker_ratings: vec![WorkerRating {
-                        worker: account(&worker),
-                        score: Score::new(8)?,
-                    }],
-                },
-            },
-        )
-        .await?;
-        let before = provider.snapshot().await?;
-        let dispute = ProviderCommand::DisputeMilestone {
+        ExecutionOutcome::Success
+    );
+    let milestone_id = project(provider, project_id).await?.proposals[0].milestones[0].milestone_id;
+    success(
+        provider,
+        coordinator,
+        ProviderCommand::RequestMilestoneCompletion {
             project_id,
             milestone_id,
-            request: reason.clone(),
-        };
-        assert_eq!(
-            send(&provider, &worker, dispute.clone()).await?.outcome,
-            ExecutionOutcome::Failed("project_party_required".into())
-        );
-        assert_eq!(provider.snapshot().await?, before);
-        success(&provider, actor, dispute).await?;
-        let view = project(&provider, project_id).await?;
-        assert!(view.proposals[0].milestones[0].frozen);
-        assert_eq!(
-            view.proposals[0].milestones[0].status,
-            Some(MilestoneStatus::Disputed)
-        );
-        assert_eq!(view.execution_escrow, Money::new(120));
-        assert_eq!(
-            send(
-                &provider,
-                &client,
-                ProviderCommand::AcceptMilestoneCompletion {
-                    project_id,
-                    milestone_id,
-                    request: AcceptMilestoneCompletionRequest {
-                        coordinator_score: Score::new(7)?,
-                        team_rating: TeamRating::DelegateToCoordinator
-                    }
+            request: RequestMilestoneCompletionRequest {
+                worker_ratings: vec![WorkerRating {
+                    worker: account(worker),
+                    score: Score::new(8)?,
+                }],
+            },
+        },
+    )
+    .await?;
+    let before = provider.snapshot().await?;
+    let dispute = ProviderCommand::DisputeMilestone {
+        project_id,
+        milestone_id,
+        request: reason.clone(),
+    };
+    assert_eq!(
+        send(provider, worker, dispute.clone()).await?.outcome,
+        ExecutionOutcome::Failed("project_party_required".into())
+    );
+    assert_eq!(provider.snapshot().await?, before);
+    success(provider, actor, dispute).await?;
+    let view = project(provider, project_id).await?;
+    assert!(view.proposals[0].milestones[0].frozen);
+    assert_eq!(
+        view.proposals[0].milestones[0].status,
+        Some(MilestoneStatus::Disputed)
+    );
+    assert_eq!(view.execution_escrow, Money::new(120));
+    assert_eq!(
+        send(
+            provider,
+            client,
+            ProviderCommand::AcceptMilestoneCompletion {
+                project_id,
+                milestone_id,
+                request: AcceptMilestoneCompletionRequest {
+                    coordinator_score: Score::new(7)?,
+                    team_rating: TeamRating::DelegateToCoordinator
                 }
-            )
-            .await?
-            .outcome,
-            ExecutionOutcome::Failed("invalid_milestone_state".into())
-        );
-        let cancel = ProviderCommand::CancelProject {
-            project_id,
-            request: reason.clone(),
-        };
-        assert_eq!(
-            send(&provider, &worker, cancel.clone()).await?.outcome,
-            ExecutionOutcome::Failed("project_party_required".into())
-        );
-        success(&provider, actor, cancel).await?;
-        let cancelled = project(&provider, project_id).await?;
-        assert!(cancelled.cancelled);
-        assert_eq!(cancelled.execution_escrow, Money::new(120));
-        assert_eq!(cancelled.proposals[0].status, ProposalStatus::Cancelled);
-        assert_eq!(provider.snapshot().await?.balances, before.balances);
-        assert_eq!(provider.snapshot().await?.workers, before.workers);
-    }
+            }
+        )
+        .await?
+        .outcome,
+        ExecutionOutcome::Failed("invalid_milestone_state".into())
+    );
+    assert_cancellation_freezes(provider, worker, actor, project_id, reason, &before).await
+}
+
+async fn assert_cancellation_freezes(
+    provider: &Provider,
+    worker: &Keypair,
+    actor: &Keypair,
+    project_id: EntityId,
+    reason: &ReasonRequest,
+    before: &ProviderSnapshot,
+) -> TestResult {
+    let cancel = ProviderCommand::CancelProject {
+        project_id,
+        request: reason.clone(),
+    };
+    assert_eq!(
+        send(provider, worker, cancel.clone()).await?.outcome,
+        ExecutionOutcome::Failed("project_party_required".into())
+    );
+    success(provider, actor, cancel).await?;
+    let cancelled = project(provider, project_id).await?;
+    assert!(cancelled.cancelled);
+    assert_eq!(cancelled.execution_escrow, Money::new(120));
+    assert_eq!(cancelled.proposals[0].status, ProposalStatus::Cancelled);
+    assert_eq!(provider.snapshot().await?.balances, before.balances);
+    assert_eq!(provider.snapshot().await?.workers, before.workers);
     Ok(())
 }
 
@@ -1115,29 +1256,7 @@ async fn signed_http_auth_receipts_and_event_replay() -> TestResult {
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(5))
         .build()?;
-    assert_eq!(
-        client.get(format!("{base}/health")).send().await?.status(),
-        reqwest::StatusCode::OK
-    );
-    assert_eq!(
-        client
-            .get(format!("{base}/internal/snapshot"))
-            .send()
-            .await?
-            .status(),
-        reqwest::StatusCode::UNAUTHORIZED
-    );
-    let response = client
-        .post(format!("{base}/internal/contracts/call"))
-        .bearer_auth(token)
-        .json(&serde_json::json!({"unknown": "field"}))
-        .send()
-        .await?;
-    assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
-    assert_eq!(
-        response.json::<ApiError>().await?.code,
-        "invalid_contract_json"
-    );
+    assert_http_boundaries(&client, &base, token).await?;
     let mut call = signed(
         &provider,
         &root,
@@ -1162,6 +1281,46 @@ async fn signed_http_auth_receipts_and_event_replay() -> TestResult {
         .await?;
     assert_eq!(response.status(), reqwest::StatusCode::OK);
     drop(response);
+    assert_http_receipt_and_events(&client, &provider, &base, token, &call).await?;
+    server.abort();
+    assert!(server.await.is_err_and(|error| error.is_cancelled()));
+    Ok(())
+}
+
+async fn assert_http_boundaries(client: &reqwest::Client, base: &str, token: &str) -> TestResult {
+    assert_eq!(
+        client.get(format!("{base}/health")).send().await?.status(),
+        reqwest::StatusCode::OK
+    );
+    assert_eq!(
+        client
+            .get(format!("{base}/internal/snapshot"))
+            .send()
+            .await?
+            .status(),
+        reqwest::StatusCode::UNAUTHORIZED
+    );
+    let response = client
+        .post(format!("{base}/internal/contracts/call"))
+        .bearer_auth(token)
+        .json(&serde_json::json!({"unknown": "field"}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), reqwest::StatusCode::BAD_REQUEST);
+    assert_eq!(
+        response.json::<ApiError>().await?.code,
+        "invalid_contract_json"
+    );
+    Ok(())
+}
+
+async fn assert_http_receipt_and_events(
+    client: &reqwest::Client,
+    provider: &Provider,
+    base: &str,
+    token: &str,
+    call: &SignedContractCallV1,
+) -> TestResult {
     let receipt = client
         .get(format!(
             "{base}/internal/receipts/{}",
@@ -1208,7 +1367,5 @@ async fn signed_http_auth_receipts_and_event_replay() -> TestResult {
             .events
             .is_empty()
     );
-    server.abort();
-    assert!(server.await.is_err_and(|error| error.is_cancelled()));
     Ok(())
 }
