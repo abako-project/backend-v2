@@ -52,8 +52,9 @@ milestone key is preserved. The E2E covers four milestones with teams of 5/3/4/2
 This is not complete legacy compatibility. Auxiliary Virto membership/governance,
 Bramp, rich profiles and several legacy wrapper APIs remain unimplemented or require
 a product decision. Dispute opening is only a reason plus frozen funds today; the
-formal dispute expediente described in `Disputas.md` is planned separately. See the
-[current port review](docs/project/porting-coverage.md).
+formal dispute expediente described in `Disputas.md` has a draft
+[implementation plan](specs/0005-dispute-opening/tasks.md), not an approved or
+implemented feature. See the [current port review](docs/project/porting-coverage.md).
 
 ## Core Layout
 

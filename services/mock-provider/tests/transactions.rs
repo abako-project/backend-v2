@@ -1287,6 +1287,7 @@ async fn signed_http_auth_receipts_and_event_replay() -> TestResult {
     Ok(())
 }
 
+#[cfg(feature = "storage-sqlite")]
 async fn assert_http_boundaries(client: &reqwest::Client, base: &str, token: &str) -> TestResult {
     assert_eq!(
         client.get(format!("{base}/health")).send().await?.status(),
@@ -1314,6 +1315,7 @@ async fn assert_http_boundaries(client: &reqwest::Client, base: &str, token: &st
     Ok(())
 }
 
+#[cfg(feature = "storage-sqlite")]
 async fn assert_http_receipt_and_events(
     client: &reqwest::Client,
     provider: &Provider,

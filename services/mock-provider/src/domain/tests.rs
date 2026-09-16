@@ -1,12 +1,16 @@
 use std::cmp::Ordering;
 
+#[cfg(feature = "storage-sqlite")]
+use generated_contracts::Money;
 use generated_contracts::{
-    AccountId32, CalendarDefinition, Minutes, Money, ProviderCommand, Qualifications,
+    AccountId32, CalendarDefinition, Minutes, ProviderCommand, Qualifications,
     RegisterWorkerRequest, ReputationView, UnixSeconds, WorkerMode,
 };
 
 use super::{State, add_rating, compare_scores, empty_score};
-use crate::{Error, Result};
+#[cfg(feature = "storage-sqlite")]
+use crate::Error;
+use crate::Result;
 
 #[test]
 fn exact_scores_do_not_round_or_overflow() -> Result<()> {

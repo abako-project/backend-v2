@@ -1,7 +1,7 @@
 # Porting and E2E coverage
 
-Reviewed 2026-09-16 against Rust `master` plus the current working E2E changes and
-legacy `main` commit `3e2b929`. This is a port of the approved marketplace redesign,
+Reviewed 2026-09-16 against Rust `master` and legacy `main` commit `3e2b929`.
+This is a port of the approved marketplace redesign,
 not a complete compatibility port of the legacy backend or all mock endpoints.
 
 ## Source baseline
@@ -98,6 +98,14 @@ mock-provider --all-features --locked` and `python3 scripts/poc-e2e.py` passed.
 Both `exercise` and `exercise_multi_milestone` passed on SQLite and memory (four
 successful runs). See [the E2E handoff](../../progress/handoffs/E2E-legacy-scale.md).
 
+Reverified on 2026-09-16 after the test-layout and mock-provider refactors:
+46/46 workspace tests passed, both isolated mock feature matrices passed, and
+the real-service E2E again reported all four SQLite/memory scenario passes.
+Workspace format, check, Clippy, doc tests, build and WASM check passed. The
+dependency-policy gate still fails for the previously documented CC0/Boost
+allowlist and two Leptos maintenance advisories; `cargo audit` exits 0 with
+those two maintenance warnings. See the [current review handoff](../../progress/handoffs/PORT-REVIEW-2026-09-16.md).
+
 Covered flow: registration/login, catalog, worker registration, privileged coordinator
 promotion and funding, planning quote/acceptance/payment, proposal and task storage,
 execution approval and reservations, task progress, milestone completion, exact
@@ -149,14 +157,14 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 
 | Priority | Area | Status / next decision |
 |---|---|---|
-| P0 | Formal disputes | Current command only freezes a milestone and records one reason. No rejection history, immutable expediente, counterargument, communication channel or public view. A new plan is based on `Disputas.md` |
+| P0 | Formal disputes | Current command only freezes a milestone and records one reason. No rejection history, immutable expediente, counterargument, communication channel or public view. [SPEC-0005](../../specs/0005-dispute-opening/status.md) is a draft implementation plan based on `Disputas.md`; product decisions remain |
 | P0 | Verification closure | POC-07 and TASK-005 remain open; diagnostic secret-marker evidence, the key-rotation scope and dependency-policy gate still need closure |
 | P1 | Virto auxiliary compatibility | Membership/governance remark and Bramp are planned in SPEC-0004; permissions and settlement rules await approval |
 | P1 | Worker/client profiles | GitHub username, biography, background, proficiency, location and languages are absent |
 | P1 | Catalog relations | Skill-to-role associations and legacy free-text skill creation are absent |
 | P2 | Lifecycle parity choices | Sequential milestone activation, assignment-key continuity and explicit project completion need product decisions; current behavior follows SPEC-0003 |
 | P2 | Optional compatibility | Virto WebAuthn/password-derived login, generic Kreivo RPC, generic payments and old contract wrapper aliases need a named consumer before implementation |
-| P2 | Code structure | Large provider/adapter modules and remaining inline test modules need mechanical extraction without changing contracts |
+| Quality | Code structure | Provider domain and long mock integration scenarios were split; unit tests now live in `tests.rs`. The adapter and frontend were not split merely for line count; their flow and tests remain focused |
 
 The standalone `services/calendar`, `services/task-storage`, `services/task` and
 similar directories are inactive scaffolds, not deployed microservices or workspace
