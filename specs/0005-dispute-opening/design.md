@@ -1,143 +1,108 @@
-# Technical design: dispute opening
+# Dispute opening: technical design
 
-Status: DRAFT
+Status: REVIEW REQUIRED — 2026-09-22
 
-## Current baseline
+## Reuse the existing flow
 
-The current signed `DisputeMilestone` command accepts either `InProgress` or
-`CompletionRequested`, changes the milestone to `Disputed`, sets `frozen`, stores
-one private `RecordedReason` and emits `MilestoneDisputed`. It has no rejection
-precondition. `RecordedReason` is serialized in provider state but omitted from
-the provider snapshot and all public queries.
+adapter http::command -> operations::enqueue/authorize -> custody signing job
+-> provider HTTP call -> Provider::execute -> State::execute -> project dispatch.
 
-There is no reject-completion command, dispute aggregate, dispute ID, evidence
-snapshot, argument append, communication channel or public dispute view. The
-adapter route only submits the existing command. Provider events notify project
-participants, but an event contains no case record or argument.
+Provider commits domain state, receipt and event atomically. Its ordered stream
+feeds adapter notifications/SSE. Keep existing retry and replay semantics.
 
-## Decision summary
+State::apply_project_command is the central project guard: add the active-dispute
+check there so all project commands are covered. Response uses an explicit
+dispute operation and party check; no broad bypass of the freeze.
 
-Add a cohesive dispute module inside the transactional provider rather than a
-new microservice. The provider remains the business source of truth. The adapter
-maps authenticated REST actions to closed signed commands and exposes explicit
-read DTOs. Resolution and DAO integration stay absent.
+## Contracts
 
-Keep dispute logic out of the already large provider dispatch function: the
-domain module owns validation and state transitions; the composition layer only
-routes commands and commits returned effects. New tests live in dedicated
-`tests.rs` files.
+Add ordinary derived structs/enums in focused submission/dispute modules.
+No new DTO-generating macros or generic state-machine framework. Evidence uses
+validated private fields and constructors reused by JSON/SCALE decoding.
+Runtime validation still checks signed origin, current state and ancestry.
 
-## Command flows
+Proposed technical bounds: absolute HTTPS URL, maximum 2048 UTF-8 bytes, no
+embedded credentials or control characters; a fixed 32-byte SHA-256 value.
+Fixtures use valid HTTPS references without fetching them. IPFS can use HTTPS
+gateway references; no implicit downloader or additional URI scheme support.
 
-### Reject completion
+Keep signable-payload and HTTP bounds. Public case reads respect response size
+limits and fail explicitly if exceeded; never silently truncate evidence.
+Any separate history reads introduced later must be paginated.
 
-1. Adapter authenticates the client and validates CSRF/origin.
-2. Custody signs `RejectMilestoneCompletion` for that client.
-3. Provider verifies signature, project ownership, review state and reason.
-4. Provider appends rejection and event without paying or scoring.
-5. Adapter exposes the durable receipt and notification through existing
-   operation polling and SSE.
+Bump the payload version for changed command encodings. Pin enum discriminants
+where wire compatibility requires it; never reinterpret old persisted bytes.
+Final compatibility approval is still recorded as pending in status.md.
 
-### Open dispute
+## Provider
 
-1. Adapter authenticates the client or assigned coordinator.
-2. Custody signs the closed command with project, milestone and argument.
-3. Provider rechecks party authorization and finds a qualifying rejection.
-4. Provider captures evidence at one event-cursor boundary.
-5. Provider creates case, opening argument and channel, freezes the milestone and
-   commits all related events in one storage transaction.
-6. Adapter returns an operation reference; case IDs come only from the receipt.
+Retain submission history under the milestone and disputes in a provider-owned
+map; project stores its active link. Shared helpers resolve submission/dispute
+targets. Provider rechecks resource ancestry independently from adapter.
 
-### Add counterparty argument
+Submitting appends a version. Accept/reject reference the exact current ID,
+closing the stale-review race introduced by resubmission. Acceptance uses the
+submission's worker ratings and existing settlement arithmetic.
 
-1. Adapter authenticates the counterparty and signs the append command.
-2. Provider rechecks the dispute's stored counterparty and validates content.
-3. Provider appends one argument and event atomically.
+Opening creates the case and project link, changes the target milestone and
+emits DisputeOpened in one transaction. GET joins case, submission and frozen
+target records without storing a snapshot. Metadata-only events provide a
+timeline, not a complete reconstruction of earlier task contents.
 
-Read routes never accept an actor in the request body. Private and public views
-are distinct projections of provider-owned state.
+Restoration validates unique IDs, increasing versions, parent/party relationships,
+review state, response authorship, project/dispute links and escrow conservation.
+Failed business transitions retain existing failed receipt/nonce behavior.
 
-## Contracts and compatibility
+## Adapter and clients
 
-The contract task first freezes:
+Focused handlers map confirmed REST routes to closed signed commands.
+Only the exact public case GET/HEAD bypasses login; never exempt the entire
+/api/disputes prefix from authentication/CSRF.
 
-- the completion-request reference and rejection DTO;
-- dispute status semantics;
-- signed commands, views, events and stable errors;
-- text and collection bounds;
-- public redaction and pagination;
-- payload compatibility for replacing the permissive command.
+Use an authenticated internal case query instead of fetching the whole provider
+aggregate for public reads. Return a purpose-built DTO, never State, a receipt
+or a notification object. Resolve IDs without trusting body-supplied authors.
 
-Adding enum variants affects SCALE wire compatibility. Do not rely on source
-ordering accidentally remaining compatible. Either bump the payload contract or
-provide a deliberate transition that rejects the old precondition-free path.
+Add MilestoneCompletionSubmitted, MilestoneCompletionRejected, DisputeOpened
+and DisputeResponseAdded to existing notifications/SSE. Response remains allowed
+under freeze, but cannot change the frozen project.
 
-The existing endpoint may be retired or mapped to the new open command only after
-compatibility review. It must not remain a bypass around the rejection rule.
+Adapt existing Leptos completion controls/browser fixtures to changed contracts.
+Initial proof is real-service HTTP E2E; a full Figma dispute-management UI is
+separate work and cannot be claimed from API tests.
 
-## Evidence capture
+## Typed errors and tracing
 
-Evidence capture selects only the target project and milestone plus related
-events through a fixed cursor. It clones the recorded data into a versioned
-snapshot. Future mutations append new records and cannot rewrite the snapshot.
+Use a dispute-domain error enum with stable public code mapping:
+invalid_evidence, submission_not_pending, submission_not_current,
+milestone_not_changes_requested, project_disputed, active_dispute_exists,
+dispute_response_forbidden, dispute_already_answered, plus existing not-found,
+auth/CSRF, idempotency and payload-version errors.
 
-No current contract stores deliverable bytes, versions or explicit acceptance
-criteria. The implementation records those fields as unavailable rather than
-accepting retrospective user content as historical evidence. Q-008 decides how
-future completion submissions become identifiable.
+HTTP validation/authorization can fail before enqueue. Later domain failures
+appear through operation receipts. Document both in OpenAPI.
 
-Content hashing is not part of this PoC. The mock retains its versioned snapshot
-without an on-chain/off-chain split. A future real-chain specification must
-freeze canonical encoding and the integrity commitment; an ad hoc JSON hash
-would not be a stable chain commitment.
+Use info! for committed transitions, warn! for rejected transitions and error!
+for storage/internal failures, with IDs, codes and cursors. Do not log URLs,
+documents, bodies, credentials or signing bytes. Initialize a subscriber in
+participating executables so the E2E can actually collect the tracing output.
 
-## Public view and channel
+## Storage boundary
 
-The public endpoint uses a purpose-built allowlist. It never serializes internal
-provider state, signed payloads, receipts, session data or notification read
-state. Implementation waits for Q-003.
+Proposed first delivery uses memory and SQLite with equivalent domain behavior.
+PostgreSQL remains requested separate adapter/custody/provider/Compose work.
+Incompatible retained state fails clearly; tests use temporary databases.
+Never auto-reset user data or claim production chain/DAO compatibility.
 
-The provider can atomically create channel identity with the dispute. Actual
-messages require Q-004; a channel ID alone must not be presented as a functioning
-chat. A future realtime transport may deliver channel updates, while durable
-message authority remains in the provider or another explicitly approved owner.
+## Verification
 
-## Failure, retry and concurrency
+Contract tests cover constructors and JSON/SCALE validation/versioning. Provider
+tests cover rejection/resubmission, all freeze guards, resource ancestry, one
+response, races, replay and restoration, in dedicated tests.rs modules.
+Adapter tests cover public GET versus protected writes and SSE replay.
 
-The existing provider clone/apply/commit transaction remains the serialization
-boundary. Concurrent openings observe committed rejection/dispute state in order.
-The Q-006 uniqueness decision determines whether the second valid opening fails
-or creates another case.
-
-Existing operation IDs and receipts handle lost responses. Replaying an operation
-returns its original receipt. A different operation ID is a new business request
-and must obey the approved uniqueness rule.
-
-Argument/event pages and evidence size need bounded limits before approval. No
-unbounded channel history is returned in one response.
-
-## Security controls
-
-- Adapter and provider enforce authorization independently.
-- The signed origin determines author and party; body-supplied authors are absent.
-- Rejection and argument text is length-bounded and rendered as text by clients.
-- Internal evidence and public evidence use separate DTOs.
-- Events and logs omit free-text arguments.
-- Normal milestone completion rejects a disputed/frozen milestone.
-
-## Observability
-
-Record command outcome, dispute ID, project/milestone IDs, actor account, event
-cursors and latency. Do not log reasons, arguments or evidence bodies. Track
-rejection, opening, append, authorization denial, validation failure and rollback
-counters without using them to infer a resolution.
-
-## Validation plan
-
-1. Resolve the blocking questions in `status.md` and change state to `APPROVED`.
-2. Freeze contracts and payload compatibility.
-3. Run focused contract tests.
-4. Run identical provider transition suites for memory and SQLite.
-5. Run adapter authorization/redaction/SSE tests.
-6. Run a signed E2E with rejection, optional opening, response and frozen funds.
-7. Run the workspace quality gates and independent requirement trace review.
+E2E starts real adapter/custody/mock services and uses public REST/SSE. Fixtures
+contain exact evidence bytes/digests; no real repository or remote host is needed.
+Exercise acceptance and dispute branches, changed delivery versions, frozen
+other milestones, conservation and idempotency. Keep four-milestone 5/3/4/2
+regression passing. See acceptance.feature and tasks.md.

@@ -1,290 +1,194 @@
-# SPEC-0005: Apertura de disputas de milestone
+# SPEC-0005: Milestone rejection and public dispute opening
 
-Status: DRAFT
+Status: DRAFT — confirmed product decisions consolidated; technical review pending.
 
-Created: 2026-09-16
+Updated: 2026-09-22
 
-Last updated: 2026-09-16
+## Goal and authority
 
-## Problem
+Deliver a signed, end-to-end mock flow from milestone submission to rejection,
+public dispute opening, one counterparty response and a frozen project.
+Resolution is outside this PoC. An E2E ending in Open is the requested complete
+flow, not a claim that adjudication is implemented.
 
-SPEC-0003 permite que el cliente o el coordinador marque un milestone como
-disputado y congele sus fondos. Esa operación no modela el rechazo previo del
-cliente ni crea un expediente consultable. Tampoco conserva una evidencia
-inmutable, admite la respuesta de la contraparte, crea un canal o publica una
-vista saneada.
+This consolidates the owner's latest confirmations following Disputas.md.
+It replaces the earlier draft's channel, snapshots, timeout and extensions.
+Once approved, it amends SPEC-0003 MILE-001, TASK-002 and MONEY-003A for milestone
+disputes. Planning disputes and reputation calculations retain their rules.
 
-La prueba de concepto debe demostrar la apertura documentada de una disputa a
-partir del primer rechazo. Resolverla pertenece a una iteración posterior.
+## Ownership
 
-## Goals
+The provider/mock owns business state, signed-origin authorization, atomic
+effects, receipts and domain events. The future blockchain owns the same truth.
+The adapter owns sessions, pending transport operations and notification read
+state. Custody signs commands; both frontends use the same REST/SSE contract.
+The adapter does not store a second dispute database.
 
-- Registrar el rechazo de una solicitud de finalización con un motivo obligatorio.
-- Permitir que el cliente o el coordinador asignado abra voluntariamente una
-  disputa después de un rechazo del mismo milestone.
-- Crear atómicamente el expediente, argumento inicial, evidencia disponible,
-  canal, congelación y eventos de apertura.
-- Permitir que la contraparte añada argumentos sin modificar los anteriores.
-- Ofrecer una vista pública saneada cuando se aprueben sus reglas de visibilidad.
-- Mantener el escrow sin pago ni devolución mientras no exista una resolución
-  aprobada en otra especificación.
+## SUB-001: Submit an identifiable delivery
 
-## Non-goals
+Only the assigned coordinator may submit completion for a non-cancelled,
+non-disputed project and a milestone in InProgress or ChangesRequested.
+The request contains the deliverable reference and existing per-worker ratings.
+The provider generates a submission ID and an increasing version within the
+milestone, and records its author and Unix timestamp.
 
-- Resolver, rechazar o cancelar una disputa.
-- Elegir juez, árbitro o miembro de la DAO.
-- Definir electorado, votación, quorum, plazo o ejecución de gobernanza.
-- Distribuir, devolver o penalizar fondos disputados.
-- Resolver disputas de planificación; el comportamiento vigente de SPEC-0003
-  no se amplía aquí.
-- Inventar entregables, versiones, criterios de aceptación o comunicaciones que
-  la plataforma no haya registrado.
-- Restaurar tablas PostgreSQL del documento de origen. El mock transaccional
-  continúa siendo la fuente de verdad de la PoC.
+The submission starts PendingReview; the milestone becomes CompletionRequested.
+Previous submissions/reviews remain recorded. Submission changes no payments,
+accumulated reputation or reservations. Every assigned worker must still be
+rated exactly once, as required by the existing completion operation.
 
-## Actors
+## SUB-002: Review the current submission
 
-| Actor | Permissions in this scope |
+Only the project client may accept or reject the current PendingReview
+submission. Both commands identify its submission ID. A stale ID cannot review
+a newer delivery, even when its command was queued or signed earlier.
+
+Acceptance marks the submission Accepted and milestone Completed, with the
+existing atomic payouts and reputation calculation. It uses that submission's
+worker ratings. This does not introduce new scoring rules.
+
+## REJ-001: Reject with a reason reference
+
+Rejection requires a valid public evidence reference. It atomically marks the
+submission Rejected with reason, client author and timestamp, sets the milestone
+to ChangesRequested and emits MilestoneCompletionRejected.
+It creates no dispute and changes no payment, score or reservation.
+The coordinator does not need to accept the rejection.
+
+## REJ-002: Resubmission replaces dispute eligibility
+
+A new submission returns the milestone to CompletionRequested. An earlier
+rejection stays in history but no longer authorizes opening. A later rejection
+of the new submission enables opening against that new submission only.
+
+## REF-001: Public URL and SHA-256
+
+Deliverable, rejection reason, opening argument and counterparty response each
+contain url and sha256 (32 bytes, JSON hexadecimal prefixed with 0x).
+The digest commits to exact artifact bytes, not the URL string.
+
+The adapter/provider validate structure, sign and store the reference. Neither
+fetches the URL, verifies remote content or guarantees availability. Readers
+can verify downloaded bytes against the commitment. A repository homepage does
+not identify exact bytes: software evidence should use a commit-specific
+artifact or a manifest describing the commit. A Git object ID is not necessarily
+the artifact's SHA-256 digest.
+
+Recorded references cannot be replaced. External hosts can still change/remove
+content. Freezing project state does not freeze a website, and a hash cannot
+recover missing content. Hosting and long-term retention are outside this PoC.
+
+## DSP-001: Open only against a current rejection
+
+The project client or assigned coordinator may open when the project is not
+cancelled and has no active dispute, the milestone is ChangesRequested, the
+supplied submission ID is its current Rejected submission, and the opening
+evidence reference is valid.
+
+InProgress, CompletionRequested and Completed do not permit opening.
+Workers, unrelated accounts and system authority have no bypass.
+
+## DSP-002: Create and freeze atomically
+
+Opening generates a dispute ID and records project, milestone, rejected
+submission, opener, counterparty, opening evidence and timestamp. It records
+the existing proposal revision and the committed event cursor immediately
+before opening. A proposal revision alone does not version every task mutation.
+
+The same provider transaction creates the Open case, sets project
+active_dispute_id, sets the affected milestone to Disputed and emits one
+DisputeOpened event with its ID. Failure commits no partial business effects.
+
+No full project/task snapshot is stored. The frozen records remain the opening
+context. This preserves state at opening, not task contents at an earlier
+delivery. Today's metadata-only events cannot reconstruct arbitrary past state.
+
+## DSP-003: Freeze the whole project and preserve funds
+
+While active_dispute_id is present, reject every project mutation: proposal
+editing/deletion/submission/approval, task creation/edit/progress, completion
+submission/acceptance/rejection, planning changes/disputes and cancellation.
+Another opening fails even for another milestone.
+
+Opening and denied mutations preserve balances, planning/execution escrow,
+assignments, accumulated ratings and calendar reservations. Existing payments
+are not reversed. Other milestones retain their status but inherit the project
+freeze. No funds are paid, refunded or unreserved.
+
+Reads, notifications and the single formal counterparty response remain
+available. The response changes only the dispute. Other projects, catalog and
+personal calendar edits keep their existing rules and cannot remove this
+project's reservations.
+
+## DSP-004: One immutable counterparty response
+
+The other project principal may append one evidence reference with verified
+author and timestamp. The opener, workers, administrator and unrelated accounts
+cannot respond on its behalf. Opening and response references cannot be
+edited/deleted. A second operation ID cannot overwrite the response.
+The dispute remains Open after responding.
+
+## DSP-005: Public case without a communication channel
+
+The dispute is public immediately; Public is not a lifecycle state.
+GET /api/disputes/{disputeId} requires no login. Its explicit projection contains
+case identities, state, parties, timestamps, references, rejected submission/
+review, context revision/cursor and the affected frozen milestone definition
+and task storage. Related submission/review metadata comes from retained records.
+
+Never return sessions, keys, credentials, signed payloads, receipts, notification
+recipients/read state, unrelated projects or personal calendar reservations.
+Published accounts and references are public; adapter login cannot conceal
+onchain data. No chat, channel identity or additional argument loop is created.
+
+## DSP-006: Durable events, replay and concurrency
+
+Provider events feed the existing adapter ingestor and authenticated SSE.
+Client and coordinator observe opening/response after reconnecting. Public
+reads do not change notification read state.
+
+Exact replays return the original receipt before current-state guards.
+Different operation IDs obey uniqueness and response limits. Concurrent
+openings serialize: one succeeds, the other sees the active dispute.
+Business failures leave no partial effects; existing failed receipt/nonce
+semantics remain intact.
+
+## DSP-007: No resolution or unlock
+
+The case stays Open and the project frozen. No user, administrator or
+system-origin operation can resolve/unlock it. DAO authority, decisions,
+escrow disposition and post-resolution states require a later specification.
+Resetting disposable tests is not a resolution mechanism.
+Timeout, due_at extensions, arbitration, refunds and penalties are excluded.
+
+## Public REST contract
+
+| Method and route | Input / result |
 |---|---|
-| Client | Reject its milestone completion; open a dispute; answer when it is the counterparty |
-| Assigned coordinator | Open a dispute; answer when it is the counterparty |
-| Assigned worker | No mutation permission on a dispute |
-| Public reader | Read only the fields approved for the public view; exact audience is unresolved |
-| DAO or judge | No permission in this scope |
-| System authority | No power to resolve or move disputed funds in this scope |
+| POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions | Deliverable reference and worker ratings; operation reference |
+| POST /api/completion-submissions/{submissionId}/rejection | Reason reference; operation reference |
+| POST /api/projects/{projectId}/milestones/{milestoneId}/accept-completion | Current submission ID and existing client ratings; operation reference |
+| POST /api/disputes | Project, milestone, rejected submission IDs and evidence; operation reference |
+| POST /api/disputes/{disputeId}/response | Evidence reference; operation reference |
+| GET /api/disputes/{disputeId} | Public case projection |
 
-## Definitions
+Writes retain session/CSRF/idempotency protections, return HTTP 202 and expose
+final outcome through /api/operations/{operationId}. Created IDs come from
+provider receipts. Signed commands bind resolved resource targets; provider
+rechecks every relationship. Bodies cannot supply trusted authors/timestamps.
 
-- **Completion request:** the coordinator's recorded request for the client to
-  accept a milestone as completed.
-- **Rejection:** the client's recorded refusal of one completion request,
-  including its mandatory reason.
-- **Dispute:** an append-only case associated with one project and milestone,
-  opened after at least one rejection of that milestone.
-- **Counterparty:** the other project principal: coordinator when the client
-  opens, or client when the coordinator opens.
-- **Evidence snapshot:** an immutable copy of the project, milestone, task and
-  event data available to the provider when the dispute opens.
-- **Current view:** live project data after opening. It is not evidence for the
-  original opening unless appended through a future approved operation.
+## Technical review pending
 
-## Functional requirements
+Product states, references, API, freeze and E2E were confirmed. The last
+technical proposal has not received an explicit answer. Proposed:
 
-### REJ-001: Reject milestone completion with a reason
+1. Retire old request-completion and precondition-free milestone /dispute routes;
+   replace DisputeMilestone and bump signed payload version. Update local
+   clients/tests together. Never leave an old route bypassing rejection/freeze.
+2. Use fresh disposable test state; fail clearly on incompatible retained state.
+   Never delete a user-selected database automatically.
+3. Implement against memory and existing SQLite first. PostgreSQL remains
+   requested separate work across provider, adapter, custody and Compose.
 
-Only the project client may reject a milestone whose completion is awaiting
-review. A rejection must contain a non-blank reason and identify the completion
-request it rejects. The provider records author, milestone, reason and Unix
-timestamp atomically and emits `MilestoneCompletionRejected`.
-
-The rejection releases no funds and records no scores. A missing or invalid
-reason commits no state.
-
-### REJ-002: Rejection does not open a dispute
-
-The first and subsequent rejections make dispute opening eligible but never
-create a dispute automatically. The ordinary milestone state after rejection
-and the resubmission rule are blocking product decisions.
-
-### DSP-001: Authorized and justified opening
-
-The project client or its assigned coordinator may open a milestone dispute
-only when that milestone has a recorded rejection. The opening argument is
-mandatory and non-blank. Workers, former/unassigned coordinators and unrelated
-accounts cannot open it.
-
-Whether more than one dispute may exist for the same milestone or rejection is
-not approved. Existing operation-id replay protection still prevents one signed
-operation from creating duplicate effects.
-
-### DSP-002: Atomic dispute case
-
-A successful opening commits one transaction containing:
-
-- a provider-generated dispute ID;
-- the project and milestone references;
-- the opener, counterparty, opening time and opening argument;
-- an immutable snapshot of available evidence;
-- one linked communication channel;
-- the milestone and escrow freeze required by SPEC-0003;
-- durable opening, channel and publication events required by the approved
-  status model.
-
-If any part fails, none of those effects commits. The current `DisputeMilestone`
-operation does not satisfy this requirement because it can run without a prior
-rejection and stores no dispute entity.
-
-### DSP-003: Immutable available evidence
-
-Opening captures the data already recorded for the project and milestone,
-including the proposal and milestone definition, contractual assignments, task
-storage and tasks, completion and rejection history, and related domain events
-up to a fixed cursor. The snapshot records its capture time and schema version.
-
-Later task, project or event changes do not mutate that snapshot. Data absent
-from the platform at opening is listed as unavailable; it is not reconstructed
-from user claims. The mock stores this versioned snapshot in its provider
-aggregate. Canonical chain encoding and any off-chain integrity commitment are
-deferred until the real-chain design; neither is needed to demonstrate opening.
-
-### DSP-004: Append-only counterparty arguments
-
-The counterparty may append an authenticated argument containing author, type,
-content and Unix timestamp. Existing arguments cannot be updated, reordered or
-deleted. The public representation of each argument follows the approved
-redaction policy.
-
-Whether the opener may append later arguments, and whether repeated counterparty
-responses are allowed, remain product decisions.
-
-### DSP-005: Linked communication channel
-
-Opening creates exactly one channel linked to the dispute and makes it available
-to the client and assigned coordinator. Channel creation must not depend on a
-best-effort webhook. Message protocol, retention and whether messages become
-formal dispute arguments are blocking decisions.
-
-### DSP-006: Public sanitized view
-
-The system exposes a dedicated dispute view rather than the provider's internal
-aggregate. At minimum the product document requests project and milestone
-identity, dispute state, opening time, opener, opening argument, relevant
-milestone history and later arguments.
-
-The exact audience, identifiers, field-level redaction and treatment of task and
-event contents require approval before this endpoint is implemented. Custody
-data, credentials, private keys, session data, internal receipts and unrelated
-project data are never public.
-
-### DSP-007: Funds remain frozen
-
-Opening freezes the disputed milestone and its unreleased portion of execution
-escrow. It cannot reverse settled payments, release reservations, pay, refund or
-change reputation. No command in this scope unfreezes or disposes of funds.
-
-### DSP-008: Durable events and notification
-
-The provider records the committed dispute events in its ordered event stream.
-At minimum the counterparty receives an authenticated notification that the
-dispute opened. Public listing does not expose private notification state.
-
-### DSP-009: Storage and retry equivalence
-
-Memory and SQLite storage commit the same dispute state, evidence, funds and
-events. Duplicate delivery, a lost HTTP response or an operation replay cannot
-create another argument, channel, snapshot or freeze effect for the same
-operation ID.
-
-## Invariants
-
-- INV-001: Every dispute references an existing project, milestone and recorded
-  rejection of that milestone.
-- INV-002: The opener is the project client or assigned coordinator; the
-  counterparty is the other one.
-- INV-003: Every dispute has exactly one opening argument, evidence snapshot and
-  communication channel.
-- INV-004: Rejections and arguments are append-only.
-- INV-005: Snapshot content and its event-cursor boundary never change.
-- INV-006: Dispute opening conserves total token supply and keeps unreleased
-  milestone funds in execution escrow.
-- INV-007: A disputed milestone cannot complete or pay through the normal
-  acceptance command.
-- INV-008: Failed commands commit no partial dispute state, business event or
-  balance change.
-- INV-009: Public output is produced from an allowlisted DTO, never by serializing
-  internal provider state.
-
-## Failure behavior
-
-| Condition | Observable result | State effect |
-|---|---|---|
-| Blank rejection reason | Validation failure | None |
-| Rejection by a non-client | Forbidden | None |
-| Rejection outside the approved review state | Domain rejection | None |
-| Opening without a recorded rejection | Domain rejection | None |
-| Opening by a non-party | Forbidden | None |
-| Blank opening argument | Validation failure | None |
-| Argument from anyone other than the approved counterparty | Forbidden | None |
-| Evidence/channel creation failure | Operation failure | Full rollback |
-| Normal completion acceptance after dispute | Domain rejection | Funds remain frozen |
-| Replayed operation ID | Original receipt | No duplicate effect |
-
-Stable public error codes are frozen with the contracts task, not invented in
-this draft.
-
-## Contract impact
-
-Proposed signed commands are `RejectMilestoneCompletion`,
-`OpenMilestoneDispute` and `AddDisputeArgument`. Proposed query DTOs are
-`DisputeView`, `DisputePublicView`, `DisputeArgumentView`,
-`DisputeEvidenceView` and `DisputeChannelView`.
-
-Proposed REST surface:
-
-- `POST /api/projects/{projectId}/milestones/{milestoneId}/reject-completion`
-- `POST /api/projects/{projectId}/milestones/{milestoneId}/disputes`
-- `POST /api/disputes/{disputeId}/arguments`
-- `GET /api/disputes/{disputeId}`
-- `GET /api/disputes/{disputeId}/history`
-
-Public listing and channel-message routes depend on the open visibility and
-channel decisions. No generic provider command endpoint is exposed.
-
-Published event candidates are `MilestoneCompletionRejected`, `DisputeOpened`,
-`DisputeChannelCreated`, `DisputePublished` and `DisputeArgumentAdded`. The
-meaning and order of publication-related events depend on the status decision.
-
-Replacing the current `DisputeMilestone` contract is a compatibility change.
-The contracts task must choose an explicit payload-version or transition policy;
-the permissive old behavior cannot remain an alternate path.
-
-## Data ownership and consistency
-
-The mock provider owns rejection, dispute, evidence, arguments, channel identity,
-freeze state and domain events. The adapter owns only authentication, transport
-operations and notification read state. Custody owns signing keys. A future real
-chain implementation must preserve this authority split.
-
-Opening is one provider transaction under SPEC-0003 DOM-002. Reads may use a
-separate sanitized projection but cannot become a second source of truth.
-
-## Security and privacy
-
-- The adapter checks session ownership; the provider checks the verified signing
-  origin again.
-- Actor IDs are derived from the signed origin, never request-body fields.
-- Arguments and rejection reasons have bounded length and are treated as
-  untrusted text. Limits must be frozen in the contract.
-- Public evidence uses explicit allowlists and cannot include secrets or unrelated
-  participants' private data.
-- The immutable internal record remains distinct from its redacted public view.
-- Logs record IDs, result and event cursors, not argument or evidence content.
-
-## Test strategy
-
-- Contract tests cover validation, serialization and compatibility in dedicated
-  `tests.rs` files.
-- Provider tests cover authorization, state transitions, rollback, escrow
-  conservation, immutability and replay for memory and SQLite.
-- Adapter tests cover session authorization, public redaction, operation polling
-  and SSE delivery.
-- End-to-end tests cover rejection, optional opening, evidence capture,
-  counterparty response, notification and frozen funds through signed HTTP.
-- An independent verifier maps every approved requirement to a Gherkin scenario.
-
-## Open questions
-
-| ID | Blocking question |
-|---|---|
-| Q-001 | After rejection, does the milestone return to `InProgress`, remain `CompletionRequested`, or gain a separate review state? How is a new completion version submitted? |
-| Q-002 | Are `Open`, `Public` and `PendingDaoResolution` distinct stored states? Which atomic action triggers each transition? |
-| Q-003 | Is the public view unauthenticated, member-only or authenticated-platform-only? Which identity, task, event and argument fields are redacted? |
-| Q-004 | Are channel messages separate private communication, formal public arguments, or promotable evidence? What are their retention rules? |
-| Q-006 | Can one milestone or one rejection have multiple disputes? If not, what conflict result is returned? |
-| Q-007 | May the opener append later arguments, and may the counterparty add more than one response? |
-| Q-008 | What recorded object identifies a completion submission/version? Current contracts record neither deliverable content nor a completion-request ID. |
-
-## Approval
-
-Product, architecture, security and data approval are pending. No implementation
-task may start while this specification remains `DRAFT`.
+These are review items, not silently approved exceptions. Concrete implementation
+choices and evidence requirements are in design.md and tasks.md.

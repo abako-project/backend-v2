@@ -1,113 +1,64 @@
-# Data model: dispute opening
+# Dispute opening: data model
 
-Status: DRAFT
+Status: REVIEW REQUIRED — 2026-09-22
 
-## Ownership
+The provider owns these records. They are not adapter database entities.
 
-The provider dispute context owns all records below. The adapter may project
-sanitized reads and notification state but does not persist a competing dispute.
-The same logical aggregate is stored by the memory and SQLite mock backends.
+## EvidenceReference
 
-## Proposed domain records
+Validated url and sha256. Submitter commits to exact artifact bytes; provider
+does not fetch or attest them. No private-text variant or upload subsystem.
 
-Names are descriptive until contract approval.
+## CompletionSubmission
 
-### Milestone rejection
+- Provider-generated submission_id; milestone owns its collection.
+- Increasing version within that milestone, starting at 1.
+- Deliverable reference, verified coordinator and Unix submission timestamp.
+- Existing coordinator ratings of assigned workers.
+- Review enum: PendingReview; Rejected { reason, reviewed_by, reviewed_at };
+  Accepted { reviewed_by, reviewed_at }.
 
-| Field | Meaning |
-|---|---|
-| `rejection_id` | Provider-generated opaque ID |
-| `project_id` / `milestone_id` | Existing aggregate references |
-| `completion_request_ref` | Exact completion submission rejected; representation depends on Q-008 |
-| `rejected_by` | Verified client account |
-| `reason` | Validated non-blank untrusted text |
-| `occurred_at` | Provider Unix timestamp |
-| `event_cursor` | Durable event-stream position |
+Only review can transition once from pending to terminal. Identity, version,
+deliverable, author, creation timestamp and ratings cannot be edited.
+Resubmission appends a record; earlier submissions never regain eligibility.
 
-Rejections are inserted, never updated or deleted.
+## Milestone and project
 
-### Dispute
+Milestone retains submissions and adds ChangesRequested. Latest pending
+submission corresponds to CompletionRequested; rejection corresponds to
+ChangesRequested or the disputed milestone; acceptance corresponds to Completed.
 
-| Field | Meaning |
-|---|---|
-| `dispute_id` | Provider-generated opaque ID |
-| `project_id` / `milestone_id` | Existing aggregate references |
-| `trigger_rejection_id` | Rejection that made opening eligible |
-| `opened_by` / `counterparty` | The two project principals |
-| `status` | Exact enum and transitions pending Q-002 |
-| `opened_at` | Provider Unix timestamp |
-| `opening_argument_id` | Exactly one argument owned by this dispute |
-| `evidence_id` | Exactly one immutable opening snapshot |
-| `channel_id` | Exactly one linked communication channel |
+Project stores active_dispute_id: Option<EntityId>, the authoritative freeze
+guard for all attached proposals, milestones and task storages. No new project
+lifecycle enum or synthetic task revision system is required.
 
-The uniqueness rule across milestone, rejection and active dispute awaits Q-006.
+## Dispute
 
-### Argument
+- dispute_id, project_id, milestone_id, rejected_submission_id.
+- status: Open.
+- opened_by, counterparty, opened_at.
+- evidence: EvidenceReference.
+- response: Option<DisputeResponse>.
+- Existing proposal revision and context_event_cursor immediately before opening.
 
-| Field | Meaning |
-|---|---|
-| `argument_id` / `dispute_id` | Opaque identity and owner |
-| `author` | Verified opener or counterparty account |
-| `kind` | `Opening` or approved response kind |
-| `content` | Validated untrusted text |
-| `occurred_at` | Provider Unix timestamp |
-| `event_cursor` | Durable append position |
+Response contains evidence, verified author and timestamp, inserted once.
+No argument vector, communication channel or resolution fields.
+Without closing, a project can have at most one dispute during this PoC.
 
-There is no update or delete operation. Additional kinds depend on Q-007.
+## Public projection
 
-### Evidence snapshot
+Join the case, rejected submission/review and affected frozen milestone definition/
+task storage. Related delivery metadata comes from retained records.
+No duplicate snapshot, unrelated project data or internal event recipients/
+receipts. Public account IDs and evidence references are intentional.
 
-The snapshot contains a schema version, capture timestamp and terminal event
-cursor plus copies of the data available at opening:
+## Invariants and restoration
 
-- project parties and project definition;
-- approved proposal and milestone definition;
-- milestone state, assignments and frozen escrow context;
-- attached task storage and its tasks;
-- completion requests and recorded rejections that exist at that time;
-- project/milestone domain events through the terminal cursor;
-- explicit markers for requested evidence that the platform does not possess.
+Unique IDs; resolvable parent links; increasing versions; consistent review/
+milestone state; coordinator submission authors; client review authors;
+active link to an Open case for the same project/current rejection; response
+author equals counterparty. Opening conserves funds and reservations.
 
-The internal evidence may contain fields that are not public. A separately built
-`DisputePublicView` applies approved field allowlists. The provider must not copy
-the complete global snapshot or unrelated projects.
-
-### Communication channel
-
-The minimum record has `channel_id`, `dispute_id`, client, coordinator and
-creation time. Message records and their relation to formal arguments are not
-defined until Q-004 is answered.
-
-## Aggregate invariants
-
-- Every reference resolves inside the same provider state.
-- Evidence belongs to one dispute and cannot be replaced.
-- Every argument belongs to one dispute and preserves insertion order.
-- The opening argument author equals `opened_by`.
-- A response author equals `counterparty` under the current PoC scope.
-- The channel participants equal the dispute client and coordinator.
-- Frozen milestone value remains part of execution escrow.
-- State restoration validates all references, event cursors and uniqueness rules.
-
-## Transaction boundaries
-
-`RejectMilestoneCompletion` commits the rejection and event together.
-`OpenMilestoneDispute` commits dispute, opening argument, evidence, channel,
-freeze and events together. `AddDisputeArgument` commits one append and event.
-Failure leaves the pre-command state unchanged except for the existing failed
-receipt/nonce behavior defined by SPEC-0003.
-
-## Persistence and migration
-
-The current SQLite backend stores the complete provider aggregate as JSON. The
-implementation must either provide explicit defaults and validation for the new
-collections or document a PoC reset requirement. No PostgreSQL schema is implied.
-Before a real chain migration, freeze SCALE discriminants, payload version,
-evidence encoding and any off-chain content-addressing policy.
-
-## Retention and privacy
-
-The source document requires immutable evidence and arguments, so deletion and
-retention cannot be inferred. Public redaction must not modify the internal
-record. Data retention, erasure handling and evidence access need security/data
-approval before production use.
+Retained context is state at opening, not earlier submission task contents or
+external hosted bytes. Future unlock design must address historical context
+before permitting edits again.

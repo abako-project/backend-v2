@@ -2,40 +2,45 @@
 
 State: DRAFT
 
-Last updated: 2026-09-16
+Updated: 2026-09-22
 
-## Implemented baseline
+Product decisions: CONFIRMED in conversation. Implementation: NOT STARTED.
+The old unanswered business-question list is superseded by those answers.
 
-SPEC-0003 currently authorizes the project client and assigned coordinator to
-mark planning or milestone work as disputed and freeze unreleased funds. The
-milestone command accepts `InProgress` or `CompletionRequested`, stores one
-private reason, changes the milestone to `Disputed` and emits an event.
+## Confirmed decisions
 
-That baseline is not the dispute-opening system described here. It lacks the
-required prior rejection, a dispute entity and ID, immutable evidence, append-only
-counterparty arguments, a communication channel and a public sanitized view.
+- Submission: PendingReview, Rejected or Accepted. Rejection immediately moves
+  milestone to ChangesRequested.
+- Only a current rejection enables opening. No timeout or extension now.
+- Public URL + SHA-256 for deliverable, rejection and both formal arguments.
+- Separate Open dispute; one active per project, project-wide freeze and one
+  immutable counterparty response.
+- Public getter without login; no chat, snapshots, resolution or unlock.
+- Provider owns business truth; adapter handles REST/auth/transport/SSE and public
+  projection; custody signs. Existing scoring rules remain.
+- Real-service signed E2E ends with an open case and frozen project.
 
-## Blocking product decisions
+## Pending technical review
 
-- Q-001: milestone state and resubmission after rejection.
-- Q-002: meaning and triggers of `Open`, `Public` and
-  `PendingDaoResolution`.
-- Q-003: public audience and field-level redaction.
-- Q-004: relationship between channel messages and formal arguments.
-- Q-006: multiplicity and conflict rules for disputes.
-- Q-007: number and authorship of later arguments.
-- Q-008: identity and versioning of the completion submission being rejected.
+Review spec.md, design.md, data-model.md, threat-model.md, acceptance.feature
+and tasks.md. The last technical proposal still needs an answer on old-route
+retirement, signed-payload compatibility/fresh test state and keeping the
+PostgreSQL migration separate. See spec.md for the exact scope.
 
-## Scope held outside the PoC
+Do not set APPROVED or claim implementation because consolidation is complete.
 
-Resolution, DAO voting, judge selection, escrow disposition, penalties and
-compensation remain out of scope. SPEC-0004 governance remarks do not confer any
-of those powers. The on-chain/off-chain evidence boundary and canonical hash are
-also deferred; the PoC keeps a versioned snapshot in the transactional mock.
+## Observed baseline
 
-## Approval record
+DisputeMilestone records a reason in the provider's internal aggregate, marks
+only the target milestone Disputed/frozen and emits an event. The reason is not
+encrypted; it is absent from public read DTOs. The command accepts InProgress
+or CompletionRequested and has no formal case. Adapter forwards that command.
 
-Product, architecture, security and data approval: pending.
+Submission history, rejection, formal case, response and public getter are not
+implemented. Existing tests do not verify this specification.
+Evidence: ../../progress/handoffs/DSP-00-reanalysis.md.
 
-No development worktree from `tasks.md` should start until this state changes to
-`APPROVED`.
+## Next step
+
+Approve the consolidated technical scope, then execute DSP-01 through DSP-07.
+Keep approval, implementation and observed verification as separate statuses.

@@ -1,5 +1,8 @@
 # DevStory 4.5 - Como usuario freelance consultor quiero que exista un sistema de resolución de disputas en el que participe la DAO para evitar situaciones en las que el trabajo entregado se rechace continuamente
 
+> **Vigencia para la PoC:** este documento conserva la propuesta original de la reunión.
+> La [adenda final](#adenda-de-decisiones-posteriores-para-la-poc) recoge las decisiones posteriores y prevalece frente a las secciones históricas que contradiga. Describe requisitos acordados, no funcionalidad ya implementada; deben incorporarse a las especificaciones del proyecto antes del desarrollo.
+
 ## Objetivo
 
 Cada vez que se hace la entrega de un hito, este debe ser revisado y aprobado o rechazado por el cliente. La aprobación libera automáticamente los fondos asociados a la consecución de dicho hito, mientras que el rechazo constituye una consideración de que el entregable no cumple con los requisitos acordados y debe indicar los motivos del mismo. Este rechazo no implica que automáticamente se abra una disputa, ya que la disputa se considerará un mecanismo voluntario que permite escalar el conflico cuando el proceso ordinario de revisión y comunicación no permite resolverlo. Es conveniente aclarar que tanto el cliente como el coordinador del proyecto son responsables de la gestión del proyecto y podrán iniciar una disputa.
@@ -515,3 +518,78 @@ Estos eventos permitirán desacoplar posteriormente:
 *   La resolución de disputas.
 
 *   Las posibles consecuencias sobre escrow.
+
+## Adenda de decisiones posteriores para la PoC
+
+Actualizada el 2026-09-22 con las últimas decisiones confirmadas. La especificación consolidada es [SPEC-0005](specs/0005-dispute-opening/spec.md); su [estado](specs/0005-dispute-opening/status.md) distingue decisiones de producto confirmadas, revisión técnica pendiente e implementación.
+
+Esta adenda prevalece para la PoC. Las secciones originales «Estados de la disputa», «Data Model», «Datos registrados en Blockchain», «API Reference» y «Eventos» conservan propuestas históricas, no contratos vigentes. También sustituye el canal del criterio 9 y concreta el histórico de los criterios 6 y 12. La resolución y la votación de la DAO se definirán posteriormente.
+
+### Entrega y rechazo
+
+- La entrega es una entidad versionada del milestone, con identificador, autor, fecha y estados `PendingReview`, `Rejected` o `Accepted`. Mantiene las puntuaciones del coordinador que ya usa la solicitud de finalización; no cambia el cálculo de reputación.
+- Entregable, motivo del rechazo, argumento inicial y respuesta usan la misma referencia pública: URL más SHA-256 de 32 bytes. El hash identifica los bytes del documento o artefacto, no el texto de la URL. El mock/blockchain registra la referencia sin descargarla ni verificar el contenido remoto.
+- Una URL de repositorio genérica no identifica por sí sola una entrega concreta. Para software se puede referenciar un artefacto de un commit o un manifiesto que lo identifique. Congelar el proyecto no impide modificar o borrar contenido en un servidor externo; el hash permite comprobar integridad si el contenido sigue disponible, pero no recuperarlo.
+- Solo el cliente revisa la entrega pendiente actual. Aceptar o rechazar debe identificar esa entrega para no actuar accidentalmente sobre una versión posterior.
+- Al rechazar con motivo, la entrega pasa a `Rejected` y el milestone inmediatamente a `ChangesRequested`. El coordinador no tiene que aceptar el rechazo. No se abre automáticamente una disputa ni se pagan fondos o computan puntuaciones.
+- El coordinador puede presentar una nueva entrega desde `InProgress` o `ChangesRequested`; queda `PendingReview` y el milestone pasa a `CompletionRequested`. El rechazo anterior permanece en el historial, pero deja de habilitar una disputa.
+- Las prórrogas, el timeout y las nuevas reglas de vencimiento quedan fuera de esta iteración. Sustituyen las propuestas de la versión anterior de esta adenda; los plazos de tareas y las reservas de calendario existentes no cambian.
+
+### Apertura y congelación
+
+- El cliente o coordinador asignado pueden abrir una disputa únicamente desde `ChangesRequested`, contra la entrega rechazada vigente y con una referencia pública a sus argumentos. No se admite abrir directamente desde `InProgress`, `CompletionRequested` o `Completed`.
+- La disputa es una entidad propia con estado `Open`. Una sola disputa activa por proyecto: abrirla registra su identificador en el proyecto y marca el milestone afectado como `Disputed`, de forma atómica.
+- Se congelan todas las mutaciones del proyecto, sus propuestas, task storages y milestones: tareas, progreso, entregas, aceptación, pagos y cancelación. Los demás milestones conservan sus estados, pero quedan bloqueados por la congelación del proyecto.
+- La apertura no mueve balances, escrow, asignaciones, puntuaciones ni reservas de calendario. No revierte pagos anteriores. Otros proyectos, perfiles, catálogos y calendarios personales siguen sujetos a sus reglas habituales sin poder eliminar las reservas congeladas.
+- No se crean snapshots. El expediente referencia proyecto, milestone, entrega rechazada, revisión existente y cursor de eventos al abrir. El contexto permanece consultable en los registros congelados. Esto conserva el estado en la apertura, no reconstruye estados anteriores de las tareas ni congela el contenido externo de las URLs.
+- La disputa es pública desde su apertura. La contraparte puede añadir una única respuesta formal, también URL más SHA-256, con autor y fecha. Las referencias de apertura y respuesta no se pueden sobrescribir. La respuesta no altera el proyecto congelado.
+- La lectura pública no requiere login; devuelve una proyección explícita del expediente y contexto afectado, sin claves, sesiones, firmas, notificaciones privadas ni datos de otros proyectos. Los datos registrados onchain son públicos.
+- No se crea canal de comunicación. La PoC termina en `Open`, con respuesta opcional y proyecto congelado. No hay resolución, cancelación de disputa ni desbloqueo, tampoco para el administrador. Una futura especificación de DAO definirá autoridad, decisiones, fondos y estados posteriores.
+
+### Frontera de API y autoridad
+
+El mock/blockchain valida el origen firmado y ejecuta todas las transiciones y la congelación. El adapter autentica, solicita la firma a custodia, envía comandos, expone el estado de operaciones y las notificaciones SSE, y consulta el expediente público. No mantiene una segunda fuente de verdad de disputas.
+
+La superficie REST confirmada incluye:
+
+- `POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions`
+- `POST /api/completion-submissions/{submissionId}/rejection`
+- `POST /api/disputes`
+- `POST /api/disputes/{disputeId}/response`
+- `GET /api/disputes/{disputeId}`
+
+Aceptar una finalización mantiene los pagos y puntuaciones existentes e identifica la entrega actual. Las escrituras devuelven una operación pendiente; los identificadores y resultados finales proceden del mock/blockchain. Retirada de rutas antiguas, versión de payload y alcance de persistencia se detallan en la revisión técnica de SPEC-0005.
+
+### Criterios de aceptación añadidos
+
+```gherkin
+@ADENDA_001
+Scenario: Rechazo de entrega y estado del milestone son distintos
+  Given una entrega PendingReview del milestone en CompletionRequested
+  When el cliente rechaza esa entrega con una referencia URL y SHA-256
+  Then la entrega queda Rejected y el milestone ChangesRequested
+  And no se crea una disputa ni se pagan fondos
+
+@ADENDA_002
+Scenario: La nueva entrega invalida la elegibilidad del rechazo anterior
+  Given la primera entrega fue rechazada
+  When el coordinador presenta una segunda entrega
+  Then el milestone queda CompletionRequested
+  And no se puede revisar la segunda entrega usando el identificador de la primera
+  And no se puede abrir una disputa basada en el rechazo anterior
+
+@ADENDA_003
+Scenario: Una disputa congela todos los milestones del proyecto
+  Given un proyecto con dos milestones y una entrega rechazada vigente
+  When un principal abre una disputa válida contra esa entrega
+  Then se crea una disputa Open y se congela el proyecto completo
+  And no se pueden modificar tareas ni pagar ninguno de sus milestones
+  And no se duplican snapshots ni se cambian fondos o reservas
+
+@ADENDA_004
+Scenario: La PoC permite réplica y lectura pública pero no desbloqueo
+  Given una disputa Open con el proyecto congelado
+  When la contraparte aporta una respuesta URL y SHA-256
+  Then la respuesta queda registrada una sola vez y es pública sin login
+  And no existe canal de comunicación ni operación de resolución o desbloqueo
+```

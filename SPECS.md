@@ -1,6 +1,6 @@
 # Specification Index
 
-Updated 2026-09-16. Requirement approval and verification completion are separate.
+Updated 2026-09-22. Requirement approval and verification completion are separate.
 
 | Specification | Approval | Delivery |
 |---|---|---|
@@ -8,7 +8,7 @@ Updated 2026-09-16. Requirement approval and verification completion are separat
 | [SPEC-0002: REST/frontend](specs/0002-rest-frontend-isolation/status.md) | APPROVED | Integrated; final verification open |
 | [SPEC-0003: marketplace](specs/0003-transactional-marketplace/status.md) | APPROVED | Integrated; POC-07 final verification open |
 | [SPEC-0004: Virto compatibility](specs/0004-virto-compatibility/plan.md) | DRAFT | Plan only; permissions and ramp settlement rules need approval |
-| [SPEC-0005: dispute opening](specs/0005-dispute-opening/status.md) | DRAFT | Rejection, documented opening and public/channel behavior planned; product decisions open |
+| [SPEC-0005: dispute opening](specs/0005-dispute-opening/status.md) | DRAFT — technical review | Product decisions consolidated: current rejection, public references, project freeze and one response. No timeout, chat or resolution. Implementation/E2E pending |
 
 The marketplace POC was integrated into `master` at `ed6e4f8`; the legacy-scale
 E2E, quality refactors and dispute plan were integrated afterward. No production

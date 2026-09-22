@@ -157,7 +157,7 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 
 | Priority | Area | Status / next decision |
 |---|---|---|
-| P0 | Formal disputes | Current command only freezes a milestone and records one reason. No rejection history, immutable expediente, counterargument, communication channel or public view. [SPEC-0005](../../specs/0005-dispute-opening/status.md) is a draft implementation plan based on `Disputas.md`; product decisions remain |
+| P0 | Formal disputes | Current command only freezes a milestone and records one internal reason. [SPEC-0005](../../specs/0005-dispute-opening/status.md) now consolidates confirmed rejection/submission states, public URL/SHA-256 references, project-wide freeze and one response. Technical review and signed E2E implementation remain pending. Chat, snapshots, timeout and resolution are excluded |
 | P0 | Verification closure | POC-07 and TASK-005 remain open; diagnostic secret-marker evidence, the key-rotation scope and dependency-policy gate still need closure |
 | P1 | Virto auxiliary compatibility | Membership/governance remark and Bramp are planned in SPEC-0004; permissions and settlement rules await approval |
 | P1 | Worker/client profiles | GitHub username, biography, background, proficiency, location and languages are absent |

@@ -1,71 +1,69 @@
-# Development plan: dispute opening
+# Dispute opening: implementation plan
 
-Status: BLOCKED ON SPEC APPROVAL
+Status: READY FOR TECHNICAL REVIEW; implementation not started.
 
-## Graph rules
+Updated: 2026-09-22. DSP-00 is documentation consolidation, not feature delivery.
+Product scope is confirmed. Final compatibility/storage decisions are in spec.md.
 
-- No implementation starts while `status.md` is `DRAFT`.
-- Every task uses its named branch/worktree, one primary writer and only its
-  allowed paths.
-- Tests are kept in dedicated `tests.rs` files, not embedded in `lib.rs`,
-  `domain.rs` or handler modules.
-- The integrator alone edits shared manifests, module roots, generated aggregate
-  dispatch, OpenAPI and lockfiles.
-- A task stops rather than guessing an unanswered blocking rule in `status.md`.
+## Ownership and scope
 
-## Tasks
+One integrator owns shared contracts, dispatch, module roots, OpenAPI and scripts.
+Work sequentially in a single task worktree unless parallel work is explicitly
+requested. Do not create worktrees inside .kilo. Tests belong in tests.rs modules.
+No PostgreSQL migration, new service, DAO, chat or unrelated refactoring is
+included in the proposed scope.
 
-| ID | Branch / worktree name | Primary scope | Depends on | Completion gate |
-|---|---|---|---|---|
-| DSP-00 | `spec/0005-dispute-opening` / `dispute-spec` | `specs/0005-dispute-opening/**` | Product answers | Spec and scenarios approved |
-| DSP-01 | `feat/dispute-contracts` / `dispute-contracts` | `crates/generated-contracts/src/disputes/mod.rs`, `crates/generated-contracts/src/disputes/tests.rs` | DSP-00 | Validated DTOs, signed commands, events, bounds, errors and compatibility fixtures pass |
-| DSP-02 | `feat/dispute-provider-domain` / `dispute-provider-domain` | `services/mock-provider/src/disputes/mod.rs`, `services/mock-provider/src/disputes/tests.rs` | DSP-01 | Pure rejection/open/append transitions, evidence capture, invariants and rollback pass |
-| DSP-03 | `feat/dispute-adapter` / `dispute-adapter` | `services/adapter-api/src/disputes/mod.rs`, `services/adapter-api/src/disputes/tests.rs` | DSP-01 | Session authorization, REST mapping, redaction and query projections pass against fixtures |
-| DSP-04 | `feat/dispute-frontend` / `dispute-frontend` | `apps/leptos-web/src/disputes/mod.rs`, `apps/leptos-web/src/disputes/tests.rs` | DSP-01 | Rejection/open/response and read-only public UI use only REST/SSE |
-| DSP-05 | `integrate/dispute-opening` / `dispute-integration` | `crates/generated-contracts/src/lib.rs`, provider `domain.rs`/`lib.rs`/`storage.rs`, adapter `http.rs`/`lib.rs`/`operations.rs`, `contracts/openapi.json`, root manifests and lockfile | DSP-02, DSP-03 | Commands commit atomically in memory and SQLite; old route cannot bypass rejection |
-| DSP-06 | `test/dispute-opening-e2e` / `dispute-e2e` | `scripts/dispute-e2e.py`, `progress/handoffs/DSP-06.md` | DSP-04, DSP-05 | Signed rejection/open/response, SSE, redaction, replay and frozen escrow pass on both backends |
-| DSP-07 | `verify/dispute-opening` / `dispute-verification` | Read-only integrated tree, `progress/handoffs/DSP-07.md` | DSP-06 | Requirement-to-scenario trace and applicable workspace gates independently verified |
+| ID | Work and primary paths | Depends on | Completion evidence |
+|---|---|---|---|
+| DSP-00 | Consolidate this spec, Disputas.md adenda, indexes and review handoff | Confirmed product decisions | Consistent spec, threat model and Gherkin; technical review resolved |
+| DSP-01 | contracts submission/dispute modules and tests; generated-contracts/lib.rs; primitives only for stable validated hash types | DSP-00 | JSON/SCALE validation, payload compatibility, typed review/evidence contracts |
+| DSP-02 | mock-provider domain submission/dispute modules and tests; State, project dispatch, validation, storage | DSP-01 | Atomic review/open/response; central freeze; restore, replay, races and conservation pass |
+| DSP-03 | adapter dispute/submission handlers and tests; http/operations; provider internal resource query | DSP-01, DSP-02 | Authoritative target checks, exact public GET, authenticated writes, receipts/SSE |
+| DSP-04 | OpenAPI, adapter/provider docs, existing Leptos completion controls and browser fixtures; custody version fixtures | DSP-03 | Public contract and all existing clients match; no old bypass route |
+| DSP-05 | scoped tracing setup and typed errors in touched modules; manifests/lockfile only if necessary | DSP-02, DSP-03 | Structured output includes result IDs/cursors and excludes sensitive marker fixtures |
+| DSP-06 | scripts/dispute-e2e.py; shared helpers from poc-e2e.py only when needed; existing regression payloads | DSP-04, DSP-05 | Signed real-service full flow on memory/SQLite; 5/3/4/2 regression still passes |
+| DSP-07 | focused/full verification and progress/handoffs/DSP-07.md; spec/task statuses | DSP-06 | Observed requirements-to-tests evidence, actual limitations and clean diff |
 
-DSP-01 may require a minimal integrator-owned re-export from
-`crates/generated-contracts/src/lib.rs`; the contracts writer does not edit that
-shared file. DSP-02 and DSP-03 prepare self-contained modules. DSP-05 performs the
-only edits to the current large provider dispatch and adapter route table.
-The process-level E2E remains a standalone Python fixture; every new Rust test is
-placed in the `tests.rs` files named above.
+DSP-01 freezes wire DTOs and stable errors first. DSP-02 adds failing domain
+tests before transitions. DSP-03 connects those transitions through the existing
+signed operation path. Response must not reuse an unrestricted project mutation
+bypass. DSP-04 keeps the existing frontend working; it is not a full Figma UI.
 
-## Parallel-safe execution
+## Specific implementation checks
 
-After DSP-01 freezes fixtures, DSP-02 and DSP-03 can run in parallel. DSP-04 can
-build against those fixtures without accessing provider or custody internals.
-DSP-05 starts only when provider and adapter modules are ready. DSP-06 and DSP-07
-remain sequential because they consume the integrated behavior.
+- Accept/reject current submission ID; immutable review result and delivery.
+- Refuse dispute without current rejection, after resubmission or across parents.
+- Block every project command family and other milestones centrally.
+- Exact replay returns prior receipt even after freeze; a new ID obeys guards.
+- Allow only counterparty response and public case reads after freeze.
+- No HTTP call to evidence URLs; no snapshot or new domain DB in adapter.
+- Private provider queries remain service-authenticated.
+- Restoration rejects inconsistent links, states, authors and versions.
+- Existing payouts, committed-minute scores and reservations remain correct.
+- Public DTO omits internal event recipients, operations, keys and unrelated data.
+- Public GET exemption never exempts POST from session and CSRF checks.
+- Tests use temporary state; incompatible user databases are never reset.
+- Code uses explicit derived types, short domain functions and dedicated tests.rs.
 
-## Requirement traceability
+## Test traceability
 
-| Requirement | Implementation tasks | Acceptance evidence |
-|---|---|---|
-| REJ-001, REJ-002 | DSP-01, DSP-02, DSP-03 | Rejection validation, authorization and optional-dispute scenarios |
-| DSP-001, DSP-002 | DSP-01, DSP-02, DSP-05 | Opening authorization, atomic success and rollback scenarios |
-| DSP-003 | DSP-02, DSP-05 | Immutable evidence scenario and restoration tests |
-| DSP-004 | DSP-01, DSP-02, DSP-03 | Counterparty append and impersonation scenarios |
-| DSP-005 | DSP-01, DSP-02, DSP-04 | Linked-channel scenario plus approved channel behavior |
-| DSP-006 | DSP-01, DSP-03, DSP-04 | Public allowlist and redaction tests |
-| DSP-007 | DSP-02, DSP-05 | Escrow conservation and absent-resolution scenarios |
-| DSP-008 | DSP-02, DSP-03, DSP-06 | Provider event and authenticated SSE scenario |
-| DSP-009 | DSP-02, DSP-05, DSP-06 | Replay/lost-response and memory/SQLite scenarios |
+| Requirements | Evidence |
+|---|---|
+| REF-001, SUB-001, SUB-002 | Contract validation; submit/current-review tests; existing acceptance regression |
+| REJ-001, REJ-002, DSP-001 | Rejection/resubmission and opening authorization/resource ancestry tests |
+| DSP-002, DSP-003 | Atomic freeze, all command guards, races, conservation and restore tests |
+| DSP-004, DSP-005 | Unique response, anonymous read and protected write tests |
+| DSP-006 | Receipt replay/lost response, SSE reconnect, backend equivalence |
+| DSP-007 | Absent-resolution contract and denied root/principal mutation tests |
+| Full flow | New public HTTP E2E plus unchanged four-milestone 5/3/4/2 outcomes |
 
-## Integration order
+## Verification and handoff
 
-1. Approve the state, visibility, channel and evidence decisions.
-2. Freeze versioned contracts and compatibility behavior.
-3. Integrate provider state transitions and storage validation.
-4. Integrate adapter commands, queries and OpenAPI.
-5. Integrate the independent frontend flow.
-6. Run E2E on memory and SQLite, then independent verification.
+Run focused tests, then formatting, workspace check/clippy/tests/doc tests/build
+with applicable feature combinations. Run the signed E2E on both backends.
+Omit cargo-deny per the owner's instruction; do not claim that gate passed.
+Do not close unrelated TASK-005/POC-07 without their separate required evidence.
 
-## Applicable gates
-
-Focused tests run first, followed by formatting, workspace check, clippy, tests,
-doc tests, build, dependency policy and audit gates defined by the repository.
-Contract and provider tests must prove that no normal completion or replay can
-release disputed funds.
+The final handoff records exact commands, observed results, branch/base/final
+commits, changed paths, Gherkin mapping and any remaining gaps. Public API E2E
+does not establish browser dispute UX, real-chain compatibility or DAO readiness.
