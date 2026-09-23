@@ -1,13 +1,11 @@
 # Specification status
 
-State: DRAFT
+State: APPROVED
 
-Updated: 2026-09-16.
+Approved by the product owner on 2026-09-23 through the backend-port plan and
+the subsequent scope decisions. Implementation and independent verification are
+pending; approval does not imply delivery.
 
-The owner requested an implementation plan, not implementation of auxiliary Virto
-interfaces. `plan.md` records source evidence, proposed scope, task ownership,
-dependencies and acceptance requirements. No new endpoints have been implemented.
-
-Pending approval: membership permissions and governance depth; Bramp asset and
-settlement rules; the exact legacy consumers that need compatibility aliases.
-These questions do not block the separately requested marketplace E2E expansion.
+The mock-only contract is in `spec.md`; `acceptance.feature` records observable
+cases. `plan.md` is historical source inventory and must not override the spec.
+Governance, DAO, real Kreivo calls, banking and standalone payments are excluded.

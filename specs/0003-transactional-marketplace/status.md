@@ -22,10 +22,9 @@ Remaining closure work:
   `POC07-frontend-build.md` records a build-tool correction, not this task's completion.
   A read-only evidence review identified missing diagnostic secret-marker evidence
   and an encryption-key rotation scope discrepancy in SPEC-0001. See its status.
-- Dependency policy: cargo-deny 0.20.2 was executed on 2026-09-14 and returned
-  exit 5. Advisories and licenses failed; bans and sources passed. The blockers
-  are CC0-1.0/BSL-1.0 allowances and the two documented unmaintained Leptos
-  dependencies. No exception has been applied.
+- The owner removed Leptos and cargo-deny from this POC's backend acceptance
+  gate. The previous cargo-deny failure remains recorded evidence, not a pass.
+  It must be revisited before a production or published dependency-policy claim.
 
 Milestone rejection and formal public dispute opening now follow SPEC-0005:
 current rejected submission, one response and a whole-project freeze. The old
@@ -37,10 +36,18 @@ Requirements remain APPROVED. Full verification and task closure remain open.
 
 Port review: the owner requested legacy-scale E2E coverage on 2026-09-15. The
 script now includes four milestones with teams of 5/3/4/2 in a separate scenario;
-the original security/SSE flow is retained. Detailed profiles, catalog associations,
-explicit project completion and sequential activation remain non-equivalent.
-See `../../docs/project/porting-coverage.md`. This test expansion does not change
-approved domain rules or close independent verification.
+the original security/SSE flow is retained. At that verification point, detailed
+profiles, catalog associations, explicit project completion and sequential
+activation were non-equivalent. The 2026-09-23 amendments below supersede those
+gaps as requirements, not as completed implementation. See
+`../../docs/project/porting-coverage.md`. This test expansion does not close
+independent verification.
+
+The owner approved a further amendment on 2026-09-23: team continuity without
+`assignmentKey`, a task in every milestone before proposal submission,
+sequential activation despite atomic upfront assignment/reservation, and
+automatic project completion after the final accepted milestone. These rules
+are now in `spec.md` and `acceptance.feature`; implementation is pending.
 
 Expanded E2E verified on 2026-09-15: both original and multi-team scenarios passed
 against both SQLite and memory after rebuilding current service binaries. Evidence:
@@ -49,5 +56,5 @@ against both SQLite and memory after rebuilding current service binaries. Eviden
 The 2026-09-23 signed E2E passed single-milestone, four-milestone and dispute
 scenarios on both backends; workspace tests reached 49 passing. This does not
 close POC-07's independent verification. The owner accepted deferring the two
-maintenance advisories for this POC. The checked-in dependency policy has not
-yet been changed or passed with that decision.
+Leptos maintenance advisories for this POC. The checked-in dependency policy has
+not been changed or passed; it is outside this backend closure.
