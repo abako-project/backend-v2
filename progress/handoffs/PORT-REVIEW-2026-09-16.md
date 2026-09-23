@@ -1,5 +1,9 @@
 # Port review: 2026-09-16
 
+> Historical review. SPEC-0005 is now approved and implemented; see
+> [current coverage](../../docs/project/porting-coverage.md) and
+> [DSP-07](DSP-07.md). Results below were observed on 2026-09-16.
+
 ## Scope and result
 
 Compared the integrated Rust marketplace against legacy `main` at `3e2b929`,

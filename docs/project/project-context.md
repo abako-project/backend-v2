@@ -1,11 +1,11 @@
 # Project Context
 
-Updated 2026-09-15.
+Updated 2026-09-23.
 
 Kunveno is a Rust port of the core mock-backed marketplace with approved changes.
-Legacy: `legacy backend repository`. Selected development baseline:
-`legacy task-storage worktree`, branch `feat/68-provider-owned-proposals-task-storages`,
-commit `d408641`. This is not a complete compatibility port of every legacy package.
+Legacy: the separate backend repository. Its `main` contains the
+provider-owned task-storage change (`d408641`) through merge `3e2b929`.
+This is not a complete compatibility port of every legacy package.
 See [coverage](porting-coverage.md).
 
 | Dimension | Current implementation |
@@ -18,13 +18,14 @@ See [coverage](porting-coverage.md).
 | Authentication | Classic login, cookie sessions, CSRF, backend sr25519 signing |
 | Deployment | Local Docker Compose and Nginx on localhost:8088 |
 | Rust toolchain/MSRV | 1.96.1 |
-| Repository | Local Git; remote publishing not authorized |
+| Repository | Local Git with a configured origin; publishing requires an explicit request |
 | Product license | Undecided; possible future FOSS and commercial use |
 
-Approved behavior: SPEC-0001 through SPEC-0003 and ADR-0001. Calendars use weekly
+Approved behavior: SPEC-0001 through SPEC-0003, SPEC-0005 and ADR-0001. Calendars use weekly
 capacity; matching uses all required skills without comparing roles. Reputation is
 separate by mode. Planning is negotiated, execution fully funded into escrow, and
-payouts cover each requirement. Disputes freeze funds without resolution.
+payouts cover each requirement. A current milestone rejection can lead to a
+public Open dispute and whole-project freeze; resolution is not implemented.
 
 HSM/envelope encryption and online rotation were discussed, but are not implemented
 or finalized. Custody directly encrypts seeds using a runtime-file master key.

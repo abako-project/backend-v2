@@ -2,7 +2,7 @@
 
 This retained template catalog lists candidates, not installed dependencies or
 project approval. Cargo.toml/Cargo.lock and [poc-baseline.md](poc-baseline.md) describe
-the current stack. PostgreSQL, RabbitMQ and GraphQL rows below are not current choices.
+the current stack. PostgreSQL and RabbitMQ rows below are not current choices.
 Verify registry and primary documentation before adopting a new dependency.
 
 | Crate or tool | Default decision | Use | Important constraint |
@@ -17,7 +17,6 @@ Verify registry and primary documentation before adopting a new dependency.
 | `sqlx` | Adopt | Async PostgreSQL | Explicit features, transactions, migrations, disposable DB tests |
 | `leptos` | Default frontend | Rust web UI | Confirm SSR/hydration and deployment requirements |
 | `tonic`, `prost`, `tonic-build` | Conditional | Internal gRPC | Add only for justified RPC/streaming boundaries |
-| `async-graphql` | Default GraphQL candidate | Browser-facing BFF | Authorization, batching, cost limits, schema diff |
 | `lapin` | Default RabbitMQ client candidate | AMQP 0-9-1 | Confirms, manual acks, recovery, idempotency |
 | `tokio-tungstenite` | Conditional | WebSocket protocol | Prefer Axum integration where sufficient |
 | `futures` | Conditional | Stream/future combinators | Use standard/Tokio utilities when enough |

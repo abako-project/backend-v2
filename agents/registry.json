@@ -64,7 +64,6 @@
         "rust-error-handling",
         "tokio-concurrency",
         "axum-service",
-        "graphql-contract",
         "grpc-tonic",
         "realtime-channel",
         "performance-engineering"
@@ -79,7 +78,6 @@
       "skills": [
         "leptos-ui",
         "serialization-contracts",
-        "graphql-contract",
         "realtime-channel",
         "rust-quality"
       ]

@@ -1,5 +1,9 @@
 # DSP-00: Dispute specification reanalysis
 
+> Historical 2026-09-22 snapshot. SPEC-0005 is now approved and implemented;
+> see [its status](../../specs/0005-dispute-opening/status.md) and
+> [DSP-07](DSP-07.md). Findings below describe the pre-implementation tree.
+
 Date: 2026-09-22
 Task: DSP-00, documentation consolidation and read-only implementation review.
 Base: 792e4ce (master). Branch: spec/disputes-consolidation.

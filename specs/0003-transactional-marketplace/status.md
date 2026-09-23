@@ -4,7 +4,7 @@ State: APPROVED
 
 Approved by the product owner on 2026-09-08: architecture review, REST/frontend isolation, reputation defaults, and negotiated planning plus explicit milestone prices. Latest instruction: implement.
 
-Last updated: 2026-09-15.
+Last updated: 2026-09-23.
 
 Implementation: POC-00 through POC-06 are integrated into `master` at `ed6e4f8`.
 All six temporary task worktrees were checked and removed
@@ -27,10 +27,11 @@ Remaining closure work:
   are CC0-1.0/BSL-1.0 allowances and the two documented unmaintained Leptos
   dependencies. No exception has been applied.
 
-Disputes: opening planning/milestone disputes, participant authorization,
-recorded reasons and frozen funds are implemented and covered by provider tests.
-Arbitration, refunds and fund release after resolution remain explicitly outside
-the approved POC scope; they are not unfinished implementation tasks for this spec.
+Milestone rejection and formal public dispute opening now follow SPEC-0005:
+current rejected submission, one response and a whole-project freeze. The old
+milestone dispute command/route was removed. Planning disputes retain their
+existing route. Arbitration, refunds and fund release after resolution remain
+outside the approved POC scope.
 
 Requirements remain APPROVED. Full verification and task closure remain open.
 
@@ -45,5 +46,8 @@ Expanded E2E verified on 2026-09-15: both original and multi-team scenarios pass
 against both SQLite and memory after rebuilding current service binaries. Evidence:
 `../../progress/handoffs/E2E-legacy-scale.md`.
 
-The owner accepted deferring the two maintenance advisories for this POC. The
-checked-in dependency policy has not yet been changed or passed with that decision.
+The 2026-09-23 signed E2E passed single-milestone, four-milestone and dispute
+scenarios on both backends; workspace tests reached 49 passing. This does not
+close POC-07's independent verification. The owner accepted deferring the two
+maintenance advisories for this POC. The checked-in dependency policy has not
+yet been changed or passed with that decision.

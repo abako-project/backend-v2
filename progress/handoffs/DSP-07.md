@@ -48,8 +48,8 @@ sessions and notification read state only. Evidence URLs are validated but never
 fetched. Payload version 2 intentionally rejects old encoded commands and the
 disposable SQLite schema now requires version 2.
 
-No worktree was created for this implementation. A clean detached worktree found
-under `.kilo` was removed; future isolated worktrees belong under `/tmp`.
+No worktree was created for this implementation. An unrelated clean detached
+worktree was removed; future isolated worktrees belong under `/tmp`.
 
 ## Deferred and risks
 

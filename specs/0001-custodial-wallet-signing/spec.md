@@ -152,7 +152,7 @@ Executable scenarios are in `acceptance.feature`.
 
 ### REST
 
-Typed adapter REST commands return an operation reference and asynchronous status. Both the external frontend and Leptos use the same documented HTTP contract. No GraphQL endpoint or Leptos server-function protocol is required. The browser contract exposes neither raw-signature operations nor fields that accept arbitrary signable bytes.
+Typed adapter REST commands return an operation reference and asynchronous status. Both the external frontend and Leptos use the same documented HTTP contract. No Leptos server-function protocol is required. The browser contract exposes neither raw-signature operations nor fields that accept arbitrary signable bytes.
 
 ### gRPC
 

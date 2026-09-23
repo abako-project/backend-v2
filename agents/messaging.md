@@ -24,7 +24,7 @@ Assigned messaging modules, AsyncAPI, and payload schemas.
 
 ## Forbidden Actions
 
-Undocumented events, unbounded retries, automatic acknowledgement before processing, or GraphQL as an event schema.
+Undocumented events, unbounded retries, or automatic acknowledgement before processing.
 
 ## Exit Criteria
 

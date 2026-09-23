@@ -4,7 +4,7 @@ State: APPROVED
 
 Approved: 2026-09-08 by the product owner in conversation.
 
-Scope: REST instead of GraphQL, shared browser contract, independently built frontends, isolated backend services, and optional local Nginx/Compose routing.
+Scope: REST/JSON shared browser contract, independently built frontends, isolated backend services, and optional local Nginx/Compose routing.
 
 Last updated: 2026-09-15.
 
@@ -30,6 +30,7 @@ Related work: Custody is specified in SPEC-0001; the approved planning-price
 negotiation is specified in SPEC-0003. Neither approval implies production readiness.
 
 Human deployment and verification commands use native tools.
-The real-service E2E passed again for both backends on 2026-09-15; it remains a
-single-milestone API scenario, separate from the browser fixture smoke.
+The real-service E2E passed again for both backends on 2026-09-23. It now runs
+single-milestone, four-milestone and dispute API scenarios, separate from the
+browser fixture smoke. See `../../progress/handoffs/DSP-07.md`.
 The owner accepted maintenance-advisory deferral; applying that policy is pending.

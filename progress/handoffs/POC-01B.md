@@ -19,7 +19,7 @@
 
 ## Decisions and interface
 
-The public API uses REST under `/api`, without GraphQL or `/v1`. Internal provider
+The public API uses REST under `/api`, without `/v1`. Internal provider
 and custody endpoints are not exposed. GET `/api/openapi.json` reads the document
 from `OPENAPI_PATH`, default `contracts/openapi.json`, in the adapter implementation.
 

@@ -2,14 +2,14 @@
 
 Status: COMPLETED; implementation and verification evidence recorded.
 
-Updated: 2026-09-22. DSP-00 is documentation consolidation, not feature delivery.
+Updated: 2026-09-23. DSP-00 is documentation consolidation, not feature delivery.
 Product scope is confirmed. Final compatibility/storage decisions are in spec.md.
 
 ## Ownership and scope
 
 One integrator owns shared contracts, dispatch, module roots, OpenAPI and scripts.
 Work sequentially in a single task worktree unless parallel work is explicitly
-requested. Do not create worktrees inside .kilo. Tests belong in tests.rs modules.
+requested. Keep temporary worktrees under /tmp. Tests belong in tests.rs modules.
 No PostgreSQL migration, new service, DAO, chat or unrelated refactoring is
 included in the proposed scope.
 

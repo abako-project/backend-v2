@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026.09.23
+
+- Implemented versioned milestone delivery, current-submission rejection,
+  public dispute opening, one counterparty response and project-wide freeze.
+- Verified signed single- and four-milestone (5/3/4/2) happy paths and the
+  dispute branch on SQLite and memory.
+- Added the conceptual/API happy-path guide and reconciled project, contract,
+  specification and delivery documentation.
+- Removed unused browser API guidance and agent skill for the abandoned query
+  protocol; the legacy-seeded catalog label remains domain data.
+
 ## 2026.09.15
 
 - Updated POC documentation, native deployment commands and legacy coverage accounting.

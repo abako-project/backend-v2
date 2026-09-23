@@ -4,7 +4,7 @@ Reviewed 2026-09-08 and updated 2026-09-14 using Context7, primary docs, and Car
 
 | Family | Baseline and purpose | Features / implications |
 |---|---|---|
-| HTTP/runtime | Axum 0.8.9, Tokio 1.53.1, tower-http 0.6.11 | HTTP1, JSON, queries; runtime, bounded synchronization, CORS; no GraphQL |
+| HTTP/runtime | Axum 0.8.9, Tokio 1.53.1, tower-http 0.6.11 | HTTP1, JSON, queries; runtime, bounded synchronization, CORS |
 | SQLite | SQLx 0.9.0 | runtime-tokio + sqlite-bundled; Rust >=1.94, native SQLite C/FFI, no extension loading |
 | Wire types | serde 1.0.229, serde_json 1.0.151, SCALE 3.7.5 | derive, checked boundary types; JSON for HTTP and SCALE for signed mock calls |
 | Errors | thiserror 2.0.20 | typed library/application errors |
@@ -19,6 +19,6 @@ Reviewed 2026-09-08 and updated 2026-09-14 using Context7, primary docs, and Car
 
 All baseline MSRVs fit Rust 1.96.1. Leptos requires 1.88, SQLx 1.94, signer/AEAD 1.85; older mainstream dependencies require less. Exact resolved licenses and transitives must pass cargo-deny/audit. Main dependencies permit MIT and/or Apache-2.0; Subxt's GPL option is an alternative, not a requirement. SQLite introduces native/unsafe implementation dependencies while project code forbids unsafe.
 
-Alternatives intentionally omitted: broker for durable polling, GraphQL, full blockchain client for mock signing, rusqlite alongside SQLx (incompatible native SQLite dependency versions), server-rendered frontend, Trunk in the container build, and automatic proxy discovery. Trunk 0.21.14's locked installer was removed after its build-only graph was found to contain vulnerable crossbeam-channel 0.5.14; the application dependency graph never contained that crate.
+Alternatives intentionally omitted: broker for durable polling, full blockchain client for mock signing, rusqlite alongside SQLx (incompatible native SQLite dependency versions), server-rendered frontend, Trunk in the container build, and automatic proxy discovery. Trunk 0.21.14's locked installer was removed after its build-only graph was found to contain vulnerable crossbeam-channel 0.5.14; the application dependency graph never contained that crate.
 
 Primary sources: [Subxt signer](https://github.com/paritytech/subxt/blob/master/signer/src/sr25519.rs), [SQLx SQLite](https://docs.rs/sqlx/latest/sqlx/sqlite/index.html), [AEAD](https://docs.rs/chacha20poly1305/latest/chacha20poly1305/), [reqwest features](https://docs.rs/reqwest/latest/reqwest/), [Leptos CSR deployment](https://github.com/leptos-rs/book/blob/main/src/deployment/csr.md), [Chrono ISO dates](https://docs.rs/chrono/latest/chrono/naive/struct.NaiveDate.html).

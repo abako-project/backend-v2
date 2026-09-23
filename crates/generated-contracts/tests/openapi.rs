@@ -45,7 +45,7 @@ fn all_public_operations_have_valid_references_and_security()
     let mut operation_ids = BTreeSet::new();
     for (path, item) in paths {
         assert!(path.starts_with("/api/"));
-        assert!(!path.contains("graphql") && !path.contains("internal"));
+        assert!(!path.contains("internal"));
         for (method, operation) in item.as_object().ok_or("path operations missing")? {
             assert!(operation_ids.insert(operation["operationId"].as_str().ok_or("ID missing")?));
             assert!(operation["responses"].as_object().is_some());

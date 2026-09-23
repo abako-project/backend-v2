@@ -25,7 +25,7 @@ public reverse proxy. Ports: adapter 8080, custody 8081, provider 8082.
 | Provider | GET /internal/events?after=0&limit=100 | — | ProviderEvents |
 | Provider | GET /internal/snapshot | — | ProviderSnapshot |
 
-The unsigned call fixes a 16-byte signing domain and format version 1. The command
+The unsigned call fixes a 16-byte signing domain and payload version 2. The command
 variant identifies the message; its typed IDs identify contract instances. No
 redundant arbitrary message/contract/opaque payload can contradict this command.
 SHA-256 covers exact SCALE bytes returned by `signable_bytes()`. A receipt records
@@ -70,7 +70,11 @@ adapter, but clients needing retry safety should always supply one.
 | POST /api/projects/{projectId}/cancel | ReasonRequest | CancelProject |
 | POST /api/projects/{projectId}/milestones/{milestoneId}/request-completion | RequestMilestoneCompletionRequest | RequestMilestoneCompletion |
 | POST /api/projects/{projectId}/milestones/{milestoneId}/accept-completion | AcceptMilestoneCompletionRequest | AcceptMilestoneCompletion |
-| POST /api/projects/{projectId}/milestones/{milestoneId}/dispute | ReasonRequest | DisputeMilestone |
+| POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions | RequestMilestoneCompletionRequest | RequestMilestoneCompletion |
+| POST /api/completion-submissions/{submissionId}/rejection | EvidenceRequest | RejectCompletionSubmission |
+| POST /api/disputes | OpenDisputeRequest | OpenDispute |
+| POST /api/disputes/{disputeId}/response | EvidenceRequest | RespondToDispute |
+| GET /api/disputes/{disputeId} | — | Public DisputeView; no session required |
 | POST /api/projects/{projectId}/task-storages/{storageId}/tasks | TaskDefinition | CreateTask |
 | PUT /api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId} | TaskDefinition | EditTask |
 | PATCH /api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}/progress | TaskProgressRequest | UpdateTaskProgress |
@@ -114,8 +118,9 @@ detailed reservations remain internal provider data.
 ## Browser integration
 
 The complete public schema is `contracts/openapi.json`. The adapter serves it at
-`/api/openapi.json` from `OPENAPI_PATH` (default `contracts/openapi.json`). Register,
-login, and the schema document are public; every other route requires a session.
+`/api/openapi.json` from `OPENAPI_PATH` (default `contracts/openapi.json`).
+Registration, login, the schema document and individual dispute reads are public;
+every other route requires a session.
 
 The cookie is `kunveno_session`, HttpOnly, SameSite=Lax, Path=/api, with a 24-hour
 lifetime. Secure is enabled outside local HTTP development. Both frontend clients

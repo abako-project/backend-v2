@@ -1,6 +1,7 @@
 # Porting and E2E coverage
 
-Reviewed 2026-09-16 against Rust `master` and legacy `main` commit `3e2b929`.
+Reviewed 2026-09-23 against Rust commit `a64b747`
+and legacy `main` commit `3e2b929`.
 This is a port of the approved marketplace redesign,
 not a complete compatibility port of the legacy backend or all mock endpoints.
 
@@ -23,7 +24,7 @@ repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
 | Proposals/task storage | Draft/PendingApproval/Approved/Cancelled; provider creates storage per milestone; task tracking preserved |
 | Funds | Approved full execution escrow and per-requirement/coordinator payouts replace legacy advance-only and first-worker payouts |
 | Reputation | Approved per-milestone, committed-minute weighted scores replace standalone legacy project ratings |
-| Cancellation/dispute | Party authorization, recorded reason, frozen funds; arbitration/refunds deliberately excluded |
+| Cancellation/dispute | Party authorization, current-submission rejection, public Open case, one response and project-wide freeze; resolution/refunds excluded |
 | Storage | Mock memory/SQLite features, SQLite default, missing-only mock catalog seeding |
 | Auth/signing/events | Classic cookie login, real sr25519 custody signatures, durable operations, event ingestion and SSE |
 
@@ -51,6 +52,10 @@ the Rust provider currently permits an empty storage. Decide this explicitly bef
 calling task-storage behavior fully equivalent. The legacy uses a separate in-memory
 storage map and header-based mock caller; Rust keeps the storage inside the signed,
 atomic project aggregate, which is an intentional architecture improvement.
+
+An Open milestone dispute now freezes writes to all of the project's task
+storages, not only the disputed milestone. Public case reads and the single
+counterparty response remain available. No dispute resolution or unlock exists.
 
 Not preserved or not equivalent:
 
@@ -88,7 +93,7 @@ python3 scripts/poc-e2e.py
 The script defaults to both storage backends. Select one with `--storage sqlite` or
 `--storage memory`. It opens local ports, starts real wallet/provider/adapter binaries,
 generates disposable secrets and databases, and removes them after stopping its
-  processes. It does not require Docker, a blockchain or real funds.
+processes. It does not require Docker, a blockchain or real funds.
 
 Observed 2026-09-15: both `PASS sqlite` and `PASS memory`. The first sandboxed attempt
 could not create a socket; the unchanged test passed with local socket access.
@@ -106,21 +111,33 @@ dependency-policy gate still fails for the previously documented CC0/Boost
 allowlist and two Leptos maintenance advisories; `cargo audit` exits 0 with
 those two maintenance warnings. See the [current review handoff](../../progress/handoffs/PORT-REVIEW-2026-09-16.md).
 
+Reverified on 2026-09-23 after SPEC-0005: 49 workspace tests and workspace
+format/check/Clippy/doc-test/build passed. The signed single-milestone,
+four-milestone 5/3/4/2 and dispute scenarios passed on both SQLite and memory.
+The dispute scenario ends with an Open public case, one response, frozen project
+and unchanged balances. See [DSP-07](../../progress/handoffs/DSP-07.md).
+`cargo-deny` was intentionally omitted at the owner's request; no passing
+dependency-policy claim is made.
+
 Covered flow: registration/login, catalog, worker registration, privileged coordinator
 promotion and funding, planning quote/acceptance/payment, proposal and task storage,
 execution approval and reservations, task progress, milestone completion, exact
 payouts and weighted scores. It also checks CORS/CSRF/access denials, password changes
 preserving wallet identity, lost successful reply recovery, exact retries, notification
 ingestion, SSE replay, explicit read state and logout.
+The new dispute scenario also covers versioned submission, rejection, public
+read, authorization, freeze and one immutable counterparty response.
 
 ## Coverage limits
 
 The Rust E2E retains the original one-client/coordinator/worker/outsider security
-scenario and adds a separately initialized scenario with 10 workers, 2 coordinators
+scenario, adds a separately initialized scenario with 10 workers, 2 coordinators
 and 4 milestones with teams of 5/3/4/2 workers. Five workers have no available
 capacity. The test checks all required skills despite differing roles, individual
 task storages preserved through draft edits/approval, task progress, per-milestone payouts, exact replay, accumulated
 minute-weighted scores, delegated scoring and weekly commitments.
+It also runs a third, isolated dispute scenario. The fixture uses public
+evidence URLs and hashes; the service does not fetch those URLs.
 
 The legacy scenario uses 10 workers, 2 coordinators and 4 milestones with 5/3/4/2
 workers, checking unavailable candidates, repeated assignment continuity, preserved
@@ -157,15 +174,19 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 
 | Priority | Area | Status / next decision |
 |---|---|---|
-| P0 | Dispute resolution | [SPEC-0005](../../specs/0005-dispute-opening/status.md) implements versioned submission/rejection, public URL/SHA-256 evidence, a formal Open case, project-wide freeze, one response and signed E2E on both mock backends. Resolution/unlock, DAO authority, chat and timeout remain excluded and require a later specification |
 | P0 | Verification closure | POC-07 and TASK-005 remain open; diagnostic secret-marker evidence, the key-rotation scope and dependency-policy gate still need closure |
 | P1 | Virto auxiliary compatibility | Membership/governance remark and Bramp are planned in SPEC-0004; permissions and settlement rules await approval |
 | P1 | Worker/client profiles | GitHub username, biography, background, proficiency, location and languages are absent |
 | P1 | Catalog relations | Skill-to-role associations and legacy free-text skill creation are absent |
+| P1 | Persistence migration | Adapter, custody and mock still use SQLite; the requested PostgreSQL design and safe migrations are not implemented |
 | P2 | Lifecycle parity choices | Sequential milestone activation, assignment-key continuity and explicit project completion need product decisions; current behavior follows SPEC-0003 |
 | P2 | Optional compatibility | Virto WebAuthn/password-derived login, generic Kreivo RPC, generic payments and old contract wrapper aliases need a named consumer before implementation |
+| Future spec | Dispute resolution | [SPEC-0005](../../specs/0005-dispute-opening/status.md) ends at an Open case and frozen project. DAO authority, resolution/unlock, escrow disposition, chat and timeout need separate product decisions; they are not defects in the approved opening PoC |
+| Future platform | Real chain and production custody | Replace the signed mock-provider integration with reviewed chain encoding, submission, finality, HSM-backed key management and recovery before real assets |
+| Quality | Browser-to-backend E2E | The signed E2E exercises real backend processes; browser smoke uses fixtures. No single browser test drives the full real-service lifecycle |
 | Quality | Code structure | Provider domain and long mock integration scenarios were split; unit tests now live in `tests.rs`. The adapter and frontend were not split merely for line count; their flow and tests remain focused |
 
 The unused service, worker and library scaffolds were removed. Calendar, tasks and
 task storage remain domain logic inside the atomic mock provider; SSE remains in the
 adapter. The approved backend runtime remains adapter, wallet and mock provider.
+For the call-by-call successful flow, see [the happy-path guide](happy-path.md).

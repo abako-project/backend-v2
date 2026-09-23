@@ -6,7 +6,7 @@ Owner: Kunveno product owner
 
 ## Requirements
 
-- REST-001: Expose one documented REST/JSON browser API under `/api`, without GraphQL and without an obligatory `/v1` path segment. Version signed provider formats independently.
+- REST-001: Expose one documented REST/JSON browser API under `/api`, without an obligatory `/v1` path segment. Version signed provider formats independently.
 - REST-002: Both the team's external frontend and the Leptos application consume that API. Backend crates do not depend on the frontend; the frontend does not import backend service implementations or database models.
 - REST-003: Document authentication, credentials, CSRF, origin policy, typed errors, idempotency, operation status, and SSE resume in OpenAPI and integration examples before frontend handoff.
 - REST-004: A state-changing provider action returns an operation reference. A transport acknowledgement is not business completion. Clients can query the outcome without retaining an SSE connection.
@@ -17,7 +17,7 @@ Owner: Kunveno product owner
 
 ## Non-goals
 
-GraphQL, Leptos server-function APIs, production deployment, Kubernetes, automatic proxy discovery, and pricing-policy decisions.
+Leptos server-function APIs, production deployment, Kubernetes, automatic proxy discovery, and pricing-policy decisions.
 
 ## Verification
 

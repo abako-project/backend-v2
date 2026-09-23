@@ -14,7 +14,6 @@ This is a date-stamped research snapshot, not an instruction to add every depend
 | `sqlx` | 0.9.0 | Default asynchronous PostgreSQL access |
 | `leptos` | 0.8.20 | Default all-Rust frontend candidate |
 | `tonic` | 0.14.6 | Conditional internal gRPC |
-| `async-graphql` | 7.2.1 | Default GraphQL BFF candidate |
 | `lapin` | 4.10.0 | Default RabbitMQ client candidate |
 | `tower` | 0.5.3 | Axum middleware foundation |
 | `tower-http` | 0.7.0 | Common HTTP middleware |

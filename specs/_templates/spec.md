@@ -52,8 +52,6 @@ Executable scenarios are in `acceptance.feature`.
 
 ## Contract Impact
 
-### GraphQL
-
 ### gRPC
 
 ### HTTP and Webhooks

@@ -13,7 +13,7 @@ cargo build --workspace --all-features --locked
 python3 scripts/poc-e2e.py
 ```
 
-The test starts real adapter, custody, and provider processes with fresh secrets. It runs both mock storage backends and two isolated scenarios: the original security/SSE flow and four milestones with teams of 5/3/4/2 workers. It checks signed operations, planning fees, escrow, assignments, payouts and scores, then removes its temporary data. This is a backend E2E, not a browser-driven full-stack test. See the [porting and test coverage review](docs/project/porting-coverage.md).
+The test starts real adapter, custody, and provider processes with fresh secrets. On both mock storage backends it runs three isolated scenarios: the original security/SSE flow, four milestones with teams of 5/3/4/2 workers, and public dispute opening after a rejected delivery. It checks signed operations, planning fees, escrow, assignments, payouts, scores and dispute freeze, then removes its temporary data. This is a backend E2E, not a browser-driven full-stack test. See the [happy-path guide](docs/project/happy-path.md) and [porting coverage](docs/project/porting-coverage.md).
 
 ## Applications and contracts
 
@@ -28,7 +28,7 @@ The test starts real adapter, custody, and provider processes with fresh secrets
 
 Contract instances are domain objects inside one atomic mock runtime, not one process per worker or proposal. SQLite is the default backend. Cargo features `storage-memory` and `storage-sqlite` may compile together; `MOCK_STORAGE` selects the backend. `mock-seed` initializes missing catalog entries and enables authenticated development funding.
 
-Both frontends consume `/api`, without GraphQL or Leptos server functions. Start with the [HTTP contract](crates/generated-contracts/API.md) and [OpenAPI document](contracts/openapi.json), also served at `/api/openapi.json`. The [deployment guide](infra/README.md#another-frontend) covers the team's separate frontend.
+Both frontends consume `/api` as REST/JSON and SSE clients. Start with the [happy-path guide](docs/project/happy-path.md), [HTTP contract](crates/generated-contracts/API.md) and [OpenAPI document](contracts/openapi.json), also served at `/api/openapi.json`. The [deployment guide](infra/README.md#another-frontend) covers the team's separate frontend.
 
 Authenticate with the HttpOnly cookie and send `X-CSRF-Token` on authenticated mutations. Business mutations return `202 OperationRef`, not business success: poll the operation and inspect its receipt's execution outcome. Supply an `Idempotency-Key` for retry safety. SSE cursors do not mark notifications read. Custody and provider endpoints remain internal.
 

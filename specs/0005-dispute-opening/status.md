@@ -4,7 +4,7 @@ State: APPROVED
 
 Updated: 2026-09-23
 
-Implementation: COMPLETE on `feat/dispute-opening`. Verification: PASSED for
+Implementation: COMPLETE at `a64b747`. Verification: PASSED for
 the approved memory/SQLite mock scope. PostgreSQL and dispute resolution remain
 separate work.
 

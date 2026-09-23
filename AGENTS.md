@@ -42,7 +42,7 @@ Do not edit outside the assigned scope. Shared workspace files, lockfiles, globa
 - Measure before optimizing.
 - Choose the simplest protocol that meets the requirement.
 
-Default web stack when the specification calls for it: Axum/Tower, Leptos, SQLx/PostgreSQL, RabbitMQ, GraphQL at a browser BFF when useful, tonic/gRPC for justified internal RPC, SSE for one-way updates, and WebSockets for true bidirectional sessions.
+Default web stack when the specification calls for it: Axum/Tower, Leptos, REST/JSON, SQLx/PostgreSQL, RabbitMQ, tonic/gRPC for justified internal RPC, SSE for one-way updates, and WebSockets for true bidirectional sessions.
 
 A service boundary is an architecture decision. Do not create a microservice merely because a table or noun exists.
 

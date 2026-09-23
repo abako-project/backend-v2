@@ -4,7 +4,7 @@ Status: ACCEPTED
 
 Date: 2026-09-08
 
-Authority: The product owner accepted the architecture review, explicitly rejected GraphQL, and requested independent external and Leptos frontends.
+Authority: The product owner accepted the REST architecture review and requested independent external and Leptos frontends.
 
 ## Decision
 

@@ -1,7 +1,7 @@
 # DevStory 4.5 - Como usuario freelance consultor quiero que exista un sistema de resolución de disputas en el que participe la DAO para evitar situaciones en las que el trabajo entregado se rechace continuamente
 
 > **Vigencia para la PoC:** este documento conserva la propuesta original de la reunión.
-> La [adenda final](#adenda-de-decisiones-posteriores-para-la-poc) recoge las decisiones posteriores y prevalece frente a las secciones históricas que contradiga. Describe requisitos acordados, no funcionalidad ya implementada; deben incorporarse a las especificaciones del proyecto antes del desarrollo.
+> La [adenda final](#adenda-de-decisiones-posteriores-para-la-poc) recoge las decisiones posteriores y prevalece frente a las secciones históricas que contradiga. El alcance aprobado de apertura de disputas está consolidado en [SPEC-0005](specs/0005-dispute-opening/spec.md) e implementado en el mock. La resolución por la DAO sigue pendiente.
 
 ## Objetivo
 
@@ -521,7 +521,7 @@ Estos eventos permitirán desacoplar posteriormente:
 
 ## Adenda de decisiones posteriores para la PoC
 
-Actualizada el 2026-09-22 con las últimas decisiones confirmadas. La especificación consolidada es [SPEC-0005](specs/0005-dispute-opening/spec.md); su [estado](specs/0005-dispute-opening/status.md) distingue decisiones de producto confirmadas, revisión técnica pendiente e implementación.
+Actualizada el 2026-09-23. La especificación consolidada es [SPEC-0005](specs/0005-dispute-opening/spec.md); su [estado](specs/0005-dispute-opening/status.md) registra la apertura implementada y verificada en el mock y el alcance de resolución pendiente.
 
 Esta adenda prevalece para la PoC. Las secciones originales «Estados de la disputa», «Data Model», «Datos registrados en Blockchain», «API Reference» y «Eventos» conservan propuestas históricas, no contratos vigentes. También sustituye el canal del criterio 9 y concreta el histórico de los criterios 6 y 12. La resolución y la votación de la DAO se definirán posteriormente.
 
