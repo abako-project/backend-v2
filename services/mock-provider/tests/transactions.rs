@@ -13,6 +13,8 @@ use subxt_signer::sr25519::Keypair;
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 #[path = "disputes/tests.rs"]
 mod disputes;
+#[path = "lifecycle/tests.rs"]
+mod lifecycle;
 
 fn evidence() -> TestResult<EvidenceReference> {
     Ok(EvidenceReference::new(
@@ -49,6 +51,41 @@ fn capacity(minutes: u32) -> CalendarDefinition {
         default_weekly_minutes: Minutes::new(minutes),
         overrides: Vec::new(),
     }
+}
+
+fn draft_task() -> TaskDefinition {
+    TaskDefinition {
+        title: "Milestone deliverable".into(),
+        description: String::new(),
+        task_type: TaskType::Task,
+        priority: TaskPriority::Medium,
+        status: TaskStatus::ToDo,
+        assignees: Vec::new(),
+        estimated_minutes: Minutes::ZERO,
+        logged_minutes: Minutes::ZERO,
+        due_at: None,
+    }
+}
+
+async fn fill_milestone_tasks(
+    provider: &Provider,
+    coordinator: &Keypair,
+    project_id: EntityId,
+) -> TestResult {
+    let view = project(provider, project_id).await?;
+    for milestone in &view.proposals.last().ok_or("missing proposal")?.milestones {
+        success(
+            provider,
+            coordinator,
+            ProviderCommand::CreateTask {
+                project_id,
+                task_storage_id: milestone.task_storage.task_storage_id,
+                task: draft_task(),
+            },
+        )
+        .await?;
+    }
+    Ok(())
 }
 
 async fn signed(
@@ -236,6 +273,7 @@ async fn delivered_plan(
             .tasks
             .is_empty()
     );
+    fill_milestone_tasks(provider, coordinator, id).await?;
     success(
         provider,
         coordinator,
@@ -379,7 +417,9 @@ async fn exercise_task_permissions(
     .await?;
     let task_view = project(provider, project_id).await?.proposals[0].milestones[0]
         .task_storage
-        .tasks[0]
+        .tasks
+        .last()
+        .ok_or("task missing")?
         .clone();
     assert_eq!(task_view.reporter, account(coordinator));
     assert_eq!(task_view.created_at, NOW);
@@ -739,6 +779,7 @@ async fn assert_delivery_revision(
     .await?
     .created_entity_id
     .ok_or("proposal ID")?;
+    fill_milestone_tasks(provider, coordinator, quoted_id).await?;
     success(
         provider,
         coordinator,
@@ -1248,6 +1289,14 @@ macro_rules! suite {
             async fn cancellation_and_disputes_require_either_project_party_and_freeze_funds()
             -> TestResult {
                 freezing_permissions(provider().await?).await
+            }
+            #[tokio::test]
+            async fn submitted_milestones_require_tasks() -> TestResult {
+                lifecycle::task_required(provider().await?).await
+            }
+            #[tokio::test]
+            async fn execution_activates_in_order_and_preserves_team() -> TestResult {
+                lifecycle::sequential_and_continuity(provider().await?).await
             }
         }
     };

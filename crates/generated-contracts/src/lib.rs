@@ -77,8 +77,8 @@ wire_enum!(/// Only one mode can be active; coordinator eligibility is separate.
     WorkerMode { Worker, Coordinator });
 wire_enum!(/// Proposal lifecycle, distinct from execution lifecycle.
     ProposalStatus { Draft, PendingApproval, Approved, Cancelled });
-wire_enum!(/// Absent until execution approval, then one of these four states.
-    MilestoneStatus { InProgress, CompletionRequested, Completed, Disputed, ChangesRequested });
+wire_enum!(/// Absent until execution approval; funded milestones activate in order.
+    MilestoneStatus { NotStarted, InProgress, CompletionRequested, Completed, Disputed, ChangesRequested });
 wire_enum!(/// Planning delivery acceptance is separate from execution approval.
     PlanningStatus { AwaitingQuote, Quoted, Accepted, Delivered, Completed, Disputed });
 wire_enum!(/// Tracking vocabulary retained from the legacy provider.
@@ -632,8 +632,8 @@ dto!(/// Proposal read model; its total is derived from checked quote line items
     ProposalView { proposal_id: EntityId, revision: u64, title: String, description: String, status: ProposalStatus, milestones: Vec<MilestoneView>, change_request: Option<String> });
 dto!(/// Negotiation and settlement of planning, separate from execution.
     PlanningView { revision: u64, status: PlanningStatus, quote: Option<PlanningQuote>, escrow: Money, frozen: bool });
-dto!(/// Project read model; multiple drafts are representable without new services.
-    ProjectView { project_id: EntityId, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, active_dispute_id: Option<EntityId> });
+dto!(/// Project read model; completion follows acceptance of the final funded milestone.
+    ProjectView { project_id: EntityId, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, completed: bool, active_dispute_id: Option<EntityId> });
 dto!(/// Available balance for the initial KVN asset, excluding locked escrow.
     BalanceView { account: AccountId32, asset_id: u32, available: Money });
 dto!(/// Internal read-only snapshot. Adapter filters confidential project/task data.

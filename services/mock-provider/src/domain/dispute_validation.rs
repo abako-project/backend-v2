@@ -50,19 +50,19 @@ fn validate_milestone(
                 milestone.status,
                 current.map(|submission| &submission.review)
             ),
-            (None | Some(MilestoneStatus::InProgress), None)
-                | (
-                    Some(MilestoneStatus::CompletionRequested),
-                    Some(SubmissionReview::PendingReview)
-                )
-                | (
-                    Some(MilestoneStatus::ChangesRequested | MilestoneStatus::Disputed),
-                    Some(SubmissionReview::Rejected { .. })
-                )
-                | (
-                    Some(MilestoneStatus::Completed),
-                    Some(SubmissionReview::Accepted { .. })
-                )
+            (
+                None | Some(MilestoneStatus::NotStarted | MilestoneStatus::InProgress),
+                None
+            ) | (
+                Some(MilestoneStatus::CompletionRequested),
+                Some(SubmissionReview::PendingReview)
+            ) | (
+                Some(MilestoneStatus::ChangesRequested | MilestoneStatus::Disputed),
+                Some(SubmissionReview::Rejected { .. })
+            ) | (
+                Some(MilestoneStatus::Completed),
+                Some(SubmissionReview::Accepted { .. })
+            )
         ),
         "invalid_submission_state",
     )?;

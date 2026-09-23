@@ -12,7 +12,7 @@ use super::{Effect, State, compare_scores, empty_score};
 use crate::{Error, Result, calendar, random_id, require};
 
 impl State {
-    fn root(&self, origin: AccountId32) -> Result<()> {
+    pub(super) fn root(&self, origin: AccountId32) -> Result<()> {
         require(origin == self.info.root_account, "system_origin_required")
     }
 
@@ -258,6 +258,7 @@ impl State {
                 proposals: Vec::new(),
                 execution_escrow: Money::ZERO,
                 cancelled: false,
+                completed: false,
                 active_dispute_id: None,
             },
         );
@@ -353,6 +354,7 @@ impl State {
         &mut self,
         project: &ProjectView,
         milestone: &mut MilestoneView,
+        earlier_team: &BTreeSet<AccountId32>,
     ) -> Result<()> {
         let window = milestone.definition.window;
         let reference = ReservationView {
@@ -392,7 +394,19 @@ impl State {
                     Err(error) => return Err(error),
                 }
             }
-            let account = self.select(&available, WorkerMode::Worker)?;
+            let previous: Vec<_> = available
+                .iter()
+                .copied()
+                .filter(|account| earlier_team.contains(account))
+                .collect();
+            let account = self.select(
+                if previous.is_empty() {
+                    &available
+                } else {
+                    &previous
+                },
+                WorkerMode::Worker,
+            )?;
             calendar::reserve(
                 &mut self.worker_mut(account)?.calendar,
                 window,
@@ -408,7 +422,6 @@ impl State {
             });
             used.insert(account);
         }
-        milestone.status = Some(generated_contracts::MilestoneStatus::InProgress);
         Ok(())
     }
 
