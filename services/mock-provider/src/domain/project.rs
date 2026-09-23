@@ -1,5 +1,3 @@
-use std::collections::BTreeSet;
-
 use generated_contracts::{
     AccountId32, DomainEventKind, EntityId, MilestoneStatus, MilestoneView, Minutes, Money,
     PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView, ProviderCommand,
@@ -20,6 +18,37 @@ impl State {
         now: UnixSeconds,
     ) -> Result<Effect> {
         let transition = match command {
+            ProviderCommand::RejectMilestoneCompletion {
+                milestone_id,
+                submission_id,
+                request,
+                ..
+            } => {
+                super::submissions::reject(
+                    project,
+                    origin,
+                    *milestone_id,
+                    *submission_id,
+                    request,
+                    now,
+                )?;
+                Ok((
+                    DomainEventKind::MilestoneCompletionRejected,
+                    Some(*submission_id),
+                ))
+            }
+            ProviderCommand::OpenDispute(request) => {
+                let id = self.open_dispute(project, origin, request, now)?;
+                Ok((DomainEventKind::DisputeOpened, Some(id)))
+            }
+            ProviderCommand::RespondDispute {
+                dispute_id,
+                request,
+                ..
+            } => {
+                self.respond_dispute(project, origin, *dispute_id, request, now)?;
+                Ok((DomainEventKind::DisputeResponseAdded, Some(*dispute_id)))
+            }
             ProviderCommand::QuotePlanning { .. }
             | ProviderCommand::AcceptPlanningQuote { .. }
             | ProviderCommand::AcceptPlanningDelivery { .. } => {
@@ -35,9 +64,7 @@ impl State {
             | ProviderCommand::RequestProposalChanges { .. } => {
                 self.proposal_review_command(project, origin, command)
             }
-            ProviderCommand::CancelProject { .. }
-            | ProviderCommand::DisputePlanning { .. }
-            | ProviderCommand::DisputeMilestone { .. } => {
+            ProviderCommand::CancelProject { .. } | ProviderCommand::DisputePlanning { .. } => {
                 self.lifecycle_command(project, origin, command, now)
             }
             ProviderCommand::CreateTask { .. }
@@ -47,7 +74,7 @@ impl State {
             }
             ProviderCommand::RequestMilestoneCompletion { .. }
             | ProviderCommand::AcceptMilestoneCompletion { .. } => {
-                self.milestone_command(project, origin, command)
+                self.milestone_command(project, origin, command, now)
             }
             _ => Err(Error::bad("invalid_project_message")),
         }?;
@@ -336,32 +363,6 @@ impl State {
                 bump(&mut project.planning.revision)?;
                 Ok((DomainEventKind::PlanningDisputed, Some(project.project_id)))
             }
-            ProviderCommand::DisputeMilestone {
-                milestone_id,
-                request,
-                ..
-            } => {
-                participant(project, origin)?;
-                let milestone = milestone_mut(project, *milestone_id)?;
-                require(
-                    matches!(
-                        milestone.status,
-                        Some(MilestoneStatus::InProgress | MilestoneStatus::CompletionRequested)
-                    ),
-                    "invalid_milestone_state",
-                )?;
-                milestone.status = Some(MilestoneStatus::Disputed);
-                milestone.frozen = true;
-                self.record_reason(
-                    project.project_id,
-                    Some(*milestone_id),
-                    origin,
-                    request.reason.clone(),
-                    now,
-                    DomainEventKind::MilestoneDisputed,
-                );
-                Ok((DomainEventKind::MilestoneDisputed, Some(*milestone_id)))
-            }
             _ => Err(Error::bad("invalid_project_message")),
         }
     }
@@ -456,6 +457,7 @@ impl State {
         project: &mut ProjectView,
         origin: AccountId32,
         command: &ProviderCommand,
+        now: UnixSeconds,
     ) -> Result<Transition> {
         match command {
             ProviderCommand::RequestMilestoneCompletion {
@@ -463,32 +465,8 @@ impl State {
                 request,
                 ..
             } => {
-                coordinator(project, origin)?;
-                let milestone = milestone_mut(project, *milestone_id)?;
-                require(
-                    milestone.status == Some(MilestoneStatus::InProgress) && !milestone.frozen,
-                    "invalid_milestone_state",
-                )?;
-                let assigned: BTreeSet<_> = milestone
-                    .assignments
-                    .iter()
-                    .map(|item| item.worker)
-                    .collect();
-                let rated: BTreeSet<_> = request
-                    .worker_ratings
-                    .iter()
-                    .map(|item| item.worker)
-                    .collect();
-                require(
-                    assigned == rated && rated.len() == request.worker_ratings.len(),
-                    "worker_ratings_mismatch",
-                )?;
-                milestone.worker_ratings.clone_from(&request.worker_ratings);
-                milestone.status = Some(MilestoneStatus::CompletionRequested);
-                Ok((
-                    DomainEventKind::MilestoneCompletionRequested,
-                    Some(*milestone_id),
-                ))
+                let id = super::submissions::submit(project, origin, *milestone_id, request, now)?;
+                Ok((DomainEventKind::MilestoneCompletionRequested, Some(id)))
             }
             ProviderCommand::AcceptMilestoneCompletion {
                 milestone_id,
@@ -503,6 +481,7 @@ impl State {
                         && !milestone.frozen,
                     "invalid_milestone_state",
                 )?;
+                super::submissions::pending(milestone, request.submission_id)?;
                 let total = milestone.definition.total()?;
                 self.credit(coordinator, milestone.definition.coordinator_fee)?;
                 add_rating(
@@ -532,6 +511,11 @@ impl State {
                         requirement.minutes,
                     )?;
                 }
+                super::submissions::pending(milestone, request.submission_id)?.review =
+                    generated_contracts::SubmissionReview::Accepted {
+                        reviewed_by: origin,
+                        reviewed_at: now,
+                    };
                 milestone.status = Some(MilestoneStatus::Completed);
                 project.execution_escrow = project.execution_escrow.checked_sub(total)?;
                 Ok((DomainEventKind::MilestoneCompleted, Some(*milestone_id)))
@@ -585,7 +569,7 @@ fn proposal_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut Proposal
         .ok_or_else(|| Error::domain("proposal_not_found"))
 }
 
-fn milestone_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut MilestoneView> {
+pub(super) fn milestone_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut MilestoneView> {
     project
         .proposals
         .iter_mut()
@@ -647,6 +631,7 @@ fn make_milestones(
                     status: None,
                     assignments: Vec::new(),
                     worker_ratings: Vec::new(),
+                    submissions: Vec::new(),
                     task_storage: TaskStorageView {
                         task_storage_id: random_id()?,
                         milestone_id,

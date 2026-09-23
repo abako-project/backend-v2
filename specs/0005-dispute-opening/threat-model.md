@@ -1,6 +1,6 @@
 # Dispute opening: threat model
 
-Status: REVIEW REQUIRED — 2026-09-22
+Status: IMPLEMENTED — 2026-09-23
 
 | Threat | Control and evidence |
 |---|---|

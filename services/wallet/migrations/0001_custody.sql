@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS signing_jobs (
     creation_sequence INTEGER PRIMARY KEY AUTOINCREMENT,
     operation_id TEXT UNIQUE NOT NULL,
     wallet_id TEXT NOT NULL REFERENCES custodial_wallets(wallet_id),
-    payload_version INTEGER NOT NULL CHECK(payload_version = 1),
+    payload_version INTEGER NOT NULL CHECK(payload_version = 2),
     signable_payload BLOB NOT NULL CHECK(length(signable_payload) BETWEEN 1 AND 262144),
     payload_hash BLOB NOT NULL CHECK(length(payload_hash) = 32),
     expires_at INTEGER NOT NULL,

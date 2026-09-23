@@ -26,9 +26,9 @@ fn scale_is_exact_bounded_versioned_and_instance_bound() -> Result<(), Box<dyn s
     let mut altered = call.clone();
     altered.provider_instance_id = ProviderInstanceId::from_bytes([4; 16]);
     assert_ne!(bytes, altered.signable_bytes()?);
-    altered.payload_version = 2;
+    altered.payload_version = PAYLOAD_VERSION + 1;
     assert!(altered.signable_bytes().is_err());
-    altered.payload_version = 1;
+    altered.payload_version = PAYLOAD_VERSION;
     altered.signing_domain = [0; 16];
     assert!(UnsignedContractCallV1::decode_signable(&altered.encode()).is_err());
     let mut oversized = call;

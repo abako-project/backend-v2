@@ -27,6 +27,13 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// Explicit public case projection, without internal state or receipts.
+    pub async fn dispute(
+        &self,
+        id: generated_contracts::EntityId,
+    ) -> Result<generated_contracts::DisputeView> {
+        self.read().await?.dispute_view(id)
+    }
     /// New disposable memory generation; recreating it invalidates old signatures.
     #[cfg(feature = "storage-memory")]
     pub fn memory(root: AccountId32) -> Result<Self> {

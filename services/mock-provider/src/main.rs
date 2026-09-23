@@ -13,6 +13,11 @@ fn secret(name: &str) -> Result<String, Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_writer(std::io::stderr)
+        .try_init()
+        .map_err(|_| std::io::Error::other("tracing initialization failed"))?;
     let root: AccountId32 = secret("MOCK_ROOT_ACCOUNT_FILE")?.parse()?;
     let service_token = secret("INTERNAL_SERVICE_TOKEN_FILE")?;
     let mode = env::var("MOCK_STORAGE").unwrap_or_else(|_| {

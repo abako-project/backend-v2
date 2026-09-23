@@ -1,6 +1,6 @@
 # Dispute opening: technical design
 
-Status: REVIEW REQUIRED — 2026-09-22
+Status: IMPLEMENTED — 2026-09-23
 
 ## Reuse the existing flow
 
@@ -32,7 +32,7 @@ Any separate history reads introduced later must be paginated.
 
 Bump the payload version for changed command encodings. Pin enum discriminants
 where wire compatibility requires it; never reinterpret old persisted bytes.
-Final compatibility approval is still recorded as pending in status.md.
+Compatibility is approved: payload version 2 and disposable test state are implemented.
 
 ## Provider
 
@@ -73,8 +73,9 @@ separate work and cannot be claimed from API tests.
 
 ## Typed errors and tracing
 
-Use a dispute-domain error enum with stable public code mapping:
-invalid_evidence, submission_not_pending, submission_not_current,
+Use a dispute-domain error enum with stable public code mapping. Malformed
+evidence is rejected as invalid_request at the JSON boundary; domain codes are:
+submission_not_pending, submission_not_current,
 milestone_not_changes_requested, project_disputed, active_dispute_exists,
 dispute_response_forbidden, dispute_already_answered, plus existing not-found,
 auth/CSRF, idempotency and payload-version errors.

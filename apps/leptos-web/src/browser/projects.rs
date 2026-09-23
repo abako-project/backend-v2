@@ -4,11 +4,12 @@ use super::{
 };
 use generated_contracts::{
     AcceptMilestoneCompletionRequest, AccountId32, CreateProjectRequest, EntityId,
-    MilestoneDefinition, MilestoneStatus, MilestoneView, Minutes, Money, PlanningQuote,
-    PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView, ReasonRequest,
-    RequestChangesRequest, RequestMilestoneCompletionRequest, RequirementDefinition,
-    RevisionRequest, Score, TaskDefinition, TaskPriority, TaskProgressRequest, TaskStatus,
-    TaskType, TaskView, TeamRating, UnixSeconds, WeekWindow, WorkerRating,
+    EvidenceReference, EvidenceRequest, MilestoneDefinition, MilestoneStatus, MilestoneView,
+    Minutes, Money, OpenDisputeRequest, PayloadHash, PlanningQuote, PlanningStatus, ProjectView,
+    ProposalDefinition, ProposalStatus, ProposalView, ReasonRequest, RequestChangesRequest,
+    RequestMilestoneCompletionRequest, RequirementDefinition, RevisionRequest, Score,
+    TaskDefinition, TaskPriority, TaskProgressRequest, TaskStatus, TaskType, TaskView, TeamRating,
+    UnixSeconds, WeekWindow, WorkerRating,
 };
 use leptos::prelude::*;
 use leptos_web::{parse_ids, parse_week, week_input};
@@ -24,6 +25,14 @@ fn window(values: &Values) -> Result<WeekWindow, String> {
 fn score(values: &Values, key: &str) -> Result<Score, String> {
     Score::new(values.parse(key)?)
         .map_err(|_| "La puntuación debe ser un entero entre 0 y 10".into())
+}
+fn evidence(values: &Values) -> Result<EvidenceReference, String> {
+    let hash = values
+        .text("sha256")
+        .parse::<PayloadHash>()
+        .map_err(|_| "El SHA-256 debe tener 32 bytes hexadecimales con prefijo 0x")?;
+    EvidenceReference::new(values.text("url"), hash)
+        .map_err(|_| "La evidencia debe ser una URL HTTPS válida y sin credenciales".into())
 }
 
 fn enum_value<T: serde::de::DeserializeOwned>(values: &Values, key: &str) -> Result<T, String> {
@@ -50,7 +59,7 @@ fn Project(project: ProjectView, account: AccountId32) -> impl IntoView {
     let id = project.project_id;
     let coordinator = account == project.coordinator;
     let client = account == project.client;
-    let active = !project.cancelled;
+    let active = !project.cancelled && project.active_dispute_id.is_none();
     let planning = project.planning.clone();
     let quote = planning.quote.clone();
     let revision = planning.revision;
@@ -218,7 +227,7 @@ fn Milestone(
     let status = milestone.status;
     let storage = milestone.task_storage.task_storage_id;
     let assignments = milestone.assignments.clone();
-    let rating_fields = assignments
+    let mut rating_fields = assignments
         .iter()
         .map(|assignment| {
             Field::number(
@@ -228,27 +237,49 @@ fn Milestone(
             )
         })
         .collect::<Vec<_>>();
+    rating_fields.extend([
+        Field::text("url", "URL HTTPS del entregable", ""),
+        Field::text("sha256", "SHA-256 del entregable (0x…)", ""),
+    ]);
+    let submission_id = milestone
+        .submissions
+        .last()
+        .map(|submission| submission.submission_id);
     view! {
         <details><summary>{format!("Hito {} · {} · {}", milestone.definition.key, milestone.definition.title, status.map_or_else(|| "Sin ejecutar".into(), |status| format!("{status:?}")))}</summary>
         <p>{format!("{} a {} · Coordinador: {} minutos, {} KVN", week_input(milestone.definition.window.start()), week_input(milestone.definition.window.end()), milestone.definition.coordinator_minutes.get(), milestone.definition.coordinator_fee.units())}</p>
         {milestone.frozen.then(|| view! { <p class="notice">"Fondos congelados. No hay resolución automática de disputas."</p> })}
-        {((client || coordinator) && active && matches!(status, Some(MilestoneStatus::InProgress | MilestoneStatus::CompletionRequested))).then(|| view! {
-            <details><summary>"Abrir disputa del hito"</summary><Form fields=vec![Field::text("reason", "Motivo de la disputa", "")] submit="Disputar hito y congelar fondos" on_submit=Callback::new(move |values: Values| context.command("POST", format!("/projects/{project_id}/milestones/{id}/dispute"), &ReasonRequest { reason: values.text("reason") })) /></details>
+        {((client || coordinator) && active && status == Some(MilestoneStatus::ChangesRequested)).then(|| view! {
+            <details><summary>"Abrir disputa por el rechazo vigente"</summary>
+            <Form fields=vec![Field::text("url", "URL HTTPS de los argumentos públicos", ""), Field::text("sha256", "SHA-256 de los argumentos (0x…)", "")] submit="Abrir disputa y congelar el proyecto"
+            on_submit=Callback::new(move |values: Values| {
+                let rejected_submission_id = submission_id.ok_or("No existe una entrega rechazada vigente")?;
+                context.command("POST", "/disputes".into(), &OpenDisputeRequest { project_id, milestone_id: id, rejected_submission_id, evidence: evidence(&values)? })
+            }) /></details>
         })}
         <div class="scroll"><table><thead><tr><th>"Puesto"</th><th>"Habilidades"</th><th>"Minutos"</th><th>"KVN"</th><th>"Asignado"</th></tr></thead><tbody>{milestone.definition.requirements.into_iter().map(|requirement| {
             let assigned = milestone.assignments.iter().find(|item| item.requirement_key == requirement.key).map_or_else(|| "Sin asignar".into(), |item| item.worker.to_string());
             view! { <tr><td>{requirement.key}</td><td>{format!("{:?}", requirement.skill_ids)}</td><td>{requirement.minutes.get()}</td><td>{requirement.budget.units().to_string()}</td><td><code>{assigned}</code></td></tr> }
         }).collect_view()}</tbody></table></div>
-        {(coordinator && active && status == Some(MilestoneStatus::InProgress)).then(|| view! {
-            <h4>"Solicitar finalización"</h4><Form fields=rating_fields submit="Pedir aceptación del hito" on_submit=Callback::new(move |values: Values| {
+        {(coordinator && active && matches!(status, Some(MilestoneStatus::InProgress | MilestoneStatus::ChangesRequested))).then(|| view! {
+            <h4>"Entregar una versión para revisión"</h4><Form fields=rating_fields submit="Pedir aceptación del hito" on_submit=Callback::new(move |values: Values| {
                 let worker_ratings = assignments.iter().map(|assignment| Ok(WorkerRating { worker: assignment.worker, score: score(&values, &assignment.worker.to_string())? })).collect::<Result<Vec<_>, String>>()?;
-                context.command("POST", format!("/projects/{project_id}/milestones/{id}/request-completion"), &RequestMilestoneCompletionRequest { worker_ratings })
+                context.command("POST", format!("/projects/{project_id}/milestones/{id}/request-completion"), &RequestMilestoneCompletionRequest { worker_ratings, deliverable: evidence(&values)? })
             })/>
         })}
         {(client && active && status == Some(MilestoneStatus::CompletionRequested)).then(|| view! {
-            <h4>"Aceptar y valorar"</h4><p class="muted">"Esta aceptación liquida los pagos y registra la reputación una sola vez."</p>
+            <h4>"Revisar la entrega vigente"</h4><p class="muted">"Aceptar liquida los pagos y registra la reputación una sola vez. Rechazar solicita cambios; no abre una disputa."</p>
             <Form fields=vec![Field::number("coordinator", "Score del coordinador (0–10)", 5), Field::select("team_mode", "Valoración del equipo", "Client", &["Client", "DelegateToCoordinator"]), Field::number("team", "Score del equipo (ignorado si delegas)", 5)] submit="Aceptar hito terminado y pagar"
-            on_submit=Callback::new(move |values: Values| context.command("POST", format!("/projects/{project_id}/milestones/{id}/accept-completion"), &AcceptMilestoneCompletionRequest { coordinator_score: score(&values, "coordinator")?, team_rating: if values.text("team_mode") == "DelegateToCoordinator" { TeamRating::DelegateToCoordinator } else { TeamRating::Client(score(&values, "team")?) } })) />
+            on_submit=Callback::new(move |values: Values| {
+                let submission_id = submission_id.ok_or("No existe una entrega pendiente")?;
+                context.command("POST", format!("/projects/{project_id}/milestones/{id}/accept-completion"), &AcceptMilestoneCompletionRequest { submission_id, coordinator_score: score(&values, "coordinator")?, team_rating: if values.text("team_mode") == "DelegateToCoordinator" { TeamRating::DelegateToCoordinator } else { TeamRating::Client(score(&values, "team")?) } })
+            }) />
+            <details><summary>"Rechazar y solicitar cambios"</summary>
+            <Form fields=vec![Field::text("url", "URL HTTPS del motivo público", ""), Field::text("sha256", "SHA-256 del motivo (0x…)", "")] submit="Rechazar esta entrega"
+            on_submit=Callback::new(move |values: Values| {
+                let submission_id = submission_id.ok_or("No existe una entrega pendiente")?;
+                context.command("POST", format!("/completion-submissions/{submission_id}/rejection"), &EvidenceRequest { evidence: evidence(&values)? })
+            }) /></details>
         })}
         <h4>"Tareas de seguimiento"</h4><p class="muted">"Editar tareas no cambia asignaciones contractuales, reservas ni pagos. Storage: "<code>{storage.to_string()}</code></p>
         {(coordinator && active).then(|| view! { <details><summary>"Crear tarea"</summary><TaskEditor project_id=project_id storage=storage initial=None/></details> })}

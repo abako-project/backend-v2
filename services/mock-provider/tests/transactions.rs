@@ -11,6 +11,26 @@ use mock_provider::Provider;
 use subxt_signer::sr25519::Keypair;
 
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
+#[path = "disputes/tests.rs"]
+mod disputes;
+
+fn evidence() -> TestResult<EvidenceReference> {
+    Ok(EvidenceReference::new(
+        "https://example.test/evidence".to_owned(),
+        PayloadHash::from_bytes([7; 32]),
+    )?)
+}
+
+async fn submission(provider: &Provider, project_id: EntityId) -> TestResult<EntityId> {
+    Ok(
+        project(provider, project_id).await?.proposals[0].milestones[0]
+            .submissions
+            .last()
+            .ok_or("missing submission")?
+            .submission_id,
+    )
+}
+
 const NOW: UnixSeconds = UnixSeconds::new(1_788_912_000);
 static OPERATIONS: AtomicU64 = AtomicU64::new(1);
 
@@ -418,6 +438,7 @@ async fn complete_milestone_and_assert_settlement(
     milestone_id: EntityId,
 ) -> TestResult {
     let requested = RequestMilestoneCompletionRequest {
+        deliverable: evidence()?,
         worker_ratings: vec![WorkerRating {
             worker: account(worker),
             score: Score::new(9)?,
@@ -437,6 +458,7 @@ async fn complete_milestone_and_assert_settlement(
         project_id,
         milestone_id,
         request: AcceptMilestoneCompletionRequest {
+            submission_id: submission(provider, project_id).await?,
             coordinator_score: Score::new(8)?,
             team_rating: TeamRating::Client(Score::new(7)?),
         },
@@ -925,6 +947,7 @@ async fn delegated_ratings(provider: Provider) -> TestResult {
             project_id: id,
             milestone_id,
             request: RequestMilestoneCompletionRequest {
+                deliverable: evidence()?,
                 worker_ratings: vec![WorkerRating {
                     worker: account(&worker),
                     score: Score::new(9)?,
@@ -940,6 +963,7 @@ async fn delegated_ratings(provider: Provider) -> TestResult {
             project_id: id,
             milestone_id,
             request: AcceptMilestoneCompletionRequest {
+                submission_id: submission(&provider, id).await?,
                 coordinator_score: Score::new(6)?,
                 team_rating: TeamRating::DelegateToCoordinator,
             },
@@ -1087,6 +1111,7 @@ async fn assert_milestone_dispute_and_cancellation_freeze(
             project_id,
             milestone_id,
             request: RequestMilestoneCompletionRequest {
+                deliverable: evidence()?,
                 worker_ratings: vec![WorkerRating {
                     worker: account(worker),
                     score: Score::new(8)?,
@@ -1095,12 +1120,27 @@ async fn assert_milestone_dispute_and_cancellation_freeze(
         },
     )
     .await?;
+    let rejected_submission_id = submission(provider, project_id).await?;
+    success(
+        provider,
+        client,
+        ProviderCommand::RejectMilestoneCompletion {
+            project_id,
+            milestone_id,
+            submission_id: rejected_submission_id,
+            request: EvidenceRequest {
+                evidence: evidence()?,
+            },
+        },
+    )
+    .await?;
     let before = provider.snapshot().await?;
-    let dispute = ProviderCommand::DisputeMilestone {
+    let dispute = ProviderCommand::OpenDispute(OpenDisputeRequest {
         project_id,
         milestone_id,
-        request: reason.clone(),
-    };
+        rejected_submission_id,
+        evidence: evidence()?,
+    });
     assert_eq!(
         send(provider, worker, dispute.clone()).await?.outcome,
         ExecutionOutcome::Failed("project_party_required".into())
@@ -1122,6 +1162,7 @@ async fn assert_milestone_dispute_and_cancellation_freeze(
                 project_id,
                 milestone_id,
                 request: AcceptMilestoneCompletionRequest {
+                    submission_id: submission(provider, project_id).await?,
                     coordinator_score: Score::new(7)?,
                     team_rating: TeamRating::DelegateToCoordinator
                 }
@@ -1129,9 +1170,28 @@ async fn assert_milestone_dispute_and_cancellation_freeze(
         )
         .await?
         .outcome,
-        ExecutionOutcome::Failed("invalid_milestone_state".into())
+        ExecutionOutcome::Failed("project_disputed".into())
     );
-    assert_cancellation_freezes(provider, worker, actor, project_id, reason, &before).await
+    assert_eq!(
+        send(
+            provider,
+            actor,
+            ProviderCommand::CancelProject {
+                project_id,
+                request: reason.clone()
+            }
+        )
+        .await?
+        .outcome,
+        ExecutionOutcome::Failed("project_disputed".into())
+    );
+    let (other, proposal_id) = delivered_plan(provider, coordinator, client, proposal()?).await?;
+    assert_eq!(
+        approve(provider, client, other, proposal_id).await?.outcome,
+        ExecutionOutcome::Success
+    );
+    let before = provider.snapshot().await?;
+    assert_cancellation_freezes(provider, worker, actor, other, reason, &before).await
 }
 
 async fn assert_cancellation_freezes(

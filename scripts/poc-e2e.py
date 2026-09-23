@@ -84,7 +84,7 @@ class Client:
         self.session = self.request("POST", path, body, 201 if path.endswith("/register") else 200)
         return self.session["accountId"]
 
-    def command(self, method, path, body=None, operation_id=None):
+    def command(self, method, path, body=None, operation_id=None, expected_outcome="Success"):
         key = operation_id or "0x" + secrets.token_hex(16)
         reference = self.request(method, path, body, 202, {"Idempotency-Key": key})
         require(reference["operationId"] == key, "adapter changed caller idempotency key")
@@ -93,8 +93,9 @@ class Client:
             operation = self.request("GET", "/api/operations/" + key)
             if operation["status"] == "Finalized":
                 receipt = operation["receipt"]
-                require(receipt["outcome"]["type"] == "Success",
-                        f"operation failed: {receipt['outcome'].get('code')}")
+                require(receipt["outcome"]["type"] == expected_outcome,
+                        f"expected {expected_outcome}, got {receipt['outcome'].get('type')}: "
+                        f"{receipt['outcome'].get('code')}")
                 return operation
             require(operation["status"] not in ("Rejected", "Expired"),
                     f"operation terminated: {operation.get('errorCode')}")
@@ -215,7 +216,7 @@ def launch(stack, binary, port, environment):
     return client
 
 
-def exercise(base, admin_password, proxy):
+def prepare_single(base, admin_password):
     admin = Client(base)
     admin.authenticate("/api/auth/login", {"username": "admin", "password": admin_password})
     require(admin.session["isAdmin"], "bootstrap administrator missing")
@@ -285,13 +286,24 @@ def exercise(base, admin_password, proxy):
     milestone = project["proposals"][0]["milestones"][0]
     require(milestone["status"] == "InProgress", "execution did not start")
     require(milestone["assignments"] == [{"requirementKey": 1, "worker": worker_account}], "skills/mode assignment failed")
+    return (client, coordinator, worker, password, coordinator_account, worker_account,
+            project_id, project_path, storage_path, milestone, task)
+
+
+def exercise(base, admin_password, proxy):
+    (client, coordinator, worker, password, coordinator_account, worker_account,
+     _project_id, project_path, storage_path, milestone, task) = prepare_single(base, admin_password)
     task_id = milestone["taskStorage"]["tasks"][0]["taskId"]
     task["assignees"] = [worker_account]
     coordinator.command("PUT", storage_path + "/tasks/" + str(task_id), task)
     worker.command("PATCH", storage_path + f"/tasks/{task_id}/progress", {"status": "Done", "loggedMinutes": 999})
     milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
-    coordinator.command("POST", milestone_path + "/request-completion", {"workerRatings": [{"worker": worker_account, "score": 8}]})
-    acceptance = {"coordinatorScore": 9, "teamRating": {"type": "Client", "score": 6}}
+    submission = coordinator.command("POST", milestone_path + "/request-completion", {
+        "workerRatings": [{"worker": worker_account, "score": 8}],
+        "deliverable": {"url": "https://example.test/delivery", "sha256": "0x" + "07" * 32},
+    })
+    acceptance = {"coordinatorScore": 9, "teamRating": {"type": "Client", "score": 6},
+                  "submissionId": submission["receipt"]["createdEntityId"]}
     key = "0x" + secrets.token_hex(16)
     proxy.drop_next = True
     first = client.command("POST", milestone_path + "/accept-completion", acceptance, key)
@@ -331,6 +343,57 @@ def exercise(base, admin_password, proxy):
     client.request("GET", "/api/auth/session", expected=401)
 
 
+def exercise_dispute(base, admin_password, _proxy):
+    """Signed public flow: submit, reject, open, freeze, read and answer."""
+    (client, coordinator, worker, _password, _coordinator_account, worker_account,
+     project_id, project_path, _storage_path, milestone, _task) = prepare_single(base, admin_password)
+    milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
+    reference = {"url": "https://example.test/dispute-evidence", "sha256": "0x" + "09" * 32}
+    balances_before = [actor.request("GET", "/api/balance") for actor in (client, coordinator, worker)]
+    submission = coordinator.command("POST", milestone_path + "/request-completion", {
+        "workerRatings": [{"worker": worker_account, "score": 8}],
+        "deliverable": {"url": "https://example.test/delivery", "sha256": "0x" + "07" * 32},
+    })
+    submission_id = submission["receipt"]["createdEntityId"]
+    client.command("POST", f"/api/completion-submissions/{submission_id}/rejection",
+                   {"evidence": reference})
+    changed = client.request("GET", project_path)
+    changed_milestone = changed["proposals"][0]["milestones"][0]
+    require(changed_milestone["status"] == "ChangesRequested", "rejection did not request changes")
+    require(changed["activeDisputeId"] is None, "rejection opened a dispute implicitly")
+
+    anonymous = Client(base)
+    opening = {"projectId": project_id, "milestoneId": milestone["milestoneId"],
+               "rejectedSubmissionId": submission_id, "evidence": reference}
+    anonymous.request("POST", "/api/disputes", opening, 401)
+    opened = client.command("POST", "/api/disputes", opening)
+    dispute_id = opened["receipt"]["createdEntityId"]
+
+    frozen = client.request("GET", project_path)
+    frozen_milestone = frozen["proposals"][0]["milestones"][0]
+    require(frozen["activeDisputeId"] == dispute_id, "project does not link its active dispute")
+    require(frozen_milestone["status"] == "Disputed" and frozen_milestone["frozen"],
+            "opening did not freeze the milestone")
+    public = anonymous.request("GET", f"/api/disputes/{dispute_id}")
+    require(set(public) == {"dispute", "milestone"}, "public case leaked unrelated state")
+    require(public["dispute"]["rejectedSubmissionId"] == submission_id,
+            "public case points to the wrong submission")
+    require(public["dispute"]["response"] is None, "new case already has a response")
+
+    blocked = client.command("POST", project_path + "/cancel", {"reason": "blocked"},
+                             expected_outcome="Failed")
+    require(blocked["receipt"]["outcome"]["code"] == "project_disputed",
+            "project mutation bypassed the dispute freeze")
+    coordinator.command("POST", f"/api/disputes/{dispute_id}/response", {"evidence": reference})
+    answered = anonymous.request("GET", f"/api/disputes/{dispute_id}")
+    require(answered["dispute"]["response"]["author"] == coordinator.session["accountId"],
+            "counterparty response was not published")
+    duplicate = coordinator.command("POST", f"/api/disputes/{dispute_id}/response",
+                                    {"evidence": reference}, expected_outcome="Failed")
+    require(duplicate["receipt"]["outcome"]["code"] == "dispute_already_answered",
+            "case accepted a second response")
+    balances_after = [actor.request("GET", "/api/balance") for actor in (client, coordinator, worker)]
+    require(balances_after == balances_before, "dispute opening or response moved funds")
 def exercise_multi_milestone(base, admin_password, _proxy):
     """Legacy-sized teams, with the approved all-skills and weekly-capacity rules."""
     admin = Client(base)
@@ -427,14 +490,16 @@ def exercise_multi_milestone(base, admin_password, _proxy):
             coordinator.command("PUT", path, definition)
             workers[slot].command("PATCH", path + "/progress", {"status": "Done", "loggedMinutes": 999})
         path = project_path + "/milestones/" + milestone["milestoneId"]
-        coordinator.command("POST", path + "/request-completion", {
+        submission = coordinator.command("POST", path + "/request-completion", {
             "workerRatings": [{"worker": workers[slot].session["accountId"], "score": 8} for slot in team],
+            "deliverable": {"url": "https://example.test/delivery", "sha256": "0x" + "07" * 32},
         })
         requested = client.request("GET", project_path)["proposals"][0]["milestones"][index]
         require(requested["status"] == "CompletionRequested", "completion request was not recorded")
         require(client.request("GET", project_path)["executionEscrow"] == str(escrow), "request prematurely paid escrow")
-        acceptance = {"coordinatorScore": 9, "teamRating": (
-            {"type": "DelegateToCoordinator"} if index == 3 else {"type": "Client", "score": 6})}
+        acceptance = {"submissionId": submission["receipt"]["createdEntityId"],
+                      "coordinatorScore": 9, "teamRating": (
+                          {"type": "DelegateToCoordinator"} if index == 3 else {"type": "Client", "score": 6})}
         key = "0x" + secrets.token_hex(16)
         first = client.command("POST", path + "/accept-completion", acceptance, key)
         require(client.command("POST", path + "/accept-completion", acceptance, key) == first,
@@ -509,7 +574,7 @@ def run(storage, binaries, scenario=exercise):
             "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),
         })
         scenario(adapter.base, (secret_dir / "bootstrap-admin-password").read_text().strip(), proxy)
-        print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle, escrow, assignment and scores")
+        print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle")
 
 
 if __name__ == "__main__":
@@ -520,3 +585,4 @@ if __name__ == "__main__":
     for selected in (("sqlite", "memory") if arguments.storage == "both" else (arguments.storage,)):
         run(selected, arguments.binaries.resolve())
         run(selected, arguments.binaries.resolve(), exercise_multi_milestone)
+        run(selected, arguments.binaries.resolve(), exercise_dispute)

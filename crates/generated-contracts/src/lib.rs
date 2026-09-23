@@ -10,13 +10,15 @@
 #![allow(clippy::missing_errors_doc)]
 
 pub use domain_primitives::*;
+mod disputes;
+pub use disputes::*;
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 /// Signing domain prevents interpreting this format as another protocol.
 pub const MOCK_SIGNING_DOMAIN: [u8; 16] = *b"KUNVENO-MOCK-V1!";
 /// The signed SCALE format, independent of the public HTTP path.
-pub const PAYLOAD_VERSION: u16 = 1;
+pub const PAYLOAD_VERSION: u16 = 2;
 /// Upper bound on signable transport bytes, not on matching candidates.
 pub const MAX_SIGNABLE_BYTES: usize = 256 * 1024;
 
@@ -76,7 +78,7 @@ wire_enum!(/// Only one mode can be active; coordinator eligibility is separate.
 wire_enum!(/// Proposal lifecycle, distinct from execution lifecycle.
     ProposalStatus { Draft, PendingApproval, Approved, Cancelled });
 wire_enum!(/// Absent until execution approval, then one of these four states.
-    MilestoneStatus { InProgress, CompletionRequested, Completed, Disputed });
+    MilestoneStatus { InProgress, CompletionRequested, Completed, Disputed, ChangesRequested });
 wire_enum!(/// Planning delivery acceptance is separate from execution approval.
     PlanningStatus { AwaitingQuote, Quoted, Accepted, Delivered, Completed, Disputed });
 wire_enum!(/// Tracking vocabulary retained from the legacy provider.
@@ -205,7 +207,7 @@ dto!(/// The only task changes allowed to an assignee.
 dto!(/// Coordinator rating of one assigned worker.
     WorkerRating { worker: AccountId32, score: Score });
 dto!(/// Completion request includes each contractual worker's individual rating.
-    RequestMilestoneCompletionRequest { worker_ratings: Vec<WorkerRating> });
+    RequestMilestoneCompletionRequest { worker_ratings: Vec<WorkerRating>, deliverable: EvidenceReference });
 
 /// A client supplies one team score or delegates to individual coordinator scores.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
@@ -218,7 +220,7 @@ pub enum TeamRating {
     DelegateToCoordinator,
 }
 dto!(/// Accept completion and settle its quoted payments and scores atomically.
-    AcceptMilestoneCompletionRequest { coordinator_score: Score, team_rating: TeamRating });
+    AcceptMilestoneCompletionRequest { coordinator_score: Score, team_rating: TeamRating, submission_id: EntityId });
 
 /// Closed provider command set. Targets and messages are implicit in the variant
 /// and resource IDs; no browser endpoint accepts this enum as a generic command.
@@ -288,10 +290,17 @@ pub enum ProviderCommand {
         project_id: EntityId,
         request: ReasonRequest,
     },
-    DisputeMilestone {
+    RejectMilestoneCompletion {
         project_id: EntityId,
         milestone_id: EntityId,
-        request: ReasonRequest,
+        submission_id: EntityId,
+        request: EvidenceRequest,
+    },
+    OpenDispute(OpenDisputeRequest),
+    RespondDispute {
+        project_id: EntityId,
+        dispute_id: EntityId,
+        request: EvidenceRequest,
     },
     CreateTask {
         project_id: EntityId,
@@ -451,9 +460,9 @@ impl ProviderCommand {
             Self::RequestProposalChanges { request, .. } => {
                 nonempty(&request.reference, "change reference")
             }
-            Self::CancelProject { request, .. }
-            | Self::DisputePlanning { request, .. }
-            | Self::DisputeMilestone { request, .. } => nonempty(&request.reason, "reason"),
+            Self::CancelProject { request, .. } | Self::DisputePlanning { request, .. } => {
+                nonempty(&request.reason, "reason")
+            }
             Self::CreateTask { task, .. } | Self::EditTask { task, .. } => task.validate(),
             Self::RequestMilestoneCompletion { request, .. } => unique(
                 &request
@@ -470,6 +479,7 @@ impl ProviderCommand {
     #[must_use]
     pub const fn project_id(&self) -> Option<EntityId> {
         match self {
+            Self::OpenDispute(request) => Some(request.project_id),
             Self::QuotePlanning { project_id, .. }
             | Self::AcceptPlanningQuote { project_id, .. }
             | Self::CreateProposal { project_id, .. }
@@ -481,7 +491,8 @@ impl ProviderCommand {
             | Self::RequestProposalChanges { project_id, .. }
             | Self::CancelProject { project_id, .. }
             | Self::DisputePlanning { project_id, .. }
-            | Self::DisputeMilestone { project_id, .. }
+            | Self::RejectMilestoneCompletion { project_id, .. }
+            | Self::RespondDispute { project_id, .. }
             | Self::CreateTask { project_id, .. }
             | Self::EditTask { project_id, .. }
             | Self::UpdateTaskProgress { project_id, .. }
@@ -616,20 +627,20 @@ dto!(/// Provider-owned task key, reporter and timestamps cannot be supplied in 
 dto!(/// Storage created and attached atomically with its milestone.
     TaskStorageView { task_storage_id: EntityId, milestone_id: EntityId, tasks: Vec<TaskView> });
 dto!(/// Quote, execution state, contractual workers and attached tracking storage.
-    MilestoneView { milestone_id: EntityId, definition: MilestoneDefinition, status: Option<MilestoneStatus>, assignments: Vec<AssignmentView>, worker_ratings: Vec<WorkerRating>, task_storage: TaskStorageView, frozen: bool });
+    MilestoneView { milestone_id: EntityId, definition: MilestoneDefinition, status: Option<MilestoneStatus>, assignments: Vec<AssignmentView>, worker_ratings: Vec<WorkerRating>, task_storage: TaskStorageView, frozen: bool, submissions: Vec<CompletionSubmission> });
 dto!(/// Proposal read model; its total is derived from checked quote line items.
     ProposalView { proposal_id: EntityId, revision: u64, title: String, description: String, status: ProposalStatus, milestones: Vec<MilestoneView>, change_request: Option<String> });
 dto!(/// Negotiation and settlement of planning, separate from execution.
     PlanningView { revision: u64, status: PlanningStatus, quote: Option<PlanningQuote>, escrow: Money, frozen: bool });
 dto!(/// Project read model; multiple drafts are representable without new services.
-    ProjectView { project_id: EntityId, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool });
+    ProjectView { project_id: EntityId, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, active_dispute_id: Option<EntityId> });
 dto!(/// Available balance for the initial KVN asset, excluding locked escrow.
     BalanceView { account: AccountId32, asset_id: u32, available: Money });
 dto!(/// Internal read-only snapshot. Adapter filters confidential project/task data.
     ProviderSnapshot { info: ProviderInfo, catalog: CatalogView, workers: Vec<WorkerView>, projects: Vec<ProjectView>, balances: Vec<BalanceView> });
 
 wire_enum!(/// Durable state-change event vocabulary, committed with its command.
-    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted });
+    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded });
 dto!(/// Durable provider event with explicit recipients, no secret or raw payload.
     DomainEvent { provider_instance_id: ProviderInstanceId, cursor: u64, operation_id: OperationId, kind: DomainEventKind, project_id: Option<EntityId>, entity_id: Option<EntityId>, recipients: Vec<AccountId32>, occurred_at: UnixSeconds });
 dto!(/// Cursor-based provider event page; cursor always refers to this instance.

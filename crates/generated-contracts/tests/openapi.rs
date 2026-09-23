@@ -52,7 +52,7 @@ fn all_public_operations_have_valid_references_and_security()
             let public = matches!(
                 path.as_str(),
                 "/api/auth/register" | "/api/auth/login" | "/api/openapi.json"
-            );
+            ) || (path == "/api/disputes/{disputeId}" && method == "get");
             if public {
                 assert_eq!(operation["security"], serde_json::json!([]));
             } else {
@@ -99,7 +99,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 42);
+    assert_eq!(operation_ids.len(), 46);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "kunveno_session"
@@ -130,6 +130,10 @@ fn documented_examples_roundtrip_through_the_frozen_rust_dtos()
 -> Result<(), Box<dyn std::error::Error>> {
     let doc = document()?;
     check_examples::<Money>(&doc, "Money")?;
+    check_examples::<EvidenceReference>(&doc, "EvidenceReference")?;
+    check_examples::<EvidenceRequest>(&doc, "EvidenceRequest")?;
+    check_examples::<CompletionSubmission>(&doc, "CompletionSubmission")?;
+    check_examples::<OpenDisputeRequest>(&doc, "OpenDisputeRequest")?;
     check_examples::<Week>(&doc, "Week")?;
     check_examples::<PlanningQuote>(&doc, "PlanningQuote")?;
     check_examples::<RevisionRequest>(&doc, "RevisionRequest")?;

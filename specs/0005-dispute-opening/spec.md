@@ -1,8 +1,8 @@
 # SPEC-0005: Milestone rejection and public dispute opening
 
-Status: DRAFT — confirmed product decisions consolidated; technical review pending.
+Status: APPROVED — implemented and verified on the mock stack.
 
-Updated: 2026-09-22
+Updated: 2026-09-23
 
 ## Goal and authority
 
@@ -166,6 +166,7 @@ Timeout, due_at extensions, arbitration, refunds and penalties are excluded.
 | Method and route | Input / result |
 |---|---|
 | POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions | Deliverable reference and worker ratings; operation reference |
+| POST /api/projects/{projectId}/milestones/{milestoneId}/request-completion | Compatibility alias with the same input and behavior |
 | POST /api/completion-submissions/{submissionId}/rejection | Reason reference; operation reference |
 | POST /api/projects/{projectId}/milestones/{milestoneId}/accept-completion | Current submission ID and existing client ratings; operation reference |
 | POST /api/disputes | Project, milestone, rejected submission IDs and evidence; operation reference |
@@ -177,18 +178,18 @@ final outcome through /api/operations/{operationId}. Created IDs come from
 provider receipts. Signed commands bind resolved resource targets; provider
 rechecks every relationship. Bodies cannot supply trusted authors/timestamps.
 
-## Technical review pending
+## Implemented technical decisions
 
-Product states, references, API, freeze and E2E were confirmed. The last
-technical proposal has not received an explicit answer. Proposed:
+The existing request-completion and accept-completion routes remain available.
+completion-submissions is an alias for versioned delivery submission. The old
+precondition-free milestone dispute route and DisputeMilestone command were
+removed, so every milestone dispute requires a current rejection.
 
-1. Retire old request-completion and precondition-free milestone /dispute routes;
-   replace DisputeMilestone and bump signed payload version. Update local
-   clients/tests together. Never leave an old route bypassing rejection/freeze.
-2. Use fresh disposable test state; fail clearly on incompatible retained state.
-   Never delete a user-selected database automatically.
-3. Implement against memory and existing SQLite first. PostgreSQL remains
-   requested separate work across provider, adapter, custody and Compose.
+Signed payload version 2 covers the changed command encoding. Memory and SQLite
+use disposable state in this PoC; incompatible retained state is never deleted
+automatically. PostgreSQL remains separate work across provider, adapter and
+custody.
 
-These are review items, not silently approved exceptions. Concrete implementation
-choices and evidence requirements are in design.md and tasks.md.
+Observed verification is recorded in status.md and the DSP-07 handoff. Resolution,
+unlock, DAO adjudication, timeout and due_at extensions remain outside this
+approved specification.

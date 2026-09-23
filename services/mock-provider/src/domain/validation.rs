@@ -12,6 +12,7 @@ impl State {
     pub(super) fn validate(&self) -> Result<()> {
         let mut identities = self.validate_workers()?;
         self.validate_projects(&mut identities)?;
+        self.validate_disputes(&mut identities)?;
         self.validate_history()
     }
 

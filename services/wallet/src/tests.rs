@@ -146,7 +146,7 @@ async fn reject_payload_version_hash_origin_expiry_and_trailing_bytes() -> TestR
     let wallet = store.provision(PrincipalId::from_bytes([7; 16])).await?;
     let base = request(&wallet, 1)?;
     let mut bad_version = base.clone();
-    bad_version.payload_version = 2;
+    bad_version.payload_version = PAYLOAD_VERSION + 1;
     let mut bad_hash = base.clone();
     bad_hash.payload_hash = PayloadHash::from_bytes([0; 32]);
     let mut bad_id = base.clone();

@@ -1,6 +1,6 @@
 # Dispute opening: data model
 
-Status: REVIEW REQUIRED — 2026-09-22
+Status: IMPLEMENTED — 2026-09-23
 
 The provider owns these records. They are not adapter database entities.
 

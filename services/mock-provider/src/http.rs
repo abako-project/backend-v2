@@ -45,6 +45,7 @@ pub fn router(provider: Provider, service_token: &str) -> Result<Router> {
         .route("/internal/receipts/{operation_id}", get(receipt))
         .route("/internal/events", get(events))
         .route("/internal/snapshot", get(snapshot))
+        .route("/internal/disputes/{dispute_id}", get(dispute))
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
     Ok(private
         .route("/health", get(|| async { StatusCode::OK }))
@@ -88,6 +89,22 @@ async fn info(State(state): State<App>) -> Result<impl IntoResponse> {
 }
 async fn snapshot(State(state): State<App>) -> Result<impl IntoResponse> {
     Ok(Json(state.provider.snapshot().await?))
+}
+
+async fn dispute(
+    State(state): State<App>,
+    Path(id): Path<generated_contracts::EntityId>,
+) -> Result<impl IntoResponse> {
+    state.provider.dispute(id).await.map(Json).map_err(|error| {
+        if error.code() == "dispute_not_found" {
+            Error {
+                code: "dispute_not_found",
+                status: StatusCode::NOT_FOUND,
+            }
+        } else {
+            error
+        }
+    })
 }
 async fn nonce(
     State(state): State<App>,
@@ -140,5 +157,22 @@ async fn call(
             .map_err(|_| Error::internal())?
             .as_secs(),
     );
-    Ok(Json(state.provider.execute(call, now).await?))
+    let result = state.provider.execute(call, now).await;
+    match &result {
+        Ok(receipt) => match &receipt.outcome {
+            generated_contracts::ExecutionOutcome::Success => {
+                tracing::info!(operation_id = %receipt.operation_id,
+                entity_id = ?receipt.created_entity_id, cursor = ?receipt.last_event_cursor, "provider command committed");
+            }
+            generated_contracts::ExecutionOutcome::Failed(code) => {
+                tracing::warn!(operation_id = %receipt.operation_id,
+                code, "provider command rejected");
+            }
+        },
+        Err(error) if error.status == StatusCode::SERVICE_UNAVAILABLE => {
+            tracing::error!(code = error.code(), "provider unavailable");
+        }
+        Err(error) => tracing::warn!(code = error.code(), "provider envelope rejected"),
+    }
+    Ok(Json(result?))
 }

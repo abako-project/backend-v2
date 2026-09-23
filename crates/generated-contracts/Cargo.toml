@@ -9,6 +9,7 @@ repository.workspace = true
 [dependencies]
 domain-primitives.workspace = true
 serde.workspace = true
+url.workspace = true
 thiserror.workspace = true
 parity-scale-codec.workspace = true
 

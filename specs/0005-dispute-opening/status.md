@@ -1,46 +1,44 @@
 # Specification status
 
-State: DRAFT
+State: APPROVED
 
-Updated: 2026-09-22
+Updated: 2026-09-23
 
-Product decisions: CONFIRMED in conversation. Implementation: NOT STARTED.
-The old unanswered business-question list is superseded by those answers.
+Implementation: COMPLETE on `feat/dispute-opening`. Verification: PASSED for
+the approved memory/SQLite mock scope. PostgreSQL and dispute resolution remain
+separate work.
 
-## Confirmed decisions
+## Delivered
 
-- Submission: PendingReview, Rejected or Accepted. Rejection immediately moves
-  milestone to ChangesRequested.
-- Only a current rejection enables opening. No timeout or extension now.
-- Public URL + SHA-256 for deliverable, rejection and both formal arguments.
-- Separate Open dispute; one active per project, project-wide freeze and one
-  immutable counterparty response.
-- Public getter without login; no chat, snapshots, resolution or unlock.
-- Provider owns business truth; adapter handles REST/auth/transport/SSE and public
-  projection; custody signs. Existing scoring rules remain.
-- Real-service signed E2E ends with an open case and frozen project.
+- Versioned milestone submissions with immutable HTTPS URL and SHA-256 evidence.
+- Current-submission acceptance and rejection; rejection enters ChangesRequested.
+- Open public dispute entity, one active case per project and project-wide freeze.
+- One immutable counterparty response and anonymous public case read.
+- Adapter REST/auth/CSRF boundary, custody-signed payload version 2 and SSE events.
+- Leptos forms for delivery, rejection and opening; existing completion routes remain.
+- Central provider guards, state restoration validation and structured tracing.
 
-## Pending technical review
+The old permissive milestone dispute route and DisputeMilestone command are
+removed. Rejection does not implicitly open a dispute. Opening and response do
+not move funds, scores or reservations. No resolution or unlock operation exists.
 
-Review spec.md, design.md, data-model.md, threat-model.md, acceptance.feature
-and tasks.md. The last technical proposal still needs an answer on old-route
-retirement, signed-payload compatibility/fresh test state and keeping the
-PostgreSQL migration separate. See spec.md for the exact scope.
+## Observed evidence
 
-Do not set APPROVED or claim implementation because consolidation is complete.
+- Contract/OpenAPI tests: 11 passed.
+- Provider unit/integration tests: 18 passed, including memory and SQLite dispute
+  races, replay, restore, stale submission, freeze and response rules.
+- Custody tests: 9 passed with payload version 2.
+- Clippy with all targets/features and WASM frontend check passed.
+- Signed real-service happy path passed on memory and SQLite.
+- Signed four-milestone regression passed with teams 5/3/4/2 on both backends.
+- Signed dispute E2E passed on both backends through public response.
+- Local cargo-audit reported no vulnerabilities and only the two accepted
+  unmaintained warnings inherited through the Leptos dependency tree.
 
-## Observed baseline
+Exact final commands and results are in `../../progress/handoffs/DSP-07.md`.
+Cargo-deny is intentionally omitted by owner instruction.
 
-DisputeMilestone records a reason in the provider's internal aggregate, marks
-only the target milestone Disputed/frozen and emits an event. The reason is not
-encrypted; it is absent from public read DTOs. The command accepts InProgress
-or CompletionRequested and has no formal case. Adapter forwards that command.
+## Deferred by specification
 
-Submission history, rejection, formal case, response and public getter are not
-implemented. Existing tests do not verify this specification.
-Evidence: ../../progress/handoffs/DSP-00-reanalysis.md.
-
-## Next step
-
-Approve the consolidated technical scope, then execute DSP-01 through DSP-07.
-Keep approval, implementation and observed verification as separate statuses.
+DAO adjudication, resolution/unlock, timeout disputes, due_at extensions, chat,
+encrypted communication, evidence retention and PostgreSQL migration.

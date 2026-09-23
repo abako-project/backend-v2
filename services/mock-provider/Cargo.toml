@@ -26,6 +26,8 @@ subxt-signer.workspace = true
 parity-scale-codec.workspace = true
 sha2.workspace = true
 chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
 [dev-dependencies]
 reqwest.workspace = true

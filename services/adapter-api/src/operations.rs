@@ -73,7 +73,8 @@ pub(crate) async fn authorize(
             | ProviderCommand::AcceptPlanningDelivery { .. }
             | ProviderCommand::ApproveExecution { .. }
             | ProviderCommand::RequestProposalChanges { .. }
-            | ProviderCommand::AcceptMilestoneCompletion { .. } => project.client == account,
+            | ProviderCommand::AcceptMilestoneCompletion { .. }
+            | ProviderCommand::RejectMilestoneCompletion { .. } => project.client == account,
             ProviderCommand::UpdateTaskProgress {
                 task_storage_id,
                 task_id,
@@ -90,8 +91,15 @@ pub(crate) async fn authorize(
             }
             ProviderCommand::CancelProject { .. }
             | ProviderCommand::DisputePlanning { .. }
-            | ProviderCommand::DisputeMilestone { .. } => {
+            | ProviderCommand::OpenDispute(_) => {
                 project.client == account || project.coordinator == account
+            }
+            ProviderCommand::RespondDispute { dispute_id, .. } => {
+                crate::disputes::read(app, *dispute_id)
+                    .await?
+                    .dispute
+                    .counterparty
+                    == account
             }
             _ => false,
         };

@@ -93,6 +93,10 @@ fn selection_uses_only_the_reputation_for_the_requested_mode() -> Result<()> {
 fn persisted_state_cannot_bypass_catalog_or_supply_invariants() -> Result<()> {
     let root = AccountId32::from_bytes([1; 32]);
     let mut state = State::new(root)?;
+    assert_eq!(
+        State::restore(b"{}", root).err(),
+        Some(Error::domain("state_configuration_mismatch"))
+    );
     state.roles.get_mut(&1).ok_or_else(Error::internal)?.name = "replacement".into();
     assert!(State::restore(&state.encode()?, root).is_err());
     let mut state = State::new(root)?;

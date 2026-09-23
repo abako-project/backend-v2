@@ -16,7 +16,10 @@ use subxt_signer::sr25519;
 use crate::{Error, Result, random_id, require, seed::SkillMetadata};
 
 mod commands;
+mod dispute_validation;
+mod disputes;
 mod project;
+mod submissions;
 #[cfg(test)]
 mod tests;
 mod validation;
@@ -53,6 +56,7 @@ pub(crate) struct State {
     receipts: BTreeMap<OperationId, RecordedCall>,
     events: Vec<DomainEvent>,
     reasons: Vec<RecordedReason>,
+    disputes: BTreeMap<EntityId, generated_contracts::Dispute>,
     next_task_id: u32,
     minted_units: Money,
     #[serde(skip)]
@@ -116,6 +120,7 @@ impl State {
             receipts: BTreeMap::new(),
             events: Vec::new(),
             reasons: Vec::new(),
+            disputes: BTreeMap::new(),
             next_task_id: 1,
             minted_units: Money::ZERO,
             skill_index: BTreeMap::new(),
@@ -190,7 +195,8 @@ impl State {
 
     #[cfg(feature = "storage-sqlite")]
     pub(crate) fn restore(bytes: &[u8], root_account: AccountId32) -> Result<Self> {
-        let mut state: Self = serde_json::from_slice(bytes).map_err(|_| Error::internal())?;
+        let mut state: Self = serde_json::from_slice(bytes)
+            .map_err(|_| Error::domain("state_configuration_mismatch"))?;
         require(
             state.info.root_account == root_account
                 && state.info.payload_version == PAYLOAD_VERSION,

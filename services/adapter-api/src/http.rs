@@ -40,6 +40,16 @@ pub(crate) fn router(app: Arc<App>) -> Router {
         .route("/api/workers/me/calendar", put(command))
         .route("/api/workers/me/mode", put(command))
         .route("/api/projects", get(projects).post(command))
+        .route(
+            "/api/completion-submissions/{submissionId}/rejection",
+            post(command),
+        )
+        .route("/api/disputes", post(command))
+        .route(
+            "/api/disputes/{disputeId}",
+            get(crate::disputes::public_case),
+        )
+        .route("/api/disputes/{disputeId}/response", post(command))
         .route("/api/projects/{projectId}", get(project))
         .route("/api/projects/{projectId}/planning/quote", post(command))
         .route("/api/projects/{projectId}/planning/accept", post(command))
@@ -75,7 +85,7 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             post(command),
         )
         .route(
-            "/api/projects/{projectId}/milestones/{milestoneId}/dispute",
+            "/api/projects/{projectId}/milestones/{milestoneId}/completion-submissions",
             post(command),
         )
         .route(
@@ -122,10 +132,16 @@ async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next)
         return public_error(StatusCode::FORBIDDEN, "origin_not_allowed");
     }
     let path = request.uri().path();
-    let public = matches!(
-        path,
-        "/health" | "/ready" | "/api/openapi.json" | "/api/auth/login" | "/api/auth/register"
-    );
+    let public_case = matches!(*request.method(), Method::GET | Method::HEAD)
+        && request
+            .extensions()
+            .get::<MatchedPath>()
+            .is_some_and(|p| p.as_str() == "/api/disputes/{disputeId}");
+    let public = public_case
+        || matches!(
+            path,
+            "/health" | "/ready" | "/api/openapi.json" | "/api/auth/login" | "/api/auth/register"
+        );
     let mutation = !matches!(
         *request.method(),
         Method::GET | Method::HEAD | Method::OPTIONS
@@ -494,7 +510,8 @@ async fn command(
             project_id: id("projectId")?,
             request: json(&headers, &body)?,
         },
-        "/api/projects/{projectId}/milestones/{milestoneId}/request-completion" => {
+        "/api/projects/{projectId}/milestones/{milestoneId}/request-completion"
+        | "/api/projects/{projectId}/milestones/{milestoneId}/completion-submissions" => {
             ProviderCommand::RequestMilestoneCompletion {
                 project_id: id("projectId")?,
                 milestone_id: id("milestoneId")?,
@@ -508,12 +525,12 @@ async fn command(
                 request: json(&headers, &body)?,
             }
         }
-        "/api/projects/{projectId}/milestones/{milestoneId}/dispute" => {
-            ProviderCommand::DisputeMilestone {
-                project_id: id("projectId")?,
-                milestone_id: id("milestoneId")?,
-                request: json(&headers, &body)?,
-            }
+        "/api/disputes" => ProviderCommand::OpenDispute(json(&headers, &body)?),
+        "/api/completion-submissions/{submissionId}/rejection" => {
+            crate::disputes::rejection(&app, id("submissionId")?, json(&headers, &body)?).await?
+        }
+        "/api/disputes/{disputeId}/response" => {
+            crate::disputes::response(&app, id("disputeId")?, json(&headers, &body)?).await?
         }
         "/api/projects/{projectId}/task-storages/{storageId}/tasks" => {
             ProviderCommand::CreateTask {
@@ -559,8 +576,7 @@ async fn command(
         .get("idempotency-key")
         .map(|value| value.to_str().map_err(|_| Error::Invalid).and_then(parse))
         .transpose()?;
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(operations::enqueue(&app, &session, action, key).await?),
-    ))
+    let operation = operations::enqueue(&app, &session, action, key).await?;
+    tracing::info!(operation_id = %operation.operation_id, "authorized operation enqueued");
+    Ok((StatusCode::ACCEPTED, Json(operation)))
 }

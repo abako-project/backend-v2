@@ -1,6 +1,6 @@
 # Dispute opening: implementation plan
 
-Status: READY FOR TECHNICAL REVIEW; implementation not started.
+Status: COMPLETED; implementation and verification evidence recorded.
 
 Updated: 2026-09-22. DSP-00 is documentation consolidation, not feature delivery.
 Product scope is confirmed. Final compatibility/storage decisions are in spec.md.
@@ -21,7 +21,7 @@ included in the proposed scope.
 | DSP-03 | adapter dispute/submission handlers and tests; http/operations; provider internal resource query | DSP-01, DSP-02 | Authoritative target checks, exact public GET, authenticated writes, receipts/SSE |
 | DSP-04 | OpenAPI, adapter/provider docs, existing Leptos completion controls and browser fixtures; custody version fixtures | DSP-03 | Public contract and all existing clients match; no old bypass route |
 | DSP-05 | scoped tracing setup and typed errors in touched modules; manifests/lockfile only if necessary | DSP-02, DSP-03 | Structured output includes result IDs/cursors and excludes sensitive marker fixtures |
-| DSP-06 | scripts/dispute-e2e.py; shared helpers from poc-e2e.py only when needed; existing regression payloads | DSP-04, DSP-05 | Signed real-service full flow on memory/SQLite; 5/3/4/2 regression still passes |
+| DSP-06 | shared dispute scenario in scripts/poc-e2e.py; existing regression payloads | DSP-04, DSP-05 | Signed real-service full flow on memory/SQLite; 5/3/4/2 regression still passes |
 | DSP-07 | focused/full verification and progress/handoffs/DSP-07.md; spec/task statuses | DSP-06 | Observed requirements-to-tests evidence, actual limitations and clean diff |
 
 DSP-01 freezes wire DTOs and stable errors first. DSP-02 adds failing domain
@@ -64,6 +64,6 @@ with applicable feature combinations. Run the signed E2E on both backends.
 Omit cargo-deny per the owner's instruction; do not claim that gate passed.
 Do not close unrelated TASK-005/POC-07 without their separate required evidence.
 
-The final handoff records exact commands, observed results, branch/base/final
+The DSP-07 handoff records exact commands, observed results, branch/base/final
 commits, changed paths, Gherkin mapping and any remaining gaps. Public API E2E
 does not establish browser dispute UX, real-chain compatibility or DAO readiness.

@@ -258,6 +258,7 @@ impl State {
                 proposals: Vec::new(),
                 execution_escrow: Money::ZERO,
                 cancelled: false,
+                active_dispute_id: None,
             },
         );
         let mut effect = Effect::new(DomainEventKind::ProjectCreated, Some(project_id), origin);
@@ -279,6 +280,15 @@ impl State {
             .remove(&project_id)
             .ok_or_else(|| Error::domain("project_not_found"))?;
         require(!project.cancelled, "project_cancelled")?;
+        if project.active_dispute_id.is_some() {
+            match command {
+                ProviderCommand::RespondDispute { .. } => {}
+                ProviderCommand::OpenDispute(_) => {
+                    return Err(super::disputes::DisputeError::AlreadyOpen.into());
+                }
+                _ => return Err(super::disputes::DisputeError::ProjectFrozen.into()),
+            }
+        }
         let mut effect = self.project_command(&mut project, origin, command, now)?;
         effect.recipients.insert(project.client);
         effect.recipients.insert(project.coordinator);

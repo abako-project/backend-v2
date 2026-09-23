@@ -1,5 +1,6 @@
 //! Independent REST adapter; delivery state never owns business truth.
 mod auth;
+mod disputes;
 mod http;
 mod notifications;
 mod operations;
@@ -11,6 +12,11 @@ use tokio::{sync::watch, task::JoinSet};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    tracing_subscriber::fmt()
+        .with_ansi(false)
+        .with_writer(std::io::stderr)
+        .try_init()
+        .map_err(|_| Error::Internal)?;
     let config = tokio::task::spawn_blocking(Config::from_env).await??;
     let bind_addr = config.bind_addr.clone();
     let app = Arc::new(App::new(config).await?);

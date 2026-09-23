@@ -1644,7 +1644,7 @@
           "Marketplace"
         ],
         "summary": "Request completion with each worker's rating",
-        "description": "",
+        "description": "Versioned HTTPS deliverable and SHA-256 plus worker ratings. Receipt createdEntityId is the submission ID.",
         "security": [
           {
             "sessionCookie": [],
@@ -1720,7 +1720,7 @@
           "Marketplace"
         ],
         "summary": "Accept completion, pay and score the team",
-        "description": "Coordinator score plus client team rating or delegation. Settlement and reputation updates occur together once; exact replay does not score or pay again.",
+        "description": "Coordinator score plus client team rating or delegation. Settlement and reputation updates occur together once; exact replay does not score or pay again. Must reference the current PendingReview submissionId.",
         "security": [
           {
             "sessionCookie": [],
@@ -1783,82 +1783,6 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/AcceptMilestoneCompletionRequest"
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/projects/{projectId}/milestones/{milestoneId}/dispute": {
-      "post": {
-        "operationId": "disputeMilestone",
-        "tags": [
-          "Marketplace"
-        ],
-        "summary": "Dispute a milestone and freeze its unreleased funds",
-        "description": "",
-        "security": [
-          {
-            "sessionCookie": [],
-            "csrfToken": []
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OperationRef"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/BadRequest"
-          },
-          "401": {
-            "$ref": "#/components/responses/Unauthenticated"
-          },
-          "403": {
-            "$ref": "#/components/responses/Forbidden"
-          },
-          "404": {
-            "$ref": "#/components/responses/NotFound"
-          },
-          "409": {
-            "$ref": "#/components/responses/Conflict"
-          },
-          "413": {
-            "$ref": "#/components/responses/TooLarge"
-          },
-          "429": {
-            "$ref": "#/components/responses/CapacityExceeded"
-          },
-          "500": {
-            "$ref": "#/components/responses/InternalError"
-          },
-          "503": {
-            "$ref": "#/components/responses/Unavailable"
-          }
-        },
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/ProjectId"
-          },
-          {
-            "$ref": "#/components/parameters/MilestoneId"
-          },
-          {
-            "$ref": "#/components/parameters/IdempotencyKey"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ReasonRequest"
               }
             }
           }
@@ -2735,6 +2659,331 @@
           }
         }
       }
+    },
+    "/api/projects/{projectId}/milestones/{milestoneId}/completion-submissions": {
+      "post": {
+        "operationId": "submitMilestoneCompletion",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Request completion with each worker's rating",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/MilestoneId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestMilestoneCompletionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/disputes": {
+      "post": {
+        "operationId": "openDispute",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Open a public case on the current rejection and freeze the project",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenDisputeRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/disputes/{disputeId}/response": {
+      "post": {
+        "operationId": "respondDispute",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Record the counterparty's single public immutable response",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/completion-submissions/{submissionId}/rejection": {
+      "post": {
+        "operationId": "rejectMilestoneCompletion",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Reject the current delivery and request changes without opening a dispute",
+        "description": "",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubmissionId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvidenceRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/disputes/{disputeId}": {
+      "get": {
+        "operationId": "getPublicDispute",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read an open public case and its frozen milestone without login",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public case, excluding private operations and unrelated project records.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeView"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2864,6 +3113,22 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 4294967295
+        }
+      },
+      "DisputeId": {
+        "name": "disputeId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
+      },
+      "SubmissionId": {
+        "name": "submissionId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
         }
       }
     },
@@ -3127,7 +3392,8 @@
           "InProgress",
           "CompletionRequested",
           "Completed",
-          "Disputed"
+          "Disputed",
+          "ChangesRequested"
         ]
       },
       "PlanningStatus": {
@@ -3736,7 +4002,8 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "workerRatings"
+          "workerRatings",
+          "deliverable"
         ],
         "properties": {
           "workerRatings": {
@@ -3744,6 +4011,9 @@
             "items": {
               "$ref": "#/components/schemas/WorkerRating"
             }
+          },
+          "deliverable": {
+            "$ref": "#/components/schemas/EvidenceReference"
           }
         },
         "description": "Exactly one rating for each contractually assigned worker, without duplicate worker accounts."
@@ -3797,7 +4067,8 @@
         "additionalProperties": false,
         "required": [
           "coordinatorScore",
-          "teamRating"
+          "teamRating",
+          "submissionId"
         ],
         "properties": {
           "coordinatorScore": {
@@ -3805,6 +4076,9 @@
           },
           "teamRating": {
             "$ref": "#/components/schemas/TeamRating"
+          },
+          "submissionId": {
+            "$ref": "#/components/schemas/EntityId"
           }
         },
         "description": "Client acceptance settles quoted payments and contributes mode-specific reputation once. Reputation weight is committed minutes, not money or edited logged minutes."
@@ -4070,7 +4344,8 @@
           "assignments",
           "workerRatings",
           "taskStorage",
-          "frozen"
+          "frozen",
+          "submissions"
         ],
         "properties": {
           "milestoneId": {
@@ -4106,6 +4381,12 @@
           },
           "frozen": {
             "type": "boolean"
+          },
+          "submissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CompletionSubmission"
+            }
           }
         }
       },
@@ -4203,7 +4484,8 @@
           "planning",
           "proposals",
           "executionEscrow",
-          "cancelled"
+          "cancelled",
+          "activeDisputeId"
         ],
         "properties": {
           "projectId": {
@@ -4235,6 +4517,16 @@
           },
           "cancelled": {
             "type": "boolean"
+          },
+          "activeDisputeId": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EntityId"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "description": "Only visible to authorized project participants. Cancellation freezes unreleased escrow and does not reverse completed transfers.",
@@ -4311,14 +4603,16 @@
                       "milestoneId": "0x05050505050505050505050505050505",
                       "tasks": []
                     },
-                    "frozen": false
+                    "frozen": false,
+                    "submissions": []
                   }
                 ],
                 "changeRequest": null
               }
             ],
             "executionEscrow": "0",
-            "cancelled": false
+            "cancelled": false,
+            "activeDisputeId": null
           }
         ]
       },
@@ -4586,7 +4880,10 @@
           "TaskCreated",
           "TaskUpdated",
           "MilestoneCompletionRequested",
-          "MilestoneCompleted"
+          "MilestoneCompleted",
+          "MilestoneCompletionRejected",
+          "DisputeOpened",
+          "DisputeResponseAdded"
         ]
       },
       "DomainEvent": {
@@ -4874,6 +5171,306 @@
             }
           }
         ]
+      },
+      "EvidenceReference": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "url",
+          "sha256"
+        ],
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "maxLength": 2048,
+            "pattern": "^https://",
+            "description": "Absolute HTTPS URL; no credentials, whitespace or control characters. Publicly stored, never fetched."
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]{64}$"
+          }
+        },
+        "examples": [
+          {
+            "url": "https://example.test/delivery",
+            "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+          }
+        ]
+      },
+      "EvidenceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence"
+        ],
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceReference"
+          }
+        },
+        "examples": [
+          {
+            "evidence": {
+              "url": "https://example.test/delivery",
+              "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+            }
+          }
+        ]
+      },
+      "SubmissionReview": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "PendingReview"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "reason",
+              "reviewedBy",
+              "reviewedAt"
+            ],
+            "properties": {
+              "type": {
+                "const": "Rejected"
+              },
+              "reason": {
+                "$ref": "#/components/schemas/EvidenceReference"
+              },
+              "reviewedBy": {
+                "$ref": "#/components/schemas/AccountId32"
+              },
+              "reviewedAt": {
+                "$ref": "#/components/schemas/UnixSeconds"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "reviewedBy",
+              "reviewedAt"
+            ],
+            "properties": {
+              "type": {
+                "const": "Accepted"
+              },
+              "reviewedBy": {
+                "$ref": "#/components/schemas/AccountId32"
+              },
+              "reviewedAt": {
+                "$ref": "#/components/schemas/UnixSeconds"
+              }
+            }
+          }
+        ]
+      },
+      "CompletionSubmission": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "submissionId",
+          "version",
+          "deliverable",
+          "submittedBy",
+          "submittedAt",
+          "workerRatings",
+          "review"
+        ],
+        "properties": {
+          "submissionId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "version": {
+            "$ref": "#/components/schemas/Revision"
+          },
+          "deliverable": {
+            "$ref": "#/components/schemas/EvidenceReference"
+          },
+          "submittedBy": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "submittedAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "workerRatings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkerRating"
+            }
+          },
+          "review": {
+            "$ref": "#/components/schemas/SubmissionReview"
+          }
+        },
+        "examples": [
+          {
+            "submissionId": "0x08080808080808080808080808080808",
+            "version": 1,
+            "deliverable": {
+              "url": "https://example.test/delivery",
+              "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+            },
+            "submittedBy": "0x0303030303030303030303030303030303030303030303030303030303030303",
+            "submittedAt": 1,
+            "workerRatings": [],
+            "review": {
+              "type": "PendingReview"
+            }
+          }
+        ]
+      },
+      "OpenDisputeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "projectId",
+          "milestoneId",
+          "rejectedSubmissionId",
+          "evidence"
+        ],
+        "properties": {
+          "projectId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "milestoneId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "rejectedSubmissionId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceReference"
+          }
+        },
+        "examples": [
+          {
+            "projectId": "0x01010101010101010101010101010101",
+            "milestoneId": "0x05050505050505050505050505050505",
+            "rejectedSubmissionId": "0x08080808080808080808080808080808",
+            "evidence": {
+              "url": "https://example.test/delivery",
+              "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+            }
+          }
+        ]
+      },
+      "DisputeResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evidence",
+          "author",
+          "occurredAt"
+        ],
+        "properties": {
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceReference"
+          },
+          "author": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "occurredAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          }
+        }
+      },
+      "Dispute": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "disputeId",
+          "projectId",
+          "milestoneId",
+          "rejectedSubmissionId",
+          "status",
+          "openedBy",
+          "counterparty",
+          "openedAt",
+          "evidence",
+          "response",
+          "proposalRevision",
+          "contextEventCursor"
+        ],
+        "properties": {
+          "disputeId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "projectId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "milestoneId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "rejectedSubmissionId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Open"
+            ]
+          },
+          "openedBy": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "counterparty": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "openedAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/EvidenceReference"
+          },
+          "response": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DisputeResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "proposalRevision": {
+            "$ref": "#/components/schemas/Revision"
+          },
+          "contextEventCursor": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "DisputeView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "dispute",
+          "milestone"
+        ],
+        "properties": {
+          "dispute": {
+            "$ref": "#/components/schemas/Dispute"
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/MilestoneView"
+          }
+        }
       }
     }
   },
@@ -4882,4 +5479,3 @@
     "url": "https://spec.openapis.org/oas/v3.1.1.html"
   }
 }
-
