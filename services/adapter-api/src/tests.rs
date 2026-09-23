@@ -233,26 +233,40 @@ async fn submit(
     Ok(Json(receipt).into_response())
 }
 async fn app(internal: &Server) -> Result<Arc<App>, Error> {
-    let app = Arc::new(
-        App::new(Config {
-            bind_addr: "127.0.0.1:0".into(),
-            database_url: "sqlite::memory:".into(),
-            custody_url: internal.url.clone(),
-            provider_url: internal.url.clone(),
-            service_token: Zeroizing::new("test-service-token-not-a-production-secret".into()),
-            allowed_origins: BTreeSet::from([
-                "http://localhost:8088".into(),
-                "http://localhost:3000".into(),
-            ]),
-            cookie_secure: false,
-            admin_username: "admin".into(),
-            admin_password: Zeroizing::new(PASSWORD.into()),
-            openapi: "{}".into(),
-        })
-        .await?,
+    let base = std::env::var("TEST_ADAPTER_DATABASE_URL").map_err(|_| Error::Config)?;
+    let schema = format!(
+        "adapter_test_{:032x}",
+        u128::from_le_bytes(crate::state::random()?)
     );
+    let admin = sqlx::PgPool::connect(&base).await?;
+    // `schema` contains only a fixed prefix and locally generated lowercase hex digits.
+    sqlx::query(sqlx::AssertSqlSafe(format!("CREATE SCHEMA {schema}")))
+        .execute(&admin)
+        .await?;
+    admin.close().await;
+    let separator = if base.contains('?') { '&' } else { '?' };
+    let database_url = format!("{base}{separator}options=-csearch_path%3D{schema}");
+    let app = Arc::new(App::new(test_config(database_url, internal)).await?);
     auth::bootstrap(&app).await?;
     Ok(app)
+}
+fn test_config(database_url: String, internal: &Server) -> Config {
+    Config {
+        bind_addr: "127.0.0.1:0".into(),
+        database_url,
+        custody_url: internal.url.clone(),
+        provider_url: internal.url.clone(),
+        service_token: Zeroizing::new("test-service-token-not-a-production-secret".into()),
+        allowed_origins: BTreeSet::from([
+            "http://localhost:8088".into(),
+            "http://localhost:3000".into(),
+        ]),
+        cookie_secure: false,
+        enable_mock_funding: true,
+        admin_username: "admin".into(),
+        admin_password: Zeroizing::new(PASSWORD.into()),
+        openapi: "{}".into(),
+    }
 }
 async fn register(app: &App, name: &str) -> Result<(Session, String), Box<dyn std::error::Error>> {
     let response = auth::register(
@@ -285,7 +299,7 @@ fn create() -> ProviderCommand {
 }
 async fn drive(app: &App, session: &Session, id: OperationId) -> Result<OperationView, Error> {
     for _ in 0..8 {
-        sqlx::query("UPDATE operations SET next_attempt_at = 0 WHERE operation_id = ?")
+        sqlx::query("UPDATE operations SET next_attempt_at = 0 WHERE operation_id = $1")
             .bind(id.to_string())
             .execute(&app.db)
             .await?;
@@ -499,7 +513,7 @@ async fn queue_is_owned_ordered_leased_and_recovers_lost_reply() -> TestResult {
         third.operation_id.to_string()
     );
     // Expired lease holders cannot overwrite a replacement claim's work.
-    sqlx::query("UPDATE operations SET lease_until = 0 WHERE operation_id = ?")
+    sqlx::query("UPDATE operations SET lease_until = 0 WHERE operation_id = $1")
         .bind(key.to_string())
         .execute(&app.db)
         .await?;
@@ -507,7 +521,7 @@ async fn queue_is_owned_ordered_leased_and_recovers_lost_reply() -> TestResult {
         .await?
         .ok_or("lease not reclaimed")?;
     operations::process(&app, claim_a).await?;
-    let row = sqlx::query("SELECT signable_payload FROM operations WHERE operation_id = ?")
+    let row = sqlx::query("SELECT signable_payload FROM operations WHERE operation_id = $1")
         .bind(key.to_string())
         .fetch_one(&app.db)
         .await?;
@@ -542,7 +556,7 @@ async fn exhausted_submissions_and_provider_reset_remain_unknown() -> TestResult
     assert_eq!(unresolved.status, ProviderOperationStatus::OutcomeUnknown);
     assert!(unresolved.receipt.is_none());
     assert_eq!(fake.lock().await.submissions, 5);
-    let before = sqlx::query("SELECT signable_payload, signed_json, provider_instance_id FROM operations WHERE operation_id = ?")
+    let before = sqlx::query("SELECT signable_payload, signed_json, provider_instance_id FROM operations WHERE operation_id = $1")
         .bind(first.operation_id.to_string()).fetch_one(&app.db).await?;
     let original_bytes: Vec<u8> = before.try_get("signable_payload")?;
     let original_signed: String = before.try_get("signed_json")?;
@@ -560,7 +574,7 @@ async fn exhausted_submissions_and_provider_reset_remain_unknown() -> TestResult
             .status,
         ProviderOperationStatus::AwaitingSignature
     );
-    let after = sqlx::query("SELECT signable_payload, signed_json, provider_instance_id FROM operations WHERE operation_id = ?")
+    let after = sqlx::query("SELECT signable_payload, signed_json, provider_instance_id FROM operations WHERE operation_id = $1")
         .bind(first.operation_id.to_string()).fetch_one(&app.db).await?;
     assert_eq!(
         after.try_get::<Vec<u8>, _>("signable_payload")?,
@@ -728,6 +742,61 @@ async fn notifications_are_atomic_private_resumable_and_explicitly_read() -> Tes
         2
     );
     adapter.finish().await?;
+    internal.finish().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn postgres_restart_preserves_queue_and_unread_notifications() -> TestResult {
+    let internal = Server::start(internal(fake()?)).await?;
+    let app = app(&internal).await?;
+    let (alice, _) = register(&app, "alice").await?;
+    let operation = operations::enqueue(&app, &alice, create(), None).await?;
+    let event = DomainEvent {
+        provider_instance_id: info().provider_instance_id,
+        cursor: 1,
+        operation_id: operation.operation_id,
+        kind: DomainEventKind::ProjectCreated,
+        project_id: None,
+        entity_id: None,
+        recipients: vec![alice.view.account_id],
+        occurred_at: UnixSeconds::new(1000),
+    };
+    notifications::persist(
+        &app,
+        0,
+        ProviderEvents {
+            provider_instance_id: info().provider_instance_id,
+            events: vec![event],
+            next_cursor: 1,
+        },
+    )
+    .await?;
+    let (first, second) = tokio::join!(operations::claim(&app), operations::claim(&app));
+    assert_eq!(
+        usize::from(first?.is_some()) + usize::from(second?.is_some()),
+        1
+    );
+    sqlx::query("UPDATE operations SET lease_until = 0 WHERE operation_id = $1")
+        .bind(operation.operation_id.to_string())
+        .execute(&app.db)
+        .await?;
+    let url = app.config.database_url.clone();
+    drop(app);
+    let reopened = App::new(test_config(url, &internal)).await?;
+    let job = operations::claim(&reopened)
+        .await?
+        .ok_or("lease not recovered")?;
+    operations::process(&reopened, job).await?;
+    assert_eq!(
+        drive(&reopened, &alice, operation.operation_id)
+            .await?
+            .status,
+        ProviderOperationStatus::Finalized
+    );
+    let unread = notifications::page(&reopened, alice.view.account_id, 0).await?;
+    assert_eq!(unread.notifications.len(), 1);
+    assert!(unread.notifications[0].read_at.is_none());
     internal.finish().await?;
     Ok(())
 }

@@ -10,7 +10,7 @@ use generated_contracts::{
     WorkerMode,
 };
 use parity_scale_codec::Encode;
-use sqlx::{Row, sqlite::SqliteRow};
+use sqlx::{Row, postgres::PgRow};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::watch, task::JoinSet};
 
@@ -148,7 +148,7 @@ pub(crate) async fn enqueue(
         None => OperationId::from_bytes(random()?),
     };
     if let Some(row) = sqlx::query(
-        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = ?",
+        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = $1",
     )
     .bind(operation_id.to_string())
     .fetch_optional(&app.db)
@@ -182,9 +182,13 @@ pub(crate) async fn enqueue(
         (session.wallet, session.view.account_id)
     };
     let time = now()?;
-    let mut tx = app.db.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = app.db.begin().await?;
+    // One database-wide enqueue lock preserves both queue limits across replicas.
+    sqlx::query("SELECT pg_advisory_xact_lock(621007)")
+        .execute(&mut *tx)
+        .await?;
     if let Some(row) = sqlx::query(
-        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = ?",
+        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = $1",
     )
     .bind(operation_id.to_string())
     .fetch_optional(&mut *tx)
@@ -192,15 +196,15 @@ pub(crate) async fn enqueue(
     {
         return existing(&row, session, &command_bytes, operation_id);
     }
-    let count = sqlx::query("SELECT count(*) AS total, coalesce(sum(wallet_id = ?), 0) AS wallet FROM operations WHERE status NOT IN ('Finalized', 'Rejected', 'Expired')")
+    let count = sqlx::query("SELECT count(*) AS total, count(*) FILTER (WHERE wallet_id = $1) AS wallet FROM operations WHERE status NOT IN ('Finalized', 'Rejected', 'Expired')")
         .bind(wallet.to_string()).fetch_one(&mut *tx).await?;
     if count.try_get::<i64, _>("total")? >= 10_000 || count.try_get::<i64, _>("wallet")? >= 32 {
         return Err(Error::Capacity);
     }
-    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, 'AwaitingSignature', ?, ?, ?)")
+    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9)")
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
         .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).execute(&mut *tx).await?;
-    sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES (?, ?, 'operation_authorized', 'ok', ?)")
+    sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, 'operation_authorized', 'ok', $3)")
         .bind(session.view.principal_id.to_string()).bind(operation_id.to_string()).bind(time).execute(&mut *tx).await?;
     tx.commit().await?;
     Ok(OperationRef {
@@ -209,7 +213,7 @@ pub(crate) async fn enqueue(
     })
 }
 fn existing(
-    row: &SqliteRow,
+    row: &PgRow,
     session: &Session,
     command: &[u8],
     operation_id: OperationId,
@@ -245,7 +249,7 @@ pub(crate) async fn read(
     session: &Session,
     id: OperationId,
 ) -> Result<OperationView, Error> {
-    let row = sqlx::query("SELECT status, receipt_json, error_code FROM operations WHERE operation_id = ? AND principal_id = ?")
+    let row = sqlx::query("SELECT status, receipt_json, error_code FROM operations WHERE operation_id = $1 AND principal_id = $2")
         .bind(id.to_string()).bind(session.view.principal_id.to_string()).fetch_optional(&app.db).await?.ok_or(Error::NotFound)?;
     Ok(OperationView {
         operation_id: id,
@@ -276,7 +280,7 @@ pub(crate) struct Job {
     lease: String,
 }
 impl Job {
-    fn from_row(row: &SqliteRow, lease: String) -> Result<Self, Error> {
+    fn from_row(row: &PgRow, lease: String) -> Result<Self, Error> {
         Ok(Self {
             id: parse(row.try_get("operation_id")?)?,
             wallet: parse(row.try_get("wallet_id")?)?,
@@ -314,39 +318,37 @@ impl Job {
 pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
     let time = now()?;
     let lease = token()?.to_string();
-    let mut tx = app.db.begin_with("BEGIN IMMEDIATE").await?;
-    let recovered = sqlx::query(
-        "UPDATE operations SET lease_token = NULL, lease_until = NULL WHERE lease_until <= ?",
-    )
-    .bind(time)
-    .execute(&mut *tx)
-    .await?
-    .rows_affected();
-    if recovered > 0 {
-        sqlx::query("INSERT INTO audit_records(event_kind, result_code, occurred_at) VALUES ('lease_recovery', 'expired', ?)").bind(time).execute(&mut *tx).await?;
-    }
-    let row = sqlx::query("SELECT * FROM operations o WHERE o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND o.lease_token IS NULL AND o.next_attempt_at <= ? AND NOT EXISTS (SELECT 1 FROM operations previous WHERE previous.wallet_id = o.wallet_id AND previous.creation_sequence < o.creation_sequence AND previous.status NOT IN ('Finalized', 'Rejected', 'Expired')) ORDER BY o.creation_sequence LIMIT 1")
+    let mut tx = app.db.begin().await?;
+    let row = sqlx::query("SELECT * FROM operations o WHERE o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE previous.wallet_id = o.wallet_id AND previous.creation_sequence < o.creation_sequence AND previous.status NOT IN ('Finalized', 'Rejected', 'Expired')) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
         .bind(time).fetch_optional(&mut *tx).await?;
     let Some(row) = row else {
         tx.commit().await?;
         return Ok(None);
     };
+    if row.try_get::<Option<&str>, _>("lease_token")?.is_some() {
+        sqlx::query("INSERT INTO audit_records(operation_id, event_kind, result_code, occurred_at) VALUES ($1, 'lease_recovery', 'expired', $2)")
+            .bind(row.try_get::<&str, _>("operation_id")?).bind(time).execute(&mut *tx).await?;
+    }
     let job = Job::from_row(&row, lease)?;
-    sqlx::query("UPDATE operations SET lease_token = ?, lease_until = ? WHERE operation_id = ? AND lease_token IS NULL")
-        .bind(&job.lease).bind(time + 30).bind(job.id.to_string()).execute(&mut *tx).await?;
+    sqlx::query("UPDATE operations SET lease_token = $1, lease_until = $2 WHERE operation_id = $3")
+        .bind(&job.lease)
+        .bind(time + 30)
+        .bind(job.id.to_string())
+        .execute(&mut *tx)
+        .await?;
     tx.commit().await?;
     Ok(Some(job))
 }
 async fn save(app: &App, job: &Job, release: bool) -> Result<(), Error> {
     let time = now()?;
-    let mut tx = app.db.begin_with("BEGIN IMMEDIATE").await?;
-    let result = sqlx::query("UPDATE operations SET status = ?, signable_payload = ?, signed_json = ?, provider_instance_id = ?, receipt_json = ?, error_code = ?, possibly_submitted = ?, attempt_count = ?, next_attempt_at = ?, lease_token = CASE WHEN ? THEN NULL ELSE lease_token END, lease_until = CASE WHEN ? THEN NULL ELSE lease_until END WHERE operation_id = ? AND lease_token = ? AND lease_until > ?")
+    let mut tx = app.db.begin().await?;
+    let result = sqlx::query("UPDATE operations SET status = $1, signable_payload = $2, signed_json = $3, provider_instance_id = $4, receipt_json = $5, error_code = $6, possibly_submitted = $7, attempt_count = $8, next_attempt_at = $9, lease_token = CASE WHEN $10 THEN NULL ELSE lease_token END, lease_until = CASE WHEN $11 THEN NULL ELSE lease_until END WHERE operation_id = $12 AND lease_token = $13 AND lease_until > $14")
         .bind(name(job.status)).bind(&job.payload).bind(&job.signed).bind(&job.instance).bind(&job.receipt).bind(&job.error)
         .bind(job.submitted).bind(job.attempts).bind(job.next).bind(release).bind(release).bind(job.id.to_string()).bind(&job.lease).bind(time).execute(&mut *tx).await?;
     if result.rows_affected() != 1 {
         return Err(Error::Conflict("lease_lost"));
     }
-    sqlx::query("INSERT INTO audit_records(operation_id, event_kind, result_code, occurred_at) VALUES (?, 'operation_stage', ?, ?)")
+    sqlx::query("INSERT INTO audit_records(operation_id, event_kind, result_code, occurred_at) VALUES ($1, 'operation_stage', $2, $3)")
         .bind(job.id.to_string()).bind(name(job.status)).bind(time).execute(&mut *tx).await?;
     tx.commit().await?;
     Ok(())

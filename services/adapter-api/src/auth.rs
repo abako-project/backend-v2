@@ -9,7 +9,7 @@ use generated_contracts::{
     AccountId32, ChangePasswordRequest, LoginRequest, PrincipalId, ProvisionWalletRequest,
     RegisterRequest, SessionView, WalletId, WalletLifecycle, WalletView,
 };
-use sqlx::{Row, sqlite::SqliteRow};
+use sqlx::{Row, postgres::PgRow};
 use std::sync::Arc;
 use zeroize::Zeroizing;
 
@@ -80,7 +80,7 @@ async fn verify_password(
 
 pub(crate) async fn bootstrap(app: &Arc<App>) -> Result<(), Error> {
     let name = username(&app.config.admin_username).map_err(|_| Error::Config)?;
-    let existing = sqlx::query("SELECT is_admin FROM principals WHERE username = ?")
+    let existing = sqlx::query("SELECT is_admin FROM principals WHERE username = $1")
         .bind(&name)
         .fetch_optional(&app.db)
         .await?;
@@ -92,9 +92,9 @@ pub(crate) async fn bootstrap(app: &Arc<App>) -> Result<(), Error> {
     }
     let encoded = hash_password(app, app.config.admin_password.clone()).await?;
     let id = PrincipalId::from_bytes(random()?);
-    sqlx::query("INSERT INTO principals(principal_id, username, password_hash, display_name, is_admin, created_at) VALUES (?, ?, ?, 'Administrator', 1, ?) ON CONFLICT(username) DO NOTHING")
+    sqlx::query("INSERT INTO principals(principal_id, username, password_hash, display_name, is_admin, created_at) VALUES ($1, $2, $3, 'Administrator', TRUE, $4) ON CONFLICT(username) DO NOTHING")
         .bind(id.to_string()).bind(&name).bind(encoded).bind(now()?).execute(&app.db).await?;
-    let row = sqlx::query("SELECT is_admin FROM principals WHERE username = ?")
+    let row = sqlx::query("SELECT is_admin FROM principals WHERE username = $1")
         .bind(&name)
         .fetch_one(&app.db)
         .await?;
@@ -125,7 +125,7 @@ pub(crate) async fn register(app: &App, request: RegisterRequest) -> Result<Resp
     }
     let encoded = hash_password(app, Zeroizing::new(secret)).await?;
     let id = PrincipalId::from_bytes(random()?);
-    let result = sqlx::query("INSERT INTO principals(principal_id, username, password_hash, display_name, is_admin, created_at) VALUES (?, ?, ?, ?, 0, ?) ON CONFLICT(username) DO NOTHING")
+    let result = sqlx::query("INSERT INTO principals(principal_id, username, password_hash, display_name, is_admin, created_at) VALUES ($1, $2, $3, $4, FALSE, $5) ON CONFLICT(username) DO NOTHING")
         .bind(id.to_string()).bind(&name).bind(encoded).bind(display_name).bind(now()?).execute(&app.db).await?;
     if result.rows_affected() == 0 {
         return Err(Error::Conflict("username_taken"));
@@ -143,7 +143,7 @@ pub(crate) async fn login(app: &App, request: LoginRequest) -> Result<Response, 
         password: secret,
     } = request;
     let name = username(&name).map_err(|_| Error::Unauthorized)?;
-    let row = sqlx::query("SELECT principal_id, password_hash FROM principals WHERE username = ?")
+    let row = sqlx::query("SELECT principal_id, password_hash FROM principals WHERE username = $1")
         .bind(&name)
         .fetch_optional(&app.db)
         .await?;
@@ -151,7 +151,7 @@ pub(crate) async fn login(app: &App, request: LoginRequest) -> Result<Response, 
         row.try_get("password_hash")?
     } else {
         // Equal-cost verification avoids a cheap username-existence timing oracle.
-        let row = sqlx::query("SELECT password_hash FROM principals WHERE is_admin = 1 LIMIT 1")
+        let row = sqlx::query("SELECT password_hash FROM principals WHERE is_admin = TRUE LIMIT 1")
             .fetch_one(&app.db)
             .await?;
         row.try_get("password_hash")?
@@ -180,7 +180,7 @@ async fn ensure_wallet(app: &App, id: PrincipalId) -> Result<WalletView, Error> 
     if wallet.principal_id != Some(id) || wallet.lifecycle != WalletLifecycle::Active {
         return Err(Error::Dependency);
     }
-    let affected = sqlx::query("UPDATE principals SET wallet_id = ?, account_id = ? WHERE principal_id = ? AND (wallet_id IS NULL OR (wallet_id = ? AND account_id = ?))")
+    let affected = sqlx::query("UPDATE principals SET wallet_id = $1, account_id = $2 WHERE principal_id = $3 AND (wallet_id IS NULL OR (wallet_id = $4 AND account_id = $5))")
         .bind(wallet.wallet_id.to_string()).bind(wallet.account_id.to_string()).bind(id.to_string())
         .bind(wallet.wallet_id.to_string()).bind(wallet.account_id.to_string()).execute(&app.db).await?;
     if affected.rows_affected() != 1 {
@@ -189,7 +189,7 @@ async fn ensure_wallet(app: &App, id: PrincipalId) -> Result<WalletView, Error> 
     Ok(wallet)
 }
 
-fn view(row: &SqliteRow) -> Result<SessionView, Error> {
+fn view(row: &PgRow) -> Result<SessionView, Error> {
     Ok(SessionView {
         principal_id: parse(row.try_get("principal_id")?)?,
         account_id: parse(row.try_get("account_id")?)?,
@@ -214,17 +214,21 @@ async fn create_session(
     let session_token = token()?;
     let csrf_token = token()?;
     let time = now()?;
-    let mut transaction = app.db.begin_with("BEGIN IMMEDIATE").await?;
-    sqlx::query("DELETE FROM sessions WHERE expires_at <= ?")
+    let mut transaction = app.db.begin().await?;
+    sqlx::query("SELECT principal_id FROM principals WHERE principal_id = $1 FOR UPDATE")
+        .bind(id.to_string())
+        .fetch_one(&mut *transaction)
+        .await?;
+    sqlx::query("DELETE FROM sessions WHERE expires_at <= $1")
         .bind(time)
         .execute(&mut *transaction)
         .await?;
     // Bound sessions per principal without revoking the most recent active clients.
-    sqlx::query("DELETE FROM sessions WHERE principal_id = ? AND token_hash NOT IN (SELECT token_hash FROM sessions WHERE principal_id = ? ORDER BY expires_at DESC LIMIT 15)")
+    sqlx::query("DELETE FROM sessions WHERE principal_id = $1 AND token_hash NOT IN (SELECT token_hash FROM sessions WHERE principal_id = $2 ORDER BY expires_at DESC LIMIT 15)")
         .bind(id.to_string()).bind(id.to_string()).execute(&mut *transaction).await?;
-    sqlx::query("INSERT INTO sessions(token_hash, principal_id, csrf_token, expires_at) VALUES (?, ?, ?, ?)")
+    sqlx::query("INSERT INTO sessions(token_hash, principal_id, csrf_token, expires_at) VALUES ($1, $2, $3, $4)")
         .bind(hash(session_token.as_bytes()).to_vec()).bind(id.to_string()).bind(csrf_token.as_str()).bind(time + SESSION_SECONDS).execute(&mut *transaction).await?;
-    let row = sqlx::query("SELECT display_name, is_admin FROM principals WHERE principal_id = ?")
+    let row = sqlx::query("SELECT display_name, is_admin FROM principals WHERE principal_id = $1")
         .bind(id.to_string())
         .fetch_one(&mut *transaction)
         .await?;
@@ -261,7 +265,7 @@ pub(crate) async fn authenticate(app: &App, headers: &HeaderMap) -> Result<Sessi
     authenticate_hash(app, hash(token.as_bytes())).await
 }
 pub(crate) async fn authenticate_hash(app: &App, token_hash: [u8; 32]) -> Result<Session, Error> {
-    let row = sqlx::query("SELECT p.principal_id, p.account_id, p.wallet_id, p.display_name, p.is_admin, s.csrf_token FROM sessions s JOIN principals p USING(principal_id) WHERE token_hash = ? AND expires_at > ?")
+    let row = sqlx::query("SELECT p.principal_id, p.account_id, p.wallet_id, p.display_name, p.is_admin, s.csrf_token FROM sessions s JOIN principals p USING(principal_id) WHERE token_hash = $1 AND expires_at > $2")
         .bind(token_hash.to_vec()).bind(now()?).fetch_optional(&app.db).await?.ok_or(Error::Unauthorized)?;
     Ok(Session {
         view: view(&row)?,
@@ -276,7 +280,7 @@ pub(crate) fn valid_csrf(session: &Session, headers: &HeaderMap) -> bool {
         .is_some_and(|value| hash(value.as_bytes()) == hash(session.view.csrf_token.as_bytes()))
 }
 pub(crate) async fn logout(app: &App, session: &Session) -> Result<Response, Error> {
-    sqlx::query("DELETE FROM sessions WHERE token_hash = ?")
+    sqlx::query("DELETE FROM sessions WHERE token_hash = $1")
         .bind(session.token_hash.to_vec())
         .execute(&app.db)
         .await?;
@@ -302,7 +306,7 @@ pub(crate) async fn change_password(
         current_password,
         new_password,
     } = request;
-    let row = sqlx::query("SELECT password_hash FROM principals WHERE principal_id = ?")
+    let row = sqlx::query("SELECT password_hash FROM principals WHERE principal_id = $1")
         .bind(session.view.principal_id.to_string())
         .fetch_one(&app.db)
         .await?;
@@ -311,9 +315,9 @@ pub(crate) async fn change_password(
         return Err(Error::Unauthorized);
     }
     let replacement = hash_password(app, Zeroizing::new(new_password)).await?;
-    let mut transaction = app.db.begin_with("BEGIN IMMEDIATE").await?;
+    let mut transaction = app.db.begin().await?;
     let result = sqlx::query(
-        "UPDATE principals SET password_hash = ? WHERE principal_id = ? AND password_hash = ?",
+        "UPDATE principals SET password_hash = $1 WHERE principal_id = $2 AND password_hash = $3",
     )
     .bind(replacement)
     .bind(session.view.principal_id.to_string())
@@ -323,7 +327,7 @@ pub(crate) async fn change_password(
     if result.rows_affected() != 1 {
         return Err(Error::Conflict("credentials_changed"));
     }
-    sqlx::query("DELETE FROM sessions WHERE principal_id = ? AND token_hash != ?")
+    sqlx::query("DELETE FROM sessions WHERE principal_id = $1 AND token_hash != $2")
         .bind(session.view.principal_id.to_string())
         .bind(session.token_hash.to_vec())
         .execute(&mut *transaction)
