@@ -137,11 +137,11 @@ class Client:
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
                 line = response.readline().decode().rstrip("\r\n")
+                for name, marker in self.secret_markers:
+                    require(marker not in line.encode(), f"SSE disclosed {name}")
                 if line.startswith("id:"):
                     event_id = int(line[3:].strip())
                 elif line.startswith("data:"):
-                    for name, marker in self.secret_markers:
-                        require(marker not in line.encode(), f"SSE disclosed {name}")
                     data.append(line[5:].strip())
                 elif not line and data:
                     value = json.loads("\n".join(data))
