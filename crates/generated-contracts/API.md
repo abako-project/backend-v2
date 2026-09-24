@@ -24,8 +24,12 @@ public reverse proxy. Ports: adapter 8080, custody 8081, provider 8082.
 | Provider | GET /internal/receipts/{operationId} | — | OperationReceipt or 404 |
 | Provider | GET /internal/events?after=0&limit=100 | — | ProviderEvents |
 | Provider | GET /internal/snapshot | — | ProviderSnapshot |
+| Provider | GET /internal/bramp/deposits/{depositId}?account={account} | — | Owner/system-only DepositView |
+| Provider | GET /internal/bramp/withdrawals/{withdrawalId}?account={account} | — | Owner/system-only WithdrawalView |
 
-The unsigned call fixes a 16-byte signing domain and payload version 2. The command
+The unsigned call fixes a 16-byte signing domain and payload version 2. New mock
+Bramp commands were appended to the command enum without changing existing SCALE
+discriminants or the envelope. The command
 variant identifies the message; its typed IDs identify contract instances. No
 redundant arbitrary message/contract/opaque payload can contradict this command.
 SHA-256 covers exact SCALE bytes returned by `signable_bytes()`. A receipt records
@@ -48,7 +52,16 @@ adapter, but clients needing retry safety should always supply one.
 | GET /api/auth/session | — | SessionView |
 | POST /api/auth/logout | — | 204 |
 | POST /api/auth/password | ChangePasswordRequest | 204 |
+| GET /api/profiles/me | — | Own full ProfilesView from adapter PostgreSQL |
+| PUT /api/profiles/me | Tagged `{"section":"client","profile":{...}}` or `section: "worker"` | Replace only that descriptive profile section; returns full ProfilesView |
+| GET /api/profiles/{principalId} | — | PublicProfilesView without email, department or session data; no login |
 | GET /api/catalog | — | CatalogView |
+| POST /api/bramp/deposits | `{"amount":"10000"}` | CreateDeposit; pending mock request, no balance change |
+| GET /api/bramp/deposits/{depositId} | — | Own DepositView |
+| POST /api/admin/bramp/deposits/{depositId}/confirm | — | ConfirmDeposit; system credits fixed KVN amount once |
+| POST /api/bramp/withdrawals | `{"amount":"100"}` | CreateWithdrawal; hold free KVN, no bank settlement |
+| GET /api/bramp/withdrawals/{withdrawalId} | — | Own WithdrawalView |
+| POST /api/bramp/withdrawals/{withdrawalId}/cancel | — | CancelWithdrawal; owner/system returns hold once |
 | GET /api/workers | — | WorkerSummaryView[] |
 | POST /api/workers | RegisterWorkerRequest | RegisterWorker |
 | PUT /api/workers/me/qualifications | UpdateQualificationsRequest | UpdateQualifications |
@@ -78,6 +91,11 @@ adapter, but clients needing retry safety should always supply one.
 | POST /api/projects/{projectId}/task-storages/{storageId}/tasks | TaskDefinition | CreateTask |
 | PUT /api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId} | TaskDefinition | EditTask |
 | PATCH /api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}/progress | TaskProgressRequest | UpdateTaskProgress |
+| GET /api/task-storages/{storageId} | — | Authorized TaskStorageView; canonical read |
+| GET /api/task-storages/{storageId}/tasks/{taskId} | — | Authorized TaskView; canonical read |
+| POST /api/task-storages/{storageId}/tasks | TaskDefinition | CreateTask; canonical write |
+| PUT /api/task-storages/{storageId}/tasks/{taskId} | TaskDefinition | EditTask; canonical write |
+| PATCH /api/task-storages/{storageId}/tasks/{taskId} | TaskProgressRequest | UpdateTaskProgress; canonical write |
 | GET /api/balance | — | Own BalanceView |
 | GET /api/notifications?after=0 | — | NotificationsPage |
 | POST /api/notifications/{notificationId}/read | — | NotificationView |
@@ -88,11 +106,17 @@ adapter, but clients needing retry safety should always supply one.
 | PUT /api/admin/catalog | UpsertCatalogEntryRequest | UpsertCatalogEntry |
 | DELETE /api/admin/catalog/{kind}/{id} | — | DeleteCatalogEntry; kind is Role or Skill |
 | PUT /api/admin/score-policy | ScorePolicy | SetScorePolicy |
-| POST /api/admin/fund | FundAccountRequest | FundAccount; mock-seed only |
+| POST /api/admin/fund | FundAccountRequest | FundAccount; fixture-only with `ENABLE_MOCK_FUNDING=true` |
 
 Administrator-only typed routes map catalog edits, coordinator promotion, score
-policy and dev funding to their corresponding request DTOs and closed commands.
+policy, deposit confirmation and fixture-only funding to closed commands.
 The public request never selects a privileged wallet or spoofed origin.
+
+The direct task routes resolve project ownership from provider state and apply the
+same authorization as the project-nested aliases. Profile writes are adapter-local
+PostgreSQL updates and return directly, not a signed provider operation. Bramp
+mutations do use the signed 202 operation flow. No passkey endpoint or skill-request
+route is included here until its implementation lands.
 
 Planning and proposal read models expose a provider-owned `revision`. Acceptance
 bodies are `{"expectedRevision":7}`: planning accept and accept-delivery use the
@@ -119,7 +143,8 @@ detailed reservations remain internal provider data.
 
 The complete public schema is `contracts/openapi.json`. The adapter serves it at
 `/api/openapi.json` from `OPENAPI_PATH` (default `contracts/openapi.json`).
-Registration, login, the schema document and individual dispute reads are public;
+Registration, login, the schema document, public profile projections and individual
+dispute reads are public;
 every other route requires a session.
 
 The cookie is `kunveno_session`, HttpOnly, SameSite=Lax, Path=/api, with a 24-hour
