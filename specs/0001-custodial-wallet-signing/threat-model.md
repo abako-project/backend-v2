@@ -88,7 +88,8 @@
 - Prove expired leases recover without two successful completions.
 - Scan responses and telemetry for seeded secret markers.
 - Fail startup when master-key configuration or secure randomness is unavailable.
-- Verify account IDs after encryption-key rotation.
+- Before real value, verify account IDs after the separately approved
+  encryption-key rotation. Rotation is not a POC acceptance test.
 - Prove browser contracts expose no arbitrary-signing operation.
 
 ## Approval and Accepted Risk

@@ -226,7 +226,10 @@ Deployment order: custody database and service, provider worker integration, moc
 
 There is no compatibility requirement for unsigned mock calls after cutover. Mock data is disposable and is never migrated to production.
 
-Rotating the encryption master key re-encrypts existing seeds under a new recorded version without changing wallet accounts. A signing-seed change creates a different account and requires a separate approved migration design.
+This proof of concept does not rotate the encryption master key. Before custody
+holds real value, a separately approved HSM-backed design must support verified,
+resumable key rotation without changing wallet accounts. A signing-seed change
+creates a different account and requires a separate approved migration design.
 
 Automated backup and disaster recovery are outside this proof of concept. They are mandatory before wallets control real assets.
 

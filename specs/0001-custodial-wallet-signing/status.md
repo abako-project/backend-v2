@@ -8,7 +8,7 @@ Legacy source commit: `d408641`
 
 Integrated implementation commit: `3ab2b58` on `feat/rust-rest-poc`.
 
-Last updated: 2026-09-15
+Last updated: 2026-09-24
 
 ## Blocking Questions
 
@@ -33,7 +33,7 @@ Last updated: 2026-09-15
 | Task | Owner | Branch | Worktree | State | Evidence |
 |---|---|---|---|---|---|
 | TASK-000 through TASK-004, TASK-006 | Root integrator and implementation agents | `feat/rust-rest-poc` | Main repository | Implementation integrated; dependency gate remains blocked | `../../progress/handoffs/REST-POC-foundation.md` |
-| TASK-005 | Independent verifier | `feat/rust-rest-poc` | Read-only main repository | Final acceptance/security verification not closed | `tasks.md` |
+| TASK-005 | Independent verifier | `feat/backend-port-close` | Read-only integration branch | Final acceptance/security verification in progress | `tasks.md` |
 
 ## Verification and remaining work
 
@@ -71,6 +71,14 @@ Its scope is documented in `../../docs/project/porting-coverage.md`. HSM-backed
 envelope encryption and gradual rotation have been discussed, not implemented or
 finalized. The owner accepted the two maintenance-advisory deferrals for the POC;
 applying them to the dependency policy is still pending.
+
+2026-09-24 update: the approved backend closeout defers HSM-backed encryption-key
+rotation until before real assets. `spec.md`, `data-model.md` and
+`threat-model.md` now state this explicitly; the earlier discrepancy above is
+historical, not an open POC implementation requirement. The revised signed E2E
+passed all eight memory/SQLite scenarios with adapter PostgreSQL and scans
+bounded service logs for generated secret markers. This evidence does not by
+itself close TASK-005; the independent verifier is reviewing the final tree.
 
 ## Approval Record
 
