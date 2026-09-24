@@ -6,7 +6,7 @@ Approved: 2026-09-08 by the product owner in conversation.
 
 Scope: REST/JSON shared browser contract, independently built frontends, isolated backend services, and optional local Nginx/Compose routing.
 
-Last updated: 2026-09-15.
+Last updated: 2026-09-24.
 
 Implementation: Integrated at `3ab2b58` on `feat/rust-rest-poc`.
 
@@ -20,9 +20,10 @@ Evidence: `../../progress/handoffs/REST-POC-foundation.md`,
 `../../progress/handoffs/POC-01B.md`, `../../progress/handoffs/POC05.md`, and
 `../../progress/handoffs/POC07-frontend-build.md`.
 
-Closure: POC-07's final independent acceptance review remains open. Its task is
-distinct from the similarly named frontend-build handoff. The workspace
-dependency-policy gate also remains blocked: cargo-deny 0.20.2 returns exit 5
+Closure: POC-07's final independent backend acceptance review is complete for
+the local mock-backed POC; see `../../progress/handoffs/POC-07-verification.md`.
+Its task is distinct from the similarly named frontend-build handoff. The workspace
+dependency-policy gate remains outside this backend closeout: cargo-deny 0.20.2 returned exit 5
 for license allowances and two unmaintained Leptos dependencies. No exceptions
 were added. See `../../docs/dependencies/poc-audit-2026-09-10.md`.
 

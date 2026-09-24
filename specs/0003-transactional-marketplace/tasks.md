@@ -1,9 +1,9 @@
 # Implementation graph
 
-Status update 2026-09-15: POC-00 through POC-06 implementation is integrated;
-POC-07 independent verification remains open. The similarly named frontend-build
-handoff is not POC-07 completion. See `status.md` and
-`../../docs/project/porting-coverage.md` for the remaining coverage and parity gaps.
+Status update 2026-09-24: POC-00 through POC-06 implementation is integrated;
+POC-07 independent verification is complete for the local mock-backed POC.
+The similarly named frontend-build handoff is not its evidence; see
+`../../progress/handoffs/POC-07-verification.md` and `status.md`.
 
 Each writer preserves other writers' changes. The root integrator owns shared manifests, lockfile, requirements, and final integration. The six completed implementation worktrees have been removed.
 

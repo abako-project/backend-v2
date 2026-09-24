@@ -32,13 +32,14 @@ credentials are adapter-owned, but login start awaits a decision on email versus
 username. A current milestone rejection can lead to a
 public Open dispute and whole-project freeze; resolution is not implemented.
 
-HSM/envelope encryption and online rotation were discussed, but are not implemented
-or finalized. Custody directly encrypts seeds using a runtime-file master key.
-The SPEC-0001 rotation discrepancy remains open.
+HSM/envelope encryption and online rotation are not implemented. Custody directly
+encrypts seeds using a runtime-file master key. SPEC-0001 now requires a reviewed
+rotation and recovery design before real value, not for this local POC.
 
 The owner excluded Leptos and cargo-deny gates from this backend closeout and
 described commercial/FOSS-compatible licensing goals. This is not a claim that
-dependency policy passes. Final independent verification is open.
+dependency policy passes. Independent POC-07 and TASK-005 acceptance is complete
+for the local mock-backed POC only.
 
 No real assets, blockchain provider, wallet login, arbitration, worker acceptance or
 resignation, Kubernetes or production recovery are delivered by this POC.

@@ -16,12 +16,11 @@ Compose/Nginx verification. See `../../progress/handoffs/REST-POC-foundation.md`
 and the component handoffs. These are existing execution records, not a claim
 that every acceptance scenario has independent sign-off.
 
-Remaining closure work:
+Local POC closure:
 
-- POC-07: final independent acceptance/security verification and its handoff.
-  `POC07-frontend-build.md` records a build-tool correction, not this task's completion.
-  A read-only evidence review identified missing diagnostic secret-marker evidence
-  and an encryption-key rotation scope discrepancy in SPEC-0001. See its status.
+- POC-07 is independently verified for the local mock-backed POC; see
+  `../../progress/handoffs/POC-07-verification.md`. The earlier
+  `POC07-frontend-build.md` records a separate build-tool correction.
 - The owner removed Leptos and cargo-deny from this POC's backend acceptance
   gate. The previous cargo-deny failure remains recorded evidence, not a pass.
   It must be revisited before a production or published dependency-policy claim.
@@ -32,7 +31,8 @@ milestone dispute command/route was removed. Planning disputes retain their
 existing route. Arbitration, refunds and fund release after resolution remain
 outside the approved POC scope.
 
-Requirements remain APPROVED. Full verification and task closure remain open.
+Requirements remain APPROVED. Local mock-backed POC verification is complete;
+this is not production approval.
 
 Port review: the owner requested legacy-scale E2E coverage on 2026-09-15. The
 script now includes four milestones with teams of 5/3/4/2 in a separate scenario;
@@ -63,4 +63,5 @@ On 2026-09-24 the expanded signed E2E passed the sequential four-milestone
 5/3/4/2 scenario against adapter PostgreSQL with both mock memory and SQLite.
 The fixture checks mandatory tasks, stable storages, team continuity,
 one active milestone at a time, final project completion, payouts and scores.
-This is implementation evidence, not independent POC-07 closure.
+This implementation evidence is supplemented by the later independent
+`../../progress/handoffs/POC-07-verification.md` report.

@@ -185,7 +185,7 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 
 | Priority | Area | Status / next decision |
 |---|---|---|
-| P0 | Verification closure | Independently verify POC-07 and TASK-005 against the final integrated tree. The E2E now scans bounded service logs for generated secret markers; this is evidence, not a production secrecy proof. HSM-backed rotation remains mandatory before real value. Cargo-deny and Leptos gates are outside this backend closeout by owner decision. |
+| Closed for local POC | Verification | POC-07 and TASK-005 have independent handoffs for the mock-backed backend. The E2E scans REST, SSE, custody metrics and bounded service logs for known secret markers; this is not a production secrecy proof. HSM-backed rotation remains mandatory before real value. Cargo-deny and Leptos gates are outside this backend closeout by owner decision. |
 | P1 | Passkey access | Decide whether to add verified email to principals or use username for this PoC, then expose login/options and verify a complete same-account login flow. Registration/removal and virtual-authenticator tests exist. |
 | P1 | Browser contract | Keep direct task routes and temporary nested aliases until external frontend clients migrate. OpenAPI describes implemented routes; it intentionally omits blocked login/options. |
 | Out of scope | Governance and generic Virto wrappers | No membership/governance, DAO votes, generic payments or arbitrary Kreivo JSON-RPC. Existing typed project, calendar and escrow operations replace those legacy wrappers where applicable. |

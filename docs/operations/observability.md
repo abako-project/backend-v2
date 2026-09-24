@@ -11,6 +11,6 @@ docker compose -f infra/compose.yaml ps
 docker compose -f infra/compose.yaml logs --tail=100
 ```
 
-Never enable logging of seeds, master keys, service credentials, passwords, cookies or arbitrary signing payloads. The local E2E runner scans bounded service logs, API responses, SSE and custody metrics for known secret markers. That and selected negative tests do not prove all outputs are secret-free; TASK-005 still needs independent review.
+Never enable logging of seeds, master keys, service credentials, passwords, cookies or arbitrary signing payloads. The local E2E runner scans bounded service logs, API responses, SSE and custody metrics for known secret markers. Independent TASK-005 verification covers this local POC check; it does not prove all outputs are secret-free.
 
 No service-level objectives, paging ownership, dashboards or production capacity claims have been established.

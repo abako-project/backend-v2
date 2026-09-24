@@ -2,7 +2,8 @@
 
 Status update 2026-09-15: implementation commits are integrated into
 `feat/rust-rest-poc` and temporary implementation worktrees are removed. TASK-005
-remains open pending independent verification; see `status.md`. HSM-backed
+is closed for the local mock-backed POC; see `status.md` and
+`../../progress/handoffs/SPEC-0001-verification.md`. HSM-backed
 rotation is required before real value, not for POC acceptance. Paths below describe task ownership, not existing
 verification reports. Human test commands use native tools.
 

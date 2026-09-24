@@ -18,5 +18,7 @@ implemented SPEC-0005 flow and verified mock E2E. The
 unresolved product decisions.
 
 `POC07-frontend-build.md` documents a tooling correction, not the independent POC-07
-task. TASK-005's final independent report is also missing. Do not infer completion
-from names or historical successful commands. Never store secrets in reports.
+task. Independent [POC-07](handoffs/POC-07-verification.md) and
+[TASK-005](handoffs/SPEC-0001-verification.md) reports now close local mock-backed
+POC acceptance only. They do not approve real assets or production. Never store
+secrets in reports.

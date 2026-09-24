@@ -33,7 +33,7 @@ Last updated: 2026-09-24
 | Task | Owner | Branch | Worktree | State | Evidence |
 |---|---|---|---|---|---|
 | TASK-000 through TASK-004, TASK-006 | Root integrator and implementation agents | `feat/rust-rest-poc` | Main repository | Implementation integrated; dependency gate remains blocked | `../../progress/handoffs/REST-POC-foundation.md` |
-| TASK-005 | Independent verifier | `feat/backend-port-close` | Read-only integration branch | Final acceptance/security verification in progress | `tasks.md` |
+| TASK-005 | Independent verifier | `feat/backend-port-close` | Read-only integration branch | Closed for local mock-backed POC | `../../progress/handoffs/SPEC-0001-verification.md` |
 
 ## Verification and remaining work
 
@@ -49,9 +49,9 @@ are absent from the license allowlist. Leptos transitives `paste` and
 `proc-macro-error2` have unmaintained advisories RUSTSEC-2024-0436 and
 RUSTSEC-2026-0173. No exception has been applied.
 
-TASK-005 still requires its final independent acceptance/security evidence.
-Earlier integration checks do not establish completion of that separate task.
-Requirement approval remains valid; full verification is not complete.
+TASK-005 has independent acceptance/security evidence for the local mock-backed
+POC. Earlier integration checks alone did not establish that completion.
+Requirement approval remains valid; no production security approval is claimed.
 
 Independent read-only evidence review on 2026-09-14 found two specific closure gaps:
 
@@ -77,8 +77,9 @@ rotation until before real assets. `spec.md`, `data-model.md` and
 `threat-model.md` now state this explicitly; the earlier discrepancy above is
 historical, not an open POC implementation requirement. The revised signed E2E
 passed all eight memory/SQLite scenarios with adapter PostgreSQL and scans
-bounded service logs for generated secret markers. This evidence does not by
-itself close TASK-005; the independent verifier is reviewing the final tree.
+bounded service logs for generated secret markers. The later independent
+`../../progress/handoffs/SPEC-0001-verification.md` report closes TASK-005
+for the local POC only.
 
 ## Approval Record
 
