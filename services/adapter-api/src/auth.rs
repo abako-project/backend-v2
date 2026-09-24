@@ -13,6 +13,8 @@ use sqlx::{Row, postgres::PgRow};
 use std::sync::Arc;
 use zeroize::Zeroizing;
 
+pub(crate) mod passkeys;
+
 const SESSION_SECONDS: i64 = 86_400;
 
 #[derive(Clone)]
