@@ -50,12 +50,11 @@ Authenticate with the HttpOnly cookie and send `X-CSRF-Token` on authenticated m
 ## Verification
 
 ```sh
-bash scripts/verify.sh
-python3 infra/verify.py
+cargo build -p adapter-api -p wallet -p mock-provider --all-features --locked
 python3 scripts/poc-e2e.py
 ```
 
-These cover workspace gates, mock feature variants, WASM compilation, dependency policy, Nginx isolation and the real signed flow. Actual results and remaining work belong in [progress/handoffs](progress/handoffs/); listing commands is not a claim that every gate has passed.
+This exercises the real signed backend flow with disposable PostgreSQL and both mock storage modes. Frontend, dependency-policy and Nginx checks are separate; command listings are not passing-result claims. See [porting coverage](docs/project/porting-coverage.md).
 
 ## Port status
 
@@ -65,11 +64,12 @@ created with its draft; at least one task per storage is required before
 submission. Execution approval assigns and reserves every milestone atomically,
 activates only the first, and later accepts each in sequence until the project
 is `Completed`. The expanded E2E fixture covers four milestones with teams of
-5/3/4/2. Adapter descriptive profiles use PostgreSQL. The mock now models
-Bramp deposits and withdrawal holds, but these need integrated E2E verification.
+5/3/4/2. Adapter descriptive profiles use PostgreSQL. The mock models
+Bramp deposits, withdrawal holds and operator-owned skill requests.
 
-This is not complete legacy compatibility. Passkey login, worker skill requests
-and catalog role associations are still being integrated; Virto governance,
+This is not complete legacy compatibility. Passkey registration and verification
+exist, but the login start route awaits a decision on email versus username.
+Virto governance,
 membership, real Kreivo calls, banking and generic payments are outside this
 phase. The formal public dispute case described in `Disputas.md` is implemented
 for the approved PoC scope and consolidated in

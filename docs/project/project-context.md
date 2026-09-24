@@ -1,6 +1,6 @@
 # Project Context
 
-Updated 2026-09-24 against backend integration commit `2e9e62c`.
+Updated 2026-09-24 against the backend integration branch.
 
 Kunveno is a Rust port of the core mock-backed marketplace with approved changes.
 Legacy: the separate backend repository. Its `main` contains the
@@ -15,7 +15,7 @@ See [coverage](porting-coverage.md).
 | Frontend | Independent Leptos CSR and external frontend through same REST/SSE API |
 | Storage | Adapter PostgreSQL; custody SQLite; mock SQLite or memory |
 | Messaging | Durable queues and event polling; no RabbitMQ |
-| Authentication | Classic login, cookie sessions, CSRF, backend sr25519 signing; passkey integration pending |
+| Authentication | Classic login, cookie sessions, CSRF, backend sr25519 signing; WebAuthn registration and verification integrated, login start awaiting identity lookup policy |
 | Deployment | Local Docker Compose and Nginx on localhost:8088 |
 | Rust toolchain/MSRV | 1.96.1 |
 | Repository | Local Git with a configured origin; publishing requires an explicit request |
@@ -27,7 +27,9 @@ separate by mode. Planning is negotiated, execution fully funded into escrow, an
 payouts cover each requirement. Execution activates milestones sequentially,
 while assignments and reservations are atomic upfront. Adapter PostgreSQL holds
 descriptive profiles; the mock holds simulated Bramp requests and balances.
-Skill-request and passkey work is approved but not yet integrated. A current milestone rejection can lead to a
+The mock owns skill associations and operator-decided worker requests. Passkey
+credentials are adapter-owned, but login start awaits a decision on email versus
+username. A current milestone rejection can lead to a
 public Open dispute and whole-project freeze; resolution is not implemented.
 
 HSM/envelope encryption and online rotation were discussed, but are not implemented

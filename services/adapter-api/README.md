@@ -18,7 +18,9 @@ Set these environment variables; only `ADAPTER_DATABASE_URL` is optional:
 - `BOOTSTRAP_ADMIN_PASSWORD_FILE`: initial administrator password file.
 - `ALLOWED_ORIGINS`: comma-separated exact browser origins, without trailing slashes.
 
-Optional: `BIND_ADDR` defaults to `0.0.0.0:8080`, `BOOTSTRAP_ADMIN_USERNAME`
+Optional: `WEBAUTHN_RP_ID` defaults to `localhost` and `WEBAUTHN_ORIGIN` to
+`http://localhost:8088`; configure both for the browser's exact RP/origin.
+Non-local origins must use HTTPS. `BIND_ADDR` defaults to `0.0.0.0:8080`, `BOOTSTRAP_ADMIN_USERNAME`
 to `admin`, `OPENAPI_PATH` to `contracts/openapi.json`, `COOKIE_SECURE` to
 `true`, and `ENABLE_MOCK_FUNDING` to `false`. Set `COOKIE_SECURE=false` only
 for local HTTP. The funding flag exposes fixture-only `/api/admin/fund`; a
@@ -50,8 +52,11 @@ instance resets. The public worker directory strips reservation project IDs.
 The adapter also exposes canonical `/api/task-storages/{storageId}` and task
 routes while retaining project-nested write aliases. Descriptive profile edits
 are adapter-local, not signed business commands; mock Bramp mutations are signed
-business commands. WebAuthn and skill-request routes are approved but not in
-this integration commit.
+business commands. Workers can submit skill requests, and only the operator can
+approve or reject them; approval does not qualify the requester automatically.
+Passkey registration, listing, removal and assertion verification are present.
+Password login remains available; passkey login cannot start until the approved
+email-first lookup is reconciled with the current username-only accounts.
 
 The POC reads a bounded whole provider snapshot; paginate this boundary when data
 outgrows that ceiling. This is not a production identity or custody assessment.
@@ -66,5 +71,4 @@ cargo clippy -p adapter-api --all-targets --all-features --locked -- -D warnings
 Adapter tests require a disposable PostgreSQL instance via
 `TEST_ADAPTER_DATABASE_URL`; see `src/tests.rs`. The integrated
 `scripts/poc-e2e.py` starts its own temporary PostgreSQL instance and uses real
-signing services with each mock storage backend. No passing new-run claim is made
-until that suite is executed against the integrated revision.
+signing services with each mock storage backend.

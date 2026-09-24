@@ -65,32 +65,53 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
     let root = key(1)?;
     let owner = key(2)?;
     let stranger = key(3)?;
+    deposit_flow(&provider, &root, &owner, &stranger).await?;
+    withdrawal_flow(&provider, &root, &owner, &stranger).await
+}
+
+async fn owner_balance(provider: &Provider, owner: &Keypair) -> TestResult<Money> {
+    Ok(provider
+        .snapshot()
+        .await?
+        .balances
+        .into_iter()
+        .find(|item| item.account == account(owner))
+        .ok_or("missing owner balance")?
+        .available)
+}
+
+async fn deposit_flow(
+    provider: &Provider,
+    root: &Keypair,
+    owner: &Keypair,
+    stranger: &Keypair,
+) -> TestResult {
     let amount = KvnAmount::new(Money::new(25))?;
     let deposit_id = created_id(
         &execute(
-            &provider,
-            &owner,
+            provider,
+            owner,
             ProviderCommand::CreateDeposit(CreateDepositRequest { amount }),
         )
         .await?,
     )?;
     assert_eq!(
         provider
-            .bramp_deposit(account(&owner), deposit_id)
+            .bramp_deposit(account(owner), deposit_id)
             .await?
             .status,
         DepositStatus::Pending,
     );
     assert!(
         provider
-            .bramp_deposit(account(&stranger), deposit_id)
+            .bramp_deposit(account(stranger), deposit_id)
             .await
             .is_err()
     );
     assert_eq!(
         execute(
-            &provider,
-            &stranger,
+            provider,
+            stranger,
             ProviderCommand::ConfirmDeposit { deposit_id },
         )
         .await?
@@ -98,8 +119,8 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
         ExecutionOutcome::Failed("system_origin_required".into()),
     );
     let confirm = signed(
-        &provider,
-        &root,
+        provider,
+        root,
         ProviderCommand::ConfirmDeposit { deposit_id },
     )
     .await?;
@@ -108,8 +129,8 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
     assert_eq!(provider.execute(confirm, NOW).await?, first);
     assert_eq!(
         execute(
-            &provider,
-            &root,
+            provider,
+            root,
             ProviderCommand::ConfirmDeposit { deposit_id }
         )
         .await?
@@ -118,24 +139,25 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
     );
     assert_eq!(
         provider
-            .bramp_deposit(account(&owner), deposit_id)
+            .bramp_deposit(account(owner), deposit_id)
             .await?
             .status,
         DepositStatus::Confirmed,
     );
-    let balance = provider
-        .snapshot()
-        .await?
-        .balances
-        .into_iter()
-        .find(|item| item.account == account(&owner))
-        .ok_or("missing owner balance")?;
-    assert_eq!(balance.available, Money::new(25));
+    assert_eq!(owner_balance(provider, owner).await?, Money::new(25));
+    Ok(())
+}
 
+async fn withdrawal_flow(
+    provider: &Provider,
+    root: &Keypair,
+    owner: &Keypair,
+    stranger: &Keypair,
+) -> TestResult {
     assert_eq!(
         execute(
-            &provider,
-            &owner,
+            provider,
+            owner,
             ProviderCommand::CreateWithdrawal(CreateWithdrawalRequest {
                 amount: KvnAmount::new(Money::new(26))?,
             }),
@@ -146,8 +168,8 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
     );
     let withdrawal_id = created_id(
         &execute(
-            &provider,
-            &owner,
+            provider,
+            owner,
             ProviderCommand::CreateWithdrawal(CreateWithdrawalRequest {
                 amount: KvnAmount::new(Money::new(20))?,
             }),
@@ -156,21 +178,21 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
     )?;
     assert_eq!(
         provider
-            .bramp_withdrawal(account(&owner), withdrawal_id)
+            .bramp_withdrawal(account(owner), withdrawal_id)
             .await?
             .status,
         WithdrawalStatus::Pending,
     );
     assert!(
         provider
-            .bramp_withdrawal(account(&stranger), withdrawal_id)
+            .bramp_withdrawal(account(stranger), withdrawal_id)
             .await
             .is_err()
     );
     assert_eq!(
         execute(
-            &provider,
-            &stranger,
+            provider,
+            stranger,
             ProviderCommand::CancelWithdrawal { withdrawal_id },
         )
         .await?
@@ -179,8 +201,8 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
     );
     assert_eq!(
         execute(
-            &provider,
-            &root,
+            provider,
+            root,
             ProviderCommand::CancelWithdrawal { withdrawal_id },
         )
         .await?
@@ -189,22 +211,15 @@ async fn run_bramp_flow(provider: Provider) -> TestResult {
     );
     assert_eq!(
         execute(
-            &provider,
-            &owner,
+            provider,
+            owner,
             ProviderCommand::CancelWithdrawal { withdrawal_id },
         )
         .await?
         .outcome,
         ExecutionOutcome::Failed("withdrawal_already_cancelled".into()),
     );
-    let balance = provider
-        .snapshot()
-        .await?
-        .balances
-        .into_iter()
-        .find(|item| item.account == account(&owner))
-        .ok_or("missing owner balance")?;
-    assert_eq!(balance.available, Money::new(25));
+    assert_eq!(owner_balance(provider, owner).await?, Money::new(25));
     Ok(())
 }
 

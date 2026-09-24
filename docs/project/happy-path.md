@@ -162,6 +162,21 @@ use the three Bramp rows instead.
 state. The older project-nested task write paths remain aliases during frontend
 transition; neither path creates a second storage.
 
+Optional auxiliary flows use the same session and signing pipeline. A worker
+may `POST /api/catalog/skill-requests` with
+`{"name":"New skill","roleIds":[3]}` and read its own requests at
+`GET /api/catalog/skill-requests/me`. The operator reviews
+`GET /api/admin/catalog/skill-requests` and posts `"Approve"` or `"Reject"`
+to `/api/admin/catalog/skill-requests/{requestId}/decision`. Approval adds the
+skill to the global catalog; the worker must separately update qualifications.
+A funded user may `POST /api/bramp/withdrawals` with `{"amount":"100"}`;
+the pending request holds only free KVN and may be cancelled at
+`POST /api/bramp/withdrawals/{withdrawalId}/cancel`. No bank transfer occurs.
+Passkey registration starts at `POST /api/auth/passkeys/register/options`
+with the current password and completes at `/register/verify` with the
+WebAuthn credential. Password login remains available; passkey login/options
+is not exposed until the email-versus-username account policy is decided.
+
 After every business write, poll its operation before issuing a dependent write.
 The client may use `GET /api/projects/{projectId}`; each participant can read
 `GET /api/balance` and `GET /api/workers` for public score summaries.
@@ -201,7 +216,8 @@ python3 scripts/poc-e2e.py
 
 The script requires PostgreSQL's `initdb`, `pg_ctl` and `psql` commands. It
 starts a disposable PostgreSQL instance and local services, then runs the single-milestone
-happy path, the four-milestone 5/3/4/2 path and the dispute branch on both
-SQLite and memory mock storage. Use `--storage sqlite` or `--storage memory`
+happy path, the four-milestone 5/3/4/2 path, the dispute branch and auxiliary
+profile/Bramp/catalog checks on both SQLite and memory mock storage. It also
+scans bounded service logs for the generated secret markers. Use `--storage sqlite` or `--storage memory`
 to run only one backend. It is a signed backend E2E, not a browser E2E or a
 real-chain test.

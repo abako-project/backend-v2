@@ -52,10 +52,19 @@ adapter, but clients needing retry safety should always supply one.
 | GET /api/auth/session | — | SessionView |
 | POST /api/auth/logout | — | 204 |
 | POST /api/auth/password | ChangePasswordRequest | 204 |
+| POST /api/auth/passkeys/register/options | `{"currentPassword":"..."}` | WebAuthn creation options for this session |
+| POST /api/auth/passkeys/register/verify | Ceremony ID and credential | 201 after challenge verification |
+| GET /api/auth/passkeys | — | Own credential references |
+| POST /api/auth/passkeys/{credentialId}/remove | `{"currentPassword":"..."}` | 204 after reauthentication |
+| POST /api/auth/passkeys/login/verify | Ceremony ID and assertion | SessionView; login/options is not yet exposed |
 | GET /api/profiles/me | — | Own full ProfilesView from adapter PostgreSQL |
 | PUT /api/profiles/me | Tagged `{"section":"client","profile":{...}}` or `section: "worker"` | Replace only that descriptive profile section; returns full ProfilesView |
 | GET /api/profiles/{principalId} | — | PublicProfilesView without email, department or session data; no login |
 | GET /api/catalog | — | CatalogView |
+| POST /api/catalog/skill-requests | CreateSkillRequest | Worker asks to add a skill; no qualification change |
+| GET /api/catalog/skill-requests/me | — | Own SkillRequestView[] |
+| GET /api/admin/catalog/skill-requests | — | Operator review list |
+| POST /api/admin/catalog/skill-requests/{requestId}/decision | `"Approve"` or `"Reject"` | DecideSkillRequest through system wallet |
 | POST /api/bramp/deposits | `{"amount":"10000"}` | CreateDeposit; pending mock request, no balance change |
 | GET /api/bramp/deposits/{depositId} | — | Own DepositView |
 | POST /api/admin/bramp/deposits/{depositId}/confirm | — | ConfirmDeposit; system credits fixed KVN amount once |
@@ -115,8 +124,9 @@ The public request never selects a privileged wallet or spoofed origin.
 The direct task routes resolve project ownership from provider state and apply the
 same authorization as the project-nested aliases. Profile writes are adapter-local
 PostgreSQL updates and return directly, not a signed provider operation. Bramp
-mutations do use the signed 202 operation flow. No passkey endpoint or skill-request
-route is included here until its implementation lands.
+and skill-request mutations use the signed 202 operation flow. Passkey credential
+management is adapter-local PostgreSQL state, not a provider command. The
+passkey login/options route remains blocked by the username/email policy decision.
 
 Planning and proposal read models expose a provider-owned `revision`. Acceptance
 bodies are `{"expectedRevision":7}`: planning accept and accept-delivery use the

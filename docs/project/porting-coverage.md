@@ -1,8 +1,8 @@
 # Porting and E2E coverage
 
-Reviewed 2026-09-24 against backend integration commit `2e9e62c`
+Reviewed 2026-09-24 against the backend integration branch
 and legacy `main` commit `3e2b929`. Implementation claims below describe
-that integration commit; new end-to-end verification is still pending.
+the current integration, not a release on `master`.
 This is a port of the approved marketplace redesign,
 not a complete compatibility port of the legacy backend or all mock endpoints.
 
@@ -16,7 +16,7 @@ repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
 
 | Area | Current Rust behavior |
 |---|---|
-| Roles and skills | Preserves the 9 role and 33 skill IDs; coordinator role is fixed; privileged catalog edits. Skill-to-role associations and new-skill requests remain pending integration. |
+| Roles and skills | Preserves the 9 role and 33 skill IDs; coordinator role is fixed; privileged catalog edits. Skill-to-role associations are exposed; workers request additions and only the operator decides. Approval does not qualify the requester. |
 | Worker qualifications | Provider-owned skill/role IDs; active Worker/Coordinator modes |
 | Calendars | Approved redesign: one per worker, default weekly capacity, ISO-week overrides and minute reservations |
 | Assignment | Approved redesign: all required skills, active mode and capacity; previous-milestone workers preferred when eligible, then relevant score and random exact ties; no role filter or `assignmentKey` |
@@ -28,9 +28,9 @@ repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
 | Reputation | Approved per-milestone, committed-minute weighted scores replace standalone legacy project ratings |
 | Cancellation/dispute | Party authorization, current-submission rejection, public Open case, one response and project-wide freeze; resolution/refunds excluded |
 | Storage | Adapter PostgreSQL; custody SQLite; mock memory/SQLite features with SQLite default; missing-only mock catalog seeding. No development-data migration. |
-| Descriptive profiles | Adapter PostgreSQL stores separate editable client and worker sections; public projection excludes email, department, session and custody data. Independent verification pending. |
-| Bramp | Mock-only deposit request with one operator credit; pending withdrawal hold and cancellation. No bank connection, currency conversion or generic payment API. Integrated E2E pending. |
-| Auth/signing/events | Classic cookie login, real sr25519 custody signatures, durable operations, event ingestion and SSE. Passkey method is approved but not yet integrated. |
+| Descriptive profiles | Adapter PostgreSQL stores separate editable client and worker sections; public projection excludes email, department, session and custody data. Auxiliary E2E passes in both mock modes. |
+| Bramp | Mock-only deposit request with one operator credit; pending withdrawal hold and cancellation. Auxiliary E2E passes in both mock modes. No bank connection, currency conversion or generic payment API. |
+| Auth/signing/events | Classic cookie login, real sr25519 custody signatures, durable operations, event ingestion and SSE. WebAuthn registration, storage, assertion verification and virtual-authenticator tests exist; login/options awaits an email-versus-username policy decision. |
 
 ## Milestone task storage
 
@@ -54,7 +54,7 @@ This area is implemented in the Rust provider and covered by the expanded E2E:
   Existing project-nested write paths remain aliases; there is one provider store.
 - The four-milestone E2E fixture checks that four distinct storage IDs survive
   a draft edit and execution approval and that tasks do not leak between
-  storages. Its 2026-09-24 additions still need an integrated run.
+  storages. The expanded assertions passed in both mock modes against adapter PostgreSQL.
 
 Legacy uses a separate in-memory storage map and header-based mock caller;
 Rust keeps storage inside the signed, atomic project aggregate. The task
@@ -66,17 +66,18 @@ counterparty response remain available. No dispute resolution or unlock exists.
 
 Open or deliberately changed compatibility points:
 
-- Profile sections are now stored in adapter PostgreSQL, not provider state.
-  Their read/write/public-projection tests need integrated verification.
-- Skill-to-role associations and worker new-skill requests are approved in
-  [SPEC-0006](../../specs/0006-backend-parity/spec.md) but not in this
-  integration commit. Qualifications still reference existing catalog IDs.
+- Profile sections are stored in adapter PostgreSQL, not provider state.
+  Their read/write/public-projection checks pass in the auxiliary E2E.
+- Skill-to-role associations and worker new-skill requests are implemented
+  under [SPEC-0006](../../specs/0006-backend-parity/spec.md). Qualifications
+  still change only through the worker qualification command.
 - Sequential activation and project completion are implemented. Team continuity
   means preferring an eligible previous worker, not preserving legacy
   `assignmentKey` identity. This is a deliberate matching rule change.
-- WebAuthn passkey login is approved in
-  [SPEC-0004](../../specs/0004-virto-compatibility/spec.md), but not yet
-  integrated. Classic password login still owns the same custodial wallet.
+- WebAuthn passkey registration and assertion verification are implemented
+  under [SPEC-0004](../../specs/0004-virto-compatibility/spec.md).
+  Login cannot start until email-first lookup is reconciled with the
+  username-only principal model. Password login still owns the same wallet.
 - Bramp is a typed mock of deposit credit and withdrawal holds. It is not
   legacy `/v1` wire compatibility, a bank connection or a real Kreivo call.
 - Membership, governance, DAO voting, generic payments/refunds and dispute
@@ -124,10 +125,10 @@ and unchanged balances. See [DSP-07](../../progress/handoffs/DSP-07.md).
 dependency-policy claim is made.
 
 The 2026-09-24 fixture adds task-submission, canonical storage reads,
-sequential activation and project-completion assertions. These new assertions
-have **not** been counted in the historical passing results above. Record an
-integrated signed run against PostgreSQL and both mock backends before claiming
-the revised path verified.
+sequential activation and project-completion assertions. These passed against
+adapter PostgreSQL with mock memory and SQLite. The auxiliary scenario also
+passed in both modes, covering profiles, Bramp, catalog requests, passkey
+boundary failures and bounded secret-marker scanning of service logs.
 
 Covered flow: registration/login, catalog, worker registration, privileged coordinator
 promotion and funding, planning quote/acceptance/payment, proposal and task storage,
@@ -152,9 +153,9 @@ evidence URLs and hashes; the service does not fetch those URLs.
 The legacy scenario uses 10 workers, 2 coordinators and 4 milestones with 5/3/4/2
 workers, checking unavailable candidates, repeated assignment continuity, preserved
 storage identities during proposal edits, sequential activation and project completion.
-The expanded Rust fixture now asserts sequential activation and explicit project
+The expanded Rust fixture asserts sequential activation and explicit project
 completion under the approved redesign, but not legacy assignment-key continuity.
-Those additions await an integrated run. Rust provider tests separately cover
+Rust provider tests separately cover
 concurrent approvals/rollback, delegation, signature/replay, capacity and disputes.
 
 `apps/leptos-web/tests/browser_smoke.py` runs Chromium against an HTTP fixture using
@@ -184,11 +185,9 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 
 | Priority | Area | Status / next decision |
 |---|---|---|
-| P0 | Verification closure | Re-run the revised signed E2E against adapter PostgreSQL and both mock backends; independently verify POC-07 and TASK-005, including diagnostic secret-marker evidence. HSM-backed rotation remains a pre-real-value requirement. Cargo-deny and Leptos gates are outside this backend closeout by owner decision, not claimed passing. |
-| P1 | Passkey access | Implement and verify email-first WebAuthn registration/login/removal for the same custodial account, with configured RP/origin and a virtual authenticator. Password login remains available. |
-| P1 | Catalog relations | Expose skill-to-role associations and implement worker new-skill requests with operator approval/rejection; requests never qualify workers automatically. |
-| P1 | Bramp/profiles | Run integration tests for deposit idempotency, withdrawal holds/cancellation, private/public profile projection and PostgreSQL behavior. Mock Bramp code and adapter profile tables exist; bank settlement does not. |
-| P1 | Public contract | Update OpenAPI and direct-route examples; keep the temporary nested task aliases until frontend clients migrate. |
+| P0 | Verification closure | Independently verify POC-07 and TASK-005 against the final integrated tree. The E2E now scans bounded service logs for generated secret markers; this is evidence, not a production secrecy proof. HSM-backed rotation remains mandatory before real value. Cargo-deny and Leptos gates are outside this backend closeout by owner decision. |
+| P1 | Passkey access | Decide whether to add verified email to principals or use username for this PoC, then expose login/options and verify a complete same-account login flow. Registration/removal and virtual-authenticator tests exist. |
+| P1 | Browser contract | Keep direct task routes and temporary nested aliases until external frontend clients migrate. OpenAPI describes implemented routes; it intentionally omits blocked login/options. |
 | Out of scope | Governance and generic Virto wrappers | No membership/governance, DAO votes, generic payments or arbitrary Kreivo JSON-RPC. Existing typed project, calendar and escrow operations replace those legacy wrappers where applicable. |
 | Future spec | Dispute resolution | [SPEC-0005](../../specs/0005-dispute-opening/status.md) ends at an Open case and frozen project. DAO authority, resolution/unlock, escrow disposition, chat and timeout need separate product decisions; they are not defects in the approved opening PoC |
 | Future platform | Real chain and production custody | Replace the signed mock-provider integration with reviewed chain encoding, submission, finality, HSM-backed key management and recovery before real assets |

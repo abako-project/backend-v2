@@ -208,6 +208,10 @@ pub(crate) async fn remove(
 
 // The public email-to-principal lookup belongs in the HTTP integration after
 // the product owner resolves the existing username-only account model.
+#[expect(
+    dead_code,
+    reason = "AUTH-001 login options await the email-versus-username policy"
+)]
 pub(crate) async fn begin_login(
     app: &App,
     principal: PrincipalId,

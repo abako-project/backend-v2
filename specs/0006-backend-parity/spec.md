@@ -71,7 +71,7 @@ place deployment credentials or user data in the repository.
 
 ## Compatibility and verification
 
-No `/v1` aliases or GraphQL schema are added. OpenAPI and the happy-path guide
+No `/v1` aliases are added. OpenAPI and the happy-path guide
 show both frontends how to use `/api`. Verify profiles' public/private projections,
 catalog request authorization and duplicate handling, canonical and nested task
 routes, and operation/SSE recovery with PostgreSQL. Run the mock domain suite

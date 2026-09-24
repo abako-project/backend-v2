@@ -4,7 +4,7 @@ State: APPROVED
 
 Approved by the product owner on 2026-09-08: architecture review, REST/frontend isolation, reputation defaults, and negotiated planning plus explicit milestone prices. Latest instruction: implement.
 
-Last updated: 2026-09-23.
+Last updated: 2026-09-24.
 
 Implementation: POC-00 through POC-06 are integrated into `master` at `ed6e4f8`.
 All six temporary task worktrees were checked and removed
@@ -38,8 +38,8 @@ Port review: the owner requested legacy-scale E2E coverage on 2026-09-15. The
 script now includes four milestones with teams of 5/3/4/2 in a separate scenario;
 the original security/SSE flow is retained. At that verification point, detailed
 profiles, catalog associations, explicit project completion and sequential
-activation were non-equivalent. The 2026-09-23 amendments below supersede those
-gaps as requirements, not as completed implementation. See
+activation were non-equivalent at that time. The 2026-09-24 backend integration
+implements these approved changes; the historical gap is closed in the branch. See
 `../../docs/project/porting-coverage.md`. This test expansion does not close
 independent verification.
 
@@ -47,7 +47,7 @@ The owner approved a further amendment on 2026-09-23: team continuity without
 `assignmentKey`, a task in every milestone before proposal submission,
 sequential activation despite atomic upfront assignment/reservation, and
 automatic project completion after the final accepted milestone. These rules
-are now in `spec.md` and `acceptance.feature`; implementation is pending.
+are in `spec.md` and `acceptance.feature` and implemented in the backend branch.
 
 Expanded E2E verified on 2026-09-15: both original and multi-team scenarios passed
 against both SQLite and memory after rebuilding current service binaries. Evidence:
@@ -58,3 +58,9 @@ scenarios on both backends; workspace tests reached 49 passing. This does not
 close POC-07's independent verification. The owner accepted deferring the two
 Leptos maintenance advisories for this POC. The checked-in dependency policy has
 not been changed or passed; it is outside this backend closure.
+
+On 2026-09-24 the expanded signed E2E passed the sequential four-milestone
+5/3/4/2 scenario against adapter PostgreSQL with both mock memory and SQLite.
+The fixture checks mandatory tasks, stable storages, team continuity,
+one active milestone at a time, final project completion, payouts and scores.
+This is implementation evidence, not independent POC-07 closure.
