@@ -58,6 +58,8 @@ def temporary_postgres(stack, directory):
 
 
 class Client:
+    secret_markers = ()
+
     def __init__(self, base, origin=ORIGINS[0]):
         self.base = base
         self.origin = origin
@@ -87,6 +89,8 @@ class Client:
             response = error
         with response:
             raw = response.read()
+            for name, marker in self.secret_markers:
+                require(marker not in raw, f"{method} {path} disclosed {name}")
             try:
                 value = json.loads(raw) if raw else None
             except json.JSONDecodeError:
@@ -136,6 +140,8 @@ class Client:
                 if line.startswith("id:"):
                     event_id = int(line[3:].strip())
                 elif line.startswith("data:"):
+                    for name, marker in self.secret_markers:
+                        require(marker not in line.encode(), f"SSE disclosed {name}")
                     data.append(line[5:].strip())
                 elif not line and data:
                     value = json.loads("\n".join(data))
@@ -709,16 +715,14 @@ def exercise_auxiliary(base, admin_password, _proxy):
     exercise_catalog(admin, worker, outsider)
 
 
-def scan_secret_logs(logs, secret_dir):
-    markers = [(name, (secret_dir / name).read_bytes().strip()) for name in
-               ("service-token", "master-key.hex", "root-seed.hex", "bootstrap-admin-password")]
+def scan_secret_logs(logs):
     for service, log in logs:
         log.flush()
         log.seek(0)
         output = log.read(4 * 1024 * 1024 + 1)
         require(len(output) <= 4 * 1024 * 1024, f"{service} log exceeds secret-scan limit")
-        for name, marker in markers:
-            require(len(marker) >= 12 and marker not in output,
+        for name, marker in Client.secret_markers:
+            require(marker not in output,
                     f"{service} log disclosed {name}")
 
 
@@ -730,9 +734,15 @@ def run(storage, binaries, scenario=exercise):
         secret_dir = directory / "secrets"
         subprocess.run([str(binaries / "wallet"), "init-dev-secrets", str(secret_dir)],
                        check=True, stdout=subprocess.DEVNULL)
+        Client.secret_markers = tuple(
+            (name, (secret_dir / name).read_bytes().strip()) for name in
+            ("service-token", "master-key.hex", "root-seed.hex", "bootstrap-admin-password")
+        )
+        require(all(len(marker) >= 12 for _, marker in Client.secret_markers),
+                "secret marker too short for reliable scanning")
         wallet_port, provider_port, adapter_port = [available_port() for _ in range(3)]
         common = {"INTERNAL_SERVICE_TOKEN_FILE": str(secret_dir / "service-token")}
-        launch(stack, binaries / "wallet", wallet_port, {
+        wallet = launch(stack, binaries / "wallet", wallet_port, {
             **common, "CUSTODY_DATABASE_URL": f"sqlite://{directory}/custody.sqlite?mode=rwc",
             "CUSTODY_MASTER_KEY_FILE": str(secret_dir / "master-key.hex"),
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
@@ -757,7 +767,10 @@ def run(storage, binaries, scenario=exercise):
             "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),
         }, logs)
         scenario(adapter.base, (secret_dir / "bootstrap-admin-password").read_text().strip(), proxy)
-        scan_secret_logs(logs, secret_dir)
+        wallet.request("GET", "/internal/metrics", headers={
+            "Authorization": "Bearer " + (secret_dir / "service-token").read_text().strip(),
+        })
+        scan_secret_logs(logs)
         print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle")
 
 

@@ -4,7 +4,7 @@ Custody stores wallet seeds encrypted with XChaCha20-Poly1305 in its own SQLite 
 
 Use the generator documented in [infra/README.md](../../infra/README.md). It creates private files without printing their contents and refuses existing targets. Keep them outside the repository/build context. Compose mounts only each service's required files.
 
-The backend signs with sr25519 in custody memory. HSM-backed signing, DEK/KEK envelope encryption and automatic or manual encryption-key rotation are not implemented. Their discussion is not an approved replacement for SPEC-0001's unresolved recovery requirement.
+The backend signs with sr25519 in custody memory. HSM-backed signing, DEK/KEK envelope encryption and automatic or manual encryption-key rotation are not implemented. SPEC-0001 requires a reviewed recovery and rotation design before real value is held; this POC does not satisfy that production requirement.
 
 Before custody holds real value, approve and test a versioned HSM-backed design:
 each seed has a fresh data-encryption key (DEK), and a non-exportable HSM
