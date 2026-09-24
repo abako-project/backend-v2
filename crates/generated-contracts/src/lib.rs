@@ -91,6 +91,10 @@ wire_enum!(/// Tracking status; it does not settle payments or reservations.
     TaskStatus { ToDo, Open, InProgress, InReview, Done, Closed });
 wire_enum!(/// Catalog ownership is provider-side.
     CatalogKind { Role, Skill });
+wire_enum!(/// An operator's final response to a worker skill request.
+    SkillRequestDecision { Approve, Reject });
+wire_enum!(/// A submitted request is not a qualification or catalog entry.
+    SkillRequestStatus { Pending, Approved, Rejected });
 wire_enum!(/// Key lifecycle; only Active may sign.
     WalletLifecycle { Provisioning, Active, Suspended, Retired });
 wire_enum!(/// Durable custody job stage.
@@ -116,6 +120,10 @@ dto!(/// Create or rename a catalog entry; role 1 is protected by the provider.
     UpsertCatalogEntryRequest { kind: CatalogKind, id: u32, name: String });
 dto!(/// Delete a catalog entry subject to provider reference/invariant checks.
     DeleteCatalogEntryRequest { kind: CatalogKind, id: u32 });
+dto!(/// A worker proposes a skill and descriptive role associations.
+    CreateSkillRequest { name: String, role_ids: Vec<u32> });
+dto!(/// Only the system account can decide a pending skill request.
+    DecideSkillRequest { request_id: EntityId, decision: SkillRequestDecision });
 dto!(/// Dev-only mint, authorized against the configured system account.
     FundAccountRequest { account: AccountId32, amount: Money });
 
@@ -339,6 +347,8 @@ pub enum ProviderCommand {
     CancelWithdrawal {
         withdrawal_id: EntityId,
     },
+    CreateSkillRequest(CreateSkillRequest),
+    DecideSkillRequest(DecideSkillRequest),
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -462,6 +472,16 @@ impl ProviderCommand {
             }
             Self::DeleteCatalogEntry(request) if request.id == 0 => {
                 Err(ContractError::Invalid("catalog ID"))
+            }
+            Self::CreateSkillRequest(request) => {
+                if request.name.trim().len() > 100 {
+                    return Err(ContractError::Invalid("skill name"));
+                }
+                nonempty(&request.name, "skill name")?;
+                if request.role_ids.is_empty() {
+                    return Err(ContractError::Invalid("skill role IDs"));
+                }
+                catalog_ids(&request.role_ids, "skill role IDs")
             }
             Self::CreateProject(request) => nonempty(&request.title, "project title"),
             Self::CreateProposal { proposal, .. } | Self::UpdateProposal { proposal, .. } => {
@@ -614,8 +634,12 @@ redacted_dto!(/// Current session information; cookie is `HttpOnly`, CSRF token 
 
 dto!(/// Editable role/skill seed entry; protected entries expose their restriction.
     CatalogEntry { id: u32, name: String, fixed: bool });
+dto!(/// Descriptive association, never an assignment matching filter.
+    SkillRoleAssociation { skill_id: u32, role_ids: Vec<u32> });
 dto!(/// Provider-owned role/skill catalogs and score policy.
-    CatalogView { roles: Vec<CatalogEntry>, skills: Vec<CatalogEntry>, score_policy: ScorePolicy });
+    CatalogView { roles: Vec<CatalogEntry>, skills: Vec<CatalogEntry>, skill_roles: Vec<SkillRoleAssociation>, score_policy: ScorePolicy });
+dto!(/// Provider-owned request visible only to its worker and the system operator.
+    SkillRequestView { request_id: EntityId, requester: AccountId32, name: String, role_ids: Vec<u32>, status: SkillRequestStatus, skill_id: Option<u32> });
 dto!(/// Exact reputation numerator is hundredths-of-score times committed minutes.
     ReputationView { #[serde(with = "decimal_u128")] weighted_score_sum: u128, rated_minutes: u64 });
 dto!(/// One committed weekly allocation, retained after completion.
@@ -650,7 +674,7 @@ dto!(/// Internal read-only snapshot. Adapter filters confidential project/task 
     ProviderSnapshot { info: ProviderInfo, catalog: CatalogView, workers: Vec<WorkerView>, projects: Vec<ProjectView>, balances: Vec<BalanceView> });
 
 wire_enum!(/// Durable state-change event vocabulary, committed with its command.
-    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded, DepositRequested, DepositConfirmed, WithdrawalRequested, WithdrawalCancelled });
+    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded, DepositRequested, DepositConfirmed, WithdrawalRequested, WithdrawalCancelled, SkillRequested, SkillRequestApproved, SkillRequestRejected });
 dto!(/// Durable provider event with explicit recipients, no secret or raw payload.
     DomainEvent { provider_instance_id: ProviderInstanceId, cursor: u64, operation_id: OperationId, kind: DomainEventKind, project_id: Option<EntityId>, entity_id: Option<EntityId>, recipients: Vec<AccountId32>, occurred_at: UnixSeconds });
 dto!(/// Cursor-based provider event page; cursor always refers to this instance.

@@ -10,6 +10,7 @@ use crate::{Error, Result, calendar, require};
 impl State {
     /// Validate the complete persisted aggregate at its serialization boundary.
     pub(super) fn validate(&self) -> Result<()> {
+        self.validate_catalog()?;
         let mut identities = self.validate_workers()?;
         self.validate_projects(&mut identities)?;
         self.validate_disputes(&mut identities)?;

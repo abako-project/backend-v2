@@ -1,10 +1,9 @@
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use generated_contracts::{
-    AccountId32, AssignmentView, CalendarView, CatalogEntry, CatalogKind, DomainEventKind,
-    MilestoneView, Minutes, Money, PlanningStatus, PlanningView, ProjectView, ProviderCommand,
-    Qualifications, ReputationView, ReservationView, TaskDefinition, UnixSeconds, WorkerMode,
-    WorkerView,
+    AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, MilestoneView,
+    Minutes, Money, PlanningStatus, PlanningView, ProjectView, ProviderCommand, Qualifications,
+    ReputationView, ReservationView, TaskDefinition, UnixSeconds, WorkerMode, WorkerView,
 };
 use rand::RngExt;
 
@@ -128,28 +127,16 @@ impl State {
                 Effect::new(DomainEventKind::CoordinatorPromoted, None, request.account)
             }
             ProviderCommand::UpsertCatalogEntry(request) => {
-                self.root(origin)?;
-                require(
-                    !(request.kind == CatalogKind::Role && request.id == 1),
-                    "fixed_coordinator_role",
-                )?;
-                let catalog = if request.kind == CatalogKind::Role {
-                    &mut self.roles
-                } else {
-                    &mut self.skills
-                };
-                catalog.insert(
-                    request.id,
-                    CatalogEntry {
-                        id: request.id,
-                        name: request.name.clone(),
-                        fixed: false,
-                    },
-                );
-                Effect::new(DomainEventKind::CatalogUpdated, None, origin)
+                self.upsert_catalog_entry(origin, request)?
             }
             ProviderCommand::DeleteCatalogEntry(request) => {
                 self.delete_catalog_entry(request.kind, request.id, origin)?
+            }
+            ProviderCommand::CreateSkillRequest(request) => {
+                self.create_skill_request(origin, request)?
+            }
+            ProviderCommand::DecideSkillRequest(request) => {
+                self.decide_skill_request(origin, request)?
             }
             ProviderCommand::FundAccount(request) => {
                 self.root(origin)?;
@@ -212,6 +199,15 @@ impl State {
             !references_worker && !references_proposal,
             "catalog_entry_in_use",
         )?;
+        if kind == CatalogKind::Role {
+            require(
+                !self
+                    .skill_metadata
+                    .values()
+                    .any(|metadata| metadata.role_ids.contains(&id)),
+                "catalog_entry_in_use",
+            )?;
+        }
         let catalog = if kind == CatalogKind::Role {
             &mut self.roles
         } else {

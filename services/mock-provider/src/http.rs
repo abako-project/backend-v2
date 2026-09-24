@@ -45,6 +45,7 @@ pub fn router(provider: Provider, service_token: &str) -> Result<Router> {
         .route("/internal/receipts/{operation_id}", get(receipt))
         .route("/internal/events", get(events))
         .route("/internal/snapshot", get(snapshot))
+        .route("/internal/catalog/skill-requests", get(skill_requests))
         .route("/internal/disputes/{dispute_id}", get(dispute))
         .route("/internal/bramp/deposits/{deposit_id}", get(deposit))
         .route(
@@ -94,6 +95,20 @@ async fn info(State(state): State<App>) -> Result<impl IntoResponse> {
 }
 async fn snapshot(State(state): State<App>) -> Result<impl IntoResponse> {
     Ok(Json(state.provider.snapshot().await?))
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SkillRequestsQuery {
+    account: AccountId32,
+}
+
+async fn skill_requests(
+    State(state): State<App>,
+    query: std::result::Result<Query<SkillRequestsQuery>, QueryRejection>,
+) -> Result<impl IntoResponse> {
+    let Query(query) = query.map_err(|_| Error::bad("invalid_skill_requests_query"))?;
+    Ok(Json(state.provider.skill_requests(query.account).await?))
 }
 
 async fn dispute(

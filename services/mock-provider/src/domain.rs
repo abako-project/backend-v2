@@ -8,7 +8,7 @@ use generated_contracts::{
     DomainEventKind, EntityId, ExecutionOutcome, Minutes, Money, OperationId, OperationReceipt,
     PAYLOAD_VERSION, Percentage, ProjectView, ProviderCommand, ProviderEvents, ProviderInfo,
     ProviderInstanceId, ProviderSnapshot, ReputationView, ScorePolicy, SignedContractCallV1,
-    UnixSeconds, UnsignedContractCallV1, WorkerView,
+    SkillRequestView, SkillRoleAssociation, UnixSeconds, UnsignedContractCallV1, WorkerView,
 };
 use serde::{Deserialize, Serialize};
 use subxt_signer::sr25519;
@@ -16,6 +16,7 @@ use subxt_signer::sr25519;
 use crate::{Error, Result, random_id, require, seed::SkillMetadata};
 
 mod bramp;
+mod catalog_requests;
 mod commands;
 mod dispute_validation;
 mod disputes;
@@ -49,6 +50,8 @@ pub(crate) struct State {
     roles: BTreeMap<u32, CatalogEntry>,
     skills: BTreeMap<u32, CatalogEntry>,
     skill_metadata: BTreeMap<u32, SkillMetadata>,
+    #[serde(default)]
+    skill_requests: BTreeMap<EntityId, SkillRequestView>,
     score_policy: ScorePolicy,
     workers: BTreeMap<AccountId32, WorkerView>,
     projects: BTreeMap<EntityId, ProjectView>,
@@ -115,6 +118,7 @@ impl State {
             roles: BTreeMap::new(),
             skills: BTreeMap::new(),
             skill_metadata: BTreeMap::new(),
+            skill_requests: BTreeMap::new(),
             score_policy: ScorePolicy::new(Percentage::new(50)?, Percentage::new(50)?)?,
             workers: BTreeMap::new(),
             projects: BTreeMap::new(),
@@ -166,6 +170,14 @@ impl State {
             catalog: CatalogView {
                 roles: self.roles.values().cloned().collect(),
                 skills: self.skills.values().cloned().collect(),
+                skill_roles: self
+                    .skill_metadata
+                    .iter()
+                    .map(|(skill_id, metadata)| SkillRoleAssociation {
+                        skill_id: *skill_id,
+                        role_ids: metadata.role_ids.clone(),
+                    })
+                    .collect(),
                 score_policy: self.score_policy,
             },
             workers: self.workers.values().cloned().collect(),

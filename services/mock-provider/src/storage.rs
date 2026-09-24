@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
-    ProviderEvents, ProviderInfo, ProviderSnapshot, SignedContractCallV1, UnixSeconds,
-    WithdrawalView,
+    ProviderEvents, ProviderInfo, ProviderSnapshot, SignedContractCallV1, SkillRequestView,
+    UnixSeconds, WithdrawalView,
 };
 
 use crate::{
@@ -28,6 +28,11 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// Requests are visible only to their worker or the configured system account.
+    pub async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestView>> {
+        Ok(self.read().await?.skill_requests(origin))
+    }
+
     /// Read one deposit with the same owner/system policy as the mock contract.
     pub async fn bramp_deposit(&self, origin: AccountId32, id: EntityId) -> Result<DepositView> {
         self.read().await?.bramp_deposit(origin, id)
