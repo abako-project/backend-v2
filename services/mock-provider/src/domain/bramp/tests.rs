@@ -25,7 +25,7 @@ fn a_deposit_is_immutable_and_can_only_credit_once() -> Result<()> {
         &ProviderCommand::CreateDeposit(CreateDepositRequest { amount }),
         NOW,
     )?;
-    let id = effect.entity_id.expect("request creates an ID");
+    let id = effect.entity_id.ok_or_else(crate::Error::internal)?;
     let pending = state.bramp_deposit(owner, id)?;
     assert_eq!(pending.status, DepositStatus::Pending);
     assert_eq!(pending.owner, owner);
@@ -83,7 +83,7 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
     state.bramp_command(
         root,
         &ProviderCommand::ConfirmDeposit {
-            deposit_id: deposit.entity_id.expect("request creates an ID"),
+            deposit_id: deposit.entity_id.ok_or_else(crate::Error::internal)?,
         },
         NOW,
     )?;
@@ -103,7 +103,7 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
         }),
         NOW,
     )?;
-    let id = effect.entity_id.expect("request creates an ID");
+    let id = effect.entity_id.ok_or_else(crate::Error::internal)?;
     assert_eq!(state.balances.get(&owner), Some(&Money::new(5)));
     assert_eq!(
         state.bramp_withdrawal(owner, id)?.status,
