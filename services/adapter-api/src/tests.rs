@@ -599,6 +599,7 @@ async fn only_client_and_assigned_coordinator_can_cancel_or_dispute() -> TestRes
     let (outsider, _) = register(&app, "outsider").await?;
     let project_id = EntityId::from_bytes([8; 16]);
     fake.lock().await.snapshot.projects.push(ProjectView {
+        completed: false,
         project_id,
         client: client.view.account_id,
         coordinator: coordinator.view.account_id,

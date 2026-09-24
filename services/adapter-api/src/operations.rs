@@ -36,6 +36,7 @@ fn privileged(command: &ProviderCommand) -> bool {
             | ProviderCommand::UpsertCatalogEntry(_)
             | ProviderCommand::DeleteCatalogEntry(_)
             | ProviderCommand::FundAccount(_)
+            | ProviderCommand::ConfirmDeposit { .. }
             | ProviderCommand::SetScorePolicy(_)
     )
 }
@@ -53,6 +54,18 @@ pub(crate) async fn authorize(
         };
     }
     let account = session.view.account_id;
+    match command {
+        ProviderCommand::CreateDeposit(_) | ProviderCommand::CreateWithdrawal(_) => {
+            return Ok(());
+        }
+        ProviderCommand::CancelWithdrawal { withdrawal_id } => {
+            if !session.view.is_admin {
+                crate::bramp::read_withdrawal(app, account, *withdrawal_id).await?;
+            }
+            return Ok(());
+        }
+        _ => {}
+    }
     let snapshot = app.snapshot().await?;
     if let Some(id) = command.project_id() {
         let project = snapshot
@@ -166,7 +179,9 @@ pub(crate) async fn enqueue(
         .await?;
         return Err(error);
     }
-    let (wallet, account) = if privileged(&command) {
+    let (wallet, account) = if privileged(&command)
+        || (session.view.is_admin && matches!(command, ProviderCommand::CancelWithdrawal { .. }))
+    {
         let system: WalletView = app
             .get(&app.config.custody_url, "/internal/system-wallet")
             .await?;

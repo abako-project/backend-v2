@@ -177,8 +177,7 @@ impl State {
                 *id == deposit.deposit_id
                     && identities.insert(*id)
                     && deposit.owner == deposit.destination
-                    && deposit.created_at
-                        <= deposit.confirmed_at.unwrap_or(deposit.created_at)
+                    && deposit.created_at <= deposit.confirmed_at.unwrap_or(deposit.created_at)
                     && (deposit.status == DepositStatus::Confirmed)
                         == deposit.confirmed_at.is_some(),
                 "invalid_deposit_state",

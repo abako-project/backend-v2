@@ -128,6 +128,7 @@ impl State {
                 }
             }
         }
+        total = total.checked_add(self.validate_bramp(identities)?)?;
         require(total == self.minted_units, "supply_mismatch")?;
         Ok(())
     }

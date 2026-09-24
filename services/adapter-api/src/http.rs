@@ -16,7 +16,7 @@ use generated_contracts::{
     BalanceView, CalendarSummaryView, CatalogKind, CatalogView, DeleteCatalogEntryRequest,
     EntityId, MAX_SIGNABLE_BYTES, Minutes, Money, NotificationView, NotificationsPage,
     OperationRef, OperationView, ProjectView, ProviderCommand, ProviderInfo, RevisionRequest,
-    SessionView, WalletView, Week, WeeklyCommitment, WorkerSummaryView,
+    SessionView, TaskStorageView, TaskView, WalletView, Week, WeeklyCommitment, WorkerSummaryView,
 };
 use serde::{Deserialize, de::DeserializeOwned};
 use std::{
@@ -34,7 +34,33 @@ pub(crate) fn router(app: Arc<App>) -> Router {
         .route("/api/auth/session", get(session))
         .route("/api/auth/logout", post(logout))
         .route("/api/auth/password", post(password))
+        .route(
+            "/api/profiles/me",
+            get(crate::profiles::get_me).put(crate::profiles::put_me),
+        )
+        .route(
+            "/api/profiles/{principalId}",
+            get(crate::profiles::get_public),
+        )
         .route("/api/catalog", get(catalog))
+        .route("/api/bramp/deposits", post(command))
+        .route(
+            "/api/bramp/deposits/{depositId}",
+            get(crate::bramp::deposit),
+        )
+        .route(
+            "/api/admin/bramp/deposits/{depositId}/confirm",
+            post(command),
+        )
+        .route("/api/bramp/withdrawals", post(command))
+        .route(
+            "/api/bramp/withdrawals/{withdrawalId}",
+            get(crate::bramp::withdrawal),
+        )
+        .route(
+            "/api/bramp/withdrawals/{withdrawalId}/cancel",
+            post(command),
+        )
         .route("/api/workers", get(workers).post(command))
         .route("/api/workers/me/qualifications", put(command))
         .route("/api/workers/me/calendar", put(command))
@@ -100,6 +126,12 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             "/api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}/progress",
             axum::routing::patch(command),
         )
+        .route("/api/task-storages/{storageId}", get(task_storage))
+        .route("/api/task-storages/{storageId}/tasks", post(command))
+        .route(
+            "/api/task-storages/{storageId}/tasks/{taskId}",
+            get(task).put(command).patch(command),
+        )
         .route("/api/admin/coordinators", post(command))
         .route("/api/admin/catalog", put(command))
         .route(
@@ -133,10 +165,12 @@ async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next)
     }
     let path = request.uri().path();
     let public_case = matches!(*request.method(), Method::GET | Method::HEAD)
-        && request
-            .extensions()
-            .get::<MatchedPath>()
-            .is_some_and(|p| p.as_str() == "/api/disputes/{disputeId}");
+        && request.extensions().get::<MatchedPath>().is_some_and(|p| {
+            matches!(
+                p.as_str(),
+                "/api/disputes/{disputeId}" | "/api/profiles/{principalId}"
+            )
+        });
     let public = public_case
         || matches!(
             path,
@@ -357,6 +391,52 @@ async fn project(
             .ok_or(Error::NotFound)?,
     ))
 }
+
+async fn visible_storage(
+    app: &App,
+    session: &Session,
+    storage_id: EntityId,
+) -> Result<(EntityId, TaskStorageView), Error> {
+    app.snapshot()
+        .await?
+        .projects
+        .into_iter()
+        .filter(|project| operations::visible(project, session.view.account_id))
+        .find_map(|project| {
+            project
+                .proposals
+                .into_iter()
+                .flat_map(|proposal| proposal.milestones)
+                .find(|milestone| milestone.task_storage.task_storage_id == storage_id)
+                .map(|milestone| (project.project_id, milestone.task_storage))
+        })
+        .ok_or(Error::NotFound)
+}
+
+async fn task_storage(
+    State(app): State<Arc<App>>,
+    Extension(session): Extension<Session>,
+    Path(storage_id): Path<String>,
+) -> Result<Json<TaskStorageView>, Error> {
+    let (_, storage) = visible_storage(&app, &session, parse(&storage_id)?).await?;
+    Ok(Json(storage))
+}
+
+async fn task(
+    State(app): State<Arc<App>>,
+    Extension(session): Extension<Session>,
+    Path((storage_id, task_id)): Path<(String, String)>,
+) -> Result<Json<TaskView>, Error> {
+    let (_, storage) = visible_storage(&app, &session, parse(&storage_id)?).await?;
+    let task_id = parse::<u32>(&task_id)?;
+    Ok(Json(
+        storage
+            .tasks
+            .into_iter()
+            .find(|task| task.task_id == task_id)
+            .ok_or(Error::NotFound)?,
+    ))
+}
 async fn balance(
     State(app): State<Arc<App>>,
     Extension(session): Extension<Session>,
@@ -448,6 +528,20 @@ async fn command(
         }
         "/api/workers/me/calendar" => ProviderCommand::SetCalendar(json(&headers, &body)?),
         "/api/workers/me/mode" => ProviderCommand::SetWorkerMode(json(&headers, &body)?),
+        "/api/bramp/deposits" => ProviderCommand::CreateDeposit(json(&headers, &body)?),
+        "/api/admin/bramp/deposits/{depositId}/confirm" => {
+            no_body()?;
+            ProviderCommand::ConfirmDeposit {
+                deposit_id: id("depositId")?,
+            }
+        }
+        "/api/bramp/withdrawals" => ProviderCommand::CreateWithdrawal(json(&headers, &body)?),
+        "/api/bramp/withdrawals/{withdrawalId}/cancel" => {
+            no_body()?;
+            ProviderCommand::CancelWithdrawal {
+                withdrawal_id: id("withdrawalId")?,
+            }
+        }
         "/api/projects" => ProviderCommand::CreateProject(json(&headers, &body)?),
         "/api/projects/{projectId}/planning/quote" => ProviderCommand::QuotePlanning {
             project_id: id("projectId")?,
@@ -555,6 +649,25 @@ async fn command(
                 progress: json(&headers, &body)?,
             }
         }
+        "/api/task-storages/{storageId}/tasks" => ProviderCommand::CreateTask {
+            project_id: visible_storage(&app, &session, id("storageId")?).await?.0,
+            task_storage_id: id("storageId")?,
+            task: json(&headers, &body)?,
+        },
+        "/api/task-storages/{storageId}/tasks/{taskId}" if method == Method::PUT => {
+            ProviderCommand::EditTask {
+                project_id: visible_storage(&app, &session, id("storageId")?).await?.0,
+                task_storage_id: id("storageId")?,
+                task_id: parse(params.get("taskId").ok_or(Error::Invalid)?)?,
+                task: json(&headers, &body)?,
+            }
+        }
+        "/api/task-storages/{storageId}/tasks/{taskId}" => ProviderCommand::UpdateTaskProgress {
+            project_id: visible_storage(&app, &session, id("storageId")?).await?.0,
+            task_storage_id: id("storageId")?,
+            task_id: parse(params.get("taskId").ok_or(Error::Invalid)?)?,
+            progress: json(&headers, &body)?,
+        },
         "/api/admin/coordinators" => ProviderCommand::PromoteCoordinator(json(&headers, &body)?),
         "/api/admin/catalog" => ProviderCommand::UpsertCatalogEntry(json(&headers, &body)?),
         "/api/admin/catalog/{kind}/{id}" => {
@@ -569,7 +682,10 @@ async fn command(
             })
         }
         "/api/admin/score-policy" => ProviderCommand::SetScorePolicy(json(&headers, &body)?),
-        "/api/admin/fund" => ProviderCommand::FundAccount(json(&headers, &body)?),
+        "/api/admin/fund" if app.config.enable_mock_funding => {
+            ProviderCommand::FundAccount(json(&headers, &body)?)
+        }
+        "/api/admin/fund" => return Err(Error::NotFound),
         _ => return Err(Error::NotFound),
     };
     let key = headers

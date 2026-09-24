@@ -15,6 +15,7 @@ use subxt_signer::sr25519;
 
 use crate::{Error, Result, random_id, require, seed::SkillMetadata};
 
+mod bramp;
 mod commands;
 mod dispute_validation;
 mod disputes;
@@ -57,6 +58,8 @@ pub(crate) struct State {
     events: Vec<DomainEvent>,
     reasons: Vec<RecordedReason>,
     disputes: BTreeMap<EntityId, generated_contracts::Dispute>,
+    #[serde(default)]
+    bramp: bramp::BrampState,
     next_task_id: u32,
     minted_units: Money,
     #[serde(skip)]
@@ -121,6 +124,7 @@ impl State {
             events: Vec::new(),
             reasons: Vec::new(),
             disputes: BTreeMap::new(),
+            bramp: bramp::BrampState::default(),
             next_task_id: 1,
             minted_units: Money::ZERO,
             skill_index: BTreeMap::new(),

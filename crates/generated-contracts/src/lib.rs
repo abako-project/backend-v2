@@ -12,13 +12,15 @@
 pub use domain_primitives::*;
 mod disputes;
 pub use disputes::*;
+mod bramp;
+pub use bramp::*;
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 /// Signing domain prevents interpreting this format as another protocol.
 pub const MOCK_SIGNING_DOMAIN: [u8; 16] = *b"KUNVENO-MOCK-V1!";
 /// The signed SCALE format, independent of the public HTTP path.
-pub const PAYLOAD_VERSION: u16 = 2;
+pub const PAYLOAD_VERSION: u16 = 3;
 /// Upper bound on signable transport bytes, not on matching candidates.
 pub const MAX_SIGNABLE_BYTES: usize = 256 * 1024;
 
@@ -328,6 +330,14 @@ pub enum ProviderCommand {
         project_id: EntityId,
         milestone_id: EntityId,
         request: AcceptMilestoneCompletionRequest,
+    },
+    CreateDeposit(CreateDepositRequest),
+    ConfirmDeposit {
+        deposit_id: EntityId,
+    },
+    CreateWithdrawal(CreateWithdrawalRequest),
+    CancelWithdrawal {
+        withdrawal_id: EntityId,
     },
 }
 
@@ -640,7 +650,7 @@ dto!(/// Internal read-only snapshot. Adapter filters confidential project/task 
     ProviderSnapshot { info: ProviderInfo, catalog: CatalogView, workers: Vec<WorkerView>, projects: Vec<ProjectView>, balances: Vec<BalanceView> });
 
 wire_enum!(/// Durable state-change event vocabulary, committed with its command.
-    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded });
+    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded, DepositRequested, DepositConfirmed, WithdrawalRequested, WithdrawalCancelled });
 dto!(/// Durable provider event with explicit recipients, no secret or raw payload.
     DomainEvent { provider_instance_id: ProviderInstanceId, cursor: u64, operation_id: OperationId, kind: DomainEventKind, project_id: Option<EntityId>, entity_id: Option<EntityId>, recipients: Vec<AccountId32>, occurred_at: UnixSeconds });
 dto!(/// Cursor-based provider event page; cursor always refers to this instance.

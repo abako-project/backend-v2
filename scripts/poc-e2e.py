@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Exercise real custodial REST operations against disposable local services.
 
-Run after `cargo build --workspace --all-features --locked`. No third-party
-Python packages, Docker, existing users, or real tokens are required.
+Run after `cargo build --workspace --all-features --locked`. PostgreSQL binaries
+(`initdb`, `pg_ctl`, `psql`) are required; no Docker or real tokens are used.
 """
 
 import argparse
@@ -37,6 +37,24 @@ def available_port():
     with socket.socket() as listener:
         listener.bind(("127.0.0.1", 0))
         return listener.getsockname()[1]
+
+
+def temporary_postgres(stack, directory):
+    data = directory / "postgres"
+    socket_dir = directory / "pg-socket"
+    socket_dir.mkdir()
+    port = available_port()
+    subprocess.run(["initdb", "-D", str(data), "-U", "kunveno", "-A", "trust",
+                    "--no-instructions"], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["pg_ctl", "-D", str(data), "-o",
+                    f"-F -c listen_addresses=127.0.0.1 -p {port} -k {socket_dir}",
+                    "-w", "start"], check=True, stdout=subprocess.DEVNULL)
+    stack.callback(subprocess.run, ["pg_ctl", "-D", str(data), "-m", "immediate",
+                                   "-w", "stop"], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(port), "-U", "kunveno",
+                    "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
+                    "CREATE DATABASE kunveno"], check=True, stdout=subprocess.DEVNULL)
+    return f"postgres://kunveno@127.0.0.1:{port}/kunveno"
 
 
 class Client:
@@ -457,11 +475,13 @@ def exercise_multi_milestone(base, admin_password, _proxy):
             "draft editing replaced milestone storages")
     for index, team in enumerate(teams):
         for slot in team:
-            coordinator.command("POST", project_path + f"/task-storages/{storages[index]}/tasks", {
+            coordinator.command("POST", f"/api/task-storages/{storages[index]}/tasks", {
                 "title": f"Slot {slot + 1}", "description": "Contractual time is independent of logged time",
                 "taskType": "Task", "priority": "Medium", "status": "ToDo", "assignees": [],
                 "estimatedMinutes": 60 * (index + 1), "loggedMinutes": 0, "dueAt": None,
             })
+    direct_storage = coordinator.request("GET", f"/api/task-storages/{storages[0]}")
+    require(len(direct_storage["tasks"]) == 5, "direct task-storage route disagrees with project")
     coordinator.command("POST", proposal_path + "/submit")
     project = client.request("GET", project_path)
     client.command("POST", project_path + "/planning/accept-delivery", {"expectedRevision": project["planning"]["revision"]})
@@ -473,6 +493,9 @@ def exercise_multi_milestone(base, admin_password, _proxy):
     require([item["taskStorage"]["taskStorageId"] for item in milestones] == storages,
             "approval replaced milestone storages")
     require([len(item["assignments"]) for item in milestones] == [5, 3, 4, 2], "team sizes differ from 5/3/4/2")
+    require([item["status"] for item in milestones] ==
+            ["InProgress", "NotStarted", "NotStarted", "NotStarted"],
+            "milestones did not activate sequentially")
     expected_minutes = [0] * 5
     expected_scores = [0] * 5
     expected_balances = [0] * 5
@@ -480,7 +503,8 @@ def exercise_multi_milestone(base, admin_password, _proxy):
     for index, (milestone, team) in enumerate(zip(milestones, teams)):
         expected = [{"requirementKey": slot + 1, "worker": workers[slot].session["accountId"]} for slot in team]
         require(milestone["assignments"] == expected, "all-skills, mode, capacity or distinct-slot matching failed")
-        require(milestone["status"] == "InProgress", "approved milestone did not start execution")
+        require(client.request("GET", project_path)["proposals"][0]["milestones"][index]["status"]
+                == "InProgress", "current milestone did not start execution")
         tasks = milestone["taskStorage"]["tasks"]
         require(len(tasks) == len(team), "tasks leaked between milestone storages")
         for task, slot in zip(tasks, team):
@@ -513,7 +537,10 @@ def exercise_multi_milestone(base, admin_password, _proxy):
         project = client.request("GET", project_path)
         require(project["executionEscrow"] == str(escrow), "milestone settlement consumed the wrong escrow")
         require([item["status"] for item in project["proposals"][0]["milestones"]]
-                == ["Completed"] * (index + 1) + ["InProgress"] * (3 - index), "settlement changed other milestone states")
+                == ["Completed"] * (index + 1)
+                + (["InProgress"] if index < 3 else [])
+                + ["NotStarted"] * max(0, 2 - index), "settlement changed milestone sequence")
+        require(project["completed"] == (index == 3), "project completion did not follow final milestone")
         balances = [int(actor.request("GET", "/api/balance")["available"]) for actor in people]
         require(balances[0] == 6900 and sum(balances) + escrow == 20000, "multi-team token conservation failed")
         require(balances[3:8] == expected_balances and balances[8:] == [0] * 5, "wrong workers received payments")
@@ -545,6 +572,7 @@ def exercise_multi_milestone(base, admin_password, _proxy):
 def run(storage, binaries, scenario=exercise):
     with ExitStack() as stack:
         directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="kunveno-e2e-")))
+        adapter_database_url = temporary_postgres(stack, directory)
         secret_dir = directory / "secrets"
         subprocess.run([str(binaries / "wallet"), "init-dev-secrets", str(secret_dir)],
                        check=True, stdout=subprocess.DEVNULL)
@@ -565,10 +593,11 @@ def run(storage, binaries, scenario=exercise):
         stack.callback(proxy.server_close)
         stack.callback(proxy.shutdown)
         adapter = launch(stack, binaries / "adapter-api", adapter_port, {
-            **common, "ADAPTER_DATABASE_URL": f"sqlite://{directory}/adapter.sqlite?mode=rwc",
+            **common, "ADAPTER_DATABASE_URL": adapter_database_url,
             "CUSTODY_URL": f"http://127.0.0.1:{wallet_port}",
             "MOCK_PROVIDER_URL": f"http://127.0.0.1:{proxy.server_port}",
             "ALLOWED_ORIGINS": ",".join(ORIGINS), "COOKIE_SECURE": "false",
+            "ENABLE_MOCK_FUNDING": "true",
             "BOOTSTRAP_ADMIN_USERNAME": "admin",
             "BOOTSTRAP_ADMIN_PASSWORD_FILE": str(secret_dir / "bootstrap-admin-password"),
             "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),

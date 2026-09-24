@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
 use generated_contracts::{
-    AccountId32, AccountNonce, OperationId, OperationReceipt, ProviderEvents, ProviderInfo,
-    ProviderSnapshot, SignedContractCallV1, UnixSeconds,
+    AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
+    ProviderEvents, ProviderInfo, ProviderSnapshot, SignedContractCallV1, UnixSeconds,
+    WithdrawalView,
 };
 
 use crate::{
@@ -27,6 +28,20 @@ pub struct Provider {
 }
 
 impl Provider {
+    /// Read one deposit with the same owner/system policy as the mock contract.
+    pub async fn bramp_deposit(&self, origin: AccountId32, id: EntityId) -> Result<DepositView> {
+        self.read().await?.bramp_deposit(origin, id)
+    }
+
+    /// Read one withdrawal without exposing another account's request.
+    pub async fn bramp_withdrawal(
+        &self,
+        origin: AccountId32,
+        id: EntityId,
+    ) -> Result<WithdrawalView> {
+        self.read().await?.bramp_withdrawal(origin, id)
+    }
+
     /// Explicit public case projection, without internal state or receipts.
     pub async fn dispute(
         &self,

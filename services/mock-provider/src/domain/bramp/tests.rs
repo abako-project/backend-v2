@@ -1,8 +1,8 @@
-use parity_scale_codec::{Decode, Encode};
 use generated_contracts::{
     AccountId32, CreateDepositRequest, CreateWithdrawalRequest, DepositStatus, Money,
     ProviderCommand, UnixSeconds, WithdrawalStatus,
 };
+use parity_scale_codec::{Decode, Encode};
 
 use super::State;
 use crate::Result;
@@ -33,20 +33,35 @@ fn a_deposit_is_immutable_and_can_only_credit_once() -> Result<()> {
     assert_eq!(pending.amount, amount);
     assert_eq!(state.balances.get(&owner), None);
     assert!(state.bramp_deposit(stranger, id).is_err());
-    assert!(state
-        .bramp_command(
-            stranger,
-            &ProviderCommand::ConfirmDeposit { deposit_id: id },
-            NOW,
-        )
-        .is_err());
-    state.bramp_command(root, &ProviderCommand::ConfirmDeposit { deposit_id: id }, NOW)?;
-    assert_eq!(state.bramp_deposit(owner, id)?.status, DepositStatus::Confirmed);
+    assert!(
+        state
+            .bramp_command(
+                stranger,
+                &ProviderCommand::ConfirmDeposit { deposit_id: id },
+                NOW,
+            )
+            .is_err()
+    );
+    state.bramp_command(
+        root,
+        &ProviderCommand::ConfirmDeposit { deposit_id: id },
+        NOW,
+    )?;
+    assert_eq!(
+        state.bramp_deposit(owner, id)?.status,
+        DepositStatus::Confirmed
+    );
     assert_eq!(state.balances.get(&owner), Some(&Money::new(25)));
     assert_eq!(state.minted_units, Money::new(25));
-    assert!(state
-        .bramp_command(root, &ProviderCommand::ConfirmDeposit { deposit_id: id }, NOW)
-        .is_err());
+    assert!(
+        state
+            .bramp_command(
+                root,
+                &ProviderCommand::ConfirmDeposit { deposit_id: id },
+                NOW
+            )
+            .is_err()
+    );
     assert_eq!(state.balances.get(&owner), Some(&Money::new(25)));
     assert_eq!(state.minted_units, Money::new(25));
     Ok(())
@@ -90,29 +105,39 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
     )?;
     let id = effect.entity_id.expect("request creates an ID");
     assert_eq!(state.balances.get(&owner), Some(&Money::new(5)));
-    assert_eq!(state.bramp_withdrawal(owner, id)?.status, WithdrawalStatus::Pending);
+    assert_eq!(
+        state.bramp_withdrawal(owner, id)?.status,
+        WithdrawalStatus::Pending
+    );
     assert!(state.bramp_withdrawal(stranger, id).is_err());
-    assert!(state
-        .bramp_command(
-            stranger,
-            &ProviderCommand::CancelWithdrawal { withdrawal_id: id },
-            NOW,
-        )
-        .is_err());
+    assert!(
+        state
+            .bramp_command(
+                stranger,
+                &ProviderCommand::CancelWithdrawal { withdrawal_id: id },
+                NOW,
+            )
+            .is_err()
+    );
     state.bramp_command(
         root,
         &ProviderCommand::CancelWithdrawal { withdrawal_id: id },
         NOW,
     )?;
     assert_eq!(state.balances.get(&owner), Some(&Money::new(25)));
-    assert_eq!(state.bramp_withdrawal(owner, id)?.status, WithdrawalStatus::Cancelled);
-    assert!(state
-        .bramp_command(
-            owner,
-            &ProviderCommand::CancelWithdrawal { withdrawal_id: id },
-            NOW,
-        )
-        .is_err());
+    assert_eq!(
+        state.bramp_withdrawal(owner, id)?.status,
+        WithdrawalStatus::Cancelled
+    );
+    assert!(
+        state
+            .bramp_command(
+                owner,
+                &ProviderCommand::CancelWithdrawal { withdrawal_id: id },
+                NOW,
+            )
+            .is_err()
+    );
     assert_eq!(state.balances.get(&owner), Some(&Money::new(25)));
     Ok(())
 }

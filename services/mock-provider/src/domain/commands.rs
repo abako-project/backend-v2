@@ -166,6 +166,12 @@ impl State {
             ProviderCommand::CreateProject(request) => {
                 self.create_project(origin, &request.title, &request.description, now)?
             }
+            ProviderCommand::CreateDeposit(_)
+            | ProviderCommand::ConfirmDeposit { .. }
+            | ProviderCommand::CreateWithdrawal(_)
+            | ProviderCommand::CancelWithdrawal { .. } => {
+                self.bramp_command(origin, command, now)?
+            }
             _ => self.apply_project_command(origin, command, now)?,
         };
         Ok(effect)
