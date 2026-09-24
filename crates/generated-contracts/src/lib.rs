@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 /// Signing domain prevents interpreting this format as another protocol.
 pub const MOCK_SIGNING_DOMAIN: [u8; 16] = *b"KUNVENO-MOCK-V1!";
 /// The signed SCALE format, independent of the public HTTP path.
-pub const PAYLOAD_VERSION: u16 = 3;
+pub const PAYLOAD_VERSION: u16 = 2;
 /// Upper bound on signable transport bytes, not on matching candidates.
 pub const MAX_SIGNABLE_BYTES: usize = 256 * 1024;
 

@@ -267,6 +267,7 @@ pub(crate) async fn decode_response<T: DeserializeOwned>(
         return Err(Error::NotFound);
     }
     if !response.status().is_success() {
+        tracing::warn!(status = %response.status(), "internal service returned an unsuccessful response");
         return Err(Error::Dependency);
     }
     // ponytail: bounded whole snapshot for this POC; paginate provider reads as data grows.

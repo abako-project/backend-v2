@@ -63,7 +63,7 @@ pub struct CreateWithdrawalRequest {
     pub amount: KvnAmount,
 }
 
-/// A deposit may be credited once; it cannot be cancelled by this PoC.
+/// A deposit may be credited once; it cannot be cancelled in this proof of concept.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub enum DepositStatus {
     /// No spendable balance has changed.
@@ -72,7 +72,7 @@ pub enum DepositStatus {
     Confirmed,
 }
 
-/// A withdrawal cannot settle to a bank in this PoC.
+/// A withdrawal cannot settle to a bank in this proof of concept.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub enum WithdrawalStatus {
     /// KVN is held outside the owner's free balance.

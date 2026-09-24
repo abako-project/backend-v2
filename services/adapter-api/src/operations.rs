@@ -376,6 +376,7 @@ pub(crate) async fn process(app: &App, mut job: Job) -> Result<(), Error> {
         if matches!(error, Error::Conflict("lease_lost")) {
             return Ok(());
         }
+        tracing::warn!(operation_id = %job.id, stage = ?job.status, code = error.status_code().1, "operation stage failed");
         job.retry(time, error.status_code().1);
     }
     match save(app, &job, true).await {
