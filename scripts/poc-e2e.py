@@ -222,8 +222,10 @@ def stop_process(process):
             process.wait(timeout=5)
 
 
-def launch(stack, binary, port, environment):
+def launch(stack, binary, port, environment, logs=None):
     log = stack.enter_context(tempfile.TemporaryFile())
+    if logs is not None:
+        logs.append((binary.name, log))
     process = subprocess.Popen(
         [str(binary)], cwd=ROOT, stdout=log, stderr=log,
         env={**os.environ, **environment, "BIND_ADDR": f"127.0.0.1:{port}"},
@@ -569,9 +571,161 @@ def exercise_multi_milestone(base, admin_password, _proxy):
         "weightedScoreSum": "0", "ratedMinutes": 0}, "unselected coordinator acquired commitments or reputation")
 
 
+def exercise_profiles_passkeys(base, owner, outsider, password):
+    profile = {"name": "Example client", "company": "Example Ltd",
+               "department": "Private department", "website": "https://example.test",
+               "description": "Public summary", "location": "Madrid", "languages": ["es"]}
+    owner.request("PUT", "/api/profiles/me", {"section": "client", "profile": profile})
+    own = owner.request("GET", "/api/profiles/me")
+    require(own["client"] == profile and own["worker"] is None, "owner profile was not persisted")
+    public = Client(base).request("GET", "/api/profiles/" + owner.session["principalId"])
+    require(public["client"]["company"] == profile["company"], "public client profile missing")
+    require("department" not in public["client"] and "email" not in json.dumps(public)
+            and "csrfToken" not in json.dumps(public), "public profile exposed private fields")
+    require(outsider.request("GET", "/api/profiles/me")["client"] is None,
+            "another principal read the owner's private profile")
+    owner.request("PUT", "/api/profiles/me", {"section": "client", "profile": {
+        **profile, "isAdmin": True}}, 422)
+
+    anonymous = Client(base)
+    anonymous.request("POST", "/api/auth/passkeys/register/options",
+                      {"currentPassword": password}, 401)
+    owner.request("POST", "/api/auth/passkeys/register/options",
+                  {"currentPassword": "incorrect-password"}, 401)
+    options = owner.request("POST", "/api/auth/passkeys/register/options",
+                            {"currentPassword": password})
+    require(options["ceremonyId"] and options["options"], "passkey options were not issued")
+    require(owner.request("GET", "/api/auth/passkeys") == [],
+            "unverified passkey options created a credential")
+    anonymous.request("POST", "/api/auth/passkeys/login/verify",
+                      {"ceremonyId": "missing", "credential": {}}, (400, 401, 422))
+    anonymous.request("GET", "/api/auth/session", expected=401)
+
+
+def exercise_bramp(base, admin, owner, outsider):
+    initial = int(owner.request("GET", "/api/balance")["available"])
+    deposit = owner.command("POST", "/api/bramp/deposits", {"amount": "25"})
+    deposit_id = deposit["receipt"]["createdEntityId"]
+    path = "/api/bramp/deposits/" + deposit_id
+    pending = owner.request("GET", path)
+    require(pending["status"] == "Pending" and pending["owner"] == owner.session["accountId"]
+            and pending["destination"] == pending["owner"] and pending["amount"] == "25",
+            "deposit terms changed before confirmation")
+    require(int(owner.request("GET", "/api/balance")["available"]) == initial,
+            "pending deposit changed spendable balance")
+    outsider.request("GET", path, expected=404)
+    confirm_path = "/api/admin/bramp/deposits/" + deposit_id + "/confirm"
+    outsider.request("POST", confirm_path, expected=403)
+    key = "0x" + secrets.token_hex(16)
+    first = admin.command("POST", confirm_path, operation_id=key)
+    require(admin.command("POST", confirm_path, operation_id=key) == first,
+            "deposit replay changed the receipt")
+    repeated = admin.command("POST", confirm_path, expected_outcome="Failed")
+    require(repeated["receipt"]["outcome"]["code"] == "deposit_already_confirmed",
+            "a second deposit confirmation was not rejected")
+    require(owner.request("GET", path)["status"] == "Confirmed"
+            and int(owner.request("GET", "/api/balance")["available"]) == initial + 25,
+            "deposit was not credited exactly once")
+
+    excessive = owner.command("POST", "/api/bramp/withdrawals",
+                              {"amount": str(initial + 26)}, expected_outcome="Failed")
+    require(excessive["receipt"]["outcome"]["code"] == "insufficient_balance",
+            "withdrawal spent more than the free balance")
+    withdrawal = owner.command("POST", "/api/bramp/withdrawals", {"amount": "20"})
+    withdrawal_id = withdrawal["receipt"]["createdEntityId"]
+    withdrawal_path = "/api/bramp/withdrawals/" + withdrawal_id
+    require(owner.request("GET", withdrawal_path)["status"] == "Pending"
+            and int(owner.request("GET", "/api/balance")["available"]) == initial + 5,
+            "pending withdrawal did not hold free KVN")
+    outsider.request("GET", withdrawal_path, expected=404)
+    outsider.request("POST", withdrawal_path + "/cancel", expected=404)
+    owner.command("POST", withdrawal_path + "/cancel")
+    repeated = owner.command("POST", withdrawal_path + "/cancel", expected_outcome="Failed")
+    require(repeated["receipt"]["outcome"]["code"] == "withdrawal_already_cancelled"
+            and owner.request("GET", withdrawal_path)["status"] == "Cancelled"
+            and int(owner.request("GET", "/api/balance")["available"]) == initial + 25,
+            "withdrawal cancellation did not restore the hold exactly once")
+
+
+def exercise_catalog(admin, worker, outsider):
+    worker.command("POST", "/api/workers", {
+        "displayName": "Catalog worker", "qualifications": {"roleIds": [3], "skillIds": [1]},
+        "calendar": {"defaultWeeklyMinutes": 600, "overrides": []},
+    })
+    catalog_before = worker.request("GET", "/api/catalog")
+    skill_name = "Auxiliary skill " + secrets.token_hex(4)
+    request = worker.command("POST", "/api/catalog/skill-requests",
+                             {"name": skill_name, "roleIds": [3]})
+    request_id = request["receipt"]["createdEntityId"]
+    mine = worker.request("GET", "/api/catalog/skill-requests/me")
+    require(len(mine) == 1 and mine[0]["requestId"] == request_id
+            and mine[0]["status"] == "Pending", "skill request is not owner-visible")
+    require(outsider.request("GET", "/api/catalog/skill-requests/me") == [],
+            "another principal saw a private skill request")
+    require(any(item["requestId"] == request_id for item in
+                admin.request("GET", "/api/admin/catalog/skill-requests")),
+            "operator cannot review the skill request")
+    require(worker.request("GET", "/api/catalog")["skills"] == catalog_before["skills"],
+            "pending request mutated the global catalog")
+    decision_path = "/api/admin/catalog/skill-requests/" + request_id + "/decision"
+    outsider.request("POST", decision_path, "Approve", 403)
+    key = "0x" + secrets.token_hex(16)
+    first = admin.command("POST", decision_path, "Approve", key)
+    require(admin.command("POST", decision_path, "Approve", key) == first,
+            "skill decision replay changed the receipt")
+    repeated = admin.command("POST", decision_path, "Approve", expected_outcome="Failed")
+    require(repeated["receipt"]["outcome"]["code"] == "skill_request_decided",
+            "a decided request was approved twice")
+    decided = worker.request("GET", "/api/catalog/skill-requests/me")[0]
+    skill_id = decided["skillId"]
+    catalog = worker.request("GET", "/api/catalog")
+    require(decided["status"] == "Approved" and len(catalog["skills"]) == len(catalog_before["skills"]) + 1
+            and sum(item["name"] == skill_name for item in catalog["skills"]) == 1
+            and any(item["skillId"] == skill_id and item["roleIds"] == [3]
+                    for item in catalog["skillRoles"]), "approval did not publish the skill once")
+    directory = {item["account"]: item for item in worker.request("GET", "/api/workers")}
+    require(skill_id not in directory[worker.session["accountId"]]["qualifications"]["skillIds"],
+            "approval silently qualified the worker")
+    duplicate = worker.command("POST", "/api/catalog/skill-requests",
+                               {"name": "  " + skill_name.upper() + "  ", "roleIds": [3]},
+                               expected_outcome="Failed")
+    require(duplicate["receipt"]["outcome"]["code"] == "skill_name_exists",
+            "normalized duplicate created a second global skill")
+
+
+def exercise_auxiliary(base, admin_password, _proxy):
+    """Typed REST checks beyond the original project and dispute paths."""
+    admin = Client(base)
+    admin.authenticate("/api/auth/login", {"username": "admin", "password": admin_password})
+    password = secrets.token_urlsafe(24)
+    owner, worker, outsider = (Client(base) for _ in range(3))
+    for actor in (owner, worker, outsider):
+        actor.authenticate("/api/auth/register", {
+            "username": "aux" + secrets.token_hex(8), "password": password,
+            "displayName": "Auxiliary flow",
+        })
+    exercise_profiles_passkeys(base, owner, outsider, password)
+    exercise_bramp(base, admin, owner, outsider)
+    exercise_catalog(admin, worker, outsider)
+
+
+def scan_secret_logs(logs, secret_dir):
+    markers = [(name, (secret_dir / name).read_bytes().strip()) for name in
+               ("service-token", "master-key.hex", "root-seed.hex", "bootstrap-admin-password")]
+    for service, log in logs:
+        log.flush()
+        log.seek(0)
+        output = log.read(4 * 1024 * 1024 + 1)
+        require(len(output) <= 4 * 1024 * 1024, f"{service} log exceeds secret-scan limit")
+        for name, marker in markers:
+            require(len(marker) >= 12 and marker not in output,
+                    f"{service} log disclosed {name}")
+
+
 def run(storage, binaries, scenario=exercise):
     with ExitStack() as stack:
         directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="kunveno-e2e-")))
+        logs = []
         adapter_database_url = temporary_postgres(stack, directory)
         secret_dir = directory / "secrets"
         subprocess.run([str(binaries / "wallet"), "init-dev-secrets", str(secret_dir)],
@@ -582,11 +736,11 @@ def run(storage, binaries, scenario=exercise):
             **common, "CUSTODY_DATABASE_URL": f"sqlite://{directory}/custody.sqlite?mode=rwc",
             "CUSTODY_MASTER_KEY_FILE": str(secret_dir / "master-key.hex"),
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
-        })
+        }, logs)
         launch(stack, binaries / "mock-provider", provider_port, {
             **common, "MOCK_DATABASE_URL": f"sqlite://{directory}/mock.sqlite?mode=rwc",
             "MOCK_STORAGE": storage, "MOCK_ROOT_ACCOUNT_FILE": str(secret_dir / "root-account.hex"),
-        })
+        }, logs)
         proxy = LossyProvider(provider_port)
         proxy_thread = threading.Thread(target=proxy.serve_forever, daemon=True)
         proxy_thread.start()
@@ -601,8 +755,9 @@ def run(storage, binaries, scenario=exercise):
             "BOOTSTRAP_ADMIN_USERNAME": "admin",
             "BOOTSTRAP_ADMIN_PASSWORD_FILE": str(secret_dir / "bootstrap-admin-password"),
             "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),
-        })
+        }, logs)
         scenario(adapter.base, (secret_dir / "bootstrap-admin-password").read_text().strip(), proxy)
+        scan_secret_logs(logs, secret_dir)
         print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle")
 
 
@@ -615,3 +770,4 @@ if __name__ == "__main__":
         run(selected, arguments.binaries.resolve())
         run(selected, arguments.binaries.resolve(), exercise_multi_milestone)
         run(selected, arguments.binaries.resolve(), exercise_dispute)
+        run(selected, arguments.binaries.resolve(), exercise_auxiliary)
