@@ -43,6 +43,18 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             get(crate::profiles::get_public),
         )
         .route("/api/catalog", get(catalog))
+        .route(
+            "/api/catalog/skill-requests",
+            get(crate::catalog::mine).post(command),
+        )
+        .route(
+            "/api/admin/catalog/skill-requests",
+            get(crate::catalog::all),
+        )
+        .route(
+            "/api/admin/catalog/skill-requests/{requestId}/decision",
+            post(command),
+        )
         .route("/api/bramp/deposits", post(command))
         .route(
             "/api/bramp/deposits/{depositId}",
@@ -669,6 +681,15 @@ async fn command(
             progress: json(&headers, &body)?,
         },
         "/api/admin/coordinators" => ProviderCommand::PromoteCoordinator(json(&headers, &body)?),
+        "/api/catalog/skill-requests" => {
+            ProviderCommand::CreateSkillRequest(json(&headers, &body)?)
+        }
+        "/api/admin/catalog/skill-requests/{requestId}/decision" => {
+            ProviderCommand::DecideSkillRequest(generated_contracts::DecideSkillRequest {
+                request_id: id("requestId")?,
+                decision: json(&headers, &body)?,
+            })
+        }
         "/api/admin/catalog" => ProviderCommand::UpsertCatalogEntry(json(&headers, &body)?),
         "/api/admin/catalog/{kind}/{id}" => {
             no_body()?;

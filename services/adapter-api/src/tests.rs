@@ -78,6 +78,7 @@ fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
             catalog: CatalogView {
                 roles: vec![],
                 skills: vec![],
+                skill_roles: vec![],
                 score_policy: ScorePolicy::new(Percentage::new(50)?, Percentage::new(50)?)?,
             },
             workers: vec![],

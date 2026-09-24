@@ -37,6 +37,7 @@ fn privileged(command: &ProviderCommand) -> bool {
             | ProviderCommand::DeleteCatalogEntry(_)
             | ProviderCommand::FundAccount(_)
             | ProviderCommand::ConfirmDeposit { .. }
+            | ProviderCommand::DecideSkillRequest(_)
             | ProviderCommand::SetScorePolicy(_)
     )
 }
@@ -124,7 +125,9 @@ pub(crate) async fn authorize(
     }
     match command {
         ProviderCommand::RegisterWorker(_) | ProviderCommand::CreateProject(_) => Ok(()),
-        ProviderCommand::UpdateQualifications(_) | ProviderCommand::SetCalendar(_) => {
+        ProviderCommand::UpdateQualifications(_)
+        | ProviderCommand::SetCalendar(_)
+        | ProviderCommand::CreateSkillRequest(_) => {
             if snapshot.workers.iter().any(|w| w.account == account) {
                 Ok(())
             } else {
