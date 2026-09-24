@@ -74,54 +74,7 @@ pub(crate) async fn authorize(
             .iter()
             .find(|p| p.project_id == id)
             .ok_or(Error::NotFound)?;
-        let allowed = match command {
-            ProviderCommand::QuotePlanning { .. }
-            | ProviderCommand::CreateProposal { .. }
-            | ProviderCommand::UpdateProposal { .. }
-            | ProviderCommand::DeleteProposal { .. }
-            | ProviderCommand::SubmitProposal { .. }
-            | ProviderCommand::CreateTask { .. }
-            | ProviderCommand::EditTask { .. }
-            | ProviderCommand::RequestMilestoneCompletion { .. } => project.coordinator == account,
-            ProviderCommand::AcceptPlanningQuote { .. }
-            | ProviderCommand::AcceptPlanningDelivery { .. }
-            | ProviderCommand::ApproveExecution { .. }
-            | ProviderCommand::RequestProposalChanges { .. }
-            | ProviderCommand::AcceptMilestoneCompletion { .. }
-            | ProviderCommand::RejectMilestoneCompletion { .. } => project.client == account,
-            ProviderCommand::UpdateTaskProgress {
-                task_storage_id,
-                task_id,
-                ..
-            } => {
-                project.client != account
-                    && project
-                        .proposals
-                        .iter()
-                        .flat_map(|p| &p.milestones)
-                        .find(|m| m.task_storage.task_storage_id == *task_storage_id)
-                        .and_then(|m| m.task_storage.tasks.iter().find(|t| t.task_id == *task_id))
-                        .is_some_and(|task| task.task.assignees.contains(&account))
-            }
-            ProviderCommand::CancelProject { .. }
-            | ProviderCommand::DisputePlanning { .. }
-            | ProviderCommand::OpenDispute(_) => {
-                project.client == account || project.coordinator == account
-            }
-            ProviderCommand::RespondDispute { dispute_id, .. } => {
-                crate::disputes::read(app, *dispute_id)
-                    .await?
-                    .dispute
-                    .counterparty
-                    == account
-            }
-            _ => false,
-        };
-        return if allowed {
-            Ok(())
-        } else {
-            Err(Error::Forbidden)
-        };
+        return authorize_project(app, project, account, command).await;
     }
     match command {
         ProviderCommand::RegisterWorker(_) | ProviderCommand::CreateProject(_) => Ok(()),
@@ -145,6 +98,62 @@ pub(crate) async fn authorize(
             }
         }
         _ => Err(Error::Forbidden),
+    }
+}
+
+async fn authorize_project(
+    app: &App,
+    project: &ProjectView,
+    account: AccountId32,
+    command: &ProviderCommand,
+) -> Result<(), Error> {
+    let allowed = match command {
+        ProviderCommand::QuotePlanning { .. }
+        | ProviderCommand::CreateProposal { .. }
+        | ProviderCommand::UpdateProposal { .. }
+        | ProviderCommand::DeleteProposal { .. }
+        | ProviderCommand::SubmitProposal { .. }
+        | ProviderCommand::CreateTask { .. }
+        | ProviderCommand::EditTask { .. }
+        | ProviderCommand::RequestMilestoneCompletion { .. } => project.coordinator == account,
+        ProviderCommand::AcceptPlanningQuote { .. }
+        | ProviderCommand::AcceptPlanningDelivery { .. }
+        | ProviderCommand::ApproveExecution { .. }
+        | ProviderCommand::RequestProposalChanges { .. }
+        | ProviderCommand::AcceptMilestoneCompletion { .. }
+        | ProviderCommand::RejectMilestoneCompletion { .. } => project.client == account,
+        ProviderCommand::UpdateTaskProgress {
+            task_storage_id,
+            task_id,
+            ..
+        } => {
+            project.client != account
+                && project
+                    .proposals
+                    .iter()
+                    .flat_map(|p| &p.milestones)
+                    .find(|m| m.task_storage.task_storage_id == *task_storage_id)
+                    .and_then(|m| m.task_storage.tasks.iter().find(|t| t.task_id == *task_id))
+                    .is_some_and(|task| task.task.assignees.contains(&account))
+        }
+        ProviderCommand::CancelProject { .. }
+        | ProviderCommand::DisputePlanning { .. }
+        | ProviderCommand::OpenDispute(_) => {
+            project.client == account || project.coordinator == account
+        }
+        ProviderCommand::RespondDispute { dispute_id, .. } => {
+            crate::disputes::read(app, *dispute_id)
+                .await?
+                .dispute
+                .counterparty
+                == account
+        }
+        _ => false,
+    };
+    if allowed {
+        Ok(())
+    } else {
+        Err(Error::Forbidden)
     }
 }
 

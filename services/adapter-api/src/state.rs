@@ -177,6 +177,7 @@ pub(crate) struct App {
 }
 impl App {
     pub(crate) async fn new(config: Config) -> Result<Self, Error> {
+        crate::auth::passkeys::configured_webauthn()?;
         let db = PgPoolOptions::new()
             .max_connections(16)
             .acquire_timeout(Duration::from_secs(5))
@@ -190,6 +191,9 @@ impl App {
             .execute(&mut *migration)
             .await?;
         sqlx::raw_sql(include_str!("../migrations/0002_profiles.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!("../migrations/0003_passkeys.sql"))
             .execute(&mut *migration)
             .await?;
         migration.commit().await?;

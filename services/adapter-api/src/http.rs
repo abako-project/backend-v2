@@ -35,6 +35,23 @@ pub(crate) fn router(app: Arc<App>) -> Router {
         .route("/api/auth/logout", post(logout))
         .route("/api/auth/password", post(password))
         .route(
+            "/api/auth/passkeys/register/options",
+            post(crate::auth::passkeys::register_options),
+        )
+        .route(
+            "/api/auth/passkeys/register/verify",
+            post(crate::auth::passkeys::register_verify),
+        )
+        .route("/api/auth/passkeys", get(crate::auth::passkeys::list))
+        .route(
+            "/api/auth/passkeys/{credentialId}/remove",
+            post(crate::auth::passkeys::remove),
+        )
+        .route(
+            "/api/auth/passkeys/login/verify",
+            post(crate::auth::passkeys::login_verify),
+        )
+        .route(
             "/api/profiles/me",
             get(crate::profiles::get_me).put(crate::profiles::put_me),
         )
@@ -43,10 +60,8 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             get(crate::profiles::get_public),
         )
         .route("/api/catalog", get(catalog))
-        .route(
-            "/api/catalog/skill-requests",
-            get(crate::catalog::mine).post(command),
-        )
+        .route("/api/catalog/skill-requests", post(command))
+        .route("/api/catalog/skill-requests/me", get(crate::catalog::mine))
         .route(
             "/api/admin/catalog/skill-requests",
             get(crate::catalog::all),
@@ -77,6 +92,28 @@ pub(crate) fn router(app: Arc<App>) -> Router {
         .route("/api/workers/me/qualifications", put(command))
         .route("/api/workers/me/calendar", put(command))
         .route("/api/workers/me/mode", put(command))
+        .merge(marketplace_routes())
+        .route("/api/admin/coordinators", post(command))
+        .route("/api/admin/catalog", put(command))
+        .route(
+            "/api/admin/catalog/{kind}/{id}",
+            axum::routing::delete(command),
+        )
+        .route("/api/admin/score-policy", put(command))
+        .route("/api/admin/fund", post(command))
+        .route("/api/balance", get(balance))
+        .route("/api/operations/{operationId}", get(operation))
+        .route("/api/notifications", get(notification_page))
+        .route("/api/notifications/{notificationId}/read", post(mark_read))
+        .route("/api/events", get(events))
+        .fallback(|| async { Error::NotFound })
+        .layer(DefaultBodyLimit::max(MAX_SIGNABLE_BYTES))
+        .layer(middleware::from_fn_with_state(app.clone(), boundary))
+        .with_state(app)
+}
+
+fn marketplace_routes() -> Router<Arc<App>> {
+    Router::new()
         .route("/api/projects", get(projects).post(command))
         .route(
             "/api/completion-submissions/{submissionId}/rejection",
@@ -144,23 +181,6 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             "/api/task-storages/{storageId}/tasks/{taskId}",
             get(task).put(command).patch(command),
         )
-        .route("/api/admin/coordinators", post(command))
-        .route("/api/admin/catalog", put(command))
-        .route(
-            "/api/admin/catalog/{kind}/{id}",
-            axum::routing::delete(command),
-        )
-        .route("/api/admin/score-policy", put(command))
-        .route("/api/admin/fund", post(command))
-        .route("/api/balance", get(balance))
-        .route("/api/operations/{operationId}", get(operation))
-        .route("/api/notifications", get(notification_page))
-        .route("/api/notifications/{notificationId}/read", post(mark_read))
-        .route("/api/events", get(events))
-        .fallback(|| async { Error::NotFound })
-        .layer(DefaultBodyLimit::max(MAX_SIGNABLE_BYTES))
-        .layer(middleware::from_fn_with_state(app.clone(), boundary))
-        .with_state(app)
 }
 
 async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next) -> Response {
@@ -186,7 +206,12 @@ async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next)
     let public = public_case
         || matches!(
             path,
-            "/health" | "/ready" | "/api/openapi.json" | "/api/auth/login" | "/api/auth/register"
+            "/health"
+                | "/ready"
+                | "/api/openapi.json"
+                | "/api/auth/login"
+                | "/api/auth/register"
+                | "/api/auth/passkeys/login/verify"
         );
     let mutation = !matches!(
         *request.method(),
@@ -706,7 +731,6 @@ async fn command(
         "/api/admin/fund" if app.config.enable_mock_funding => {
             ProviderCommand::FundAccount(json(&headers, &body)?)
         }
-        "/api/admin/fund" => return Err(Error::NotFound),
         _ => return Err(Error::NotFound),
     };
     let key = headers
