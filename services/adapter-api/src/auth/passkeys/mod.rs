@@ -1,4 +1,4 @@
-//! Server-side WebAuthn ceremonies for the adapter's existing principals.
+//! Server-side `WebAuthn` ceremonies for the adapter's existing principals.
 mod store;
 
 use super::{Session, create_session, ensure_wallet, verify_password};

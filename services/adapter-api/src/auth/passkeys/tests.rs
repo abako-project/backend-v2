@@ -21,13 +21,14 @@ fn virtual_authenticator_verifies_and_rejects_foreign_origin_or_challenge() -> T
     let proof = authenticator.do_registration(origin.clone(), options)?;
     let passkey = server.finish_passkey_registration(&proof, &registration)?;
 
-    let (options, state) = server.start_passkey_authentication(&[passkey.clone()])?;
+    let (options, state) = server.start_passkey_authentication(std::slice::from_ref(&passkey))?;
     let assertion = authenticator.do_authentication(origin, options)?;
     let result = server.finish_passkey_authentication(&assertion, &state)?;
     assert!(result.user_verified());
     assert_eq!(result.cred_id(), passkey.cred_id());
 
-    let (options, other_state) = server.start_passkey_authentication(&[passkey.clone()])?;
+    let (options, other_state) =
+        server.start_passkey_authentication(std::slice::from_ref(&passkey))?;
     let other_assertion = authenticator.do_authentication(foreign, options)?;
     assert!(
         server
