@@ -139,9 +139,18 @@ pub(crate) async fn register_verify(
     )
     .await?;
     let state = serde_json::from_str(&state)?;
-    let passkey = configured_webauthn()?
-        .finish_passkey_registration(&request.credential, &state)
-        .map_err(|_| Error::Unauthorized)?;
+    let permit = app
+        .password_slots
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| Error::Capacity)?;
+    let passkey = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        configured_webauthn()?
+            .finish_passkey_registration(&request.credential, &state)
+            .map_err(|_| Error::Unauthorized)
+    })
+    .await??;
     store::insert_credential(&app.db, session.view.principal_id, &passkey).await?;
     app.audit(
         Some(&session.view.principal_id.to_string()),
@@ -233,9 +242,18 @@ pub(crate) async fn login_verify(
 ) -> Result<Response, Error> {
     let (principal, state) = store::consume_login(&app.db, &request.ceremony_id).await?;
     let state = serde_json::from_str(&state)?;
-    let result = configured_webauthn()?
-        .finish_passkey_authentication(&request.credential, &state)
-        .map_err(|_| Error::Unauthorized)?;
+    let permit = app
+        .password_slots
+        .clone()
+        .try_acquire_owned()
+        .map_err(|_| Error::Capacity)?;
+    let result = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        configured_webauthn()?
+            .finish_passkey_authentication(&request.credential, &state)
+            .map_err(|_| Error::Unauthorized)
+    })
+    .await??;
     if !result.user_verified() {
         return Err(Error::Unauthorized);
     }
