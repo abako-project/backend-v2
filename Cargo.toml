@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = [
+  "crates/bloque-rs",
   "crates/domain-primitives",
   "crates/generated-contracts",
   "services/mock-provider",
@@ -16,6 +17,7 @@ license = "Apache-2.0"
 repository = "https://example.invalid/kunveno-local-only"
 
 [workspace.dependencies]
+bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 domain-primitives = { version = "0.1.0", path = "crates/domain-primitives" }
 generated-contracts = { version = "0.1.0", path = "crates/generated-contracts" }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
