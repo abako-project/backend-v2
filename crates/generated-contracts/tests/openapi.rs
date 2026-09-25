@@ -53,6 +53,7 @@ fn all_public_operations_have_valid_references_and_security()
                 path.as_str(),
                 "/api/auth/register"
                     | "/api/auth/login"
+                    | "/api/auth/passkeys/login/options"
                     | "/api/auth/passkeys/login/verify"
                     | "/api/openapi.json"
             ) || (matches!(
@@ -112,7 +113,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 69);
+    assert_eq!(operation_ids.len(), 70);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "kunveno_session"

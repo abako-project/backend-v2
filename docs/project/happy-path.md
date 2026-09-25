@@ -144,7 +144,7 @@ use the three Bramp rows instead.
 | Client or administrator | `GET /api/bramp/deposits/{depositId}` | Read the pending or confirmed request; unrelated accounts cannot read it. |
 | Administrator | `POST /api/admin/bramp/deposits/{depositId}/confirm` | No body. This credits the fixed amount once. No bank or currency conversion is involved. |
 | Administrator, fixture only | `POST /api/admin/fund` | `{"account":"<client accountId>","amount":"10000"}`. Requires `ENABLE_MOCK_FUNDING=true`; disabled in normal Compose. |
-| Client | `POST /api/projects` | `{"title":"Signed POC","description":"Integration flow"}`; receipt yields `projectId`. `GET /api/projects/{projectId}` reveals its assigned `coordinator`. |
+| Client | `POST /api/projects` | `{"title":"Signed Project","description":"Integration flow"}`; receipt yields `projectId`. `GET /api/projects/{projectId}` reveals its assigned `coordinator`. |
 | Assigned coordinator | `POST /api/projects/{projectId}/planning/quote` | `{"fee":"100","minutes":100,"window":{"start":{"isoYear":2026,"week":40},"end":{"isoYear":2026,"week":40}}}`. |
 | Client | `POST /api/projects/{projectId}/planning/accept` | `{"expectedRevision":<current planning.revision>}`. |
 | Coordinator | `POST /api/projects/{projectId}/proposals` | `{"title":"Implementation","description":"One milestone","milestones":[{"key":1,"title":"Ship","window":<future week window>,"coordinatorFee":"100","coordinatorMinutes":60,"requirements":[{"key":1,"roleId":2,"skillIds":[1,5,13],"minutes":120,"budget":"900"}]}]}`. Read the project to obtain `proposalId`, `milestoneId` and `taskStorage.taskStorageId`. |
@@ -174,8 +174,16 @@ the pending request holds only free KVN and may be cancelled at
 `POST /api/bramp/withdrawals/{withdrawalId}/cancel`. No bank transfer occurs.
 Passkey registration starts at `POST /api/auth/passkeys/register/options`
 with the current password and completes at `/register/verify` with the
-WebAuthn credential. Password login remains available; passkey login/options
-is not exposed until the email-versus-username account policy is decided.
+WebAuthn credential. Password login remains available. To sign in with a
+passkey, send `POST /api/auth/passkeys/login/options` with
+`{"username":"alice"}`. Pass the returned `options` to the browser WebAuthn
+API and send its JSON credential with the returned `ceremonyId` to
+`POST /api/auth/passkeys/login/verify`:
+`{"ceremonyId":"…","credential":{…}}`. The response sets the same HttpOnly
+session cookie and returns the same `SessionView` and CSRF token as password
+login. No verified email is needed. Challenges expire after five minutes and
+are single-use; an unknown username and an account without passkeys receive
+the same `401 invalid_credentials` error.
 
 After every business write, poll its operation before issuing a dependent write.
 The client may use `GET /api/projects/{projectId}`; each participant can read

@@ -1,8 +1,8 @@
 //! Server-side `WebAuthn` ceremonies for the adapter's existing principals.
 mod store;
 
-use super::{Session, create_session, ensure_wallet, verify_password};
-use crate::state::{App, Error, now, token};
+use super::{Session, create_session, ensure_wallet, username, verify_password};
+use crate::state::{App, Error, now, parse, token};
 use axum::{
     Json,
     extract::{Extension, Path, State},
@@ -46,6 +46,12 @@ pub(crate) struct RegisterVerifyRequest {
 pub(crate) struct LoginVerifyRequest {
     ceremony_id: String,
     credential: PublicKeyCredential,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct LoginOptionsRequest {
+    username: String,
 }
 
 #[derive(Deserialize)]
@@ -206,12 +212,20 @@ pub(crate) async fn remove(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// The public email-to-principal lookup belongs in the HTTP integration after
-// the product owner resolves the existing username-only account model.
-#[expect(
-    dead_code,
-    reason = "AUTH-001 login options await the email-versus-username policy"
-)]
+pub(crate) async fn login_options(
+    State(app): State<Arc<App>>,
+    Json(request): Json<LoginOptionsRequest>,
+) -> Result<Json<CeremonyOptions<RequestChallengeResponse>>, Error> {
+    let name = username(&request.username).map_err(|_| Error::Unauthorized)?;
+    let row = sqlx::query("SELECT principal_id FROM principals WHERE username = $1")
+        .bind(name)
+        .fetch_optional(&app.db)
+        .await?
+        .ok_or(Error::Unauthorized)?;
+    let principal: PrincipalId = parse(row.try_get("principal_id")?)?;
+    begin_login(&app, principal).await.map(Json)
+}
+
 pub(crate) async fn begin_login(
     app: &App,
     principal: PrincipalId,

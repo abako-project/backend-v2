@@ -1,6 +1,6 @@
-# Kunveno Rust POC
+# Kunveno Rust backend
 
-Local Rust implementation of Kunveno's marketplace: REST adapter, full custodial signing, transactional mock provider, and independent Leptos frontend. Mock funds, contracts and keys are disposable development data, never production assets.
+Kunveno is a product under development. This Rust workspace provides its REST adapter, custodial signing, a transactional mock provider for development and an independent Leptos test frontend. Mock funds, contracts and keys are disposable test data, never real assets.
 
 ## Run locally
 
@@ -15,12 +15,13 @@ python3 scripts/poc-e2e.py
 ```
 
 The test starts real adapter, custody, provider and disposable PostgreSQL
-processes with fresh secrets. On both mock storage backends it runs three
+processes with fresh secrets. On both mock storage backends it runs four
 isolated scenarios: the security/SSE flow, four sequential milestones with
-teams of 5/3/4/2 workers, and public dispute opening after a rejected
-delivery. It checks signed operations, escrow, assignments, payouts and
-scores, then removes its temporary data. This is a backend E2E, not a browser
-test. See the [happy-path guide](docs/project/happy-path.md) and
+teams of 5/3/4/2 workers, public dispute opening after a rejected
+delivery, and auxiliary profile/Bramp/catalog/passkey-boundary checks. It checks
+signed operations, escrow, assignments, payouts and scores, then removes its
+temporary data. This is a backend E2E, not a browser test. See the
+[happy-path guide](docs/project/happy-path.md) and
 [porting coverage](docs/project/porting-coverage.md). Passing historical E2E
 records do not verify the latest integration commit; check its handoff.
 
@@ -67,12 +68,12 @@ is `Completed`. The expanded E2E fixture covers four milestones with teams of
 5/3/4/2. Adapter descriptive profiles use PostgreSQL. The mock models
 Bramp deposits, withdrawal holds and operator-owned skill requests.
 
-This is not complete legacy compatibility. Passkey registration and verification
-exist, but the login start route awaits a decision on email versus username.
-Virto governance,
+This is not complete legacy compatibility. Passkey registration and login use
+the existing username and custodial account; email verification is not required
+for passkey access. Password login remains available. Virto governance,
 membership, real Kreivo calls, banking and generic payments are outside this
 phase. The formal public dispute case described in `Disputas.md` is implemented
-for the approved PoC scope and consolidated in
+for the approved current scope and consolidated in
 [SPEC-0005](specs/0005-dispute-opening/spec.md): current rejection, public
 URL/SHA-256 references, project-wide freeze and one counterparty response.
 Signed E2E covers opening and one public response; chat, timeout and DAO resolution

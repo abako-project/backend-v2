@@ -54,12 +54,13 @@ routes while retaining project-nested write aliases. Descriptive profile edits
 are adapter-local, not signed business commands; mock Bramp mutations are signed
 business commands. Workers can submit skill requests, and only the operator can
 approve or reject them; approval does not qualify the requester automatically.
-Passkey registration, listing, removal and assertion verification are present.
-Password login remains available; passkey login cannot start until the approved
-email-first lookup is reconciled with the current username-only accounts.
+Passkey registration, listing, removal and username-first login use the same
+principal, custodial wallet and session contract as password login. An email
+address is not required or verified for this login method.
 
-The POC reads a bounded whole provider snapshot; paginate this boundary when data
-outgrows that ceiling. This is not a production identity or custody assessment.
+The current mock-backed integration reads a bounded whole provider snapshot;
+paginate this boundary when data outgrows that ceiling. This is not a production
+identity or custody assessment.
 
 ## Verification
 

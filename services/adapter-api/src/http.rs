@@ -48,6 +48,10 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             post(crate::auth::passkeys::remove),
         )
         .route(
+            "/api/auth/passkeys/login/options",
+            post(crate::auth::passkeys::login_options),
+        )
+        .route(
             "/api/auth/passkeys/login/verify",
             post(crate::auth::passkeys::login_verify),
         )
@@ -211,6 +215,7 @@ async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next)
                 | "/api/openapi.json"
                 | "/api/auth/login"
                 | "/api/auth/register"
+                | "/api/auth/passkeys/login/options"
                 | "/api/auth/passkeys/login/verify"
         );
     let mutation = !matches!(

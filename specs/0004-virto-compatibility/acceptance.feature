@@ -4,8 +4,15 @@ Feature: Mock auxiliary interfaces
   Scenario: A passkey signs in to the existing custodial account
     Given a principal has a password session and custodial wallet
     When the principal registers a verified passkey after password reauthentication
-    And signs in with the passkey and email
+    And signs in with the passkey and username
     Then the new session identifies the same principal and wallet
+
+  @VIR-AUTH-03
+  Scenario: A username without a registered passkey cannot start login
+    Given an unknown username or an account without a passkey
+    When passkey login options are requested for that username
+    Then the public authentication error is the same in both cases
+    And no session is created
 
   @VIR-AUTH-02
   Scenario: A replayed or foreign passkey proof is rejected

@@ -15,10 +15,11 @@ documented future integration target, not a usable provider switch.
 An existing password-authenticated principal may register FIDO2/WebAuthn
 credentials after a fresh password check. Password login remains available.
 Registration and removal require the principal's session and password; no
-credential may be linked to another principal. Login starts with the account
-email and ends with a verified assertion that creates the same opaque session
-and CSRF contract as password login. The existing custodial wallet and
-`AccountId32` do not change. The browser never receives a private signing seed.
+credential may be linked to another principal. Login starts with the existing
+account username, normalized exactly as password login, and ends with a verified
+assertion that creates the same opaque session and CSRF contract as password
+login. The existing custodial wallet and `AccountId32` do not change. The
+browser never receives a private signing seed.
 
 The server generates unpredictable, single-use challenges with a five-minute
 expiry, stores ceremony state server-side, validates RP ID, configured origin,
@@ -36,7 +37,9 @@ Public routes: `POST /api/auth/passkeys/login/options` and
 `POST /api/auth/passkeys/register/verify`, `GET /api/auth/passkeys`, and
 `POST /api/auth/passkeys/{credentialId}/remove`. Options and verification
 requests have typed JSON bodies; removal requires the password again.
-Public failures must not reveal whether an email has a credential.
+Unknown usernames, invalid usernames and existing accounts without a passkey
+return the same public authentication error. A login challenge remains bound to
+the named principal; a credential belonging to another principal cannot use it.
 
 ## RAMP-001: Simulated deposit
 

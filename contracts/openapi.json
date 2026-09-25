@@ -3138,13 +3138,22 @@
         "responses": {"204": {"description": "Credential removed"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}
       }
     },
+    "/api/auth/passkeys/login/options": {
+      "post": {
+        "operationId": "beginPasskeyLogin", "tags": ["Authentication"], "summary": "Start passkey login by username",
+        "description": "Uses the same case-insensitive username as password login. No existing session, email or password is required. The challenge is single-use and expires after five minutes. Unknown usernames and accounts without a passkey return the same authentication error.",
+        "security": [],
+        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyLoginOptionsRequest"}}}},
+        "responses": {"200": {"description": "WebAuthn request options and ceremony ID", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyRequestOptions"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+      }
+    },
     "/api/auth/passkeys/login/verify": {
       "post": {
         "operationId": "verifyPasskeyLogin", "tags": ["Authentication"], "summary": "Complete a previously started passkey login",
-        "description": "Verifies and consumes the stored ceremony, then issues the same opaque session and CSRF contract as password login. The start route is not yet public while the account email lookup remains unresolved.",
+        "description": "Verifies and consumes the username-bound ceremony, then issues the same opaque session and CSRF contract as password login.",
         "security": [],
         "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyCeremonyCredential"}}}},
-        "responses": {"200": {"description": "Existing principal session", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SessionView"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+        "responses": {"200": {"description": "Existing principal session", "headers": {"Set-Cookie": {"description": "Opaque HttpOnly session cookie, same policy as password login.", "schema": {"type": "string"}}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SessionView"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
       }
     },
     "/api/disputes/{disputeId}": {
@@ -3549,11 +3558,22 @@
         "type": "object", "additionalProperties": false, "required": ["currentPassword"],
         "properties": {"currentPassword": {"type": "string", "minLength": 1, "writeOnly": true}}
       },
+      "PasskeyLoginOptionsRequest": {
+        "type": "object", "additionalProperties": false, "required": ["username"],
+        "properties": {"username": {"type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$"}}
+      },
       "PasskeyCreationOptions": {
         "type": "object", "additionalProperties": false, "required": ["ceremonyId", "options"],
         "properties": {
           "ceremonyId": {"type": "string", "description": "Opaque, single-use challenge reference; expires after five minutes."},
           "options": {"type": "object", "description": "WebAuthn creation options from the server; pass them to a compatible browser WebAuthn JSON helper.", "additionalProperties": true}
+        }
+      },
+      "PasskeyRequestOptions": {
+        "type": "object", "additionalProperties": false, "required": ["ceremonyId", "options"],
+        "properties": {
+          "ceremonyId": {"type": "string", "description": "Opaque, single-use challenge reference; expires after five minutes."},
+          "options": {"type": "object", "description": "WebAuthn request options from the server; pass them to a compatible browser WebAuthn JSON helper.", "additionalProperties": true}
         }
       },
       "PasskeyCeremonyCredential": {

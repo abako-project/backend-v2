@@ -30,7 +30,7 @@ repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
 | Storage | Adapter PostgreSQL; custody SQLite; mock memory/SQLite features with SQLite default; missing-only mock catalog seeding. No development-data migration. |
 | Descriptive profiles | Adapter PostgreSQL stores separate editable client and worker sections; public projection excludes email, department, session and custody data. Auxiliary E2E passes in both mock modes. |
 | Bramp | Mock-only deposit request with one operator credit; pending withdrawal hold and cancellation. Auxiliary E2E passes in both mock modes. No bank connection, currency conversion or generic payment API. |
-| Auth/signing/events | Classic cookie login, real sr25519 custody signatures, durable operations, event ingestion and SSE. WebAuthn registration, storage, assertion verification and virtual-authenticator tests exist; login/options awaits an email-versus-username policy decision. |
+| Auth/signing/events | Classic cookie login, real sr25519 custody signatures, durable operations, event ingestion and SSE. WebAuthn registration and username-first login use the same principal and wallet; a virtual-authenticator HTTP test covers the full login. No verified email is required. |
 
 ## Milestone task storage
 
@@ -74,10 +74,10 @@ Open or deliberately changed compatibility points:
 - Sequential activation and project completion are implemented. Team continuity
   means preferring an eligible previous worker, not preserving legacy
   `assignmentKey` identity. This is a deliberate matching rule change.
-- WebAuthn passkey registration and assertion verification are implemented
-  under [SPEC-0004](../../specs/0004-virto-compatibility/spec.md).
-  Login cannot start until email-first lookup is reconciled with the
-  username-only principal model. Password login still owns the same wallet.
+- WebAuthn passkey registration and username-first login are implemented under
+  [SPEC-0004](../../specs/0004-virto-compatibility/spec.md). Password login
+  remains available and both methods create a session for the same custodial
+  wallet. Email verification is not part of this login policy.
 - Bramp is a typed mock of deposit credit and withdrawal holds. It is not
   legacy `/v1` wire compatibility, a bank connection or a real Kreivo call.
 - Membership, governance, DAO voting, generic payments/refunds and dispute
@@ -185,11 +185,11 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 
 | Priority | Area | Status / next decision |
 |---|---|---|
-| Closed for local POC | Verification | POC-07 and TASK-005 have independent handoffs for the mock-backed backend. The E2E scans REST, SSE, custody metrics and bounded service logs for known secret markers; this is not a production secrecy proof. HSM-backed rotation remains mandatory before real value. Cargo-deny and Leptos gates are outside this backend closeout by owner decision. |
-| P1 | Passkey access | Decide whether to add verified email to principals or use username for this PoC, then expose login/options and verify a complete same-account login flow. Registration/removal and virtual-authenticator tests exist. |
-| P1 | Browser contract | Keep direct task routes and temporary nested aliases until external frontend clients migrate. OpenAPI describes implemented routes; it intentionally omits blocked login/options. |
+| Verified mock backend | Verification | Historical tasks POC-07 and TASK-005 have independent handoffs for the mock-backed backend. The E2E scans REST, SSE, custody metrics and bounded service logs for known secret markers; this is not a production secrecy proof. HSM-backed rotation remains mandatory before real value. Cargo-deny and Leptos gates were outside that backend closeout by owner decision. |
+| Implemented in backend branch | Passkey access | Login starts with username and ends with the same session and wallet as password login; virtual-authenticator HTTP coverage is in the adapter tests. Email verification is not required. |
+| P1 | Browser contract | Keep direct task routes and temporary nested aliases until external frontend clients migrate. OpenAPI describes implemented routes, including passkey login/options. |
 | Out of scope | Governance and generic Virto wrappers | No membership/governance, DAO votes, generic payments or arbitrary Kreivo JSON-RPC. Existing typed project, calendar and escrow operations replace those legacy wrappers where applicable. |
-| Future spec | Dispute resolution | [SPEC-0005](../../specs/0005-dispute-opening/status.md) ends at an Open case and frozen project. DAO authority, resolution/unlock, escrow disposition, chat and timeout need separate product decisions; they are not defects in the approved opening PoC |
+| Future spec | Dispute resolution | [SPEC-0005](../../specs/0005-dispute-opening/status.md) ends at an Open case and frozen project. DAO authority, resolution/unlock, escrow disposition, chat and timeout need separate product decisions; they are not defects in the approved opening scope |
 | Future platform | Real chain and production custody | Replace the signed mock-provider integration with reviewed chain encoding, submission, finality, HSM-backed key management and recovery before real assets |
 | Quality | Browser-to-backend E2E | The signed E2E exercises real backend processes; browser smoke uses fixtures. No single browser test drives the full real-service lifecycle |
 | Quality | Code structure | Provider domain and long mock integration scenarios were split; unit tests now live in `tests.rs`. The adapter and frontend were not split merely for line count; their flow and tests remain focused |

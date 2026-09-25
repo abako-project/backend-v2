@@ -470,6 +470,119 @@ async fn http_auth_cors_csrf_password_and_typed_commands() -> TestResult {
 }
 
 #[tokio::test]
+async fn passkey_username_login_keeps_the_existing_custodial_account() -> TestResult {
+    use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
+    use webauthn_rs::prelude::{CreationChallengeResponse, RequestChallengeResponse, Url};
+
+    const ORIGIN: &str = "http://localhost:8088";
+    let internal = Server::start(internal(fake()?)).await?;
+    let app = app(&internal).await?;
+    let adapter = Server::start(http::router(app.clone())).await?;
+    let client = reqwest::Client::new();
+    let (alice, cookie) = register(&app, "alice").await?;
+    register(&app, "bob").await?;
+    let origin = Url::parse(ORIGIN)?;
+
+    for name in ["bob", "unknown", "bad username!"] {
+        let response = client
+            .post(format!("{}/api/auth/passkeys/login/options", adapter.url))
+            .header(header::ORIGIN, ORIGIN)
+            .json(&serde_json::json!({"username": name}))
+            .send()
+            .await?;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert!(response.headers().get(header::SET_COOKIE).is_none());
+        assert_eq!(
+            response.json::<ApiError>().await?.code,
+            "invalid_credentials"
+        );
+    }
+
+    let response = client
+        .post(format!(
+            "{}/api/auth/passkeys/register/options",
+            adapter.url
+        ))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", &alice.view.csrf_token)
+        .json(&serde_json::json!({"currentPassword": PASSWORD}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    let registration: serde_json::Value = response.json().await?;
+    let mut authenticator = WebauthnAuthenticator::new(SoftPasskey::new(true));
+    let options: CreationChallengeResponse =
+        serde_json::from_value(registration["options"].clone())?;
+    let credential = authenticator.do_registration(origin.clone(), options)?;
+    let response = client
+        .post(format!("{}/api/auth/passkeys/register/verify", adapter.url))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", &alice.view.csrf_token)
+        .json(&serde_json::json!({
+            "ceremonyId": registration["ceremonyId"],
+            "credential": credential,
+        }))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::CREATED);
+
+    let response = client
+        .post(format!("{}/api/auth/passkeys/login/options", adapter.url))
+        .header(header::ORIGIN, ORIGIN)
+        .json(&serde_json::json!({"username": "ALICE"}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    let login: serde_json::Value = response.json().await?;
+    let options: RequestChallengeResponse = serde_json::from_value(login["options"].clone())?;
+    let assertion = authenticator.do_authentication(origin, options)?;
+    let proof = serde_json::json!({
+        "ceremonyId": login["ceremonyId"],
+        "credential": assertion,
+    });
+    let response = client
+        .post(format!("{}/api/auth/passkeys/login/verify", adapter.url))
+        .json(&proof)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    let passkey_cookie = response
+        .headers()
+        .get(header::SET_COOKIE)
+        .ok_or("passkey session cookie missing")?
+        .to_str()?
+        .split(';')
+        .next()
+        .ok_or("passkey session cookie missing")?
+        .to_owned();
+    let view: SessionView = response.json().await?;
+    assert_eq!(view.principal_id, alice.view.principal_id);
+    assert_eq!(view.account_id, alice.view.account_id);
+    let response = client
+        .get(format!("{}/api/auth/session", adapter.url))
+        .header(header::COOKIE, passkey_cookie)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.json::<SessionView>().await?.account_id,
+        alice.view.account_id
+    );
+    let response = client
+        .post(format!("{}/api/auth/passkeys/login/verify", adapter.url))
+        .json(&proof)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    adapter.finish().await?;
+    internal.finish().await?;
+    Ok(())
+}
+
+#[tokio::test]
 async fn queue_is_owned_ordered_leased_and_recovers_lost_reply() -> TestResult {
     let fake = fake()?;
     let internal = Server::start(internal(fake.clone())).await?;
