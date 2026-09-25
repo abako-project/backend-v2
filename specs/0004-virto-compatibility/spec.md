@@ -40,6 +40,11 @@ requests have typed JSON bodies; removal requires the password again.
 Unknown usernames, invalid usernames and existing accounts without a passkey
 return the same public authentication error. A login challenge remains bound to
 the named principal; a credential belonging to another principal cannot use it.
+For this phase, a username with registered passkeys receives options containing
+credential identifiers. An unauthenticated caller can therefore infer that the
+account has passkeys. The owner accepts this disclosure to retain the working
+username-first flow; hiding passkey enrollment requires a separate requirement
+and design. Credential identifiers do not grant authentication.
 
 ## RAMP-001: Simulated deposit
 

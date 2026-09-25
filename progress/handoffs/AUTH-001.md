@@ -28,7 +28,7 @@ full passkey login is covered by the dedicated virtual-authenticator HTTP test.
 Product limit: successful login options contain credential identifiers, so
 an anonymous caller can distinguish a username with passkeys from one without.
 Uniform 401 responses only cover unknown, malformed and no-passkey names.
-The owner has been asked whether this disclosure is acceptable for this phase;
-if not, the login discovery flow needs a separate approved design. This is not
-evidence of production readiness: rate limiting, real-asset custody and HSM
-rotation require their own security gates.
+The owner accepted retaining this working flow for the current phase. Hiding
+passkey enrollment would need a later explicit requirement and design. This is
+not evidence of production readiness: rate limiting, real-asset custody and
+HSM rotation require their own security gates.
