@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026.09.25
+
+- Integrated `crates/bloque-rs`, the unofficial Bloque client, as a workspace
+  member on workspace dependency versions and lints.
+- Enabled HTTPS through `reqwest`'s `rustls` (aws-lc-rs) and allowed
+  CDLA-Permissive-2.0 in `deny.toml`; see
+  `docs/dependencies/bloque-client-2026-09-25.md`.
+
 ## 2026.09.23
 
 - Implemented versioned milestone delivery, current-submission rejection,

@@ -1,0 +1,21 @@
+[package]
+name = "bloque"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Minimal, unofficial Rust client for the Bloque API — org enrollment, accounts, and top-ups."
+
+[dependencies]
+reqwest = { workspace = true, features = ["rustls"] }
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+uuid = { workspace = true, features = ["v4"] }
+rand.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true
