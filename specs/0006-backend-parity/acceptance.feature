@@ -7,6 +7,14 @@ Feature: Backend parity without duplicate business truth
     Then their private read contains the updated fields
     And the public read excludes email, department and session data
 
+  @PAR-MEDIA-01
+  Scenario: A profile image is public but only its owner may replace it
+    Given a client has a descriptive profile
+    When the client uploads a valid PNG image
+    Then the public image read returns the same bytes and PNG content type
+    And an unrelated principal cannot replace that image
+    And an unsupported or oversized image is rejected
+
   @PAR-CATALOG-01
   Scenario: A requested skill does not change qualifications until approval
     Given a worker requests a skill that is not in the catalog
@@ -19,7 +27,7 @@ Feature: Backend parity without duplicate business truth
   Scenario: Direct task-storage routes use existing ownership rules
     Given a coordinator owns a milestone task storage
     When the coordinator creates a task through the direct route
-    Then the nested route reads the same task
+    Then the direct task read and project read show the same task
     And an unrelated principal cannot edit it
 
   @PAR-PG-01

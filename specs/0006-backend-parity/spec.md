@@ -21,6 +21,18 @@ the principal ID from the session, never from an update body. Inputs are bounded
 validated and cannot contain arbitrary extra fields. Missing optional fields
 have an explicit null/empty representation in the OpenAPI schema.
 
+Profile images are the only binary attachment supported by the legacy client
+and worker profiles. Each existing profile section may have one replaceable image,
+stored by the adapter in PostgreSQL. The owner uploads raw PNG, JPEG or WebP
+bytes (at most 1 MiB) with the matching `Content-Type` using
+`PUT /api/profiles/me/{section}/image`, where `section` is `client` or `worker`.
+The adapter checks the format signature, not only the supplied header. The image
+can be read without login at
+`GET /api/profiles/{principalId}/{section}/image`; absent profiles/images return
+404. Neither private authentication data nor arbitrary files are exposed. The
+image URL is independent of the JSON profile projection. Legacy's unrestricted
+file size, MIME trust and update authorization are deliberately not ported.
+
 ## Catalog
 
 The provider owns the existing seeded roles/skills and skill-to-role associations.
@@ -47,7 +59,7 @@ or Reject; approval uses the existing privileged catalog rules.
 `PUT/PATCH /api/task-storages/{storageId}/tasks/{taskId}` are canonical.
 The adapter resolves project/milestone ownership from the provider and applies
 the same signed authorization and dispute freeze as the existing project-nested
-routes. The nested routes remain aliases during frontend transition; no second
+routes. The nested write routes remain aliases during frontend transition; no second
 task store is introduced. Existing E2E requests remain valid.
 
 ## Adapter PostgreSQL

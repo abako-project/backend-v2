@@ -3019,6 +3019,44 @@
         "responses": {"200": {"description": "Public profile sections without email, department, session, custody or qualifications", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PublicProfilesView"}}}}, "404": {"$ref": "#/components/responses/NotFound"}}
       }
     },
+    "/api/profiles/me/{section}/image": {
+      "put": {
+        "operationId": "putMyProfileImage", "tags": ["Profiles"],
+        "summary": "Replace my client or worker profile image",
+        "description": "Raw PNG, JPEG or WebP bytes, at most 1 MiB. The authenticated owner is taken from the session; the profile section must already exist.",
+        "security": [{"sessionCookie": [], "csrfToken": []}],
+        "parameters": [{"$ref": "#/components/parameters/ProfileSection"}],
+        "requestBody": {"required": true, "content": {
+          "image/png": {"schema": {"type": "string", "format": "binary"}},
+          "image/jpeg": {"schema": {"type": "string", "format": "binary"}},
+          "image/webp": {"schema": {"type": "string", "format": "binary"}}
+        }},
+        "responses": {
+          "204": {"description": "Image stored"},
+          "400": {"$ref": "#/components/responses/BadRequest"},
+          "401": {"$ref": "#/components/responses/Unauthenticated"},
+          "403": {"$ref": "#/components/responses/Forbidden"},
+          "404": {"$ref": "#/components/responses/NotFound"},
+          "413": {"description": "Image exceeds 1 MiB"}
+        }
+      }
+    },
+    "/api/profiles/{principalId}/{section}/image": {
+      "get": {
+        "operationId": "getPublicProfileImage", "tags": ["Profiles"],
+        "summary": "Read a public client or worker profile image without login",
+        "security": [],
+        "parameters": [{"$ref": "#/components/parameters/PrincipalId"}, {"$ref": "#/components/parameters/ProfileSection"}],
+        "responses": {
+          "200": {"description": "Image bytes", "content": {
+            "image/png": {"schema": {"type": "string", "format": "binary"}},
+            "image/jpeg": {"schema": {"type": "string", "format": "binary"}},
+            "image/webp": {"schema": {"type": "string", "format": "binary"}}
+          }},
+          "404": {"$ref": "#/components/responses/NotFound"}
+        }
+      }
+    },
     "/api/catalog/skill-requests": {
       "post": {
         "operationId": "requestSkill", "tags": ["Workers"], "summary": "Ask an operator to add a skill",
@@ -3338,6 +3376,10 @@
       "PrincipalId": {
         "name": "principalId", "in": "path", "required": true,
         "schema": {"$ref": "#/components/schemas/PrincipalId"}
+      },
+      "ProfileSection": {
+        "name": "section", "in": "path", "required": true,
+        "schema": {"type": "string", "enum": ["client", "worker"]}
       },
       "RequestId": {
         "name": "requestId", "in": "path", "required": true,

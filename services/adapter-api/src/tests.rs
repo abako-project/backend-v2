@@ -321,6 +321,162 @@ async fn drive(app: &App, session: &Session, id: OperationId) -> Result<Operatio
 }
 
 #[tokio::test]
+async fn profile_images_are_bounded_public_and_owner_written() -> TestResult {
+    const PNG: &[u8] = b"\x89PNG\r\n\x1a\n\x00\x00\x00\x0dIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0bIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\xa5\xf6E@\x00\x00\x00\x00IEND\xaeB`\x82";
+    let internal = Server::start(internal(fake()?)).await?;
+    let app = app(&internal).await?;
+    let adapter = Server::start(http::router(app.clone())).await?;
+    let client = reqwest::Client::new();
+    let (owner, cookie) = register(&app, "image-owner").await?;
+    let (outsider, outsider_cookie) = register(&app, "image-outsider").await?;
+    let profile_url = format!("{}/api/profiles/me", adapter.url);
+    let upload_url = format!("{}/api/profiles/me/client/image", adapter.url);
+    let public_url = format!(
+        "{}/api/profiles/{}/client/image",
+        adapter.url, owner.view.principal_id
+    );
+
+    let missing = client.get(&public_url).send().await?;
+    assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+    let profile = serde_json::json!({
+        "section": "client", "profile": {
+            "name": "Image owner", "company": null, "department": null,
+            "website": null, "description": null, "location": null,
+            "languages": []
+        }
+    });
+    let saved = client
+        .put(&profile_url)
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &owner.view.csrf_token)
+        .json(&profile)
+        .send()
+        .await?;
+    assert_eq!(saved.status(), StatusCode::OK);
+    let no_csrf = client
+        .put(&upload_url)
+        .header(header::COOKIE, &cookie)
+        .header(header::CONTENT_TYPE, "image/png")
+        .body(PNG.to_vec())
+        .send()
+        .await?;
+    assert_eq!(no_csrf.status(), StatusCode::FORBIDDEN);
+    let uploaded = client
+        .put(&upload_url)
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &owner.view.csrf_token)
+        .header(header::CONTENT_TYPE, "image/png")
+        .body(PNG.to_vec())
+        .send()
+        .await?;
+    assert_eq!(uploaded.status(), StatusCode::NO_CONTENT);
+    let public = client.get(&public_url).send().await?;
+    assert_eq!(public.status(), StatusCode::OK);
+    assert_eq!(public.headers()[header::CONTENT_TYPE], "image/png");
+    assert_eq!(public.headers()["x-content-type-options"], "nosniff");
+    assert_eq!(public.bytes().await?.as_ref(), PNG);
+
+    let worker_profile = serde_json::json!({
+        "section": "worker", "profile": {
+            "name": "Image worker", "githubUsername": null, "portfolioUrl": null,
+            "biography": null, "background": null, "proficiency": null,
+            "location": null, "languages": []
+        }
+    });
+    assert_eq!(
+        client
+            .put(&profile_url)
+            .header(header::COOKIE, &cookie)
+            .header("x-csrf-token", &owner.view.csrf_token)
+            .json(&worker_profile)
+            .send()
+            .await?
+            .status(),
+        StatusCode::OK
+    );
+    let worker_upload = format!("{}/api/profiles/me/worker/image", adapter.url);
+    let worker_public = format!(
+        "{}/api/profiles/{}/worker/image",
+        adapter.url, owner.view.principal_id
+    );
+    let mut larger_image = PNG.to_vec();
+    larger_image.resize(MAX_SIGNABLE_BYTES + 1, 0);
+    assert_eq!(
+        client
+            .put(worker_upload)
+            .header(header::COOKIE, &cookie)
+            .header("x-csrf-token", &owner.view.csrf_token)
+            .header(header::CONTENT_TYPE, "image/png")
+            .body(larger_image.clone())
+            .send()
+            .await?
+            .status(),
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        client
+            .get(worker_public)
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .as_ref(),
+        larger_image.as_slice()
+    );
+
+    let unauthorized = client
+        .put(&upload_url)
+        .header(header::COOKIE, &outsider_cookie)
+        .header("x-csrf-token", &outsider.view.csrf_token)
+        .header(header::CONTENT_TYPE, "image/png")
+        .body(PNG.to_vec())
+        .send()
+        .await?;
+    assert_eq!(unauthorized.status(), StatusCode::NOT_FOUND);
+    let invalid = client
+        .put(&upload_url)
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &owner.view.csrf_token)
+        .header(header::CONTENT_TYPE, "image/png")
+        .body(b"<script>bad</script>".to_vec())
+        .send()
+        .await?;
+    assert_eq!(invalid.status(), StatusCode::BAD_REQUEST);
+    let unsupported = client
+        .put(&upload_url)
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &owner.view.csrf_token)
+        .header(header::CONTENT_TYPE, "image/svg+xml")
+        .body(b"<svg/>".to_vec())
+        .send()
+        .await?;
+    assert_eq!(unsupported.status(), StatusCode::BAD_REQUEST);
+    let oversized = client
+        .put(&upload_url)
+        .header(header::COOKIE, &cookie)
+        .header("x-csrf-token", &owner.view.csrf_token)
+        .header(header::CONTENT_TYPE, "image/png")
+        .body(vec![0_u8; crate::profiles::MAX_IMAGE_BYTES + 1])
+        .send()
+        .await?;
+    assert_eq!(oversized.status(), StatusCode::PAYLOAD_TOO_LARGE);
+    assert_eq!(
+        client
+            .get(&public_url)
+            .send()
+            .await?
+            .bytes()
+            .await?
+            .as_ref(),
+        PNG
+    );
+
+    adapter.finish().await?;
+    internal.finish().await?;
+    Ok(())
+}
+
+#[tokio::test]
 async fn http_auth_cors_csrf_password_and_typed_commands() -> TestResult {
     let internal = Server::start(internal(fake()?)).await?;
     let app = app(&internal).await?;

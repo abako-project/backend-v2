@@ -60,6 +60,8 @@ adapter, but clients needing retry safety should always supply one.
 | GET /api/profiles/me | — | Own full ProfilesView from adapter PostgreSQL |
 | PUT /api/profiles/me | Tagged `{"section":"client","profile":{...}}` or `section: "worker"` | Replace only that descriptive profile section; returns full ProfilesView |
 | GET /api/profiles/{principalId} | — | PublicProfilesView without email, department or session data; no login |
+| PUT /api/profiles/me/{section}/image | Raw PNG/JPEG/WebP, matching `Content-Type`, ≤1 MiB | Owner-only replacement of an existing `client` or `worker` profile image; cookie and CSRF required; 204 |
+| GET /api/profiles/{principalId}/{section}/image | — | Public image bytes and validated `Content-Type`; 404 when absent; no login |
 | GET /api/catalog | — | CatalogView |
 | POST /api/catalog/skill-requests | CreateSkillRequest | Worker asks to add a skill; no qualification change |
 | GET /api/catalog/skill-requests/me | — | Own SkillRequestView[] |

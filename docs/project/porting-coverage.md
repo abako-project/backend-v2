@@ -28,7 +28,7 @@ repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
 | Reputation | Approved per-milestone, committed-minute weighted scores replace standalone legacy project ratings |
 | Cancellation/dispute | Party authorization, current-submission rejection, public Open case, one response and project-wide freeze; resolution/refunds excluded |
 | Storage | Adapter PostgreSQL; custody SQLite; mock memory/SQLite features with SQLite default; missing-only mock catalog seeding. No development-data migration. |
-| Descriptive profiles | Adapter PostgreSQL stores separate editable client and worker sections; public projection excludes email, department, session and custody data. Auxiliary E2E passes in both mock modes. |
+| Descriptive profiles/images | Adapter PostgreSQL stores separate editable client and worker sections plus one replaceable image per section. Public projection excludes email, department, session and custody data; binary PNG/JPEG/WebP reads are public. Upload is owner-only, bounded to 1 MiB and MIME/signature checked. |
 | Bramp | Mock-only deposit request with one operator credit; pending withdrawal hold and cancellation. Auxiliary E2E passes in both mock modes. No bank connection, currency conversion or generic payment API. |
 | Auth/signing/events | Classic cookie login, real sr25519 custody signatures, durable operations, event ingestion and SSE. WebAuthn registration and username-first login use the same principal and wallet; a virtual-authenticator HTTP test covers the full login. No verified email is required. |
 
@@ -67,7 +67,10 @@ counterparty response remain available. No dispute resolution or unlock exists.
 Open or deliberately changed compatibility points:
 
 - Profile sections are stored in adapter PostgreSQL, not provider state.
-  Their read/write/public-projection checks pass in the auxiliary E2E.
+  Their read/write/public-projection checks pass in the auxiliary E2E. The
+  legacy adapter also has client/developer image upload and attachment reads;
+  Rust ports these as raw binary profile-image routes, with stronger input and
+  ownership checks. Other general attachments were not found in legacy source.
 - Skill-to-role associations and worker new-skill requests are implemented
   under [SPEC-0006](../../specs/0006-backend-parity/spec.md). Qualifications
   still change only through the worker qualification command.
@@ -129,6 +132,17 @@ sequential activation and project-completion assertions. These passed against
 adapter PostgreSQL with mock memory and SQLite. The auxiliary scenario also
 passed in both modes, covering profiles, Bramp, catalog requests, passkey
 boundary failures and bounded secret-marker scanning of service logs.
+
+Reverified on 2026-09-25 for SPEC-0006: 69/69 workspace tests and eight
+black-box E2E scenarios passed with adapter PostgreSQL and both mock backends.
+The profile scenario now round-trips a public image; the four-milestone scenario
+checks direct/project task reads and denial of an unrelated coordinator. A
+separate PostgreSQL HTTP test covers both client and worker images, CSRF,
+signature/MIME checks and the 1 MiB upload limit. Legacy source and tests show
+client/developer image support, but its Jest suites could not be made green in
+this review: the existing SQLite schema failed to synchronize, and an isolated
+in-memory database then reached an unavailable external service. We do not
+claim current legacy runtime verification from those attempts.
 
 Covered flow: registration/login, catalog, worker registration, privileged coordinator
 promotion and funding, planning quote/acceptance/payment, proposal and task storage,

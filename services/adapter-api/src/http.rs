@@ -63,6 +63,15 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             "/api/profiles/{principalId}",
             get(crate::profiles::get_public),
         )
+        .route(
+            "/api/profiles/me/{section}/image",
+            put(crate::profiles::put_image)
+                .layer(DefaultBodyLimit::max(crate::profiles::MAX_IMAGE_BYTES)),
+        )
+        .route(
+            "/api/profiles/{principalId}/{section}/image",
+            get(crate::profiles::get_image),
+        )
         .route("/api/catalog", get(catalog))
         .route("/api/catalog/skill-requests", post(command))
         .route("/api/catalog/skill-requests/me", get(crate::catalog::mine))
@@ -187,6 +196,21 @@ fn marketplace_routes() -> Router<Arc<App>> {
         )
 }
 
+fn is_public_case(request: &Request) -> bool {
+    matches!(*request.method(), Method::GET | Method::HEAD)
+        && request
+            .extensions()
+            .get::<MatchedPath>()
+            .is_some_and(|path| {
+                matches!(
+                    path.as_str(),
+                    "/api/disputes/{disputeId}"
+                        | "/api/profiles/{principalId}"
+                        | "/api/profiles/{principalId}/{section}/image"
+                )
+            })
+}
+
 async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next) -> Response {
     let Ok(_permit) = app.request_slots.try_acquire() else {
         return Error::Capacity.into_response();
@@ -200,14 +224,7 @@ async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next)
         return public_error(StatusCode::FORBIDDEN, "origin_not_allowed");
     }
     let path = request.uri().path();
-    let public_case = matches!(*request.method(), Method::GET | Method::HEAD)
-        && request.extensions().get::<MatchedPath>().is_some_and(|p| {
-            matches!(
-                p.as_str(),
-                "/api/disputes/{disputeId}" | "/api/profiles/{principalId}"
-            )
-        });
-    let public = public_case
+    let public = is_public_case(&request)
         || matches!(
             path,
             "/health"
