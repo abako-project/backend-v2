@@ -122,7 +122,11 @@ The signed envelope binds a fixed signing domain and a provider instance ID. A f
 
 The initial custody migration creates all custody tables and constraints before traffic. The initial mock migration adds nonce and receipt storage before unsigned calls are disabled. Existing mock data requires no backfill.
 
-Master-key rotation re-encrypts rows to a new `master_key_version` through a resumable, verified process. Changing signing seed or account scheme is a separate public-identity migration.
+The POC records `master_key_version = 1` but does not rotate it. Before real
+value, a separately approved HSM-backed design must rotate encryption keys
+through a resumable, verified process while preserving wallet accounts.
+Changing a signing seed or account scheme is a separate public-identity
+migration. No existing POC row should be treated as already HSM-wrapped.
 
 ## Backfill and Verification
 

@@ -37,6 +37,29 @@ Feature: Negotiate planning and execute a transactionally funded proposal
     When eligible workers are selected
     Then that role difference does not exclude the worker
 
+  @MATCH_001
+  Scenario: Prefer a qualified member of an earlier milestone team
+    Given two available workers satisfy every skill in a later requirement
+    And one worker was assigned to an earlier milestone of this project
+    When the later requirement is assigned
+    Then the earlier worker is selected even if the other worker has a higher score
+
+  @PLAN_007
+  Scenario: Every submitted milestone has a task
+    Given a draft proposal has a milestone with an empty task storage
+    When the coordinator submits the proposal
+    Then submission fails without changing the proposal or storage
+
+  @MILE_001
+  Scenario: Reserved milestones activate in sequence
+    Given a client approves a proposal with two milestones
+    Then both teams and their work are reserved atomically
+    And only the first milestone is InProgress
+    When the client accepts the first milestone delivery
+    Then the second milestone becomes InProgress
+    When the client accepts the second milestone delivery
+    Then the project becomes Completed
+
   @MILE_001 @MONEY_002 @SCORE_002
   Scenario: Accept a milestone exactly once
     Given the coordinator requested milestone completion with individual scores

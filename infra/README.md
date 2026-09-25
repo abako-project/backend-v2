@@ -11,8 +11,7 @@ export LOCAL_UID="$(id -u)"
 export LOCAL_GID="$(id -g)"
 export KUNVENO_LOCAL_DIR="$(mktemp -d /tmp/kunveno-local.XXXXXX)"
 install -d -m 700 "$KUNVENO_LOCAL_DIR/secrets" \
-  "$KUNVENO_LOCAL_DIR/data/custody" "$KUNVENO_LOCAL_DIR/data/adapter" \
-  "$KUNVENO_LOCAL_DIR/data/mock"
+  "$KUNVENO_LOCAL_DIR/data/custody" "$KUNVENO_LOCAL_DIR/data/mock"
 cargo run --locked -p wallet -- init-dev-secrets "$KUNVENO_LOCAL_DIR/secrets"
 docker compose -f infra/compose.yaml config --quiet
 docker compose -f infra/compose.yaml up --build -d --wait
@@ -22,9 +21,29 @@ The generator creates fresh mode-0600 `master-key.hex`, `root-seed.hex`, `root-a
 
 Open <http://localhost:8088>. The initial administrator username is `admin`; its generated password is in the private `bootstrap-admin-password` file. Enter it locally into the login form; do not paste it into logs, issues, or chat. No seed or private wallet key is available to browsers.
 
-The two Docker networks are `edge` (gateway, frontend, adapter) and `backend` (adapter, wallet, mock). The latter is internal. Each backend service sees only its own database directory and required secret files. Root filesystems are read-only, temporary files live in bounded tmpfs mounts, privileges are dropped, and backend processes run with the configured host UID/GID.
+The two Docker networks are `edge` (gateway, frontend, adapter) and `backend`
+(adapter, PostgreSQL, wallet, mock). The latter is internal; PostgreSQL has no
+published host port. Adapter-owned credentials, sessions, profiles, operations
+and notifications use the `adapter-postgres-data` named volume. Custody and mock
+retain their separate SQLite directories. Backend processes see only required
+secret files and storage, run without root privileges and use read-only root
+filesystems where the image supports them.
 
-SQLite data survives ordinary container restarts. To start a fresh mock environment, choose a **new** private directory and generate a coherent new secret/state set. Do not reset only provider state while retaining adapter operations, and do not delete active data while services run. `docker compose down` stops this stack without deleting its bind-mounted files.
+PostgreSQL's named volume and the custody/mock SQLite files survive ordinary
+container restarts. To start a fresh mock environment, use a new private
+directory and a coherent new secret/state set **and** a fresh Compose project
+name or PostgreSQL volume. Do not reset only provider state while retaining
+adapter operations; do not delete active data while services run.
+`docker compose down` stops the stack without deleting the named volume or
+bind-mounted files. Development SQLite data from an older adapter is not
+automatically imported into PostgreSQL.
+
+The Compose defaults use local-only PostgreSQL credentials. Set
+`ADAPTER_DATABASE_URL` for any external database. If you override
+`ADAPTER_POSTGRES_PASSWORD` for Compose PostgreSQL, also set
+`ADAPTER_DATABASE_URL` with that same password; the adapter's default URL
+retains the local-only default. Use a secure, private connection string outside
+this local setup.
 
 The example uses `/tmp`, which the operating system may clear between host reboots.
 Save the value of `KUNVENO_LOCAL_DIR` and export it again, along with your UID/GID, to

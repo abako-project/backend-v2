@@ -1,10 +1,9 @@
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use generated_contracts::{
-    AccountId32, AssignmentView, CalendarView, CatalogEntry, CatalogKind, DomainEventKind,
-    MilestoneView, Minutes, Money, PlanningStatus, PlanningView, ProjectView, ProviderCommand,
-    Qualifications, ReputationView, ReservationView, TaskDefinition, UnixSeconds, WorkerMode,
-    WorkerView,
+    AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, MilestoneView,
+    Minutes, Money, PlanningStatus, PlanningView, ProjectView, ProviderCommand, Qualifications,
+    ReputationView, ReservationView, TaskDefinition, UnixSeconds, WorkerMode, WorkerView,
 };
 use rand::RngExt;
 
@@ -12,7 +11,7 @@ use super::{Effect, State, compare_scores, empty_score};
 use crate::{Error, Result, calendar, random_id, require};
 
 impl State {
-    fn root(&self, origin: AccountId32) -> Result<()> {
+    pub(super) fn root(&self, origin: AccountId32) -> Result<()> {
         require(origin == self.info.root_account, "system_origin_required")
     }
 
@@ -128,28 +127,16 @@ impl State {
                 Effect::new(DomainEventKind::CoordinatorPromoted, None, request.account)
             }
             ProviderCommand::UpsertCatalogEntry(request) => {
-                self.root(origin)?;
-                require(
-                    !(request.kind == CatalogKind::Role && request.id == 1),
-                    "fixed_coordinator_role",
-                )?;
-                let catalog = if request.kind == CatalogKind::Role {
-                    &mut self.roles
-                } else {
-                    &mut self.skills
-                };
-                catalog.insert(
-                    request.id,
-                    CatalogEntry {
-                        id: request.id,
-                        name: request.name.clone(),
-                        fixed: false,
-                    },
-                );
-                Effect::new(DomainEventKind::CatalogUpdated, None, origin)
+                self.upsert_catalog_entry(origin, request)?
             }
             ProviderCommand::DeleteCatalogEntry(request) => {
                 self.delete_catalog_entry(request.kind, request.id, origin)?
+            }
+            ProviderCommand::CreateSkillRequest(request) => {
+                self.create_skill_request(origin, request)?
+            }
+            ProviderCommand::DecideSkillRequest(request) => {
+                self.decide_skill_request(origin, request)?
             }
             ProviderCommand::FundAccount(request) => {
                 self.root(origin)?;
@@ -165,6 +152,12 @@ impl State {
             }
             ProviderCommand::CreateProject(request) => {
                 self.create_project(origin, &request.title, &request.description, now)?
+            }
+            ProviderCommand::CreateDeposit(_)
+            | ProviderCommand::ConfirmDeposit { .. }
+            | ProviderCommand::CreateWithdrawal(_)
+            | ProviderCommand::CancelWithdrawal { .. } => {
+                self.bramp_command(origin, command, now)?
             }
             _ => self.apply_project_command(origin, command, now)?,
         };
@@ -206,6 +199,15 @@ impl State {
             !references_worker && !references_proposal,
             "catalog_entry_in_use",
         )?;
+        if kind == CatalogKind::Role {
+            require(
+                !self
+                    .skill_metadata
+                    .values()
+                    .any(|metadata| metadata.role_ids.contains(&id)),
+                "catalog_entry_in_use",
+            )?;
+        }
         let catalog = if kind == CatalogKind::Role {
             &mut self.roles
         } else {
@@ -258,6 +260,7 @@ impl State {
                 proposals: Vec::new(),
                 execution_escrow: Money::ZERO,
                 cancelled: false,
+                completed: false,
                 active_dispute_id: None,
             },
         );
@@ -353,6 +356,7 @@ impl State {
         &mut self,
         project: &ProjectView,
         milestone: &mut MilestoneView,
+        earlier_team: &BTreeSet<AccountId32>,
     ) -> Result<()> {
         let window = milestone.definition.window;
         let reference = ReservationView {
@@ -392,7 +396,19 @@ impl State {
                     Err(error) => return Err(error),
                 }
             }
-            let account = self.select(&available, WorkerMode::Worker)?;
+            let previous: Vec<_> = available
+                .iter()
+                .copied()
+                .filter(|account| earlier_team.contains(account))
+                .collect();
+            let account = self.select(
+                if previous.is_empty() {
+                    &available
+                } else {
+                    &previous
+                },
+                WorkerMode::Worker,
+            )?;
             calendar::reserve(
                 &mut self.worker_mut(account)?.calendar,
                 window,
@@ -408,7 +424,6 @@ impl State {
             });
             used.insert(account);
         }
-        milestone.status = Some(generated_contracts::MilestoneStatus::InProgress);
         Ok(())
     }
 

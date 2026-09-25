@@ -1,32 +1,48 @@
-# Kunveno Rust POC
+# Kunveno Rust backend
 
-Local Rust implementation of Kunveno's marketplace: REST adapter, full custodial signing, transactional mock provider, and independent Leptos frontend. Mock funds, contracts and keys are disposable development data, never production assets.
+Kunveno is a product under development. This Rust workspace provides its REST adapter, custodial signing, a transactional mock provider for development and an independent Leptos test frontend. Mock funds, contracts and keys are disposable test data, never real assets.
 
 ## Run locally
 
 Use Rust 1.96.1. The [Compose guide](infra/README.md) creates private runtime secrets and starts the services behind Nginx at `http://localhost:8088`. Users and agents run ordinary Cargo, Python and Docker commands. No production deployment exists.
 
-For a disposable end-to-end test without containers:
+For a disposable end-to-end test without containers, install PostgreSQL's
+`initdb`, `pg_ctl` and `psql` commands first:
 
 ```sh
 cargo build --workspace --all-features --locked
 python3 scripts/poc-e2e.py
 ```
 
-The test starts real adapter, custody, and provider processes with fresh secrets. On both mock storage backends it runs three isolated scenarios: the original security/SSE flow, four milestones with teams of 5/3/4/2 workers, and public dispute opening after a rejected delivery. It checks signed operations, planning fees, escrow, assignments, payouts, scores and dispute freeze, then removes its temporary data. This is a backend E2E, not a browser-driven full-stack test. See the [happy-path guide](docs/project/happy-path.md) and [porting coverage](docs/project/porting-coverage.md).
+The test starts real adapter, custody, provider and disposable PostgreSQL
+processes with fresh secrets. On both mock storage backends it runs four
+isolated scenarios: the security/SSE flow, four sequential milestones with
+teams of 5/3/4/2 workers, public dispute opening after a rejected
+delivery, and auxiliary profile/Bramp/catalog/passkey-boundary checks. It checks
+signed operations, escrow, assignments, payouts and scores, then removes its
+temporary data. This is a backend E2E, not a browser test. See the
+[happy-path guide](docs/project/happy-path.md) and
+[porting coverage](docs/project/porting-coverage.md). Passing historical E2E
+records do not verify the latest integration commit; check its handoff.
 
 ## Applications and contracts
 
 | Project | Responsibility |
 |---|---|
-| `services/adapter-api` | Public REST, login, sessions, operation queue, notifications and SSE |
+| `services/adapter-api` | Public REST, login, PostgreSQL profiles/sessions/operation queue, notifications and SSE |
 | `services/wallet` | Encrypted custodial seeds and durable sr25519 signing jobs; no submission |
 | `services/mock-provider` | Authoritative business state, signed execution, calendars, escrow, scores, receipts and events |
 | `apps/leptos-web` | Independent browser application using the public REST API |
 | `crates/domain-primitives` | Validated IDs, integer quantities and week ranges |
 | `crates/generated-contracts` | Wire DTOs and immutable signable call construction |
 
-Contract instances are domain objects inside one atomic mock runtime, not one process per worker or proposal. SQLite is the default backend. Cargo features `storage-memory` and `storage-sqlite` may compile together; `MOCK_STORAGE` selects the backend. `mock-seed` initializes missing catalog entries and enables authenticated development funding.
+Contract instances are domain objects inside one atomic mock runtime, not one
+process per worker or proposal. SQLite is the default *mock* backend. Cargo
+features `storage-memory` and `storage-sqlite` may compile together;
+`MOCK_STORAGE` selects the backend. Adapter-owned data uses PostgreSQL.
+`mock-seed` initializes missing catalog entries. `POST /api/admin/fund` is
+available only with `ENABLE_MOCK_FUNDING=true` for fixtures; normal local
+funding uses simulated Bramp requests and operator confirmation.
 
 Both frontends consume `/api` as REST/JSON and SSE clients. Start with the [happy-path guide](docs/project/happy-path.md), [HTTP contract](crates/generated-contracts/API.md) and [OpenAPI document](contracts/openapi.json), also served at `/api/openapi.json`. The [deployment guide](infra/README.md#another-frontend) covers the team's separate frontend.
 
@@ -35,24 +51,29 @@ Authenticate with the HttpOnly cookie and send `X-CSRF-Token` on authenticated m
 ## Verification
 
 ```sh
-bash scripts/verify.sh
-python3 infra/verify.py
+cargo build -p adapter-api -p wallet -p mock-provider --all-features --locked
 python3 scripts/poc-e2e.py
 ```
 
-These cover workspace gates, mock feature variants, WASM compilation, dependency policy, Nginx isolation and the real signed flow. Actual results and remaining work belong in [progress/handoffs](progress/handoffs/); listing commands is not a claim that every gate has passed.
+This exercises the real signed backend flow with disposable PostgreSQL and both mock storage modes. Frontend, dependency-policy and Nginx checks are separate; command listings are not passing-result claims. See [porting coverage](docs/project/porting-coverage.md).
 
 ## Port status
 
-The transactional marketplace, custodial signing, mock storage backends, REST/SSE
-adapter and independent frontend are implemented. Each proposal milestone owns one
-task storage created with the draft; draft edits preserve that storage when the
-milestone key is preserved. The E2E covers four milestones with teams of 5/3/4/2.
+The transactional marketplace, custodial signing, mock storage backends and
+REST/SSE adapter are implemented. Each proposal milestone owns a task storage
+created with its draft; at least one task per storage is required before
+submission. Execution approval assigns and reserves every milestone atomically,
+activates only the first, and later accepts each in sequence until the project
+is `Completed`. The expanded E2E fixture covers four milestones with teams of
+5/3/4/2. Adapter descriptive profiles use PostgreSQL. The mock models
+Bramp deposits, withdrawal holds and operator-owned skill requests.
 
-This is not complete legacy compatibility. Auxiliary Virto membership/governance,
-Bramp, rich profiles and several legacy wrapper APIs remain unimplemented or require
-a product decision. The formal dispute expediente described in `Disputas.md` is
-implemented for the approved PoC scope and consolidated in
+This is not complete legacy compatibility. Passkey registration and login use
+the existing username and custodial account; email verification is not required
+for passkey access. Password login remains available. Virto governance,
+membership, real Kreivo calls, banking and generic payments are outside this
+phase. The formal public dispute case described in `Disputas.md` is implemented
+for the approved current scope and consolidated in
 [SPEC-0005](specs/0005-dispute-opening/spec.md): current rejection, public
 URL/SHA-256 references, project-wide freeze and one counterparty response.
 Signed E2E covers opening and one public response; chat, timeout and DAO resolution

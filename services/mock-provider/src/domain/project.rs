@@ -1,3 +1,5 @@
+use std::collections::BTreeSet;
+
 use generated_contracts::{
     AccountId32, DomainEventKind, EntityId, MilestoneStatus, MilestoneView, Minutes, Money,
     PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView, ProviderCommand,
@@ -228,6 +230,13 @@ impl State {
                     proposal.status == ProposalStatus::Draft,
                     "proposal_not_draft",
                 )?;
+                require(
+                    proposal
+                        .milestones
+                        .iter()
+                        .all(|milestone| !milestone.task_storage.tasks.is_empty()),
+                    "milestone_tasks_required",
+                )?;
                 proposal.status = ProposalStatus::PendingApproval;
                 bump(&mut proposal.revision)?;
                 if project.planning.status != PlanningStatus::Completed {
@@ -301,8 +310,20 @@ impl State {
         )?;
         let total = proposal_definition(&proposal).total()?;
         self.debit(project.client, total)?;
-        for milestone in &mut proposal.milestones {
-            self.assign(project, milestone)?;
+        let mut earlier_team = BTreeSet::new();
+        for (index, milestone) in proposal.milestones.iter_mut().enumerate() {
+            self.assign(project, milestone, &earlier_team)?;
+            earlier_team.extend(
+                milestone
+                    .assignments
+                    .iter()
+                    .map(|assignment| assignment.worker),
+            );
+            milestone.status = Some(if index == 0 {
+                MilestoneStatus::InProgress
+            } else {
+                MilestoneStatus::NotStarted
+            });
         }
         proposal.status = ProposalStatus::Approved;
         bump(&mut proposal.revision)?;
@@ -321,6 +342,7 @@ impl State {
         match command {
             ProviderCommand::CancelProject { request, .. } => {
                 participant(project, origin)?;
+                require(!project.completed, "project_completed")?;
                 self.record_reason(
                     project.project_id,
                     None,
@@ -518,11 +540,41 @@ impl State {
                     };
                 milestone.status = Some(MilestoneStatus::Completed);
                 project.execution_escrow = project.execution_escrow.checked_sub(total)?;
+                activate_next_milestone(project, *milestone_id)?;
                 Ok((DomainEventKind::MilestoneCompleted, Some(*milestone_id)))
             }
             _ => Err(Error::bad("invalid_project_message")),
         }
     }
+}
+
+fn activate_next_milestone(project: &mut ProjectView, completed_id: EntityId) -> Result<()> {
+    let proposal = project
+        .proposals
+        .iter_mut()
+        .find(|proposal| {
+            proposal.status == ProposalStatus::Approved
+                && proposal
+                    .milestones
+                    .iter()
+                    .any(|milestone| milestone.milestone_id == completed_id)
+        })
+        .ok_or_else(Error::internal)?;
+    let index = proposal
+        .milestones
+        .iter()
+        .position(|milestone| milestone.milestone_id == completed_id)
+        .ok_or_else(Error::internal)?;
+    if let Some(next) = proposal.milestones.get_mut(index + 1) {
+        require(
+            next.status == Some(MilestoneStatus::NotStarted),
+            "invalid_milestone_state",
+        )?;
+        next.status = Some(MilestoneStatus::InProgress);
+    } else {
+        project.completed = true;
+    }
+    Ok(())
 }
 
 fn client(project: &ProjectView, origin: AccountId32) -> Result<()> {

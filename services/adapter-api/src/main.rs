@@ -1,9 +1,12 @@
 //! Independent REST adapter; delivery state never owns business truth.
 mod auth;
+mod bramp;
+mod catalog;
 mod disputes;
 mod http;
 mod notifications;
 mod operations;
+mod profiles;
 mod state;
 
 use state::{App, Config, Error};

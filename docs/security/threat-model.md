@@ -10,4 +10,4 @@ Current controls include encrypted seeds with associated data, separate runtime 
 
 The POC accepts host-memory exposure and has no HSM integration, real blockchain execution, production TLS/workload identity, verified backup regime or key-rotation procedure. It must not hold real assets.
 
-TASK-005 remains open: complete diagnostic secret scanning and reconcile the encryption-key-rotation requirement before final acceptance/security closure. Existing tests and handoffs are evidence for their named scenarios, not a completed production assessment.
+TASK-005 is independently verified for the local mock-backed POC. The E2E runner checks bounded service logs, API responses, SSE and custody metrics for known secret markers; emitted traces are captured in service logs. SPEC-0001 makes HSM-backed rotation a prerequisite for real value rather than POC acceptance. These checks are evidence for their named scenarios, not a completed production assessment.

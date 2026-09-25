@@ -51,22 +51,36 @@ fn all_public_operations_have_valid_references_and_security()
             assert!(operation["responses"].as_object().is_some());
             let public = matches!(
                 path.as_str(),
-                "/api/auth/register" | "/api/auth/login" | "/api/openapi.json"
-            ) || (path == "/api/disputes/{disputeId}" && method == "get");
-            if public {
-                assert_eq!(operation["security"], serde_json::json!([]));
+                "/api/auth/register"
+                    | "/api/auth/login"
+                    | "/api/auth/passkeys/login/options"
+                    | "/api/auth/passkeys/login/verify"
+                    | "/api/openapi.json"
+            ) || (matches!(
+                path.as_str(),
+                "/api/disputes/{disputeId}" | "/api/profiles/{principalId}"
+            ) && method == "get");
+            let security = if operation["security"].is_null() {
+                &doc["security"]
             } else {
-                assert_eq!(
-                    operation["security"][0]["sessionCookie"],
-                    serde_json::json!([])
-                );
+                &operation["security"]
+            };
+            if public {
+                assert_eq!(security, &serde_json::json!([]));
+            } else {
+                assert_eq!(security[0]["sessionCookie"], serde_json::json!([]));
                 if method != "get" {
-                    assert_eq!(operation["security"][0]["csrfToken"], serde_json::json!([]));
+                    assert_eq!(security[0]["csrfToken"], serde_json::json!([]));
                 }
             }
             if operation["responses"].get("202").is_some() {
+                let response = &operation["responses"]["202"];
+                let response = response["$ref"]
+                    .as_str()
+                    .and_then(|reference| doc.pointer(&reference[1..]))
+                    .unwrap_or(response);
                 assert_eq!(
-                    operation["responses"]["202"]["content"]["application/json"]["schema"]["$ref"],
+                    response["content"]["application/json"]["schema"]["$ref"],
                     "#/components/schemas/OperationRef"
                 );
                 assert!(
@@ -99,7 +113,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 46);
+    assert_eq!(operation_ids.len(), 70);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "kunveno_session"

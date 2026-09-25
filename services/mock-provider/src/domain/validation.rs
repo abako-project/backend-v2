@@ -10,6 +10,7 @@ use crate::{Error, Result, calendar, require};
 impl State {
     /// Validate the complete persisted aggregate at its serialization boundary.
     pub(super) fn validate(&self) -> Result<()> {
+        self.validate_catalog()?;
         let mut identities = self.validate_workers()?;
         self.validate_projects(&mut identities)?;
         self.validate_disputes(&mut identities)?;
@@ -107,6 +108,7 @@ impl State {
                     }
                 }
             }
+            validate_execution_sequence(project)?;
             require(
                 project.execution_escrow == expected_execution,
                 "escrow_mismatch",
@@ -127,6 +129,7 @@ impl State {
                 }
             }
         }
+        total = total.checked_add(self.validate_bramp(identities)?)?;
         require(total == self.minted_units, "supply_mismatch")?;
         Ok(())
     }
@@ -153,4 +156,42 @@ impl State {
         }
         Ok(())
     }
+}
+
+fn validate_execution_sequence(project: &generated_contracts::ProjectView) -> Result<()> {
+    let mut executed = project.proposals.iter().filter(|proposal| {
+        proposal
+            .milestones
+            .iter()
+            .any(|milestone| milestone.status.is_some())
+    });
+    let Some(proposal) = executed.next() else {
+        return require(!project.completed, "invalid_project_state");
+    };
+    require(executed.next().is_none(), "invalid_project_state")?;
+    let mut current_seen = false;
+    let mut future_seen = false;
+    for milestone in &proposal.milestones {
+        match milestone.status {
+            Some(MilestoneStatus::Completed) => {
+                require(!current_seen && !future_seen, "invalid_milestone_sequence")?;
+            }
+            Some(MilestoneStatus::NotStarted) => future_seen = true,
+            Some(
+                MilestoneStatus::InProgress
+                | MilestoneStatus::CompletionRequested
+                | MilestoneStatus::ChangesRequested
+                | MilestoneStatus::Disputed,
+            ) => {
+                require(!current_seen && !future_seen, "invalid_milestone_sequence")?;
+                current_seen = true;
+            }
+            None => return Err(Error::domain("invalid_milestone_sequence")),
+        }
+    }
+    require(
+        project.completed == (!current_seen && !future_seen)
+            && (!project.completed || !project.cancelled),
+        "invalid_project_state",
+    )
 }

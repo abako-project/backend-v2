@@ -9,7 +9,16 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct SkillMetadata {
     category: String,
-    role_ids: Vec<u32>,
+    pub(crate) role_ids: Vec<u32>,
+}
+
+impl SkillMetadata {
+    pub(crate) fn requested(role_ids: Vec<u32>) -> Self {
+        Self {
+            category: "requested".into(),
+            role_ids,
+        }
+    }
 }
 
 #[cfg(feature = "mock-seed")]

@@ -4,7 +4,17 @@ Custody stores wallet seeds encrypted with XChaCha20-Poly1305 in its own SQLite 
 
 Use the generator documented in [infra/README.md](../../infra/README.md). It creates private files without printing their contents and refuses existing targets. Keep them outside the repository/build context. Compose mounts only each service's required files.
 
-The backend signs with sr25519 in custody memory. HSM-backed signing, DEK/KEK envelope encryption and automatic or manual encryption-key rotation are not implemented. Their discussion is not an approved replacement for SPEC-0001's unresolved recovery requirement.
+The backend signs with sr25519 in custody memory. HSM-backed signing, DEK/KEK envelope encryption and automatic or manual encryption-key rotation are not implemented. SPEC-0001 requires a reviewed recovery and rotation design before real value is held; this POC does not satisfy that production requirement.
+
+Before custody holds real value, approve and test a versioned HSM-backed design:
+each seed has a fresh data-encryption key (DEK), and a non-exportable HSM
+key-encryption key (KEK) wraps that DEK. A KEK rotation should rewrap DEKs in
+small, resumable batches (or on access), retaining old unwrap capability until
+verified completion; it must not stop all users for a table-wide rewrite. DEK
+rotation separately re-encrypts a seed. Both require backup/restore checks,
+versioned records, audit and failure recovery. Neither rotation recovers a
+signing seed already stolen; that needs a new wallet and asset migration.
+This is a production requirement, not a claim that the current POC implements it.
 
 Do not replace a master-key file on an existing database: current ciphertext would become unreadable. Changing a login password is separate from wallet or encryption-key changes. Wallet suspension/retirement is documented in [custody](../../services/wallet/README.md).
 

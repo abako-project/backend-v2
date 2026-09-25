@@ -10,6 +10,22 @@ x-backend: &backend
   stop_grace_period: 20s
 
 services:
+  postgres:
+    image: postgres:17.11-alpine3.24
+    environment:
+      POSTGRES_USER: kunveno
+      POSTGRES_DB: kunveno_adapter
+      POSTGRES_PASSWORD: ${ADAPTER_POSTGRES_PASSWORD:-kunveno-local-only}
+    volumes:
+      - adapter-postgres-data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U kunveno -d kunveno_adapter"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
   wallet:
     <<: *backend
     image: kunveno-wallet:local
@@ -73,7 +89,7 @@ services:
       target: adapter-api
     environment:
       BIND_ADDR: 0.0.0.0:8080
-      ADAPTER_DATABASE_URL: sqlite:///data/adapter.sqlite?mode=rwc
+      ADAPTER_DATABASE_URL: ${ADAPTER_DATABASE_URL:-postgres://kunveno:kunveno-local-only@postgres:5432/kunveno_adapter}
       OPENAPI_PATH: /app/contracts/openapi.json
       CUSTODY_URL: http://wallet:8081
       MOCK_PROVIDER_URL: http://mock-provider:8082
@@ -81,15 +97,13 @@ services:
       BOOTSTRAP_ADMIN_USERNAME: admin
       BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/bootstrap-admin-password
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8088,http://127.0.0.1:8088}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-http://localhost:8088}
       COOKIE_SECURE: "false"
     secrets: [service-token, bootstrap-admin-password]
-    volumes:
-      - type: bind
-        source: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/data/adapter
-        target: /data
-        bind: {create_host_path: false}
     networks: [edge, backend]
     depends_on:
+      postgres: {condition: service_healthy}
       wallet: {condition: service_healthy}
       mock-provider: {condition: service_healthy}
     healthcheck:
@@ -147,6 +161,9 @@ services:
 networks:
   edge: {}
   backend: {internal: true}
+
+volumes:
+  adapter-postgres-data: {}
 
 secrets:
   master-key.hex:

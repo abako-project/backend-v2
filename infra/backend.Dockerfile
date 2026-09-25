@@ -2,7 +2,7 @@
 FROM rust:1.96.1-bookworm AS build
 WORKDIR /workspace
 ENV RUSTUP_TOOLCHAIN=1.96.1
-RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev pkg-config \
+RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
@@ -19,7 +19,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     && install -D target/release/mock-provider /out/mock-provider
 
 FROM debian:bookworm-slim AS runtime
-RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libgcc-s1 \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libgcc-s1 libssl3 \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 USER 65532:65532

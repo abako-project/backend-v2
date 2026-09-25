@@ -6,7 +6,7 @@ use axum::response::sse::{Event, KeepAlive, Sse};
 use generated_contracts::{
     AccountId32, NotificationView, NotificationsPage, ProviderEvents, ProviderInfo, UnixSeconds,
 };
-use sqlx::{Row, sqlite::SqliteRow};
+use sqlx::{Row, postgres::PgRow};
 use std::{
     pin::Pin,
     sync::Arc,
@@ -21,7 +21,7 @@ use tokio_stream::{Stream, wrappers::ReceiverStream};
 
 pub(crate) async fn ingest(app: &App) -> Result<(), Error> {
     let info: ProviderInfo = app.get(&app.config.provider_url, "/internal/info").await?;
-    let stored = sqlx::query("SELECT cursor FROM event_cursors WHERE provider_instance_id = ?")
+    let stored = sqlx::query("SELECT cursor FROM event_cursors WHERE provider_instance_id = $1")
         .bind(info.provider_instance_id.to_string())
         .fetch_optional(&app.db)
         .await?;
@@ -56,21 +56,25 @@ pub(crate) async fn persist(app: &App, after: i64, page: ProviderEvents) -> Resu
     if page.next_cursor != previous || next < after {
         return Err(Error::Dependency);
     }
-    let mut tx = app.db.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = app.db.begin().await?;
+    // Commit notification IDs in ingestion order so an SSE cursor cannot skip a late commit.
+    sqlx::query("SELECT pg_advisory_xact_lock(621008)")
+        .execute(&mut *tx)
+        .await?;
     for event in page.events {
         let json = serde_json::to_string(&event)?;
         for recipient in &event.recipients {
-            sqlx::query("INSERT INTO notifications(account_id, provider_instance_id, provider_cursor, event_json) VALUES (?, ?, ?, ?) ON CONFLICT(account_id, provider_instance_id, provider_cursor) DO NOTHING")
+            sqlx::query("INSERT INTO notifications(account_id, provider_instance_id, provider_cursor, event_json) VALUES ($1, $2, $3, $4) ON CONFLICT(account_id, provider_instance_id, provider_cursor) DO NOTHING")
                 .bind(recipient.to_string()).bind(event.provider_instance_id.to_string()).bind(i64::try_from(event.cursor).map_err(|_| Error::Dependency)?)
                 .bind(&json).execute(&mut *tx).await?;
         }
     }
-    sqlx::query("INSERT INTO event_cursors(provider_instance_id, cursor) VALUES (?, ?) ON CONFLICT(provider_instance_id) DO UPDATE SET cursor = max(cursor, excluded.cursor)")
+    sqlx::query("INSERT INTO event_cursors(provider_instance_id, cursor) VALUES ($1, $2) ON CONFLICT(provider_instance_id) DO UPDATE SET cursor = GREATEST(event_cursors.cursor, excluded.cursor)")
         .bind(page.provider_instance_id.to_string()).bind(next).execute(&mut *tx).await?;
     tx.commit().await?;
     Ok(())
 }
-fn view(row: &SqliteRow) -> Result<NotificationView, Error> {
+fn view(row: &PgRow) -> Result<NotificationView, Error> {
     Ok(NotificationView {
         notification_id: u64::try_from(row.try_get::<i64, _>("notification_id")?)
             .map_err(|_| Error::Internal)?,
@@ -90,7 +94,7 @@ pub(crate) async fn page(
     account: AccountId32,
     after: u64,
 ) -> Result<NotificationsPage, Error> {
-    let rows = sqlx::query("SELECT notification_id, event_json, read_at FROM notifications WHERE account_id = ? AND notification_id > ? ORDER BY notification_id LIMIT 100")
+    let rows = sqlx::query("SELECT notification_id, event_json, read_at FROM notifications WHERE account_id = $1 AND notification_id > $2 ORDER BY notification_id LIMIT 100")
         .bind(account.to_string()).bind(i64::try_from(after).map_err(|_| Error::Invalid)?).fetch_all(&app.db).await?;
     let notifications = rows.iter().map(view).collect::<Result<Vec<_>, _>>()?;
     let next_cursor = notifications
@@ -106,8 +110,8 @@ pub(crate) async fn mark_read(
     account: AccountId32,
     id: u64,
 ) -> Result<NotificationView, Error> {
-    let mut tx = app.db.begin_with("BEGIN IMMEDIATE").await?;
-    let row = sqlx::query("UPDATE notifications SET read_at = coalesce(read_at, ?) WHERE notification_id = ? AND account_id = ? RETURNING notification_id, event_json, read_at")
+    let mut tx = app.db.begin().await?;
+    let row = sqlx::query("UPDATE notifications SET read_at = coalesce(read_at, $1) WHERE notification_id = $2 AND account_id = $3 RETURNING notification_id, event_json, read_at")
         .bind(now()?).bind(i64::try_from(id).map_err(|_| Error::Invalid)?).bind(account.to_string())
         .fetch_optional(&mut *tx).await?.ok_or(Error::NotFound)?;
     let notification = view(&row)?;

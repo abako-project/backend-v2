@@ -8,7 +8,7 @@ Legacy source commit: `d408641`
 
 Integrated implementation commit: `3ab2b58` on `feat/rust-rest-poc`.
 
-Last updated: 2026-09-15
+Last updated: 2026-09-24
 
 ## Blocking Questions
 
@@ -33,7 +33,7 @@ Last updated: 2026-09-15
 | Task | Owner | Branch | Worktree | State | Evidence |
 |---|---|---|---|---|---|
 | TASK-000 through TASK-004, TASK-006 | Root integrator and implementation agents | `feat/rust-rest-poc` | Main repository | Implementation integrated; dependency gate remains blocked | `../../progress/handoffs/REST-POC-foundation.md` |
-| TASK-005 | Independent verifier | `feat/rust-rest-poc` | Read-only main repository | Final acceptance/security verification not closed | `tasks.md` |
+| TASK-005 | Independent verifier | `feat/backend-port-close` | Read-only integration branch | Closed for local mock-backed POC | `../../progress/handoffs/SPEC-0001-verification.md` |
 
 ## Verification and remaining work
 
@@ -49,9 +49,9 @@ are absent from the license allowlist. Leptos transitives `paste` and
 `proc-macro-error2` have unmaintained advisories RUSTSEC-2024-0436 and
 RUSTSEC-2026-0173. No exception has been applied.
 
-TASK-005 still requires its final independent acceptance/security evidence.
-Earlier integration checks do not establish completion of that separate task.
-Requirement approval remains valid; full verification is not complete.
+TASK-005 has independent acceptance/security evidence for the local mock-backed
+POC. Earlier integration checks alone did not establish that completion.
+Requirement approval remains valid; no production security approval is claimed.
 
 Independent read-only evidence review on 2026-09-14 found two specific closure gaps:
 
@@ -71,6 +71,15 @@ Its scope is documented in `../../docs/project/porting-coverage.md`. HSM-backed
 envelope encryption and gradual rotation have been discussed, not implemented or
 finalized. The owner accepted the two maintenance-advisory deferrals for the POC;
 applying them to the dependency policy is still pending.
+
+2026-09-24 update: the approved backend closeout defers HSM-backed encryption-key
+rotation until before real assets. `spec.md`, `data-model.md` and
+`threat-model.md` now state this explicitly; the earlier discrepancy above is
+historical, not an open POC implementation requirement. The revised signed E2E
+passed all eight memory/SQLite scenarios with adapter PostgreSQL and scans
+bounded service logs for generated secret markers. The later independent
+`../../progress/handoffs/SPEC-0001-verification.md` report closes TASK-005
+for the local POC only.
 
 ## Approval Record
 

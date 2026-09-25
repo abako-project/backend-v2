@@ -6,10 +6,7 @@ use axum::{
 use generated_contracts::{ApiError, PayloadHash, ProviderSnapshot};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
-use sqlx::{
-    SqlitePool,
-    sqlite::{SqliteConnectOptions, SqlitePoolOptions},
-};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::{
     collections::BTreeSet,
     env, fs,
@@ -90,6 +87,7 @@ pub(crate) struct Config {
     pub(crate) service_token: Zeroizing<String>,
     pub(crate) allowed_origins: BTreeSet<String>,
     pub(crate) cookie_secure: bool,
+    pub(crate) enable_mock_funding: bool,
     pub(crate) admin_username: String,
     pub(crate) admin_password: Zeroizing<String>,
     pub(crate) openapi: String,
@@ -143,18 +141,26 @@ impl Config {
             Ok("true") | Err(_) => true,
             _ => return Err(Error::Config),
         };
+        let enable_mock_funding = match env::var("ENABLE_MOCK_FUNDING").as_deref() {
+            Ok("true") => true,
+            Ok("false") | Err(_) => false,
+            _ => return Err(Error::Config),
+        };
         let service_token = required_secret("INTERNAL_SERVICE_TOKEN_FILE")?;
         if service_token.len() < 32 {
             return Err(Error::Config);
         }
         Ok(Self {
             bind_addr: env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into()),
-            database_url: env::var("ADAPTER_DATABASE_URL").map_err(|_| Error::Config)?,
+            database_url: env::var("ADAPTER_DATABASE_URL").unwrap_or_else(|_| {
+                "postgres://kunveno:kunveno-local-only@postgres:5432/kunveno_adapter".into()
+            }),
             custody_url: internal_url("CUSTODY_URL")?,
             provider_url: internal_url("MOCK_PROVIDER_URL")?,
             service_token,
             allowed_origins: origins,
             cookie_secure,
+            enable_mock_funding,
             admin_username: env::var("BOOTSTRAP_ADMIN_USERNAME").unwrap_or_else(|_| "admin".into()),
             admin_password: required_secret("BOOTSTRAP_ADMIN_PASSWORD_FILE")?,
             openapi,
@@ -163,7 +169,7 @@ impl Config {
 }
 pub(crate) struct App {
     pub(crate) config: Config,
-    pub(crate) db: SqlitePool,
+    pub(crate) db: PgPool,
     pub(crate) client: reqwest::Client,
     pub(crate) password_slots: Arc<Semaphore>,
     pub(crate) request_slots: Semaphore,
@@ -171,17 +177,26 @@ pub(crate) struct App {
 }
 impl App {
     pub(crate) async fn new(config: Config) -> Result<Self, Error> {
-        let options = SqliteConnectOptions::from_str(&config.database_url)?
-            .create_if_missing(true)
-            .foreign_keys(true)
-            .busy_timeout(Duration::from_secs(5));
-        let db = SqlitePoolOptions::new()
-            .max_connections(4)
-            .connect_with(options)
+        crate::auth::passkeys::configured_webauthn()?;
+        let db = PgPoolOptions::new()
+            .max_connections(16)
+            .acquire_timeout(Duration::from_secs(5))
+            .connect(&config.database_url)
+            .await?;
+        let mut migration = db.begin().await?;
+        sqlx::query("SELECT pg_advisory_xact_lock(621006)")
+            .execute(&mut *migration)
             .await?;
         sqlx::raw_sql(include_str!("../migrations/0001_adapter.sql"))
-            .execute(&db)
+            .execute(&mut *migration)
             .await?;
+        sqlx::raw_sql(include_str!("../migrations/0002_profiles.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!("../migrations/0003_passkeys.sql"))
+            .execute(&mut *migration)
+            .await?;
+        migration.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::none())
@@ -243,7 +258,7 @@ impl App {
         kind: &str,
         code: &str,
     ) -> Result<(), Error> {
-        sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES (?, ?, ?, ?, ?)")
+        sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, $3, $4, $5)")
             .bind(principal).bind(operation).bind(kind).bind(code).bind(now()?).execute(&self.db).await?;
         Ok(())
     }
@@ -256,6 +271,7 @@ pub(crate) async fn decode_response<T: DeserializeOwned>(
         return Err(Error::NotFound);
     }
     if !response.status().is_success() {
+        tracing::warn!(status = %response.status(), "internal service returned an unsuccessful response");
         return Err(Error::Dependency);
     }
     // ponytail: bounded whole snapshot for this POC; paginate provider reads as data grows.

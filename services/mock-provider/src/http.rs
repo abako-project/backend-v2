@@ -14,7 +14,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use generated_contracts::{AccountId32, OperationId, SignedContractCallV1, UnixSeconds};
+use generated_contracts::{AccountId32, EntityId, OperationId, SignedContractCallV1, UnixSeconds};
 use serde::Deserialize;
 use tokio::sync::Semaphore;
 
@@ -45,7 +45,13 @@ pub fn router(provider: Provider, service_token: &str) -> Result<Router> {
         .route("/internal/receipts/{operation_id}", get(receipt))
         .route("/internal/events", get(events))
         .route("/internal/snapshot", get(snapshot))
+        .route("/internal/catalog/skill-requests", get(skill_requests))
         .route("/internal/disputes/{dispute_id}", get(dispute))
+        .route("/internal/bramp/deposits/{deposit_id}", get(deposit))
+        .route(
+            "/internal/bramp/withdrawals/{withdrawal_id}",
+            get(withdrawal),
+        )
         .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
     Ok(private
         .route("/health", get(|| async { StatusCode::OK }))
@@ -91,6 +97,20 @@ async fn snapshot(State(state): State<App>) -> Result<impl IntoResponse> {
     Ok(Json(state.provider.snapshot().await?))
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SkillRequestsQuery {
+    account: AccountId32,
+}
+
+async fn skill_requests(
+    State(state): State<App>,
+    query: std::result::Result<Query<SkillRequestsQuery>, QueryRejection>,
+) -> Result<impl IntoResponse> {
+    let Query(query) = query.map_err(|_| Error::bad("invalid_skill_requests_query"))?;
+    Ok(Json(state.provider.skill_requests(query.account).await?))
+}
+
 async fn dispute(
     State(state): State<App>,
     Path(id): Path<generated_contracts::EntityId>,
@@ -105,6 +125,53 @@ async fn dispute(
             error
         }
     })
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BrampReadQuery {
+    account: AccountId32,
+}
+
+async fn deposit(
+    State(state): State<App>,
+    Path(id): Path<EntityId>,
+    Query(query): Query<BrampReadQuery>,
+) -> Result<impl IntoResponse> {
+    Ok(Json(
+        state
+            .provider
+            .bramp_deposit(query.account, id)
+            .await
+            .map_err(bramp_read_error)?,
+    ))
+}
+
+async fn withdrawal(
+    State(state): State<App>,
+    Path(id): Path<EntityId>,
+    Query(query): Query<BrampReadQuery>,
+) -> Result<impl IntoResponse> {
+    Ok(Json(
+        state
+            .provider
+            .bramp_withdrawal(query.account, id)
+            .await
+            .map_err(bramp_read_error)?,
+    ))
+}
+
+fn bramp_read_error(error: Error) -> Error {
+    match error.code {
+        "deposit_not_found"
+        | "deposit_owner_or_system_required"
+        | "withdrawal_not_found"
+        | "withdrawal_owner_or_system_required" => Error {
+            code: "bramp_request_not_found",
+            status: StatusCode::NOT_FOUND,
+        },
+        _ => error,
+    }
 }
 async fn nonce(
     State(state): State<App>,

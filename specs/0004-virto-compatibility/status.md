@@ -1,13 +1,21 @@
 # Specification status
 
-State: DRAFT
+State: APPROVED
 
-Updated: 2026-09-16.
+Approved by the product owner on 2026-09-23 through the backend-port plan and
+the subsequent scope decisions. Mock Bramp and server-side WebAuthn credential
+ceremonies are integrated in the backend branch. On 2026-09-25 the owner
+approved username-first passkey login without email verification for the
+product's current phase. The owner subsequently accepted the current public
+credential-discovery behavior rather than changing the working login flow;
+`spec.md` records that explicit limitation.
+AUTH-001 username-first login is implemented and verified with a virtual
+authenticator. Workspace tests passed 68/68 and the backend E2E passed 8/8
+with SQLite and memory mock modes. The
+[`AUTH-001` handoff](../../progress/handoffs/AUTH-001.md) records the accepted
+credential-enumeration limitation; this verification is not a production
+security certification.
 
-The owner requested an implementation plan, not implementation of auxiliary Virto
-interfaces. `plan.md` records source evidence, proposed scope, task ownership,
-dependencies and acceptance requirements. No new endpoints have been implemented.
-
-Pending approval: membership permissions and governance depth; Bramp asset and
-settlement rules; the exact legacy consumers that need compatibility aliases.
-These questions do not block the separately requested marketplace E2E expansion.
+The mock-only contract is in `spec.md`; `acceptance.feature` records observable
+cases. `plan.md` is historical source inventory and must not override the spec.
+Governance, DAO, real Kreivo calls, banking and standalone payments are excluded.

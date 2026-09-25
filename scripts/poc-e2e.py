@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Exercise real custodial REST operations against disposable local services.
 
-Run after `cargo build --workspace --all-features --locked`. No third-party
-Python packages, Docker, existing users, or real tokens are required.
+Run after `cargo build --workspace --all-features --locked`. PostgreSQL binaries
+(`initdb`, `pg_ctl`, `psql`) are required; no Docker or real tokens are used.
 """
 
 import argparse
@@ -39,7 +39,27 @@ def available_port():
         return listener.getsockname()[1]
 
 
+def temporary_postgres(stack, directory):
+    data = directory / "postgres"
+    socket_dir = directory / "pg-socket"
+    socket_dir.mkdir()
+    port = available_port()
+    subprocess.run(["initdb", "-D", str(data), "-U", "kunveno", "-A", "trust",
+                    "--no-instructions"], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["pg_ctl", "-D", str(data), "-o",
+                    f"-F -c listen_addresses=127.0.0.1 -p {port} -k {socket_dir}",
+                    "-w", "start"], check=True, stdout=subprocess.DEVNULL)
+    stack.callback(subprocess.run, ["pg_ctl", "-D", str(data), "-m", "immediate",
+                                   "-w", "stop"], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(port), "-U", "kunveno",
+                    "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
+                    "CREATE DATABASE kunveno"], check=True, stdout=subprocess.DEVNULL)
+    return f"postgres://kunveno@127.0.0.1:{port}/kunveno"
+
+
 class Client:
+    secret_markers = ()
+
     def __init__(self, base, origin=ORIGINS[0]):
         self.base = base
         self.origin = origin
@@ -69,6 +89,8 @@ class Client:
             response = error
         with response:
             raw = response.read()
+            for name, marker in self.secret_markers:
+                require(marker not in raw, f"{method} {path} disclosed {name}")
             try:
                 value = json.loads(raw) if raw else None
             except json.JSONDecodeError:
@@ -115,6 +137,8 @@ class Client:
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
                 line = response.readline().decode().rstrip("\r\n")
+                for name, marker in self.secret_markers:
+                    require(marker not in line.encode(), f"SSE disclosed {name}")
                 if line.startswith("id:"):
                     event_id = int(line[3:].strip())
                 elif line.startswith("data:"):
@@ -204,8 +228,10 @@ def stop_process(process):
             process.wait(timeout=5)
 
 
-def launch(stack, binary, port, environment):
+def launch(stack, binary, port, environment, logs=None):
     log = stack.enter_context(tempfile.TemporaryFile())
+    if logs is not None:
+        logs.append((binary.name, log))
     process = subprocess.Popen(
         [str(binary)], cwd=ROOT, stdout=log, stderr=log,
         env={**os.environ, **environment, "BIND_ADDR": f"127.0.0.1:{port}"},
@@ -457,11 +483,13 @@ def exercise_multi_milestone(base, admin_password, _proxy):
             "draft editing replaced milestone storages")
     for index, team in enumerate(teams):
         for slot in team:
-            coordinator.command("POST", project_path + f"/task-storages/{storages[index]}/tasks", {
+            coordinator.command("POST", f"/api/task-storages/{storages[index]}/tasks", {
                 "title": f"Slot {slot + 1}", "description": "Contractual time is independent of logged time",
                 "taskType": "Task", "priority": "Medium", "status": "ToDo", "assignees": [],
                 "estimatedMinutes": 60 * (index + 1), "loggedMinutes": 0, "dueAt": None,
             })
+    direct_storage = coordinator.request("GET", f"/api/task-storages/{storages[0]}")
+    require(len(direct_storage["tasks"]) == 5, "direct task-storage route disagrees with project")
     coordinator.command("POST", proposal_path + "/submit")
     project = client.request("GET", project_path)
     client.command("POST", project_path + "/planning/accept-delivery", {"expectedRevision": project["planning"]["revision"]})
@@ -473,6 +501,9 @@ def exercise_multi_milestone(base, admin_password, _proxy):
     require([item["taskStorage"]["taskStorageId"] for item in milestones] == storages,
             "approval replaced milestone storages")
     require([len(item["assignments"]) for item in milestones] == [5, 3, 4, 2], "team sizes differ from 5/3/4/2")
+    require([item["status"] for item in milestones] ==
+            ["InProgress", "NotStarted", "NotStarted", "NotStarted"],
+            "milestones did not activate sequentially")
     expected_minutes = [0] * 5
     expected_scores = [0] * 5
     expected_balances = [0] * 5
@@ -480,7 +511,8 @@ def exercise_multi_milestone(base, admin_password, _proxy):
     for index, (milestone, team) in enumerate(zip(milestones, teams)):
         expected = [{"requirementKey": slot + 1, "worker": workers[slot].session["accountId"]} for slot in team]
         require(milestone["assignments"] == expected, "all-skills, mode, capacity or distinct-slot matching failed")
-        require(milestone["status"] == "InProgress", "approved milestone did not start execution")
+        require(client.request("GET", project_path)["proposals"][0]["milestones"][index]["status"]
+                == "InProgress", "current milestone did not start execution")
         tasks = milestone["taskStorage"]["tasks"]
         require(len(tasks) == len(team), "tasks leaked between milestone storages")
         for task, slot in zip(tasks, team):
@@ -513,7 +545,10 @@ def exercise_multi_milestone(base, admin_password, _proxy):
         project = client.request("GET", project_path)
         require(project["executionEscrow"] == str(escrow), "milestone settlement consumed the wrong escrow")
         require([item["status"] for item in project["proposals"][0]["milestones"]]
-                == ["Completed"] * (index + 1) + ["InProgress"] * (3 - index), "settlement changed other milestone states")
+                == ["Completed"] * (index + 1)
+                + (["InProgress"] if index < 3 else [])
+                + ["NotStarted"] * max(0, 2 - index), "settlement changed milestone sequence")
+        require(project["completed"] == (index == 3), "project completion did not follow final milestone")
         balances = [int(actor.request("GET", "/api/balance")["available"]) for actor in people]
         require(balances[0] == 6900 and sum(balances) + escrow == 20000, "multi-team token conservation failed")
         require(balances[3:8] == expected_balances and balances[8:] == [0] * 5, "wrong workers received payments")
@@ -542,38 +577,200 @@ def exercise_multi_milestone(base, admin_password, _proxy):
         "weightedScoreSum": "0", "ratedMinutes": 0}, "unselected coordinator acquired commitments or reputation")
 
 
+def exercise_profiles_passkeys(base, owner, outsider, password):
+    profile = {"name": "Example client", "company": "Example Ltd",
+               "department": "Private department", "website": "https://example.test",
+               "description": "Public summary", "location": "Madrid", "languages": ["es"]}
+    owner.request("PUT", "/api/profiles/me", {"section": "client", "profile": profile})
+    own = owner.request("GET", "/api/profiles/me")
+    require(own["client"] == profile and own["worker"] is None, "owner profile was not persisted")
+    public = Client(base).request("GET", "/api/profiles/" + owner.session["principalId"])
+    require(public["client"]["company"] == profile["company"], "public client profile missing")
+    require("department" not in public["client"] and "email" not in json.dumps(public)
+            and "csrfToken" not in json.dumps(public), "public profile exposed private fields")
+    require(outsider.request("GET", "/api/profiles/me")["client"] is None,
+            "another principal read the owner's private profile")
+    owner.request("PUT", "/api/profiles/me", {"section": "client", "profile": {
+        **profile, "isAdmin": True}}, 422)
+
+    anonymous = Client(base)
+    anonymous.request("POST", "/api/auth/passkeys/register/options",
+                      {"currentPassword": password}, 401)
+    owner.request("POST", "/api/auth/passkeys/register/options",
+                  {"currentPassword": "incorrect-password"}, 401)
+    options = owner.request("POST", "/api/auth/passkeys/register/options",
+                            {"currentPassword": password})
+    require(options["ceremonyId"] and options["options"], "passkey options were not issued")
+    require(owner.request("GET", "/api/auth/passkeys") == [],
+            "unverified passkey options created a credential")
+    anonymous.request("POST", "/api/auth/passkeys/login/verify",
+                      {"ceremonyId": "missing", "credential": {}}, (400, 401, 422))
+    anonymous.request("GET", "/api/auth/session", expected=401)
+
+
+def exercise_bramp(base, admin, owner, outsider):
+    initial = int(owner.request("GET", "/api/balance")["available"])
+    deposit = owner.command("POST", "/api/bramp/deposits", {"amount": "25"})
+    deposit_id = deposit["receipt"]["createdEntityId"]
+    path = "/api/bramp/deposits/" + deposit_id
+    pending = owner.request("GET", path)
+    require(pending["status"] == "Pending" and pending["owner"] == owner.session["accountId"]
+            and pending["destination"] == pending["owner"] and pending["amount"] == "25",
+            "deposit terms changed before confirmation")
+    require(int(owner.request("GET", "/api/balance")["available"]) == initial,
+            "pending deposit changed spendable balance")
+    outsider.request("GET", path, expected=404)
+    confirm_path = "/api/admin/bramp/deposits/" + deposit_id + "/confirm"
+    outsider.request("POST", confirm_path, expected=403)
+    key = "0x" + secrets.token_hex(16)
+    first = admin.command("POST", confirm_path, operation_id=key)
+    require(admin.command("POST", confirm_path, operation_id=key) == first,
+            "deposit replay changed the receipt")
+    repeated = admin.command("POST", confirm_path, expected_outcome="Failed")
+    require(repeated["receipt"]["outcome"]["code"] == "deposit_already_confirmed",
+            "a second deposit confirmation was not rejected")
+    require(owner.request("GET", path)["status"] == "Confirmed"
+            and int(owner.request("GET", "/api/balance")["available"]) == initial + 25,
+            "deposit was not credited exactly once")
+
+    excessive = owner.command("POST", "/api/bramp/withdrawals",
+                              {"amount": str(initial + 26)}, expected_outcome="Failed")
+    require(excessive["receipt"]["outcome"]["code"] == "insufficient_balance",
+            "withdrawal spent more than the free balance")
+    withdrawal = owner.command("POST", "/api/bramp/withdrawals", {"amount": "20"})
+    withdrawal_id = withdrawal["receipt"]["createdEntityId"]
+    withdrawal_path = "/api/bramp/withdrawals/" + withdrawal_id
+    require(owner.request("GET", withdrawal_path)["status"] == "Pending"
+            and int(owner.request("GET", "/api/balance")["available"]) == initial + 5,
+            "pending withdrawal did not hold free KVN")
+    outsider.request("GET", withdrawal_path, expected=404)
+    outsider.request("POST", withdrawal_path + "/cancel", expected=404)
+    owner.command("POST", withdrawal_path + "/cancel")
+    repeated = owner.command("POST", withdrawal_path + "/cancel", expected_outcome="Failed")
+    require(repeated["receipt"]["outcome"]["code"] == "withdrawal_already_cancelled"
+            and owner.request("GET", withdrawal_path)["status"] == "Cancelled"
+            and int(owner.request("GET", "/api/balance")["available"]) == initial + 25,
+            "withdrawal cancellation did not restore the hold exactly once")
+
+
+def exercise_catalog(admin, worker, outsider):
+    worker.command("POST", "/api/workers", {
+        "displayName": "Catalog worker", "qualifications": {"roleIds": [3], "skillIds": [1]},
+        "calendar": {"defaultWeeklyMinutes": 600, "overrides": []},
+    })
+    catalog_before = worker.request("GET", "/api/catalog")
+    skill_name = "Auxiliary skill " + secrets.token_hex(4)
+    request = worker.command("POST", "/api/catalog/skill-requests",
+                             {"name": skill_name, "roleIds": [3]})
+    request_id = request["receipt"]["createdEntityId"]
+    mine = worker.request("GET", "/api/catalog/skill-requests/me")
+    require(len(mine) == 1 and mine[0]["requestId"] == request_id
+            and mine[0]["status"] == "Pending", "skill request is not owner-visible")
+    require(outsider.request("GET", "/api/catalog/skill-requests/me") == [],
+            "another principal saw a private skill request")
+    require(any(item["requestId"] == request_id for item in
+                admin.request("GET", "/api/admin/catalog/skill-requests")),
+            "operator cannot review the skill request")
+    require(worker.request("GET", "/api/catalog")["skills"] == catalog_before["skills"],
+            "pending request mutated the global catalog")
+    decision_path = "/api/admin/catalog/skill-requests/" + request_id + "/decision"
+    outsider.request("POST", decision_path, "Approve", 403)
+    key = "0x" + secrets.token_hex(16)
+    first = admin.command("POST", decision_path, "Approve", key)
+    require(admin.command("POST", decision_path, "Approve", key) == first,
+            "skill decision replay changed the receipt")
+    repeated = admin.command("POST", decision_path, "Approve", expected_outcome="Failed")
+    require(repeated["receipt"]["outcome"]["code"] == "skill_request_decided",
+            "a decided request was approved twice")
+    decided = worker.request("GET", "/api/catalog/skill-requests/me")[0]
+    skill_id = decided["skillId"]
+    catalog = worker.request("GET", "/api/catalog")
+    require(decided["status"] == "Approved" and len(catalog["skills"]) == len(catalog_before["skills"]) + 1
+            and sum(item["name"] == skill_name for item in catalog["skills"]) == 1
+            and any(item["skillId"] == skill_id and item["roleIds"] == [3]
+                    for item in catalog["skillRoles"]), "approval did not publish the skill once")
+    directory = {item["account"]: item for item in worker.request("GET", "/api/workers")}
+    require(skill_id not in directory[worker.session["accountId"]]["qualifications"]["skillIds"],
+            "approval silently qualified the worker")
+    duplicate = worker.command("POST", "/api/catalog/skill-requests",
+                               {"name": "  " + skill_name.upper() + "  ", "roleIds": [3]},
+                               expected_outcome="Failed")
+    require(duplicate["receipt"]["outcome"]["code"] == "skill_name_exists",
+            "normalized duplicate created a second global skill")
+
+
+def exercise_auxiliary(base, admin_password, _proxy):
+    """Typed REST checks beyond the original project and dispute paths."""
+    admin = Client(base)
+    admin.authenticate("/api/auth/login", {"username": "admin", "password": admin_password})
+    password = secrets.token_urlsafe(24)
+    owner, worker, outsider = (Client(base) for _ in range(3))
+    for actor in (owner, worker, outsider):
+        actor.authenticate("/api/auth/register", {
+            "username": "aux" + secrets.token_hex(8), "password": password,
+            "displayName": "Auxiliary flow",
+        })
+    exercise_profiles_passkeys(base, owner, outsider, password)
+    exercise_bramp(base, admin, owner, outsider)
+    exercise_catalog(admin, worker, outsider)
+
+
+def scan_secret_logs(logs):
+    for service, log in logs:
+        log.flush()
+        log.seek(0)
+        output = log.read(4 * 1024 * 1024 + 1)
+        require(len(output) <= 4 * 1024 * 1024, f"{service} log exceeds secret-scan limit")
+        for name, marker in Client.secret_markers:
+            require(marker not in output,
+                    f"{service} log disclosed {name}")
+
+
 def run(storage, binaries, scenario=exercise):
     with ExitStack() as stack:
         directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="kunveno-e2e-")))
+        logs = []
+        adapter_database_url = temporary_postgres(stack, directory)
         secret_dir = directory / "secrets"
         subprocess.run([str(binaries / "wallet"), "init-dev-secrets", str(secret_dir)],
                        check=True, stdout=subprocess.DEVNULL)
+        Client.secret_markers = tuple(
+            (name, (secret_dir / name).read_bytes().strip()) for name in
+            ("service-token", "master-key.hex", "root-seed.hex", "bootstrap-admin-password")
+        )
+        require(all(len(marker) >= 12 for _, marker in Client.secret_markers),
+                "secret marker too short for reliable scanning")
         wallet_port, provider_port, adapter_port = [available_port() for _ in range(3)]
         common = {"INTERNAL_SERVICE_TOKEN_FILE": str(secret_dir / "service-token")}
-        launch(stack, binaries / "wallet", wallet_port, {
+        wallet = launch(stack, binaries / "wallet", wallet_port, {
             **common, "CUSTODY_DATABASE_URL": f"sqlite://{directory}/custody.sqlite?mode=rwc",
             "CUSTODY_MASTER_KEY_FILE": str(secret_dir / "master-key.hex"),
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
-        })
+        }, logs)
         launch(stack, binaries / "mock-provider", provider_port, {
             **common, "MOCK_DATABASE_URL": f"sqlite://{directory}/mock.sqlite?mode=rwc",
             "MOCK_STORAGE": storage, "MOCK_ROOT_ACCOUNT_FILE": str(secret_dir / "root-account.hex"),
-        })
+        }, logs)
         proxy = LossyProvider(provider_port)
         proxy_thread = threading.Thread(target=proxy.serve_forever, daemon=True)
         proxy_thread.start()
         stack.callback(proxy.server_close)
         stack.callback(proxy.shutdown)
         adapter = launch(stack, binaries / "adapter-api", adapter_port, {
-            **common, "ADAPTER_DATABASE_URL": f"sqlite://{directory}/adapter.sqlite?mode=rwc",
+            **common, "ADAPTER_DATABASE_URL": adapter_database_url,
             "CUSTODY_URL": f"http://127.0.0.1:{wallet_port}",
             "MOCK_PROVIDER_URL": f"http://127.0.0.1:{proxy.server_port}",
             "ALLOWED_ORIGINS": ",".join(ORIGINS), "COOKIE_SECURE": "false",
+            "ENABLE_MOCK_FUNDING": "true",
             "BOOTSTRAP_ADMIN_USERNAME": "admin",
             "BOOTSTRAP_ADMIN_PASSWORD_FILE": str(secret_dir / "bootstrap-admin-password"),
             "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),
-        })
+        }, logs)
         scenario(adapter.base, (secret_dir / "bootstrap-admin-password").read_text().strip(), proxy)
+        wallet.request("GET", "/internal/metrics", headers={
+            "Authorization": "Bearer " + (secret_dir / "service-token").read_text().strip(),
+        })
+        scan_secret_logs(logs)
         print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle")
 
 
@@ -586,3 +783,4 @@ if __name__ == "__main__":
         run(selected, arguments.binaries.resolve())
         run(selected, arguments.binaries.resolve(), exercise_multi_milestone)
         run(selected, arguments.binaries.resolve(), exercise_dispute)
+        run(selected, arguments.binaries.resolve(), exercise_auxiliary)
