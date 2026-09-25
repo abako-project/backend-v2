@@ -65,7 +65,8 @@ created with its draft; at least one task per storage is required before
 submission. Execution approval assigns and reserves every milestone atomically,
 activates only the first, and later accepts each in sequence until the project
 is `Completed`. The expanded E2E fixture covers four milestones with teams of
-5/3/4/2. Adapter descriptive profiles use PostgreSQL. The mock models
+5/3/4/2. Adapter descriptive profiles and their public PNG/JPEG/WebP images
+use PostgreSQL. The mock models
 Bramp deposits, withdrawal holds and operator-owned skill requests.
 
 This is not complete legacy compatibility. Passkey registration and login use

@@ -58,7 +58,9 @@ fn all_public_operations_have_valid_references_and_security()
                     | "/api/openapi.json"
             ) || (matches!(
                 path.as_str(),
-                "/api/disputes/{disputeId}" | "/api/profiles/{principalId}"
+                "/api/disputes/{disputeId}"
+                    | "/api/profiles/{principalId}"
+                    | "/api/profiles/{principalId}/{section}/image"
             ) && method == "get");
             let security = if operation["security"].is_null() {
                 &doc["security"]
@@ -113,7 +115,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 70);
+    assert_eq!(operation_ids.len(), 72);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "kunveno_session"

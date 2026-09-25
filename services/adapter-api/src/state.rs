@@ -196,6 +196,9 @@ impl App {
         sqlx::raw_sql(include_str!("../migrations/0003_passkeys.sql"))
             .execute(&mut *migration)
             .await?;
+        sqlx::raw_sql(include_str!("../migrations/0004_profile_images.sql"))
+            .execute(&mut *migration)
+            .await?;
         migration.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))

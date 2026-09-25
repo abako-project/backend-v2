@@ -1,3 +1,4 @@
+use super::media::{ImageKind, ProfileSection};
 use super::models::{ClientProfile, Proficiency, ProfilesView, WorkerProfile};
 use crate::state::{Error, now};
 use generated_contracts::PrincipalId;
@@ -124,4 +125,44 @@ pub(super) async fn write_worker(
         .execute(pool)
         .await?;
     Ok(())
+}
+
+pub(super) async fn write_image(
+    pool: &PgPool,
+    id: PrincipalId,
+    section: ProfileSection,
+    kind: ImageKind,
+    bytes: &[u8],
+) -> Result<(), Error> {
+    let updated = sqlx::query(section.update_sql())
+        .bind(bytes)
+        .bind(kind.mime())
+        .bind(id.to_string())
+        .execute(pool)
+        .await?;
+    if updated.rows_affected() == 0 {
+        return Err(Error::NotFound);
+    }
+    Ok(())
+}
+
+pub(super) async fn read_image(
+    pool: &PgPool,
+    id: PrincipalId,
+    section: ProfileSection,
+) -> Result<(ImageKind, Vec<u8>), Error> {
+    let row = sqlx::query(section.read_sql())
+        .bind(id.to_string())
+        .fetch_optional(pool)
+        .await?
+        .ok_or(Error::NotFound)?;
+    let data: Option<Vec<u8>> = row.try_get("image_data")?;
+    let mime: Option<String> = row.try_get("image_mime_type")?;
+    match (data, mime) {
+        (Some(data), Some(mime)) => {
+            Ok((ImageKind::parse(&mime).map_err(|_| Error::Internal)?, data))
+        }
+        (None, None) => Err(Error::NotFound),
+        _ => Err(Error::Internal),
+    }
 }

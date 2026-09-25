@@ -9,7 +9,7 @@ Updated 2026-09-25. Requirement approval and verification completion are separat
 | [SPEC-0003: marketplace](specs/0003-transactional-marketplace/status.md) | APPROVED | Integrated; historical POC-07 verified against disposable mock data |
 | [SPEC-0004: Virto compatibility](specs/0004-virto-compatibility/status.md) | APPROVED | Mock Bramp/catalog and username-first passkey login integrated |
 | [SPEC-0005: dispute opening](specs/0005-dispute-opening/status.md) | APPROVED | Implemented and verified on both mock backends: current rejection, public references, project freeze and one response. No timeout, chat or resolution |
-| [SPEC-0006: backend parity](specs/0006-backend-parity/status.md) | APPROVED | Profiles, catalog requests and canonical task-storage routes integrated; independent acceptance review pending |
+| [SPEC-0006: backend parity](specs/0006-backend-parity/status.md) | APPROVED / VERIFIED | Profiles and images, catalog requests, canonical task-storage routes and PostgreSQL verified in both mock modes |
 
 The initial marketplace backend was integrated into `master` at `ed6e4f8`; the legacy-scale
 E2E and quality refactors followed. Dispute opening is implemented at `a64b747`.

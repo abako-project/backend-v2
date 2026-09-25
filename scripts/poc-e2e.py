@@ -490,6 +490,14 @@ def exercise_multi_milestone(base, admin_password, _proxy):
             })
     direct_storage = coordinator.request("GET", f"/api/task-storages/{storages[0]}")
     require(len(direct_storage["tasks"]) == 5, "direct task-storage route disagrees with project")
+    first_task = direct_storage["tasks"][0]
+    first_task_path = f"/api/task-storages/{storages[0]}/tasks/{first_task['taskId']}"
+    require(coordinator.request("GET", first_task_path) == first_task,
+            "direct task read disagrees with storage")
+    project_task = client.request("GET", project_path)["proposals"][0]["milestones"][0]["taskStorage"]["tasks"][0]
+    require(project_task == first_task, "project read disagrees with direct task read")
+    other_coordinator = next(actor for actor in coordinators if actor is not coordinator)
+    other_coordinator.request("PUT", first_task_path, first_task["task"], expected=404)
     coordinator.command("POST", proposal_path + "/submit")
     project = client.request("GET", project_path)
     client.command("POST", project_path + "/planning/accept-delivery", {"expectedRevision": project["planning"]["revision"]})
@@ -592,6 +600,21 @@ def exercise_profiles_passkeys(base, owner, outsider, password):
             "another principal read the owner's private profile")
     owner.request("PUT", "/api/profiles/me", {"section": "client", "profile": {
         **profile, "isAdmin": True}}, 422)
+
+    image = bytes.fromhex(
+        "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489"
+        "0000000b49444154789c6300010000050001a5f645400000000049454e44ae426082")
+    upload = urllib.request.Request(
+        base + "/api/profiles/me/client/image", data=image, method="PUT",
+        headers={"Origin": owner.origin, "X-CSRF-Token": owner.session["csrfToken"],
+                 "Content-Type": "image/png"})
+    with owner.opener.open(upload, timeout=10) as response:
+        require(response.status == 204, "profile image upload failed")
+    public_image = urllib.request.Request(
+        base + "/api/profiles/" + owner.session["principalId"] + "/client/image")
+    with Client(base).opener.open(public_image, timeout=10) as response:
+        require(response.read() == image and response.headers.get("Content-Type") == "image/png",
+                "public profile image disagrees with uploaded bytes")
 
     anonymous = Client(base)
     anonymous.request("POST", "/api/auth/passkeys/register/options",
