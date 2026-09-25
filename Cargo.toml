@@ -30,7 +30,7 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt"] }
 thiserror = "2.0.20"
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "query"] }
-tower-http = { version = "0.6.11", default-features = false, features = ["cors", "trace", "limit"] }
+tower-http = { version = "0.7.1", default-features = false, features = ["cors", "trace", "limit"] }
 tokio-stream = { version = "0.1.18", features = ["sync", "time"] }
 uuid = { version = "1.24.1", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4.3"
