@@ -32,7 +32,7 @@ Last updated: 2026-09-24
 
 | Task | Owner | Branch | Worktree | State | Evidence |
 |---|---|---|---|---|---|
-| TASK-000 through TASK-004, TASK-006 | Root integrator and implementation agents | `feat/rust-rest-poc` | Main repository | Implementation integrated; dependency gate remains blocked | `../../progress/handoffs/REST-POC-foundation.md` |
+| TASK-000 through TASK-004, TASK-006 | Root integrator and implementation agents | `feat/rust-rest-poc` | Main repository | Implementation integrated; dependency policy deferred from backend closeout | `../../progress/handoffs/REST-POC-foundation.md` |
 | TASK-005 | Independent verifier | `feat/backend-port-close` | Read-only integration branch | Closed for local mock-backed POC | `../../progress/handoffs/SPEC-0001-verification.md` |
 
 ## Verification and remaining work
@@ -69,8 +69,9 @@ This evidence review did not rerun acceptance tests and does not close TASK-005.
 Update: the existing signed E2E passed again for memory and SQLite on 2026-09-15.
 Its scope is documented in `../../docs/project/porting-coverage.md`. HSM-backed
 envelope encryption and gradual rotation have been discussed, not implemented or
-finalized. The owner accepted the two maintenance-advisory deferrals for the POC;
-applying them to the dependency policy is still pending.
+finalized. The owner accepted deferring the two Leptos maintenance advisories
+and removing Leptos and cargo-deny from this POC's backend acceptance gate. The
+dependency policy has not passed; this is not a production security sign-off.
 
 2026-09-24 update: the approved backend closeout defers HSM-backed encryption-key
 rotation until before real assets. `spec.md`, `data-model.md` and
@@ -87,4 +88,7 @@ Approver: Kunveno product owner
 
 Date: 2026-09-08
 
-Scope approved: Local full-custody implementation with the accepted review corrections, REST boundary, and XChaCha20-Poly1305 stored format. Dependency metadata and executable verification remain implementation gates, not claims of production approval.
+Scope approved: Local full-custody implementation with the accepted review
+corrections, REST boundary, and XChaCha20-Poly1305 stored format. Independent
+backend security verification remains open. The deferred dependency-policy gate
+must not be described as a production approval.

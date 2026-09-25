@@ -1,8 +1,8 @@
 # Porting and E2E coverage
 
-Reviewed 2026-09-24 against the backend integration branch
+Reviewed 2026-09-25 against the merged backend
 and legacy `main` commit `3e2b929`. Implementation claims below describe
-the current integration, not a release on `master`.
+the local `master`, not a production release.
 This is a port of the approved marketplace redesign,
 not a complete compatibility port of the legacy backend or all mock endpoints.
 
@@ -186,7 +186,7 @@ These fixture assets are not required for the backend E2E or Compose deployment.
 | Priority | Area | Status / next decision |
 |---|---|---|
 | Verified mock backend | Verification | Historical tasks POC-07 and TASK-005 have independent handoffs for the mock-backed backend. The E2E scans REST, SSE, custody metrics and bounded service logs for known secret markers; this is not a production secrecy proof. HSM-backed rotation remains mandatory before real value. Cargo-deny and Leptos gates were outside that backend closeout by owner decision. |
-| Implemented in backend branch | Passkey access | Login starts with username and ends with the same session and wallet as password login; virtual-authenticator HTTP coverage is in the adapter tests. Email verification is not required. |
+| Integrated | Passkey access | Login starts with username and ends with the same session and wallet as password login; virtual-authenticator HTTP coverage is in the adapter tests. Email verification is not required. |
 | P1 | Browser contract | Keep direct task routes and temporary nested aliases until external frontend clients migrate. OpenAPI describes implemented routes, including passkey login/options. |
 | Out of scope | Governance and generic Virto wrappers | No membership/governance, DAO votes, generic payments or arbitrary Kreivo JSON-RPC. Existing typed project, calendar and escrow operations replace those legacy wrappers where applicable. |
 | Future spec | Dispute resolution | [SPEC-0005](../../specs/0005-dispute-opening/status.md) ends at an Open case and frozen project. DAO authority, resolution/unlock, escrow disposition, chat and timeout need separate product decisions; they are not defects in the approved opening scope |

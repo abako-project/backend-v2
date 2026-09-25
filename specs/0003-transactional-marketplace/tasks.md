@@ -16,6 +16,6 @@ Each writer preserves other writers' changes. The root integrator owns shared ma
 | POC-04 | adapter agent | services/adapter-api | POC-01 frozen contracts |
 | POC-05 | frontend agent | apps/leptos-web | POC-01 frozen contracts |
 | POC-06 | root integrator | infra, integration tests, public OpenAPI/docs, shared-root updates | Work proceeds alongside POC-02 through POC-05 |
-| POC-07 | independent verifier | read-only integrated tree and its handoff | POC-02 through POC-06 integrated |
+| POC-07 | independent verifier | read-only integrated backend and its security handoff | POC-02 through POC-06 integrated |
 
 POC-02 through POC-05 can run in parallel. Contract changes are routed back to the integrator, never patched independently by consumers. Verify the integrated tree before completion. Do not create GitHub resources or production deployments.

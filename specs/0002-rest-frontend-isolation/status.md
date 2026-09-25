@@ -34,4 +34,5 @@ Human deployment and verification commands use native tools.
 The real-service E2E passed again for both backends on 2026-09-23. It now runs
 single-milestone, four-milestone and dispute API scenarios, separate from the
 browser fixture smoke. See `../../progress/handoffs/DSP-07.md`.
-The owner accepted maintenance-advisory deferral; applying that policy is pending.
+The Leptos maintenance advisories are deferred for this POC; they are not a
+backend acceptance blocker or a production security sign-off.

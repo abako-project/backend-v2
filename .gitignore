@@ -18,6 +18,5 @@ coverage/
 *.swp
 *.swo
 worktrees/
-progress/runs/*.log
 .qwen/QWEN.local.md
 .claude/settings.local.json
