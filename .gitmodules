@@ -1,4 +1,0 @@
-[submodule "abako-web"]
-	path = abako-web
-	url = git@github.com:abako-project/abako-web.git
-	branch = feature/disputes
