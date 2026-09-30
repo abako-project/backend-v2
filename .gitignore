@@ -20,3 +20,6 @@ coverage/
 worktrees/
 .qwen/QWEN.local.md
 .claude/settings.local.json
+
+# Independent frontend checkout.
+/abako-web/
