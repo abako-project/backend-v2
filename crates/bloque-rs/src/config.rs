@@ -89,7 +89,7 @@ impl Default for RetryConfig {
         Self {
             enabled: true,
             max_retries: 3,
-            initial_delay: Duration::from_millis(1000),
+            initial_delay: Duration::from_secs(1),
             max_delay: Duration::from_secs(30),
         }
     }
