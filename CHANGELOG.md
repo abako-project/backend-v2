@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Added `.github/workflows/release.yml`: `v*.*.*` tags on `master` run fmt,
+  clippy, Nextest and doc tests, then publish `kunveno-adapter-api`,
+  `kunveno-wallet` and `kunveno-mock-provider` to GHCR with semver tags and
+  the Podman auto-update label.
+
 ## 2026.09.25
 
 - Integrated `crates/bloque-rs`, the unofficial Bloque client, as a workspace

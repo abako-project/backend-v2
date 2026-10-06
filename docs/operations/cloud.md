@@ -1,6 +1,6 @@
 # Cloud and Deployment Policy
 
-Only local Docker Compose is implemented and approved. [infra/README.md](../../infra/README.md) describes it. There is no approved cloud provider, Kubernetes deployment, production database topology or automated release/promotion workflow.
+Only local Docker Compose is implemented and approved. [infra/README.md](../../infra/README.md) describes it. There is no approved cloud provider, Kubernetes deployment, production database topology or automated promotion workflow. Tagged releases publish backend images to GHCR (see [release policy](release.md)), but nothing deploys them.
 
 The local gateway publishes loopback HTTP. Backend services use private networks, separate database mounts, selected secret files, non-root users and read-only root filesystems. Local HTTP cookies and development image tags are not production settings.
 
