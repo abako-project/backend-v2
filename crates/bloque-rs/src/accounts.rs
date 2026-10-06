@@ -185,7 +185,7 @@ impl AccountsClient {
         let account = resp.result.account;
 
         if params.wait_for_ledger {
-            self.wait_for_active(&account.urn, Duration::from_secs(60))
+            self.wait_for_active(&account.urn, Duration::from_mins(1))
                 .await
         } else {
             Ok(account)
@@ -212,7 +212,7 @@ impl AccountsClient {
         let account = resp.result.account;
 
         if params.wait_for_ledger {
-            self.wait_for_active(&account.urn, Duration::from_secs(60))
+            self.wait_for_active(&account.urn, Duration::from_mins(1))
                 .await
         } else {
             Ok(account)
