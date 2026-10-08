@@ -58,7 +58,8 @@ fn all_public_operations_have_valid_references_and_security()
                     | "/api/openapi.json"
             ) || (matches!(
                 path.as_str(),
-                "/api/disputes/{disputeId}"
+                "/api/catalog"
+                    | "/api/disputes/{disputeId}"
                     | "/api/profiles/{principalId}"
                     | "/api/profiles/{principalId}/{section}/image"
             ) && method == "get");

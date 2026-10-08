@@ -329,12 +329,8 @@
           "Workers"
         ],
         "summary": "Read roles, skills and reputation weights",
-        "description": "",
-        "security": [
-          {
-            "sessionCookie": []
-          }
-        ],
+        "description": "Public read-only catalog for signup; catalog mutations remain authenticated.",
+        "security": [],
         "responses": {
           "200": {
             "description": "Successful request.",
@@ -3647,6 +3643,7 @@
         "required": ["name", "githubUsername", "portfolioUrl", "biography", "background", "proficiency", "location", "languages"],
         "properties": {
           "name": {"type": "string", "minLength": 1, "maxLength": 128},
+          "contactEmail": {"type": ["string", "null"], "format": "email", "maxLength": 254, "description": "Private, unverified contact email; never used for authentication or exposed in public profiles. Optional on writes; missing/null clears it. At most 254 UTF-8 bytes; one @ with nonempty parts, no whitespace or control characters."},
           "githubUsername": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"},
           "portfolioUrl": {"type": ["string", "null"], "format": "uri", "maxLength": 2048},
           "biography": {"type": ["string", "null"], "maxLength": 4096},
