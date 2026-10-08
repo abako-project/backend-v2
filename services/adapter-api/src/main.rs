@@ -7,6 +7,7 @@ mod http;
 mod notifications;
 mod operations;
 mod profiles;
+mod project_briefs;
 mod state;
 
 use state::{App, Config, Error};

@@ -69,9 +69,18 @@ invent milestone, storage, submission or dispute IDs.
   `SessionView` and set an HttpOnly session cookie. Use
   `GET /api/auth/session` to recover `csrfToken` after a reload.
 - Every authenticated mutation sends the cookie, `X-CSRF-Token`, JSON when
-  there is a body, and a new `Idempotency-Key` (a 16-byte `0x` hex operation
-  ID). Retry the *same action* with the same key; never reuse it for a
-  different body.
+  there is a body. Provider business commands also send a new `Idempotency-Key`
+  (a 16-byte `0x` hex operation ID). Retry the *same action* with the same key;
+  never reuse it for a different body.
+- After successful project creation, save its descriptive brief using
+  `PUT /api/projects/{projectId}/brief` with `{expectedRevision:0, brief}`.
+  This adapter-owned write returns 201/200 directly and needs cookie/CSRF,
+  not an operation poll. Recover it through GET (200 null before the first save).
+  If saving fails, retain the project ID and retry only the brief write; never
+  create the project again. Updates use the brief revision, independent of
+  planning/proposal revisions. An exact immediate retry returns the saved result;
+  stale/different content returns 409 `brief_revision_conflict`. See OpenAPI for
+  legacy project types, USD budget preferences and delivery choices.
 - Business mutations return HTTP 202 with `operationId`. Poll
   `GET /api/operations/{operationId}` until `status` is `Finalized`.
   Require `receipt.outcome.type == "Success"`; 202 or Finalized alone does

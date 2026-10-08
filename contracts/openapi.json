@@ -3222,6 +3222,182 @@
           }
         }
       }
+    },
+    "/api/projects/{projectId}/brief": {
+      "get": {
+        "operationId": "getProjectBrief",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read an authorized project submission brief",
+        "description": "Uses current project participant visibility. Returns null when an authorized existing project has no brief. Provider reset isolates previous briefs. No business state is changed.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brief or null if not yet saved.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProjectBriefView"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Adapter request capacity exceeded; capacity_exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "put": {
+        "operationId": "putProjectBrief",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Replace the client-owned descriptive project brief",
+        "description": "Client only. First write expects revision 0. Updates increment once. Exact immediate retries return the saved revision; stale/different bodies return brief_revision_conflict. Save after confirmed project creation; failed brief writes must not repeat project creation. This adapter write returns its result directly; no operation poll or Idempotency-Key is needed. No provider prices, tasks, calendar, nonce, funds or escrow change.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutProjectBriefRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated brief or exact immediate retry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectBriefView"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "First saved brief, revision 1.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProjectBriefView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Adapter request capacity exceeded; capacity_exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "JSON does not match the typed request; invalid_request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "409": {
+            "description": "Revision is stale, or an uncertain retry has different content. code: brief_revision_conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request exceeds the existing 256 KiB body limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5924,6 +6100,255 @@
             "$ref": "#/components/schemas/MilestoneView"
           }
         }
+      },
+      "ProjectType": {
+        "type": "string",
+        "enum": [
+          "Other",
+          "SmartContract",
+          "Frontend",
+          "MVP",
+          "Audit",
+          "MobileApp"
+        ]
+      },
+      "IndicativeBudget": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "type": "string",
+            "const": "USD"
+          },
+          "range": {
+            "type": "string",
+            "enum": [
+              "Below10000",
+              "From10000To50000",
+              "From50000To100000",
+              "Above100000"
+            ]
+          }
+        },
+        "required": [
+          "currency",
+          "range"
+        ],
+        "description": "Descriptive legacy USD range. Never converted to KVN or used for funding, matching or escrow."
+      },
+      "DeliveryPreference": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "preference": {
+                "type": "string",
+                "enum": [
+                  "WithinOneMonth",
+                  "OneToThreeMonths",
+                  "ThreeToSixMonths"
+                ]
+              }
+            },
+            "required": [
+              "preference"
+            ]
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "preference": {
+                "type": "string",
+                "const": "SpecificDate"
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                "description": "Real Gregorian date, year 0001–9999; not a contracted scheduling window."
+              }
+            },
+            "required": [
+              "preference",
+              "date"
+            ]
+          }
+        ]
+      },
+      "ProjectBrief": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "summary": {
+            "type": "string",
+            "maxLength": 280,
+            "description": "Up to 280 Unicode scalar values; U+0000 is rejected because PostgreSQL JSONB cannot store it."
+          },
+          "projectType": {
+            "$ref": "#/components/schemas/ProjectType"
+          },
+          "link": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "maxLength": 2048,
+            "description": "Optional absolute HTTP(S) URL without credentials, whitespace or control characters. Limit is UTF-8 bytes; the server never fetches this URL."
+          },
+          "objectives": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "pattern": "\\S"
+            },
+            "description": "Ordered descriptive entries; blank entries and U+0000 are rejected. Empty arrays are permitted."
+          },
+          "constraints": {
+            "type": "array",
+            "maxItems": 50,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 2000,
+              "pattern": "\\S"
+            },
+            "description": "Ordered descriptive entries; blank entries and U+0000 are rejected. Empty arrays are permitted."
+          },
+          "indicativeBudget": {
+            "$ref": "#/components/schemas/IndicativeBudget"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryPreference"
+          }
+        },
+        "required": [
+          "summary",
+          "projectType",
+          "objectives",
+          "constraints",
+          "indicativeBudget",
+          "delivery"
+        ],
+        "examples": [
+          {
+            "summary": "A focused MVP",
+            "projectType": "MVP",
+            "link": null,
+            "objectives": [
+              "Deliver the first feature",
+              "Document its operation"
+            ],
+            "constraints": [
+              "Accessible UI"
+            ],
+            "indicativeBudget": {
+              "currency": "USD",
+              "range": "Below10000"
+            },
+            "delivery": {
+              "preference": "WithinOneMonth"
+            }
+          }
+        ]
+      },
+      "PutProjectBriefRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775806,
+            "format": "int64",
+            "description": "Exact integer; independent of planning/proposal revision. Preserve precision above Number.MAX_SAFE_INTEGER."
+          },
+          "brief": {
+            "$ref": "#/components/schemas/ProjectBrief"
+          }
+        },
+        "required": [
+          "expectedRevision",
+          "brief"
+        ],
+        "examples": [
+          {
+            "expectedRevision": 0,
+            "brief": {
+              "summary": "A focused MVP",
+              "projectType": "MVP",
+              "link": null,
+              "objectives": [
+                "Deliver the first feature",
+                "Document its operation"
+              ],
+              "constraints": [
+                "Accessible UI"
+              ],
+              "indicativeBudget": {
+                "currency": "USD",
+                "range": "Below10000"
+              },
+              "delivery": {
+                "preference": "WithinOneMonth"
+              }
+            }
+          }
+        ]
+      },
+      "ProjectBriefView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807,
+            "format": "int64",
+            "description": "Exact integer; independent of planning/proposal revision. Preserve precision above Number.MAX_SAFE_INTEGER."
+          },
+          "brief": {
+            "$ref": "#/components/schemas/ProjectBrief"
+          }
+        },
+        "required": [
+          "projectId",
+          "revision",
+          "brief"
+        ],
+        "examples": [
+          {
+            "projectId": "0x01010101010101010101010101010101",
+            "revision": 1,
+            "brief": {
+              "summary": "A focused MVP",
+              "projectType": "MVP",
+              "link": null,
+              "objectives": [
+                "Deliver the first feature",
+                "Document its operation"
+              ],
+              "constraints": [
+                "Accessible UI"
+              ],
+              "indicativeBudget": {
+                "currency": "USD",
+                "range": "Below10000"
+              },
+              "delivery": {
+                "preference": "WithinOneMonth"
+              }
+            }
+          }
+        ]
       }
     }
   },

@@ -25,6 +25,9 @@ use tokio::{
 };
 use zeroize::Zeroizing;
 
+#[path = "project_briefs/http_tests.rs"]
+mod project_briefs;
+
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
 

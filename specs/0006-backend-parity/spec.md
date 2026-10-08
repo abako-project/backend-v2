@@ -94,3 +94,61 @@ catalog request authorization and duplicate handling, canonical and nested task
 routes, and operation/SSE recovery with PostgreSQL. Run the mock domain suite
 against both memory and SQLite. Existing project escrow and SPEC-0005 dispute
 freeze are unchanged.
+
+## Project submission brief (BE-B)
+
+APPROVED amendment, 2026-10-08: the adapter stores the descriptive brief needed
+by Project Submission. This does not change provider project creation, matching,
+planning prices, tasks, escrow or evidence. Title and description stay in the
+provider project; they are not duplicated in the brief.
+
+`GET /api/projects/{projectId}/brief` uses the current provider snapshot and the
+same participant visibility as the project read. An existing authorized project
+without a saved brief returns `200 null`. Missing projects and outsiders return
+404. `PUT` is restricted to the project's client and requires the existing session
+and CSRF header. Assigned coordinators/workers can read, but cannot write. Neither
+route is public. Provider failure returns 503, not a cached authorization decision.
+
+The replacement request is `{expectedRevision, brief}`. The brief contains:
+
+- `summary`: up to 280 Unicode scalar values; empty is permitted.
+- `projectType`: Other, SmartContract, Frontend, MVP, Audit or MobileApp.
+- `link`: null/omitted or an absolute HTTP(S) URL, at most 2048 UTF-8 bytes,
+  without credentials, whitespace or control characters. The adapter never fetches it.
+- `objectives` and `constraints`: ordered arrays, each with at most 50 entries.
+  Entries are nonblank and at most 2000 Unicode scalar values. Empty arrays are
+  permitted; no new business requirement is imposed on legacy drafts.
+- `indicativeBudget`: `{currency:"USD", range}`, where range is Below10000,
+  From10000To50000, From50000To100000 or Above100000. These preserve the legacy
+  dollar ranges. This is a descriptive preference, never converted to operational KVN.
+- `delivery`: `{preference}` with WithinOneMonth, OneToThreeMonths or
+  ThreeToSixMonths, or `{preference:"SpecificDate", date:"YYYY-MM-DD"}`. The
+  date must be a real Gregorian date, year 0001–9999. It is not a contracted window.
+
+Required fields and unknown-field rejection are specified in OpenAPI. The existing
+256 KiB request limit still applies. Nullable link is the only omitted brief field.
+U+0000 is rejected in descriptive text because PostgreSQL JSONB cannot store it.
+Typed JSON mismatch returns 422; semantic validation returns 400, both as ApiError.
+
+First write uses expectedRevision 0 and returns 201 with revision 1. Updates
+replace the whole brief and increment its revision once, returning 200. An exact
+retry returns 200 with the saved revision only when it is the immediate successor
+of the supplied expectedRevision and its body is identical. Other stale writes
+return 409 with code `brief_revision_conflict`. Revision inputs are nonnegative
+integers below signed BIGINT's maximum; they are independent of proposal and
+planning revisions. Preserve exact integers rather than rounding large revisions.
+
+Persist adapter-owned JSONB and revision in a new table, keyed by provider instance
+and project ID. A provider reset cannot attach an old brief to a reused ID. Use a
+transaction and row locks for concurrent replicas, with a unique key for concurrent
+first writes. No provider table is read or written directly, and no cross-service
+foreign key is introduced. Startup migration is additive and repeatable.
+
+The frontend must first confirm project creation and retain its receipt's project
+ID. Only then save the brief. If saving fails, retry that write with the same project
+ID, expectedRevision and body; never repeat project creation. GET allows recovery
+after reload. Milestone submission hashes are explicitly outside BE-B.
+
+Verify owner/participant/outsider permissions, CSRF and Origin, malformed inputs,
+repeat migration and restart persistence, provider reset isolation, concurrent
+writes and exact retries, and unchanged provider state/nonces/balances.

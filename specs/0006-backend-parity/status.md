@@ -18,3 +18,9 @@ OpenAPI references/security, formatting, check, Clippy and build passed.
 `cargo-deny` and Leptos-specific acceptance are outside the owner's backend
 gate. Evidence and legacy-test limitations are in
 `progress/handoffs/SPEC-0006.md`.
+
+BE-B amendment approved on 2026-10-08: adapter-owned project submission briefs.
+Implementation verified on feat/project-submission-brief: 76 workspace tests,
+2 doctests and eight real-service acceptance scenarios pass. Owner review is
+pending; no merge, deployment or publication has been performed. Historical
+acceptance evidence above applies to the previously integrated scope.

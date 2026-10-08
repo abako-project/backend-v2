@@ -242,6 +242,35 @@ def launch(stack, binary, port, environment, logs=None):
     return client
 
 
+def exercise_project_brief(client, coordinator, worker, outsider, project_path):
+    """Descriptive adapter writes must not change signed provider state or funds."""
+    path = project_path + "/brief"
+    project = client.request("GET", project_path)
+    balances = [actor.request("GET", "/api/balance") for actor in (client, coordinator, worker)]
+    require(client.request("GET", path) is None, "new project already has a brief")
+    outsider.request("GET", path, expected=404)
+    worker.request("GET", path, expected=404)
+    doc = json.loads((ROOT / "contracts/openapi.json").read_text())
+    brief = doc["components"]["schemas"]["ProjectBrief"]["examples"][0]
+    body = {"expectedRevision": 0, "brief": brief}
+    coordinator.request("PUT", path, body, 403)
+    outsider.request("PUT", path, body, 404)
+    client.request("PUT", path, body, 403, {"X-CSRF-Token": "forged"})
+    saved = client.request("PUT", path, body, 201)
+    require(saved["revision"] == 1 and saved["brief"] == brief, "brief lost its fields or order")
+    require(client.request("PUT", path, body) == saved, "exact initial retry changed revision")
+    require(coordinator.request("GET", path) == saved, "coordinator cannot read the project brief")
+    body = {"expectedRevision": 1, "brief": {**brief, "summary": "Updated project summary"}}
+    updated = client.request("PUT", path, body)
+    require(updated["revision"] == 2, "brief update did not increment once")
+    require(client.request("PUT", path, body) == updated, "exact update retry changed revision")
+    stale = client.request("PUT", path, {**body, "brief": brief}, 409)
+    require(stale["code"] == "brief_revision_conflict", "stale edit overwrote the brief")
+    require(client.request("GET", project_path) == project, "brief write changed provider project state")
+    require([actor.request("GET", "/api/balance") for actor in (client, coordinator, worker)] == balances,
+            "descriptive budget changed available funds")
+
+
 def prepare_single(base, admin_password):
     admin = Client(base)
     admin.authenticate("/api/auth/login", {"username": "admin", "password": admin_password})
@@ -278,6 +307,7 @@ def prepare_single(base, admin_password):
     project_path = "/api/projects/" + project_id
     project = client.request("GET", project_path)
     require(project["coordinator"] == coordinator_account, "wrong coordinator selected")
+    exercise_project_brief(client, coordinator, worker, outsider, project_path)
     require(outsider.request("GET", "/api/projects") == [], "project list leaked another client's project")
     year, week_number, _ = (date.today() + timedelta(weeks=2)).isocalendar()
     week = {"isoYear": year, "week": week_number}
@@ -312,6 +342,8 @@ def prepare_single(base, admin_password):
     milestone = project["proposals"][0]["milestones"][0]
     require(milestone["status"] == "InProgress", "execution did not start")
     require(milestone["assignments"] == [{"requirementKey": 1, "worker": worker_account}], "skills/mode assignment failed")
+    require(worker.request("GET", project_path + "/brief") == client.request("GET", project_path + "/brief"),
+            "assigned worker cannot read the client brief")
     return (client, coordinator, worker, password, coordinator_account, worker_account,
             project_id, project_path, storage_path, milestone, task)
 
