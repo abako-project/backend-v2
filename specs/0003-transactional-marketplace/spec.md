@@ -32,7 +32,7 @@ Implement the approved product in Rust. SPEC-0001 covers custody, SPEC-0002 the 
 - PLAN-004: The client can decline to contract execution after accepting and paying for planning. Execution approval is a separate signed action requiring an accepted planning delivery and a PendingApproval proposal.
 - PLAN-005: Each milestone quotes an explicit coordinator fee and duration and an explicit budget and duration per requirement. Its total is the checked sum of those prices. There is no universal coordinator percentage or DAO pricing mechanism in the POC. Execution approval locks the full quoted execution total and performs assignment/reservation atomically.
 - PLAN-006: Keep proposal states Draft, PendingApproval, Approved, Cancelled. A request for changes returns a pending proposal to Draft with the supplied change-request reference. Do not port the duplicated legacy scope/tasks model. Do not invent further proposal immutability machinery beyond guards needed to protect accepted prices and executed state.
-- PLAN-007: A Draft proposal may contain empty task storages while being edited. Submitting it requires at least one task in every milestone storage. Rejection leaves the proposal and its storages unchanged.
+- PLAN-007: Milestones retain their automatically created task storages, which may remain empty through proposal submission, planning acceptance and execution. Tracking tasks are not a prerequisite for these transitions or milestone settlement. Rejection leaves the proposal and its storages unchanged. This simplification was approved on 2026-10-08.
 
 ## Milestones, tracking, scores, and funds
 

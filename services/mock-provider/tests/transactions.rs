@@ -1291,8 +1291,8 @@ macro_rules! suite {
                 freezing_permissions(provider().await?).await
             }
             #[tokio::test]
-            async fn submitted_milestones_require_tasks() -> TestResult {
-                lifecycle::task_required(provider().await?).await
+            async fn empty_task_storages_preserve_lifecycle_and_payments() -> TestResult {
+                lifecycle::empty_task_storages(provider().await?).await
             }
             #[tokio::test]
             async fn execution_activates_in_order_and_preserves_team() -> TestResult {

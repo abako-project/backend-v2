@@ -45,10 +45,10 @@ Feature: Negotiate planning and execute a transactionally funded proposal
     Then the earlier worker is selected even if the other worker has a higher score
 
   @PLAN_007
-  Scenario: Every submitted milestone has a task
+  Scenario: Empty task storages do not block proposal delivery
     Given a draft proposal has a milestone with an empty task storage
     When the coordinator submits the proposal
-    Then submission fails without changing the proposal or storage
+    Then the proposal is delivered with the same empty task storage
 
   @MILE_001
   Scenario: Reserved milestones activate in sequence

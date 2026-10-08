@@ -116,7 +116,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 74);
+    assert_eq!(operation_ids.len(), 75);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "kunveno_session"

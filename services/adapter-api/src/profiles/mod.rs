@@ -2,8 +2,8 @@
 
 mod http;
 mod media;
-mod models;
-mod store;
+pub(crate) mod models;
+pub(crate) mod store;
 
 pub(crate) use http::{get_me, get_public, put_me};
 pub(crate) use media::MAX_IMAGE_BYTES;

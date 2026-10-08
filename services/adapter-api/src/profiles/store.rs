@@ -67,7 +67,7 @@ async fn worker(pool: &PgPool, id: PrincipalId) -> Result<Option<WorkerProfile>,
     .transpose()
 }
 
-pub(super) async fn read(pool: &PgPool, id: PrincipalId) -> Result<ProfilesView, Error> {
+pub(crate) async fn read(pool: &PgPool, id: PrincipalId) -> Result<ProfilesView, Error> {
     let exists = sqlx::query_scalar::<_, bool>(
         "SELECT EXISTS (SELECT 1 FROM principals WHERE principal_id = $1)",
     )

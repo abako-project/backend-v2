@@ -28,6 +28,9 @@ use zeroize::Zeroizing;
 #[path = "project_briefs/http_tests.rs"]
 mod project_briefs;
 
+#[path = "project_participants_tests.rs"]
+mod project_participants;
+
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
 

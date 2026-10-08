@@ -18,8 +18,8 @@ field-level source of truth and is also served at `GET /api/openapi.json`.
    the client accepts the quote. The coordinator then prepares a proposal.
 3. The proposal defines milestones, each with required skills, committed minutes
    and a budget for every worker slot. Creating its draft also creates one task
-   storage per milestone. The coordinator must create at least one task in each
-   storage before submission. Task edits do not change the contractual budget
+   storage per milestone. Storages may remain empty when submitting the proposal,
+   accepting planning delivery or approving execution. Task edits do not change the contractual budget
    or assignment requirements.
 4. The coordinator submits the proposal and delivers the plan. The client accepts
    that delivery, paying the planning fee, then approves execution. Approval
@@ -157,7 +157,7 @@ use the three Bramp rows instead.
 | Assigned coordinator | `POST /api/projects/{projectId}/planning/quote` | `{"fee":"100","minutes":100,"window":{"start":{"isoYear":2026,"week":40},"end":{"isoYear":2026,"week":40}}}`. |
 | Client | `POST /api/projects/{projectId}/planning/accept` | `{"expectedRevision":<current planning.revision>}`. |
 | Coordinator | `POST /api/projects/{projectId}/proposals` | `{"title":"Implementation","description":"One milestone","milestones":[{"key":1,"title":"Ship","window":<future week window>,"coordinatorFee":"100","coordinatorMinutes":60,"requirements":[{"key":1,"roleId":2,"skillIds":[1,5,13],"minutes":120,"budget":"900"}]}]}`. Read the project to obtain `proposalId`, `milestoneId` and `taskStorage.taskStorageId`. |
-| Coordinator | `POST /api/task-storages/{storageId}/tasks` | `{"title":"Implement","description":"Tracked separately","taskType":"Task","priority":"Medium","status":"ToDo","assignees":[],"estimatedMinutes":120,"loggedMinutes":0,"dueAt":null}`. Create at least one task per milestone before submission. |
+| Coordinator | `POST /api/task-storages/{storageId}/tasks` | `{"title":"Implement","description":"Tracked separately","taskType":"Task","priority":"Medium","status":"ToDo","assignees":[],"estimatedMinutes":120,"loggedMinutes":0,"dueAt":null}`. Optional tracking: task creation is not required before submission. |
 | Coordinator | `POST /api/projects/{projectId}/proposals/{proposalId}/submit` | No JSON body. |
 | Client | `POST /api/projects/{projectId}/planning/accept-delivery` | `{"expectedRevision":<current planning.revision>}`; planning fee is settled. |
 | Client | `POST /api/projects/{projectId}/proposals/{proposalId}/approve` | `{"expectedRevision":<current proposal.revision>}`; inspect assignments and execution escrow in a fresh project read. |

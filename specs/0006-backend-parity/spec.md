@@ -152,3 +152,10 @@ after reload. Milestone submission hashes are explicitly outside BE-B.
 Verify owner/participant/outsider permissions, CSRF and Origin, malformed inputs,
 repeat migration and restart persistence, provider reset isolation, concurrent
 writes and exact retries, and unchanged provider state/nonces/balances.
+
+
+### BE-C3 — Project participant presentation (APPROVED 2026-10-08)
+
+GET `/api/projects/{projectId}/participants` returns client and coordinator account IDs, optional display names, existing public profile sections and image-availability flags. Current project participants only: unauthenticated 401; inaccessible/missing project 404. No usernames, private contact emails, departments, background, image bytes or session secrets. Unmapped provider accounts retain their actual account ID with null name/profile and false image flags. Read-only adapter/PostgreSQL lookup; no migration or provider command changes.
+
+Acceptance: client, coordinator and assigned worker can read; outsider cannot enumerate through this route; private fields stay absent; missing/unavailable provider projects cannot reveal stale participants.

@@ -8,6 +8,7 @@ mod notifications;
 mod operations;
 mod profiles;
 mod project_briefs;
+mod project_participants;
 mod state;
 
 use state::{App, Config, Error};

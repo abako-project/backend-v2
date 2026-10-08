@@ -230,13 +230,6 @@ impl State {
                     proposal.status == ProposalStatus::Draft,
                     "proposal_not_draft",
                 )?;
-                require(
-                    proposal
-                        .milestones
-                        .iter()
-                        .all(|milestone| !milestone.task_storage.tasks.is_empty()),
-                    "milestone_tasks_required",
-                )?;
                 proposal.status = ProposalStatus::PendingApproval;
                 bump(&mut proposal.revision)?;
                 if project.planning.status != PlanningStatus::Completed {

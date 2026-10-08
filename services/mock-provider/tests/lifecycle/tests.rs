@@ -41,13 +41,15 @@ async fn complete(
     Ok(())
 }
 
-async fn empty_draft(provider: &Provider) -> TestResult<(Keypair, EntityId, EntityId)> {
-    let (_root, coordinator, _worker, client) = setup(provider).await?;
+async fn empty_draft(
+    provider: &Provider,
+) -> TestResult<(Keypair, Keypair, Keypair, EntityId, EntityId)> {
+    let (_root, coordinator, worker, client) = setup(provider).await?;
     let project_id = success(
         provider,
         &client,
         ProviderCommand::CreateProject(CreateProjectRequest {
-            title: "Plan needing tasks".into(),
+            title: "Plan with empty task storages".into(),
             description: String::new(),
         }),
     )
@@ -91,59 +93,31 @@ async fn empty_draft(provider: &Provider) -> TestResult<(Keypair, EntityId, Enti
     .await?
     .created_entity_id
     .ok_or("proposal ID")?;
-    Ok((coordinator, project_id, proposal_id))
+    Ok((coordinator, worker, client, project_id, proposal_id))
 }
 
-pub(super) async fn task_required(provider: Provider) -> TestResult {
-    let (coordinator, project_id, proposal_id) = empty_draft(&provider).await?;
-    let before = provider.snapshot().await?;
-    assert_eq!(
-        send(
-            &provider,
-            &coordinator,
-            ProviderCommand::SubmitProposal {
-                project_id,
-                proposal_id,
-            },
-        )
-        .await?
-        .outcome,
-        ExecutionOutcome::Failed("milestone_tasks_required".into())
-    );
-    assert_eq!(provider.snapshot().await?, before);
-    let storage_id = before
-        .projects
-        .iter()
-        .find(|item| item.project_id == project_id)
-        .ok_or("project missing")?
-        .proposals[0]
-        .milestones[0]
-        .task_storage
-        .task_storage_id;
+pub(super) async fn empty_task_storages(provider: Provider) -> TestResult {
+    let (coordinator, worker, client, project_id, proposal_id) = empty_draft(&provider).await?;
     success(
         &provider,
-        &coordinator,
-        ProviderCommand::CreateTask {
-            project_id,
-            task_storage_id: storage_id,
-            task: draft_task(),
-        },
+        &worker,
+        ProviderCommand::SetCalendar(capacity(120)),
     )
     .await?;
-    assert_eq!(
-        send(
-            &provider,
-            &coordinator,
-            ProviderCommand::SubmitProposal {
-                project_id,
-                proposal_id,
-            },
-        )
-        .await?
-        .outcome,
-        ExecutionOutcome::Failed("milestone_tasks_required".into())
+    let before = project(&provider, project_id).await?;
+    let storages: Vec<_> = before.proposals[0]
+        .milestones
+        .iter()
+        .map(|milestone| milestone.task_storage.task_storage_id)
+        .collect();
+    assert_eq!(storages.len(), 2);
+    assert_ne!(storages[0], storages[1]);
+    assert!(
+        before.proposals[0]
+            .milestones
+            .iter()
+            .all(|m| m.task_storage.tasks.is_empty())
     );
-    fill_milestone_tasks(&provider, &coordinator, project_id).await?;
     success(
         &provider,
         &coordinator,
@@ -153,6 +127,54 @@ pub(super) async fn task_required(provider: Provider) -> TestResult {
         },
     )
     .await?;
+    let delivered = project(&provider, project_id).await?;
+    assert_eq!(
+        delivered.proposals[0].status,
+        ProposalStatus::PendingApproval
+    );
+    assert_eq!(delivered.execution_escrow, Money::ZERO);
+    assert_eq!(
+        approve(&provider, &client, project_id, proposal_id)
+            .await?
+            .outcome,
+        ExecutionOutcome::Failed("planning_not_accepted".into())
+    );
+    success(
+        &provider,
+        &client,
+        ProviderCommand::AcceptPlanningDelivery {
+            project_id,
+            expected_revision: delivered.planning.revision,
+        },
+    )
+    .await?;
+    assert_eq!(
+        approve(&provider, &client, project_id, proposal_id)
+            .await?
+            .outcome,
+        ExecutionOutcome::Success
+    );
+    let approved = project(&provider, project_id).await?;
+    assert_eq!(approved.execution_escrow, Money::new(240));
+    for milestone in &approved.proposals[0].milestones {
+        complete(
+            &provider,
+            &coordinator,
+            &client,
+            &worker,
+            project_id,
+            milestone.milestone_id,
+        )
+        .await?;
+    }
+    let completed = project(&provider, project_id).await?;
+    assert!(completed.completed);
+    assert_eq!(completed.execution_escrow, Money::ZERO);
+    for (milestone, storage_id) in completed.proposals[0].milestones.iter().zip(storages) {
+        assert_eq!(milestone.task_storage.task_storage_id, storage_id);
+        assert!(milestone.task_storage.tasks.is_empty());
+        assert_eq!(milestone.status, Some(MilestoneStatus::Completed));
+    }
     Ok(())
 }
 
