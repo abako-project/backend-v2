@@ -18,6 +18,7 @@ pub(crate) struct ClientProfile {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub(crate) struct WorkerProfile {
     pub(crate) name: String,
+    pub(crate) contact_email: Option<String>,
     pub(crate) github_username: Option<String>,
     pub(crate) portfolio_url: Option<String>,
     pub(crate) biography: Option<String>,
@@ -170,6 +171,18 @@ impl ClientProfile {
 impl WorkerProfile {
     pub(super) fn validate(&self) -> Result<(), Error> {
         required_text(&self.name, 128)?;
+        // ponytail: basic contact syntax; use a mailbox parser if full RFC support is required.
+        if let Some(email) = &self.contact_email {
+            required_text(email, 254)?;
+            let (local, domain) = email.split_once('@').ok_or(Error::Invalid)?;
+            if local.is_empty()
+                || domain.is_empty()
+                || domain.contains('@')
+                || email.chars().any(char::is_whitespace)
+            {
+                return Err(Error::Invalid);
+            }
+        }
         if let Some(username) = &self.github_username
             && (username.len() > 39
                 || username.is_empty()

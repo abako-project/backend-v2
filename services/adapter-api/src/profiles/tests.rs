@@ -16,6 +16,7 @@ fn private_fields_never_appear_in_public_projection() -> Result<(), Box<dyn std:
     }))?;
     let worker: WorkerProfile = serde_json::from_value(json!({
         "name": "Worker",
+        "contactEmail": "worker@example.test",
         "githubUsername": "example-worker",
         "portfolioUrl": "https://example.test/work",
         "biography": "Public biography",
@@ -35,6 +36,8 @@ fn private_fields_never_appear_in_public_projection() -> Result<(), Box<dyn std:
     assert!(!serialized.contains("background"));
     assert!(!serialized.contains("proficiency"));
     assert!(!serialized.contains("email"));
+    assert!(!serialized.contains("contactEmail"));
+    assert!(!serialized.contains("worker@example.test"));
     assert!(serialized.contains("Public biography"));
     assert!(serialized.contains("Example Ltd"));
     Ok(())
@@ -63,5 +66,35 @@ fn profile_validation_rejects_unbounded_or_unsafe_input() -> Result<(), Box<dyn 
         "proficiency": null, "location": null, "languages": []
     }))?;
     assert!(matches!(worker.validate(), Err(Error::Invalid)));
+    Ok(())
+}
+
+#[test]
+fn contact_email_is_optional_bounded_and_validated() -> Result<(), Box<dyn std::error::Error>> {
+    let base = json!({"name":"Worker", "githubUsername":null, "portfolioUrl":null,
+        "biography":null, "background":null, "proficiency":null, "location":null, "languages":[]});
+    let legacy: WorkerProfile = serde_json::from_value(base.clone())?;
+    assert!(legacy.contact_email.is_none());
+    for email in [json!(null), json!("worker@example.test")] {
+        let mut value = base.clone();
+        value["contactEmail"] = email;
+        serde_json::from_value::<WorkerProfile>(value)?.validate()?;
+    }
+    for email in [
+        String::new(),
+        "@example.test".into(),
+        "worker@".into(),
+        "worker@@example.test".into(),
+        "worker name@example.test".into(),
+        "worker\n@example.test".into(),
+        format!("{}@example.test", "a".repeat(255)),
+    ] {
+        let mut value = base.clone();
+        value["contactEmail"] = json!(email);
+        assert!(matches!(
+            serde_json::from_value::<WorkerProfile>(value)?.validate(),
+            Err(Error::Invalid)
+        ));
+    }
     Ok(())
 }

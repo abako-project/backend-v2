@@ -43,7 +43,7 @@ async fn client(pool: &PgPool, id: PrincipalId) -> Result<Option<ClientProfile>,
 }
 
 async fn worker(pool: &PgPool, id: PrincipalId) -> Result<Option<WorkerProfile>, Error> {
-    let row = sqlx::query("SELECT name, github_username, portfolio_url, biography, background, proficiency, location, languages FROM worker_profiles WHERE principal_id = $1")
+    let row = sqlx::query("SELECT name, contact_email, github_username, portfolio_url, biography, background, proficiency, location, languages FROM worker_profiles WHERE principal_id = $1")
         .bind(id.to_string())
         .fetch_optional(pool)
         .await?;
@@ -51,6 +51,7 @@ async fn worker(pool: &PgPool, id: PrincipalId) -> Result<Option<WorkerProfile>,
         let proficiency: Option<String> = row.try_get("proficiency")?;
         Ok(WorkerProfile {
             name: row.try_get("name")?,
+            contact_email: row.try_get("contact_email")?,
             github_username: row.try_get("github_username")?,
             portfolio_url: row.try_get("portfolio_url")?,
             biography: row.try_get("biography")?,
@@ -111,9 +112,10 @@ pub(super) async fn write_worker(
     profile: WorkerProfile,
 ) -> Result<(), Error> {
     profile.validate()?;
-    sqlx::query("INSERT INTO worker_profiles (principal_id, name, github_username, portfolio_url, biography, background, proficiency, location, languages, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (principal_id) DO UPDATE SET name=EXCLUDED.name, github_username=EXCLUDED.github_username, portfolio_url=EXCLUDED.portfolio_url, biography=EXCLUDED.biography, background=EXCLUDED.background, proficiency=EXCLUDED.proficiency, location=EXCLUDED.location, languages=EXCLUDED.languages, updated_at=EXCLUDED.updated_at")
+    sqlx::query("INSERT INTO worker_profiles (principal_id, name, contact_email, github_username, portfolio_url, biography, background, proficiency, location, languages, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (principal_id) DO UPDATE SET name=EXCLUDED.name, contact_email=EXCLUDED.contact_email, github_username=EXCLUDED.github_username, portfolio_url=EXCLUDED.portfolio_url, biography=EXCLUDED.biography, background=EXCLUDED.background, proficiency=EXCLUDED.proficiency, location=EXCLUDED.location, languages=EXCLUDED.languages, updated_at=EXCLUDED.updated_at")
         .bind(id.to_string())
         .bind(profile.name)
+        .bind(profile.contact_email)
         .bind(profile.github_username)
         .bind(profile.portfolio_url)
         .bind(profile.biography)

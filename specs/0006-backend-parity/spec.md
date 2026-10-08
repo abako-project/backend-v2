@@ -7,7 +7,12 @@ Status: APPROVED — product owner approved implementation on 2026-09-23.
 The adapter owns editable descriptive profiles in PostgreSQL. A client profile
 has name, company, department, website, description, location and languages.
 A worker profile has name, GitHub username, portfolio URL, biography, background,
-proficiency, location and languages. Email remains private authentication data.
+proficiency, location and languages. Username is the authentication identifier.
+
+APPROVED amendment, 2026-10-08 (BE-A1/BE-A2): worker profiles may also store
+an optional, unverified contactEmail, visible only to the owner. It is not used
+for authentication. Read-only GET /api/catalog is public so signup can select
+real qualifications before account creation. Catalog mutations remain protected.
 Qualifications, mode, calendar, scores and project history remain provider-owned
 and are not copied into these rows. Availability is read from the worker's
 calendar, not a second profile field.

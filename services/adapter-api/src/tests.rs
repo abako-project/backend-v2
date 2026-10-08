@@ -1071,3 +1071,130 @@ async fn postgres_restart_preserves_queue_and_unread_notifications() -> TestResu
     internal.finish().await?;
     Ok(())
 }
+
+#[tokio::test]
+async fn signup_catalog_is_public_and_contact_email_is_private() -> TestResult {
+    let internal = Server::start(internal(fake()?)).await?;
+    let app = app(&internal).await?;
+    let adapter = Server::start(http::router(app.clone())).await?;
+    let client = reqwest::Client::new();
+    let catalog_url = format!("{}/api/catalog", adapter.url);
+    let response = client.get(&catalog_url).send().await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    response.json::<CatalogView>().await?;
+    assert_eq!(
+        client
+            .get(&catalog_url)
+            .header(header::ORIGIN, "http://evil.invalid")
+            .send()
+            .await?
+            .status(),
+        StatusCode::FORBIDDEN
+    );
+    for path in ["/api/workers", "/api/profiles/me"] {
+        assert_eq!(
+            client
+                .get(format!("{}{path}", adapter.url))
+                .send()
+                .await?
+                .status(),
+            StatusCode::UNAUTHORIZED
+        );
+    }
+    assert_eq!(
+        client
+            .post(format!("{}/api/catalog/skill-requests", adapter.url))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        client
+            .put(format!("{}/api/admin/catalog", adapter.url))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?
+            .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    let (owner, cookie) = register(&app, "contact-owner").await?;
+    let (_, other_cookie) = register(&app, "contact-other").await?;
+    let profile_url = format!("{}/api/profiles/me", adapter.url);
+    let mut body = serde_json::json!({"section":"worker", "profile":{"name":"Worker", "contactEmail":"worker@example.test",
+        "githubUsername":null, "portfolioUrl":null, "biography":null, "background":null,
+        "proficiency":null, "location":null, "languages":[]}});
+    let response = client
+        .put(&profile_url)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", &owner.view.csrf_token)
+        .json(&body)
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.json::<serde_json::Value>().await?["worker"]["contactEmail"],
+        "worker@example.test"
+    );
+    let private = client
+        .get(&profile_url)
+        .header(header::COOKIE, &cookie)
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
+    assert_eq!(private["worker"]["contactEmail"], "worker@example.test");
+    let public = client
+        .get(format!(
+            "{}/api/profiles/{}",
+            adapter.url, owner.view.principal_id
+        ))
+        .header(header::COOKIE, &other_cookie)
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
+    assert!(public["worker"].get("contactEmail").is_none());
+    let other = client
+        .get(&profile_url)
+        .header(header::COOKIE, &other_cookie)
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
+    assert!(other["worker"].is_null());
+    body["profile"]["contactEmail"] = serde_json::json!("bad email");
+    assert_eq!(
+        client
+            .put(&profile_url)
+            .header(header::COOKIE, &cookie)
+            .header("X-CSRF-Token", &owner.view.csrf_token)
+            .json(&body)
+            .send()
+            .await?
+            .status(),
+        StatusCode::BAD_REQUEST
+    );
+    for remove in [false, true] {
+        body["profile"]["contactEmail"] = serde_json::Value::Null;
+        if remove {
+            body["profile"]
+                .as_object_mut()
+                .ok_or("profile missing")?
+                .remove("contactEmail");
+        }
+        let response = client
+            .put(&profile_url)
+            .header(header::COOKIE, &cookie)
+            .header("X-CSRF-Token", &owner.view.csrf_token)
+            .json(&body)
+            .send()
+            .await?;
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(response.json::<serde_json::Value>().await?["worker"]["contactEmail"].is_null());
+    }
+    adapter.finish().await?;
+    internal.finish().await?;
+    Ok(())
+}

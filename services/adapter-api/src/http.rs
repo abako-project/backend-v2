@@ -225,6 +225,7 @@ async fn boundary(State(app): State<Arc<App>>, mut request: Request, next: Next)
     }
     let path = request.uri().path();
     let public = is_public_case(&request)
+        || (request.method() == Method::GET && path == "/api/catalog")
         || matches!(
             path,
             "/health"
