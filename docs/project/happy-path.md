@@ -238,3 +238,11 @@ profile/Bramp/catalog checks on both SQLite and memory mock storage. It also
 scans bounded service logs for the generated secret markers. Use `--storage sqlite` or `--storage memory`
 to run only one backend. It is a signed backend E2E, not a browser E2E or a
 real-chain test.
+
+### Project creation date
+
+Project reads expose `createdAt` in UTC Unix seconds. The provider records it when
+creation commits; later planning, proposal and milestone changes leave it intact.
+Existing snapshots recover it from durable `ProjectCreated` events. A missing
+historical event yields `null`, never a fabricated date. Clients may sort dated
+projects newest first and leave undated records last.

@@ -218,6 +218,15 @@ impl State {
                 && state.info.payload_version == PAYLOAD_VERSION,
             "state_configuration_mismatch",
         )?;
+        // Older snapshots retain the real creation time in their durable events.
+        for event in &state.events {
+            if event.kind == DomainEventKind::ProjectCreated
+                && let Some(id) = event.project_id
+                && let Some(project) = state.projects.get_mut(&id)
+            {
+                project.created_at = project.created_at.or(Some(event.occurred_at));
+            }
+        }
         state.validate()?;
         state.rebuild_index();
         Ok(state)

@@ -882,6 +882,7 @@ async fn only_client_and_assigned_coordinator_can_cancel_or_dispute() -> TestRes
         project_id,
         client: client.view.account_id,
         coordinator: coordinator.view.account_id,
+        created_at: Some(UnixSeconds::new(1_788_912_000)),
         title: "Permission boundary".into(),
         description: String::new(),
         planning: PlanningView {

@@ -667,7 +667,7 @@ dto!(/// Proposal read model; its total is derived from checked quote line items
 dto!(/// Negotiation and settlement of planning, separate from execution.
     PlanningView { revision: u64, status: PlanningStatus, quote: Option<PlanningQuote>, escrow: Money, frozen: bool });
 dto!(/// Project read model; completion follows acceptance of the final funded milestone.
-    ProjectView { project_id: EntityId, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, completed: bool, active_dispute_id: Option<EntityId> });
+    ProjectView { project_id: EntityId, #[serde(default)] created_at: Option<UnixSeconds>, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, completed: bool, active_dispute_id: Option<EntityId> });
 dto!(/// Available balance for the initial KVN asset, excluding locked escrow.
     BalanceView { account: AccountId32, asset_id: u32, available: Money });
 dto!(/// Internal read-only snapshot. Adapter filters confidential project/task data.

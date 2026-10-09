@@ -104,3 +104,76 @@ fn persisted_state_cannot_bypass_catalog_or_supply_invariants() -> Result<()> {
     assert!(State::restore(&state.encode()?, root).is_err());
     Ok(())
 }
+
+#[cfg(feature = "storage-sqlite")]
+#[test]
+fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
+    use generated_contracts::{CreateProjectRequest, DomainEvent, DomainEventKind, OperationId};
+
+    let root = AccountId32::from_bytes([1; 32]);
+    let coordinator = AccountId32::from_bytes([2; 32]);
+    let mut state = State::new(root)?;
+    state.apply(
+        coordinator,
+        &ProviderCommand::RegisterWorker(RegisterWorkerRequest {
+            display_name: "Coordinator".into(),
+            qualifications: Qualifications {
+                role_ids: Vec::new(),
+                skill_ids: Vec::new(),
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(60),
+                overrides: Vec::new(),
+            },
+        }),
+        UnixSeconds::new(100),
+    )?;
+    let worker = state.worker_mut(coordinator)?;
+    worker.mode = WorkerMode::Coordinator;
+    worker.coordinator_eligible = true;
+    let created_at = UnixSeconds::new(500);
+    let effect = state.apply(
+        root,
+        &ProviderCommand::CreateProject(CreateProjectRequest {
+            title: "Dated request".into(),
+            description: String::new(),
+        }),
+        created_at,
+    )?;
+    let id = effect.entity_id.ok_or_else(Error::internal)?;
+    assert_eq!(state.projects[&id].created_at, Some(created_at));
+    state.events.push(DomainEvent {
+        provider_instance_id: state.info.provider_instance_id,
+        cursor: 1,
+        operation_id: OperationId::from_bytes([1; 16]),
+        kind: DomainEventKind::ProjectCreated,
+        project_id: Some(id),
+        entity_id: Some(id),
+        recipients: vec![root, coordinator],
+        occurred_at: created_at,
+    });
+    let mut old: serde_json::Value =
+        serde_json::from_slice(&state.encode()?).map_err(|_| Error::internal())?;
+    old["projects"][id.to_string()]
+        .as_object_mut()
+        .ok_or_else(Error::internal)?
+        .remove("createdAt");
+    let bytes = serde_json::to_vec(&old).map_err(|_| Error::internal())?;
+    let restored = State::restore(&bytes, root)?;
+    assert_eq!(restored.projects[&id].created_at, Some(created_at));
+    assert_eq!(
+        State::restore(&restored.encode()?, root)?.projects[&id].created_at,
+        Some(created_at)
+    );
+    old["events"] = serde_json::json!([]);
+    assert_eq!(
+        State::restore(
+            &serde_json::to_vec(&old).map_err(|_| Error::internal())?,
+            root
+        )?
+        .projects[&id]
+            .created_at,
+        None
+    );
+    Ok(())
+}

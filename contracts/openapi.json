@@ -5581,6 +5581,7 @@
         "additionalProperties": false,
         "required": [
           "projectId",
+          "createdAt",
           "client",
           "coordinator",
           "title",
@@ -5595,6 +5596,17 @@
         "properties": {
           "projectId": {
             "$ref": "#/components/schemas/EntityId"
+          },
+          "createdAt": {
+            "description": "Provider creation time in UTC Unix seconds. New projects always have a timestamp. Older snapshots recover it from ProjectCreated events; null means no creation event is available.",
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UnixSeconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "client": {
             "$ref": "#/components/schemas/AccountId32"
@@ -5644,6 +5656,7 @@
             "projectId": "0x01010101010101010101010101010101",
             "client": "0x0202020202020202020202020202020202020202020202020202020202020202",
             "coordinator": "0x0303030303030303030303030303030303030303030303030303030303030303",
+            "createdAt": 1788912000,
             "title": "Example request",
             "description": "A plan to review",
             "planning": {

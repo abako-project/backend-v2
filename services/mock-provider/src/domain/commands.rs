@@ -246,6 +246,7 @@ impl State {
             project_id,
             ProjectView {
                 project_id,
+                created_at: Some(now),
                 client: origin,
                 coordinator,
                 title: title.into(),

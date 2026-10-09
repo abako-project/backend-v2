@@ -245,6 +245,7 @@ async fn delivered_plan(
     )
     .await?;
     let view = project(provider, id).await?;
+    assert_eq!(view.created_at, Some(NOW));
     success(
         provider,
         client,
