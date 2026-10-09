@@ -3406,7 +3406,7 @@
           "Marketplace"
         ],
         "summary": "Read public identities of the project client and coordinator",
-        "description": "Current project participants only, using the same visibility as the project read. Maps custody account IDs to adapter principals and existing public profile sections. Unmapped provider accounts have null displayName/profiles and false image flags. Never includes usernames, private contact emails, departments or session data. No provider state changes or database migration.",
+        "description": "Current project participants only, using the same visibility as the project read. Maps custody account IDs to adapter principals and existing public profile sections. Unmapped provider accounts have null displayName/profiles and false image flags. Includes optional worker contact emails only for authorized project participants; public profile endpoints still exclude them. Returns unique contractually assigned workers from approved proposals. Never includes usernames, departments or session data. No provider state changes or database migration.",
         "security": [
           {
             "sessionCookie": []
@@ -6857,6 +6857,7 @@
         "required": [
           "accountId",
           "displayName",
+          "contactEmail",
           "profiles",
           "clientImage",
           "workerImage"
@@ -6874,6 +6875,10 @@
                 "type": "null"
               }
             ]
+          },
+          "contactEmail": {
+            "description": "Contact address from the worker profile, shared only with authorized participants of this project; null when absent.",
+            "oneOf": [{"type": "string", "format": "email"}, {"type": "null"}]
           },
           "profiles": {
             "oneOf": [
@@ -6898,7 +6903,8 @@
         "additionalProperties": false,
         "required": [
           "client",
-          "coordinator"
+          "coordinator",
+          "workers"
         ],
         "properties": {
           "client": {
@@ -6906,6 +6912,10 @@
           },
           "coordinator": {
             "$ref": "#/components/schemas/ProjectParticipantView"
+          },
+          "workers": {
+            "type": "array",
+            "items": {"$ref": "#/components/schemas/ProjectParticipantView"}
           }
         }
       },

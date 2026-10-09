@@ -2,7 +2,7 @@ use super::*;
 use serde_json::{Value, json};
 
 #[tokio::test]
-async fn participants_enforce_visibility_and_only_return_public_profiles() -> TestResult {
+async fn participants_return_team_contacts_only_to_authorized_project_members() -> TestResult {
     let fake = fake()?;
     let internal = Server::start(internal(fake.clone())).await?;
     let app = app(&internal).await?;
@@ -15,10 +15,19 @@ async fn participants_enforce_visibility_and_only_return_public_profiles() -> Te
         serde_json::from_value(doc["components"]["schemas"]["ProjectView"]["examples"][0].clone())?;
     project.client = owner.view.account_id;
     project.coordinator = coordinator.view.account_id;
+    project.proposals[0].status = generated_contracts::ProposalStatus::Approved;
     let milestone = &mut project.proposals[0].milestones[0];
+    milestone.assignments = vec![generated_contracts::AssignmentView {
+        requirement_key: 1,
+        worker: worker.view.account_id,
+    }];
     let mut definition = doc["components"]["schemas"]["TaskDefinition"]["examples"][0].clone();
     definition["assignees"] = json!([worker.view.account_id]);
     milestone.task_storage.tasks.push(serde_json::from_value(json!({"taskId":1,"reporter":worker.view.account_id,"createdAt":1,"updatedAt":1,"task":definition}))?);
+    let mut second = milestone.clone();
+    second.milestone_id = EntityId::from_bytes([92; 16]);
+    second.definition.key += 1;
+    project.proposals[0].milestones.push(second);
     fake.lock().await.snapshot.projects.push(project.clone());
     let server = Server::start(http::router(app.clone())).await?;
     let client = reqwest::Client::new();
@@ -33,7 +42,13 @@ async fn participants_enforce_visibility_and_only_return_public_profiles() -> Te
             &coordinator,
             &coordinator_cookie,
             "worker",
-            json!({"name":"Coordinator Name", "contactEmail":"PRIVATE@example.test", "githubUsername":null, "portfolioUrl":null, "biography":null, "background":"PRIVATE BACKGROUND", "proficiency":"senior", "location":null, "languages":[]}),
+            json!({"name":"Coordinator Name", "contactEmail":"coordinator@example.test", "githubUsername":null, "portfolioUrl":null, "biography":null, "background":"PRIVATE BACKGROUND", "proficiency":"senior", "location":null, "languages":[]}),
+        ),
+        (
+            &worker,
+            &worker_cookie,
+            "worker",
+            json!({"name":"Worker Name", "contactEmail":"worker@example.test", "githubUsername":null, "portfolioUrl":null, "biography":null, "background":"PRIVATE WORKER BACKGROUND", "proficiency":"senior", "location":null, "languages":[]}),
         ),
     ] {
         assert_eq!(
@@ -49,7 +64,7 @@ async fn participants_enforce_visibility_and_only_return_public_profiles() -> Te
             StatusCode::OK
         );
     }
-    // The response exposes availability, never image bytes or private profile fields.
+    // Only project contacts are shared; other private fields and image bytes stay excluded.
     sqlx::query("UPDATE client_profiles SET image_data=$1,image_mime_type='image/png' WHERE principal_id=$2")
         .bind(vec![1_u8,2,3]).bind(owner.view.principal_id.to_string()).execute(&app.db).await?;
     let url = format!(
@@ -92,10 +107,27 @@ async fn participants_enforce_visibility_and_only_return_public_profiles() -> Te
             "Coordinator Name"
         );
         assert_eq!(body["coordinator"]["workerImage"], false);
+        assert_eq!(
+            body["coordinator"]["contactEmail"],
+            "coordinator@example.test"
+        );
+        assert!(body["client"]["contactEmail"].is_null());
+        assert_eq!(
+            body["workers"].as_array().ok_or("workers missing")?.len(),
+            1
+        );
+        assert_eq!(
+            body["workers"][0]["accountId"],
+            worker.view.account_id.to_string()
+        );
+        assert_eq!(
+            body["workers"][0]["profiles"]["worker"]["name"],
+            "Worker Name"
+        );
+        assert_eq!(body["workers"][0]["contactEmail"], "worker@example.test");
         let text = body.to_string();
         for private in [
             "PRIVATE",
-            "contactEmail",
             "department",
             "background",
             "username",
@@ -118,6 +150,28 @@ async fn participants_enforce_visibility_and_only_return_public_profiles() -> Te
             }
         }
     }
+    let public = client
+        .get(format!(
+            "{}/api/profiles/{}",
+            server.url, worker.view.principal_id
+        ))
+        .send()
+        .await?
+        .json::<Value>()
+        .await?
+        .to_string();
+    assert!(!public.contains("contactEmail"));
+    assert!(!public.contains("worker@example.test"));
+    fake.lock().await.snapshot.projects[0].proposals[0].status =
+        generated_contracts::ProposalStatus::Draft;
+    let body = client
+        .get(&url)
+        .header(header::COOKIE, &owner_cookie)
+        .send()
+        .await?
+        .json::<Value>()
+        .await?;
+    assert_eq!(body["workers"], json!([]));
     fake.lock().await.snapshot.projects[0].coordinator = AccountId32::from_bytes([91; 32]);
     let body = client
         .get(&url)
@@ -128,6 +182,7 @@ async fn participants_enforce_visibility_and_only_return_public_profiles() -> Te
         .await?;
     assert!(body["coordinator"]["profiles"].is_null());
     assert!(body["coordinator"]["displayName"].is_null());
+    assert!(body["coordinator"]["contactEmail"].is_null());
     assert_eq!(body["coordinator"]["workerImage"], false);
     assert_eq!(
         client
