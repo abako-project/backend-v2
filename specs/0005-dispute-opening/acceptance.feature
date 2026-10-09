@@ -12,7 +12,7 @@ Feature: Reject a milestone and open a public dispute
     @SUB_001 @REF_001
     Scenario: Coordinator submits a delivery
       Given the milestone is InProgress
-      When its coordinator submits an evidence URL and SHA-256 with every worker rating
+      When its coordinator submits an evidence URL with every worker rating
       Then a new submission ID and version are recorded with PendingReview
       And the milestone becomes CompletionRequested
       And balances reputation and reservations remain unchanged
@@ -61,13 +61,11 @@ Feature: Reject a milestone and open a public dispute
         | a URL with credentials       |
         | a URL with control characters |
         | a URL above the byte limit   |
-        | a digest of the wrong length |
-        | a non-hexadecimal digest     |
 
     @REF_001
     Scenario: Reference registration does not fetch external content
       Given an evidence URL is structurally valid but unavailable
-      When an otherwise valid submission records that reference and its declared digest
+      When an otherwise valid submission records that reference without a content digest
       Then the reference is recorded without a backend fetch
       And the system does not claim the content was verified or retained
 

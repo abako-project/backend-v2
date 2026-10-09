@@ -61,22 +61,24 @@ A new submission returns the milestone to CompletionRequested. An earlier
 rejection stays in history but no longer authorizes opening. A later rejection
 of the new submission enables opening against that new submission only.
 
-## REF-001: Public URL and SHA-256
+## REF-001: Public HTTPS URL
 
-Deliverable, rejection reason, opening argument and counterparty response each
-contain url and sha256 (32 bytes, JSON hexadecimal prefixed with 0x).
-The digest commits to exact artifact bytes, not the URL string.
+Amended with owner approval on 2026-10-09: deliverable, rejection reason,
+opening argument and counterparty response contain only url. SHA-256 is no
+longer required or validated as content evidence. New records omit it; legacy
+records retain it only to preserve signed-command JSON/SCALE round trips.
 
-The adapter/provider validate structure, sign and store the reference. Neither
-fetches the URL, verifies remote content or guarantees availability. Readers
-can verify downloaded bytes against the commitment. A repository homepage does
-not identify exact bytes: software evidence should use a commit-specific
-artifact or a manifest describing the commit. A Git object ID is not necessarily
-the artifact's SHA-256 digest.
+<!-- Previous requirement suspended: each reference included a SHA-256 digest
+committing to exact artifact bytes. Do not restore without owner approval. -->
 
-Recorded references cannot be replaced. External hosts can still change/remove
-content. Freezing project state does not freeze a website, and a hash cannot
-recover missing content. Hosting and long-term retention are outside this PoC.
+The adapter/provider validate the HTTPS URL, sign and store the reference.
+Neither fetches the URL, verifies remote content or guarantees availability.
+External hosts can change/remove content. Freezing project state does not
+freeze a website. Hosting and long-term retention remain outside this PoC.
+
+Older JSON records remain readable. The reserved SCALE digest slot is retained
+for already signed operations; it is not a content requirement. Internal
+signing-payload hashes, signatures and transaction identifiers are unchanged.
 
 ## DSP-001: Open only against a current rejection
 

@@ -19,7 +19,6 @@ mod lifecycle;
 fn evidence() -> TestResult<EvidenceReference> {
     Ok(EvidenceReference::new(
         "https://example.test/evidence".to_owned(),
-        PayloadHash::from_bytes([7; 32]),
     )?)
 }
 

@@ -6,7 +6,7 @@ The provider owns these records. They are not adapter database entities.
 
 ## EvidenceReference
 
-Validated url and sha256. Submitter commits to exact artifact bytes; provider
+Validated HTTPS url, without a required content digest; provider
 does not fetch or attest them. No private-text variant or upload subsystem.
 
 ## CompletionSubmission

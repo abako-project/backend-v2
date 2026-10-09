@@ -22,7 +22,7 @@ validated private fields and constructors reused by JSON/SCALE decoding.
 Runtime validation still checks signed origin, current state and ancestry.
 
 Proposed technical bounds: absolute HTTPS URL, maximum 2048 UTF-8 bytes, no
-embedded credentials or control characters; a fixed 32-byte SHA-256 value.
+embedded credentials or control characters. Content hashes are not required.
 Fixtures use valid HTTPS references without fetching them. IPFS can use HTTPS
 gateway references; no implicit downloader or additional URI scheme support.
 
@@ -103,7 +103,7 @@ response, races, replay and restoration, in dedicated tests.rs modules.
 Adapter tests cover public GET versus protected writes and SSE replay.
 
 E2E starts real adapter/custody/mock services and uses public REST/SSE. Fixtures
-contain exact evidence bytes/digests; no real repository or remote host is needed.
+contain HTTPS references without content digests; no real repository or remote host is needed.
 Exercise acceptance and dispute branches, changed delivery versions, frozen
 other milestones, conservation and idempotency. Keep four-milestone 5/3/4/2
 regression passing. See acceptance.feature and tasks.md.

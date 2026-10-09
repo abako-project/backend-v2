@@ -163,7 +163,7 @@ use the three Bramp rows instead.
 | Client | `POST /api/projects/{projectId}/proposals/{proposalId}/approve` | `{"expectedRevision":<current proposal.revision>}`; inspect assignments and execution escrow in a fresh project read. |
 | Coordinator | `PUT /api/task-storages/{storageId}/tasks/{taskId}` | Full `TaskDefinition` with an assigned worker in `assignees`. |
 | Assigned worker | `PATCH /api/task-storages/{storageId}/tasks/{taskId}` | `{"status":"Done","loggedMinutes":120}`. Logged time does not alter the reserved contractual minutes. |
-| Coordinator | `POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions` | `{"workerRatings":[{"worker":"<assigned accountId>","score":8}],"deliverable":{"url":"https://example.test/delivery","sha256":"0x<64 hex characters>"}}`. Receipt yields `submissionId`. The older `request-completion` path is an alias. The hash must describe the actual evidence bytes; the API does not fetch or verify the URL. |
+| Coordinator | `POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions` | `{"workerRatings":[{"worker":"<assigned accountId>","score":8}],"deliverable":{"url":"https://example.test/delivery"}}`. Receipt yields `submissionId`. The older `request-completion` path is an alias. No hash is required; the API does not fetch or verify the URL. |
 | Client | `POST /api/projects/{projectId}/milestones/{milestoneId}/accept-completion` | `{"submissionId":"<current submissionId>","coordinatorScore":9,"teamRating":{"type":"Client","score":6}}`. Alternatively use `{"type":"DelegateToCoordinator"}` for `teamRating`. This settles that milestone only. |
 
 `GET /api/task-storages/{storageId}` and
@@ -215,7 +215,7 @@ not mark a notification read. Use
 
 Instead of acceptance, the client may call
 `POST /api/completion-submissions/{submissionId}/rejection` with
-`{"evidence":{"url":"https://example.test/reason","sha256":"0x<64 hex characters>"}}`.
+`{"evidence":{"url":"https://example.test/reason"}}`.
 Only while that rejection remains current, the client or coordinator may call
 `POST /api/disputes` with `projectId`, `milestoneId`,
 `rejectedSubmissionId` and the same shape of `evidence`. The created

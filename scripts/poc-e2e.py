@@ -358,7 +358,7 @@ def exercise(base, admin_password, proxy):
     milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
     submission = coordinator.command("POST", milestone_path + "/request-completion", {
         "workerRatings": [{"worker": worker_account, "score": 8}],
-        "deliverable": {"url": "https://example.test/delivery", "sha256": "0x" + "07" * 32},
+        "deliverable": {"url": "https://example.test/delivery"},
     })
     acceptance = {"coordinatorScore": 9, "teamRating": {"type": "Client", "score": 6},
                   "submissionId": submission["receipt"]["createdEntityId"]}
@@ -406,11 +406,11 @@ def exercise_dispute(base, admin_password, _proxy):
     (client, coordinator, worker, _password, _coordinator_account, worker_account,
      project_id, project_path, _storage_path, milestone, _task) = prepare_single(base, admin_password)
     milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
-    reference = {"url": "https://example.test/dispute-evidence", "sha256": "0x" + "09" * 32}
+    reference = {"url": "https://example.test/dispute-evidence"}
     balances_before = [actor.request("GET", "/api/balance") for actor in (client, coordinator, worker)]
     submission = coordinator.command("POST", milestone_path + "/request-completion", {
         "workerRatings": [{"worker": worker_account, "score": 8}],
-        "deliverable": {"url": "https://example.test/delivery", "sha256": "0x" + "07" * 32},
+        "deliverable": {"url": "https://example.test/delivery"},
     })
     submission_id = submission["receipt"]["createdEntityId"]
     client.command("POST", f"/api/completion-submissions/{submission_id}/rejection",
@@ -564,7 +564,7 @@ def exercise_multi_milestone(base, admin_password, _proxy):
         path = project_path + "/milestones/" + milestone["milestoneId"]
         submission = coordinator.command("POST", path + "/request-completion", {
             "workerRatings": [{"worker": workers[slot].session["accountId"], "score": 8} for slot in team],
-            "deliverable": {"url": "https://example.test/delivery", "sha256": "0x" + "07" * 32},
+            "deliverable": {"url": "https://example.test/delivery"},
         })
         requested = client.request("GET", project_path)["proposals"][0]["milestones"][index]
         require(requested["status"] == "CompletionRequested", "completion request was not recorded")

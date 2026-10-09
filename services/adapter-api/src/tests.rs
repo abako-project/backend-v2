@@ -913,10 +913,7 @@ async fn only_client_and_assigned_coordinator_can_cancel_or_dispute() -> TestRes
             project_id,
             milestone_id: EntityId::from_bytes([7; 16]),
             rejected_submission_id: EntityId::from_bytes([6; 16]),
-            evidence: EvidenceReference::new(
-                "https://example.test/reason".to_owned(),
-                PayloadHash::from_bytes([7; 32]),
-            )?,
+            evidence: EvidenceReference::new("https://example.test/reason".to_owned())?,
         }),
     ] {
         operations::authorize(&app, &client, &command).await?;

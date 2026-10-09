@@ -6306,8 +6306,7 @@
         "type": "object",
         "additionalProperties": false,
         "required": [
-          "url",
-          "sha256"
+          "url"
         ],
         "properties": {
           "url": {
@@ -6319,15 +6318,17 @@
           },
           "sha256": {
             "type": "string",
-            "pattern": "^0x[0-9a-f]{64}$"
+            "deprecated": true,
+            "readOnly": true,
+            "description": "Legacy records only; never required for new evidence."
           }
         },
         "examples": [
           {
-            "url": "https://example.test/delivery",
-            "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+            "url": "https://example.test/delivery"
           }
-        ]
+        ],
+        "description": "Public HTTPS reference. No content hash is required. New records contain only url; old records may retain deprecated sha256 for signed-operation compatibility. The backend does not fetch or verify external content."
       },
       "EvidenceRequest": {
         "type": "object",
@@ -6343,8 +6344,7 @@
         "examples": [
           {
             "evidence": {
-              "url": "https://example.test/delivery",
-              "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+              "url": "https://example.test/delivery"
             }
           }
         ]
@@ -6452,8 +6452,7 @@
             "submissionId": "0x08080808080808080808080808080808",
             "version": 1,
             "deliverable": {
-              "url": "https://example.test/delivery",
-              "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+              "url": "https://example.test/delivery"
             },
             "submittedBy": "0x0303030303030303030303030303030303030303030303030303030303030303",
             "submittedAt": 1,
@@ -6493,8 +6492,7 @@
             "milestoneId": "0x05050505050505050505050505050505",
             "rejectedSubmissionId": "0x08080808080808080808080808080808",
             "evidence": {
-              "url": "https://example.test/delivery",
-              "sha256": "0x0707070707070707070707070707070707070707070707070707070707070707"
+              "url": "https://example.test/delivery"
             }
           }
         ]

@@ -10,7 +10,7 @@ separate work.
 
 ## Delivered
 
-- Versioned milestone submissions with immutable HTTPS URL and SHA-256 evidence.
+- Versioned milestone submissions with recorded HTTPS URL references (content hash removed with owner approval on 2026-10-09).
 - Current-submission acceptance and rejection; rejection enters ChangesRequested.
 - Open public dispute entity, one active case per project and project-wide freeze.
 - One immutable counterparty response and anonymous public case read.

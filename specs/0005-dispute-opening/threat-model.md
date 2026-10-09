@@ -11,7 +11,7 @@ Status: IMPLEMENTED — 2026-09-23
 | Public route exposes writes | Match public GET/HEAD only; test unauthenticated writes and invalid CSRF |
 | Internal data leak | Allowlisted case DTO; no credentials, signed bytes, notification metadata or unrelated projects |
 | SSRF through evidence | No backend URL fetch/preview/webhook; structural validation only |
-| Changed/missing artifact | SHA-256 detects different bytes when retrievable; no retention or automatic integrity-verification claim |
+| Changed/missing artifact | External content can change; no integrity or retention guarantee |
 | Credentials in reference/log | Reject URL userinfo/control characters; never log URLs; no promise to detect arbitrary secrets in text |
 | Malformed persisted/encoded state | JSON/SCALE validation and restore invariants; incompatible state fails explicitly |
 | Unilateral payout/unlock | No resolution API or root bypass; negative tests preserve funds and reservations |

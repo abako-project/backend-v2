@@ -6,24 +6,26 @@ use crate::{
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-/// A public content commitment. Recording it does not fetch or verify a document.
+/// A public HTTPS reference. Recording it does not fetch or verify a document.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Encode)]
 #[serde(try_from = "EvidenceWire", into = "EvidenceWire")]
 pub struct EvidenceReference {
     url: String,
-    sha256: PayloadHash,
+    // Retain the SCALE slot for already signed operations; new evidence has no digest.
+    legacy_sha256: PayloadHash,
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct EvidenceWire {
     url: String,
-    sha256: PayloadHash,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    sha256: Option<String>,
 }
 
 impl EvidenceReference {
     /// Validate an absolute HTTPS reference without contacting its host.
-    pub fn new(url: String, sha256: PayloadHash) -> Result<Self, ContractError> {
+    pub fn new(url: String) -> Result<Self, ContractError> {
         if url.len() > 2048
             || url.chars().any(char::is_whitespace)
             || url.chars().any(char::is_control)
@@ -39,7 +41,10 @@ impl EvidenceReference {
         {
             return Err(ContractError::Invalid("evidence"));
         }
-        Ok(Self { url, sha256 })
+        Ok(Self {
+            url,
+            legacy_sha256: PayloadHash::from_bytes([0; 32]),
+        })
     }
 }
 
@@ -51,14 +56,21 @@ impl std::fmt::Debug for EvidenceReference {
 impl TryFrom<EvidenceWire> for EvidenceReference {
     type Error = ContractError;
     fn try_from(value: EvidenceWire) -> Result<Self, Self::Error> {
-        Self::new(value.url, value.sha256)
+        let mut reference = Self::new(value.url)?;
+        reference.legacy_sha256 = value
+            .sha256
+            .and_then(|hash| hash.parse().ok())
+            .unwrap_or(PayloadHash::from_bytes([0; 32]));
+        Ok(reference)
     }
 }
 impl From<EvidenceReference> for EvidenceWire {
     fn from(value: EvidenceReference) -> Self {
         Self {
             url: value.url,
-            sha256: value.sha256,
+            // Preserve old signed JSON commands exactly; new records omit this obsolete field.
+            sha256: (value.legacy_sha256 != PayloadHash::from_bytes([0; 32]))
+                .then(|| value.legacy_sha256.to_string()),
         }
     }
 }
@@ -66,8 +78,12 @@ impl Decode for EvidenceReference {
     fn decode<I: parity_scale_codec::Input>(
         input: &mut I,
     ) -> Result<Self, parity_scale_codec::Error> {
-        Self::new(String::decode(input)?, PayloadHash::decode(input)?)
-            .map_err(|_| "invalid evidence reference".into())
+        let url = String::decode(input)?;
+        let legacy_sha256 = PayloadHash::decode(input)?;
+        let mut reference = Self::new(url)
+            .map_err(|_| parity_scale_codec::Error::from("invalid evidence reference"))?;
+        reference.legacy_sha256 = legacy_sha256;
+        Ok(reference)
     }
 }
 
@@ -79,7 +95,7 @@ pub enum SubmissionReview {
     /// Awaiting the client's decision.
     #[codec(index = 0)]
     PendingReview,
-    /// Refused by the client with a public reason commitment.
+    /// Refused by the client with a public reason reference.
     #[codec(index = 1)]
     Rejected {
         /// Reason document.
@@ -107,7 +123,7 @@ pub struct CompletionSubmission {
     pub submission_id: EntityId,
     /// One-based, increasing within the milestone.
     pub version: u64,
-    /// Submitted artifact commitment.
+    /// Submitted artifact reference.
     pub deliverable: EvidenceReference,
     /// Verified coordinator.
     pub submitted_by: AccountId32,
@@ -123,7 +139,7 @@ pub struct CompletionSubmission {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct EvidenceRequest {
-    /// Public evidence commitment.
+    /// Public evidence reference.
     pub evidence: EvidenceReference,
 }
 
@@ -137,7 +153,7 @@ pub struct OpenDisputeRequest {
     pub milestone_id: EntityId,
     /// Current rejected delivery.
     pub rejected_submission_id: EntityId,
-    /// Opener's argument commitment.
+    /// Opener's argument reference.
     pub evidence: EvidenceReference,
 }
 
@@ -153,7 +169,7 @@ pub enum DisputeStatus {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DisputeResponse {
-    /// Public response commitment.
+    /// Public response reference.
     pub evidence: EvidenceReference,
     /// Verified counterparty.
     pub author: AccountId32,
@@ -185,7 +201,7 @@ pub struct Dispute {
     pub counterparty: AccountId32,
     /// Provider opening timestamp.
     pub opened_at: UnixSeconds,
-    /// Public opening commitment.
+    /// Public opening reference.
     pub evidence: EvidenceReference,
     /// Present after exactly one counterparty response.
     pub response: Option<DisputeResponse>,
