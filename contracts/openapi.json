@@ -3458,6 +3458,434 @@
           }
         }
       }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}/presentation": {
+      "get": {
+        "summary": "Read descriptive proposal presentation visible to project participants.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Adapter request capacity exceeded; capacity_exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "JSON does not match the typed request; invalid_request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "409": {
+            "description": "Revision is stale, or an uncertain retry has different content. code: brief_revision_conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request exceeds the existing 256 KiB body limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Validated adapter-owned data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ProposalPresentation"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getProposalPresentation"
+      },
+      "put": {
+        "summary": "Versioned descriptive update by the assigned coordinator of an editable draft.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Adapter request capacity exceeded; capacity_exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "JSON does not match the typed request; invalid_request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "409": {
+            "description": "Revision is stale, or an uncertain retry has different content. code: brief_revision_conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request exceeds the existing 256 KiB body limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Validated adapter-owned data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalPresentation"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Validated adapter-owned data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalPresentation"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutProposalPresentation"
+              }
+            }
+          }
+        },
+        "operationId": "putProposalPresentation"
+      }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}/comments": {
+      "get": {
+        "summary": "Read revision snapshots and scope comments; client/coordinator only, at most 20 per page.",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Adapter request capacity exceeded; capacity_exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "JSON does not match the typed request; invalid_request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "409": {
+            "description": "Revision is stale, or an uncertain retry has different content. code: brief_revision_conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request exceeds the existing 256 KiB body limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Validated adapter-owned data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalCommentsPage"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getProposalComments"
+      },
+      "post": {
+        "summary": "Append a plain-text scope review comment with server author/time and immutable snapshot. Exact requestId retry returns the same record.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "in": "header",
+            "name": "X-CSRF-Token",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "description": "Adapter request capacity exceeded; capacity_exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "JSON does not match the typed request; invalid_request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "409": {
+            "description": "Revision is stale, or an uncertain retry has different content. code: brief_revision_conflict.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request exceeds the existing 256 KiB body limit.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Validated adapter-owned data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalReviewComment"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Validated adapter-owned data.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProposalReviewComment"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostProposalComment"
+              }
+            }
+          }
+        },
+        "operationId": "postProposalComments"
+      }
     }
   },
   "components": {
@@ -6465,6 +6893,227 @@
           },
           "coordinator": {
             "$ref": "#/components/schemas/ProjectParticipantView"
+          }
+        }
+      },
+      "RequestedExperience": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "experience"
+        ],
+        "properties": {
+          "key": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "experience": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "Junior",
+                  "MidLevel",
+                  "Senior"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "MilestonePresentation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "description",
+          "requirements"
+        ],
+        "properties": {
+          "key": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000,
+            "description": "Maximum 2000 UTF-8 bytes; no null bytes."
+          },
+          "requirements": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/RequestedExperience"
+            }
+          }
+        }
+      },
+      "PutProposalPresentation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedProposalRevision",
+          "expectedPresentationRevision",
+          "milestones"
+        ],
+        "properties": {
+          "expectedProposalRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775806
+          },
+          "expectedPresentationRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775806
+          },
+          "milestones": {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/components/schemas/MilestonePresentation"
+            }
+          }
+        }
+      },
+      "ProposalPresentation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "proposalId",
+          "revision",
+          "proposalRevision",
+          "matchesCurrentDefinition",
+          "milestones"
+        ],
+        "properties": {
+          "proposalId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "proposalRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775806
+          },
+          "matchesCurrentDefinition": {
+            "type": "boolean",
+            "description": "False when the saved business definition differs from the current proposal. Submission/review status alone does not change it."
+          },
+          "milestones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MilestonePresentation"
+            }
+          }
+        }
+      },
+      "PostProposalComment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedProposalRevision",
+          "requestId",
+          "message"
+        ],
+        "properties": {
+          "expectedProposalRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775806
+          },
+          "requestId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "message": {
+            "type": "string",
+            "pattern": "\\S",
+            "maxLength": 10000,
+            "description": "Plain text; maximum 10000 UTF-8 bytes; no null bytes."
+          }
+        }
+      },
+      "ProposalReviewComment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commentId",
+          "proposalRevision",
+          "authorAccount",
+          "createdAt",
+          "message",
+          "definition",
+          "presentation"
+        ],
+        "properties": {
+          "commentId": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "proposalRevision": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9223372036854775806
+          },
+          "authorAccount": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "message": {
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/ProposalDefinition"
+          },
+          "presentation": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProposalPresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "ProposalCommentsPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "items",
+          "nextAfter"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/ProposalReviewComment"
+            }
+          },
+          "nextAfter": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       }

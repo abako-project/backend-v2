@@ -9,6 +9,7 @@ mod operations;
 mod profiles;
 mod project_briefs;
 mod project_participants;
+mod proposal_reviews;
 mod state;
 
 use state::{App, Config, Error};

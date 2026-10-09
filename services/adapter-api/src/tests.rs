@@ -31,6 +31,9 @@ mod project_briefs;
 #[path = "project_participants_tests.rs"]
 mod project_participants;
 
+#[path = "proposal_reviews/http_tests.rs"]
+mod proposal_reviews;
+
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
 

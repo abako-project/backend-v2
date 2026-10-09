@@ -140,6 +140,15 @@ fn marketplace_routes() -> Router<Arc<App>> {
         .route("/api/disputes/{disputeId}/response", post(command))
         .route("/api/projects/{projectId}", get(project))
         .route(
+            "/api/projects/{projectId}/proposals/{proposalId}/presentation",
+            get(crate::proposal_reviews::get_presentation)
+                .put(crate::proposal_reviews::put_presentation),
+        )
+        .route(
+            "/api/projects/{projectId}/proposals/{proposalId}/comments",
+            get(crate::proposal_reviews::get_comments).post(crate::proposal_reviews::post_comment),
+        )
+        .route(
             "/api/projects/{projectId}/participants",
             get(crate::project_participants::get),
         )
