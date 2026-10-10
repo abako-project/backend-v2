@@ -129,7 +129,7 @@ impl Context {
             .ok_or(Error::NotFound)
     }
     fn can_write_channel(&self, app: &App, account: AccountId32) -> bool {
-        account == self.coordinator.account_id
+        self.party(account).is_ok()
             || (app.config.dispute_channel_allow_participants && self.participant(account).is_ok())
     }
     fn read_channel(&self, app: &App, account: AccountId32) -> Result<(), Error> {

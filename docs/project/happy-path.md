@@ -276,7 +276,7 @@ POST /api/disputes accepts projectId, milestoneId, rejectedSubmissionId and
 written reason, with a stable Idempotency-Key. Poll the operation before opening
 the created case. GET its presentation/history for names, opening and confirmed
 delivery/rejection history. /arguments supports multiple RESPONSE/ADDITIONAL
-entries; /messages is private: client/coordinator read and only coordinator writes by default.
+entries; /messages is private: client and coordinator both read/write by default.
 DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true permits the client, coordinator and assigned
 project workers to read/write that channel; public arguments remain party-only.
 GET messages returns canWrite for the authenticated session. Each POST has an

@@ -99,8 +99,8 @@ for the approved current scope and consolidated in
 written opening arguments, project-wide freeze and public case presentation.
 [SPEC-0008](specs/0008-dispute-conversations/spec.md) adds immutable repeated
 public arguments and a private case conversation in adapter/PostgreSQL. Public
-history includes later arguments but never private messages. By default only the
-coordinator writes in the channel, while client/coordinator can read it. Set
+history includes later arguments but never private messages. By default the client
+and coordinator can both read and write in the channel. Set
 `DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true` in the Compose launch environment to
 permit client, coordinator and assigned project workers to read/write that channel;
 public arguments remain client/coordinator only. The API returns `canWrite`.

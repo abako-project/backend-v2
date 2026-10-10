@@ -17,8 +17,9 @@ reuse IDs; a changed payload under an existing ID conflicts.
 Public readers see the opening, formal arguments, milestone deliveries and
 confirmed rejection reasons, names and public avatars. They never receive
 emails, session data or private conversation messages. Only client/coordinator
-may append public arguments. By default client/coordinator read the conversation,
-and only the coordinator writes. DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true lets
+may append public arguments. By default client and coordinator both read/write
+the conversation, as clarified by the owner on 2026-10-10.
+DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true lets
 the client, coordinator and assigned workers of the approved project read/write
 the conversation. Outsiders remain excluded. GET messages returns canWrite for
 the session; the frontend uses it without a second policy flag. Existing messages

@@ -5601,7 +5601,7 @@
             "$ref": "#/components/responses/Unavailable"
           }
         },
-        "description": "By default client and coordinator can read; only coordinator writes. DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true permits all assigned project participants. Outsiders receive 404."
+        "description": "By default client and coordinator can both read/write. DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true additionally permits assigned project workers. Outsiders receive 404."
       },
       "post": {
         "operationId": "appendDisputeMessage",
@@ -5679,7 +5679,7 @@
             }
           }
         },
-        "description": "Default: coordinator only (client receives 403). With DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true the client and assigned workers can also write. Public arguments remain client/coordinator only."
+        "description": "Default: client and coordinator can write. With DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true assigned project workers can also write. Public arguments remain client/coordinator only."
       }
     }
   },
@@ -10429,7 +10429,7 @@
           },
           "canWrite": {
             "type": "boolean",
-            "description": "Verified write permission for this session. Default: coordinator only. DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true also permits the client and assigned workers."
+            "description": "Verified write permission for this session. Default: client and coordinator. DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true also permits assigned project workers."
           }
         },
         "required": [

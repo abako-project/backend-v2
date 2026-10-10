@@ -285,7 +285,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
         .json::<Value>()
         .await?;
     assert_eq!(private["items"][0]["content"], message["content"]);
-    assert_eq!(private["canWrite"], false);
+    assert_eq!(private["canWrite"], true);
     let coordinator_page = client
         .get(format!("{base}/messages"))
         .header(header::COOKIE, &coordinator_cookie)
@@ -294,17 +294,40 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
         .json::<Value>()
         .await?;
     assert_eq!(coordinator_page["canWrite"], true);
-    assert_eq!(
+    let reply = json!({"entryId":EntityId::from_bytes([98;16]),"content":"PRIVATE CLIENT REPLY","argumentType":"MESSAGE"});
+    let client_reply = |body: &Value| {
         write(
             format!("{base}/messages"),
             &client_cookie,
             &client_session.view.csrf_token,
-            &message
+            body,
+        )
+    };
+    let posted = client_reply(&reply).send().await?;
+    assert_eq!(posted.status(), StatusCode::CREATED);
+    let posted = posted.json::<Value>().await?;
+    assert_eq!(posted["author"]["accountId"], json!(project.client));
+    assert_eq!(
+        client_reply(&reply).send().await?.json::<Value>().await?,
+        posted
+    );
+    let mut edited_reply = reply.clone();
+    edited_reply["content"] = json!("Edited private message");
+    assert_eq!(
+        client_reply(&edited_reply).send().await?.status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        write(
+            format!("{base}/messages"),
+            &assigned_cookie,
+            &assigned.view.csrf_token,
+            &reply,
         )
         .send()
         .await?
         .status(),
-        StatusCode::FORBIDDEN
+        StatusCode::NOT_FOUND
     );
     assert_eq!(
         client
@@ -330,6 +353,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
     assert_eq!(activity.len(), 23);
     assert_eq!(activity[0]["eventData"]["argumentId"], json!(entry_id));
     assert!(!history.to_string().contains("PRIVATE DISPUTE CONVERSATION"));
+    assert!(!history.to_string().contains("PRIVATE CLIENT REPLY"));
     let mut expanded_config = test_config(app.config.database_url.clone(), &internal);
     expanded_config.dispute_channel_allow_participants = true;
     let expanded = Arc::new(App::new(expanded_config).await?);
@@ -391,8 +415,14 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
         .await?
         .json::<Value>()
         .await?;
-    assert_eq!(private["canWrite"], false);
-    assert_eq!(private["items"][2]["author"]["role"], "worker");
+    assert_eq!(private["canWrite"], true);
+    assert!(
+        private["items"]
+            .as_array()
+            .ok_or("items")?
+            .iter()
+            .any(|entry| entry["author"]["role"] == "worker")
+    );
     assert_eq!(
         client
             .get(format!("{base}/messages"))
