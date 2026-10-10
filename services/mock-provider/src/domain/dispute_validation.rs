@@ -180,6 +180,10 @@ fn validate_case(
             || (case.opened_by == project.coordinator && case.counterparty == project.client),
         "invalid_dispute_parties",
     )?;
+    require(
+        case.evidence.is_some() != case.opening_comment_id.is_some(),
+        "invalid_dispute_opening",
+    )?;
     if let Some(response) = &case.response {
         require(
             response.author == case.counterparty && response.occurred_at >= case.opened_at,

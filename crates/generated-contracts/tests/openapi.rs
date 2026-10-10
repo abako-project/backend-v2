@@ -60,6 +60,9 @@ fn all_public_operations_have_valid_references_and_security()
                 path.as_str(),
                 "/api/catalog"
                     | "/api/disputes/{disputeId}"
+                    | "/api/disputes/{disputeId}/presentation"
+                    | "/api/disputes/{disputeId}/arguments"
+                    | "/api/disputes/{disputeId}/history"
                     | "/api/profiles/{principalId}"
                     | "/api/profiles/{principalId}/{section}/image"
             ) && method == "get");
@@ -92,7 +95,8 @@ fn all_public_operations_have_valid_references_and_security()
                         .ok_or("parameters missing")?
                         .iter()
                         .any(|parameter| parameter["$ref"]
-                            == "#/components/parameters/IdempotencyKey")
+                            == "#/components/parameters/IdempotencyKey"
+                            || parameter["$ref"] == "#/components/parameters/DisputeOpeningKey")
                 );
             }
             for parameter in path.split('{').skip(1) {
@@ -116,7 +120,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 88);
+    assert_eq!(operation_ids.len(), 94);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "kunveno_session"

@@ -2820,7 +2820,7 @@
           "Marketplace"
         ],
         "summary": "Open a public case on the current rejection and freeze the project",
-        "description": "",
+        "description": "Client/coordinator only. Store opening text before enqueuing provider-owned freeze. Idempotency-Key is required and binds the immutable opening; changed text under the same key conflicts. Orphaned/unconfirmed opening texts are not public.",
         "security": [
           {
             "sessionCookie": [],
@@ -2868,7 +2868,7 @@
         },
         "parameters": [
           {
-            "$ref": "#/components/parameters/IdempotencyKey"
+            "$ref": "#/components/parameters/DisputeOpeningKey"
           }
         ],
         "requestBody": {
@@ -2876,7 +2876,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/OpenDisputeRequest"
+                "$ref": "#/components/schemas/WrittenDisputeRequest"
               }
             }
           }
@@ -2890,7 +2890,7 @@
           "Marketplace"
         ],
         "summary": "Record the counterparty's single public immutable response",
-        "description": "",
+        "description": "Earlier reference-based signed command. The recovered frontend uses /arguments for unlimited immutable written responses.",
         "security": [
           {
             "sessionCookie": [],
@@ -2953,7 +2953,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/completion-submissions/{submissionId}/rejection": {
@@ -5127,7 +5128,7 @@
     "/api/projects/{projectId}/evaluations": {
       "post": {
         "operationId": "evaluateProject",
-        "summary": "Submit immutable final participant evaluations (1\u20135 stars)",
+        "summary": "Submit immutable final participant evaluations (1–5 stars)",
         "tags": [
           "Projects"
         ],
@@ -5282,6 +5283,403 @@
             }
           }
         }
+      }
+    },
+    "/api/disputes/{disputeId}/presentation": {
+      "get": {
+        "operationId": "getDisputePresentation",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read public written opening, project title and public participant names/avatars",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case data. No emails or session information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PresentedDisputeView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/disputes/{disputeId}/history": {
+      "get": {
+        "operationId": "getDisputeHistory",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read deliveries and confirmed rejection reasons, excluding private discussion",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case data. No emails or session information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeHistory"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "description": "Public delivery versions, rejection reasons and activity including later public arguments with verified author/date. Private conversations are excluded."
+      }
+    },
+    "/api/disputes/{disputeId}/arguments": {
+      "get": {
+        "operationId": "getDisputeArguments",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read multiple immutable public responses/additional arguments",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Exclusive cursor; repeat using nextAfter until null."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case data. No emails or session information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEntries"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      },
+      "post": {
+        "operationId": "appendDisputeArgument",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Client/coordinator append RESPONSE or ADDITIONAL; MESSAGE is rejected",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Immutable entry created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "200": {
+            "description": "Identical retry returns the already published entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEntry"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostDisputeEntry"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/disputes/{disputeId}/messages": {
+      "get": {
+        "operationId": "getDisputeMessages",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Private conversation and verified session write permission",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Exclusive cursor; repeat using nextAfter until null."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Case data. No emails or session information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeMessages"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "description": "By default client and coordinator can read; only coordinator writes. DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true permits all assigned project participants. Outsiders receive 404."
+      },
+      "post": {
+        "operationId": "appendDisputeMessage",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Coordinator appends immutable MESSAGE; participant access is configurable",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DisputeId"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Immutable entry created.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEntry"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          },
+          "200": {
+            "description": "Identical retry returns the already published entry.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisputeEntry"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostDisputeEntry"
+              }
+            }
+          }
+        },
+        "description": "Default: coordinator only (client receives 403). With DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true the client and assigned workers can also write. Public arguments remain client/coordinator only."
       }
     }
   },
@@ -5482,6 +5880,15 @@
           "type": "string",
           "minLength": 1
         }
+      },
+      "DisputeOpeningKey": {
+        "name": "Idempotency-Key",
+        "in": "header",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/OperationId"
+        },
+        "description": "Client-generated operation identity. Reuse unchanged for retries of the same authenticated typed action; different content conflicts. Keep the same key after uncertain transport outcomes. Omission lets the adapter generate one but cannot deduplicate an unacknowledged retry."
       }
     },
     "responses": {
@@ -8607,7 +9014,14 @@
             "$ref": "#/components/schemas/UnixSeconds"
           },
           "evidence": {
-            "$ref": "#/components/schemas/EvidenceReference"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "response": {
             "oneOf": [
@@ -8625,6 +9039,9 @@
           "contextEventCursor": {
             "type": "integer",
             "minimum": 0
+          },
+          "openingCommentId": {
+            "$ref": "#/components/schemas/EntityId"
           }
         }
       },
@@ -8710,7 +9127,7 @@
                 "type": "string",
                 "format": "date",
                 "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-                "description": "Real Gregorian date, year 0001\u20139999; not a contracted scheduling window."
+                "description": "Real Gregorian date, year 0001–9999; not a contracted scheduling window."
               }
             },
             "required": [
@@ -9413,7 +9830,7 @@
             }
           }
         },
-        "description": "After completion: client rates only coordinator; coordinator rates client and every distinct assigned worker; assigned workers rate only coordinator. Exact targets, no duplicates or self-votes; score 1\u20135. Provider rejects mismatches without modifying votes, balances or reputation."
+        "description": "After completion: client rates only coordinator; coordinator rates client and every distinct assigned worker; assigned workers rate only coordinator. Exact targets, no duplicates or self-votes; score 1–5. Provider rejects mismatches without modifying votes, balances or reputation."
       },
       "ProjectEvaluation": {
         "type": "object",
@@ -9568,6 +9985,457 @@
           {
             "deliverable": null
           }
+        ]
+      },
+      "WrittenDisputeRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "milestoneId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "rejectedSubmissionId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank text, 1–4000 UTF-8 bytes; NUL forbidden. References do not require any protocol."
+          }
+        },
+        "required": [
+          "projectId",
+          "milestoneId",
+          "rejectedSubmissionId",
+          "reason"
+        ]
+      },
+      "DisputeAuthor": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "accountId": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "displayName": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "imageUrl": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "enum": [
+              "client",
+              "consultant",
+              "worker"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "accountId",
+          "displayName",
+          "imageUrl",
+          "role"
+        ]
+      },
+      "DisputePresentation": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "projectTitle": {
+            "type": "string"
+          },
+          "openingReason": {
+            "type": "string"
+          },
+          "client": {
+            "$ref": "#/components/schemas/DisputeAuthor"
+          },
+          "coordinator": {
+            "$ref": "#/components/schemas/DisputeAuthor"
+          }
+        },
+        "required": [
+          "projectTitle",
+          "openingReason",
+          "client",
+          "coordinator"
+        ]
+      },
+      "PresentedDisputeView": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "dispute": {
+            "$ref": "#/components/schemas/Dispute"
+          },
+          "milestone": {
+            "$ref": "#/components/schemas/MilestoneView"
+          },
+          "presentation": {
+            "$ref": "#/components/schemas/DisputePresentation"
+          }
+        },
+        "required": [
+          "dispute",
+          "milestone",
+          "presentation"
+        ]
+      },
+      "PostDisputeEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "entryId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank text, 1–4000 UTF-8 bytes; NUL forbidden. References do not require any protocol."
+          },
+          "argumentType": {
+            "type": "string",
+            "enum": [
+              "RESPONSE",
+              "ADDITIONAL",
+              "MESSAGE"
+            ]
+          }
+        },
+        "required": [
+          "entryId",
+          "content",
+          "argumentType"
+        ]
+      },
+      "DisputeEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "cursor": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "entryId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "disputeId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "author": {
+            "$ref": "#/components/schemas/DisputeAuthor"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank text, 1–4000 UTF-8 bytes; NUL forbidden. References do not require any protocol."
+          },
+          "argumentType": {
+            "type": "string",
+            "enum": [
+              "RESPONSE",
+              "ADDITIONAL",
+              "MESSAGE"
+            ]
+          }
+        },
+        "required": [
+          "cursor",
+          "entryId",
+          "disputeId",
+          "author",
+          "createdAt",
+          "content",
+          "argumentType"
+        ]
+      },
+      "DisputeEntries": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/DisputeEntry"
+            }
+          },
+          "nextAfter": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextAfter"
+        ]
+      },
+      "DisputeHistory": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "project": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/EntityId"
+              },
+              "title": {
+                "type": "string"
+              },
+              "clientId": {
+                "$ref": "#/components/schemas/AccountId32"
+              },
+              "clientName": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "consultantId": {
+                "$ref": "#/components/schemas/AccountId32"
+              },
+              "consultantName": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "clientId",
+              "clientName",
+              "consultantId",
+              "consultantName"
+            ]
+          },
+          "milestone": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "$ref": "#/components/schemas/EntityId"
+              },
+              "title": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "Disputed"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "state"
+            ]
+          },
+          "deliverables": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "version": {
+                  "type": "string"
+                },
+                "submittedAt": {
+                  "$ref": "#/components/schemas/UnixSeconds"
+                },
+                "documentation": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "links": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "developerName": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "version",
+                "submittedAt",
+                "documentation",
+                "links",
+                "developerName"
+              ]
+            }
+          },
+          "rejections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "version": {
+                  "type": "string"
+                },
+                "rejectedAt": {
+                  "$ref": "#/components/schemas/UnixSeconds"
+                },
+                "rejectedBy": {
+                  "$ref": "#/components/schemas/AccountId32"
+                },
+                "rejectedByName": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "version",
+                "rejectedAt",
+                "rejectedBy",
+                "rejectedByName",
+                "reason"
+              ]
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "disputeId": {
+                  "$ref": "#/components/schemas/EntityId"
+                },
+                "eventType": {
+                  "type": "string"
+                },
+                "eventData": {
+                  "type": "object"
+                },
+                "createdAt": {
+                  "$ref": "#/components/schemas/UnixSeconds"
+                }
+              },
+              "required": [
+                "id",
+                "disputeId",
+                "eventType",
+                "eventData",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "project",
+          "milestone",
+          "deliverables",
+          "rejections",
+          "events"
+        ]
+      },
+      "DisputeMessages": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/DisputeEntry"
+            }
+          },
+          "nextAfter": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "canWrite": {
+            "type": "boolean",
+            "description": "Verified write permission for this session. Default: coordinator only. DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true also permits the client and assigned workers."
+          }
+        },
+        "required": [
+          "items",
+          "nextAfter",
+          "canWrite"
         ]
       }
     }

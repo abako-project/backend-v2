@@ -88,6 +88,7 @@ pub(crate) struct Config {
     pub(crate) allowed_origins: BTreeSet<String>,
     pub(crate) cookie_secure: bool,
     pub(crate) enable_mock_funding: bool,
+    pub(crate) dispute_channel_allow_participants: bool,
     pub(crate) admin_username: String,
     pub(crate) admin_password: Zeroizing<String>,
     pub(crate) openapi: String,
@@ -146,6 +147,12 @@ impl Config {
             Ok("false") | Err(_) => false,
             _ => return Err(Error::Config),
         };
+        let dispute_channel_allow_participants =
+            match env::var("DISPUTE_CHANNEL_ALLOW_PARTICIPANTS").as_deref() {
+                Ok("true") => true,
+                Ok("false") | Err(_) => false,
+                _ => return Err(Error::Config),
+            };
         let service_token = required_secret("INTERNAL_SERVICE_TOKEN_FILE")?;
         if service_token.len() < 32 {
             return Err(Error::Config);
@@ -161,6 +168,7 @@ impl Config {
             allowed_origins: origins,
             cookie_secure,
             enable_mock_funding,
+            dispute_channel_allow_participants,
             admin_username: env::var("BOOTSTRAP_ADMIN_USERNAME").unwrap_or_else(|_| "admin".into()),
             admin_password: required_secret("BOOTSTRAP_ADMIN_PASSWORD_FILE")?,
             openapi,
@@ -219,6 +227,9 @@ impl App {
         .execute(&mut *migration)
         .await?;
         sqlx::raw_sql(include_str!("../migrations/0010_submission_comments.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!("../migrations/0011_dispute_conversations.sql"))
             .execute(&mut *migration)
             .await?;
         migration.commit().await?;

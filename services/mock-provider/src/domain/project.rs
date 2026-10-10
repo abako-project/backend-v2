@@ -12,6 +12,10 @@ use crate::{Error, Result, calendar, random_id, require};
 type Transition = (DomainEventKind, Option<EntityId>);
 
 impl State {
+    #[allow(
+        clippy::too_many_lines,
+        reason = "Keep explicit command dispatch together; business logic remains in domain handlers."
+    )]
     pub(super) fn project_command(
         &mut self,
         project: &mut ProjectView,
@@ -67,6 +71,10 @@ impl State {
                     DomainEventKind::MilestoneCompletionRejected,
                     Some(*submission_id),
                 ))
+            }
+            ProviderCommand::OpenDisputeWithComment(request) => {
+                let id = self.open_dispute_with_comment(project, origin, request, now)?;
+                Ok((DomainEventKind::DisputeOpened, Some(id)))
             }
             ProviderCommand::OpenDispute(request) => {
                 let id = self.open_dispute(project, origin, request, now)?;

@@ -288,7 +288,7 @@ impl State {
         if project.active_dispute_id.is_some() {
             match command {
                 ProviderCommand::RespondDispute { .. } => {}
-                ProviderCommand::OpenDispute(_) => {
+                ProviderCommand::OpenDispute(_) | ProviderCommand::OpenDisputeWithComment(_) => {
                     return Err(super::disputes::DisputeError::AlreadyOpen.into());
                 }
                 _ => return Err(super::disputes::DisputeError::ProjectFrozen.into()),

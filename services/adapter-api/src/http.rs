@@ -134,6 +134,10 @@ pub(crate) fn router(app: Arc<App>) -> Router {
         .with_state(app)
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "Explicit marketplace route registration keeps the public surface reviewable."
+)]
 fn marketplace_routes() -> Router<Arc<App>> {
     Router::new()
         .route("/api/projects", get(projects).post(command))
@@ -146,7 +150,25 @@ fn marketplace_routes() -> Router<Arc<App>> {
             "/api/disputes/{disputeId}",
             get(crate::disputes::public_case),
         )
+        .route(
+            "/api/disputes/{disputeId}/presentation",
+            get(crate::disputes::conversations::presentation),
+        )
         .route("/api/disputes/{disputeId}/response", post(command))
+        .route(
+            "/api/disputes/{disputeId}/arguments",
+            get(crate::disputes::conversations::arguments)
+                .post(crate::disputes::conversations::post_argument),
+        )
+        .route(
+            "/api/disputes/{disputeId}/history",
+            get(crate::disputes::conversations::history),
+        )
+        .route(
+            "/api/disputes/{disputeId}/messages",
+            get(crate::disputes::conversations::messages)
+                .post(crate::disputes::conversations::post_message),
+        )
         .route("/api/projects/{projectId}", get(project))
         .route("/api/projects/{projectId}/evaluations", post(command))
         .route(
@@ -240,6 +262,9 @@ fn is_public_case(request: &Request) -> bool {
                 matches!(
                     path.as_str(),
                     "/api/disputes/{disputeId}"
+                        | "/api/disputes/{disputeId}/presentation"
+                        | "/api/disputes/{disputeId}/arguments"
+                        | "/api/disputes/{disputeId}/history"
                         | "/api/profiles/{principalId}"
                         | "/api/profiles/{principalId}/{section}/image"
                 )
@@ -734,7 +759,19 @@ async fn command(
                 submission_id: request.submission_id,
             }
         }
-        "/api/disputes" => ProviderCommand::OpenDispute(json(&headers, &body)?),
+        "/api/disputes" => {
+            crate::disputes::conversations::opening(
+                &app,
+                &session,
+                json(&headers, &body)?,
+                headers
+                    .get("idempotency-key")
+                    .ok_or(Error::Invalid)?
+                    .to_str()
+                    .map_err(|_| Error::Invalid)?,
+            )
+            .await?
+        }
         "/api/completion-submissions/{submissionId}/rejection" => {
             crate::submission_comments::rejection(
                 &app,

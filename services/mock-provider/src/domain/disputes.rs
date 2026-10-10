@@ -1,6 +1,7 @@
 use generated_contracts::{
-    AccountId32, Dispute, DisputeResponse, DisputeStatus, DisputeView, EntityId, EvidenceRequest,
-    MilestoneStatus, OpenDisputeRequest, ProjectView, SubmissionReview, UnixSeconds,
+    AccountId32, Dispute, DisputeResponse, DisputeStatus, DisputeView, EntityId, EvidenceReference,
+    EvidenceRequest, MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest,
+    ProjectView, SubmissionReview, UnixSeconds,
 };
 
 use super::{State, project::milestone_mut};
@@ -41,6 +42,46 @@ impl State {
         request: &OpenDisputeRequest,
         now: UnixSeconds,
     ) -> Result<EntityId> {
+        self.open_case(
+            project,
+            origin,
+            request.milestone_id,
+            request.rejected_submission_id,
+            Some(request.evidence.clone()),
+            None,
+            now,
+        )
+    }
+
+    pub(super) fn open_dispute_with_comment(
+        &mut self,
+        project: &mut ProjectView,
+        origin: AccountId32,
+        request: &OpenDisputeWithCommentRequest,
+        now: UnixSeconds,
+    ) -> Result<EntityId> {
+        self.open_case(
+            project,
+            origin,
+            request.milestone_id,
+            request.rejected_submission_id,
+            None,
+            Some(request.comment_id),
+            now,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn open_case(
+        &mut self,
+        project: &mut ProjectView,
+        origin: AccountId32,
+        milestone_id: EntityId,
+        rejected_submission_id: EntityId,
+        evidence: Option<EvidenceReference>,
+        opening_comment_id: Option<EntityId>,
+        now: UnixSeconds,
+    ) -> Result<EntityId> {
         require(
             origin == project.client || origin == project.coordinator,
             "project_party_required",
@@ -51,14 +92,10 @@ impl State {
         let revision = project
             .proposals
             .iter()
-            .find(|p| {
-                p.milestones
-                    .iter()
-                    .any(|m| m.milestone_id == request.milestone_id)
-            })
+            .find(|p| p.milestones.iter().any(|m| m.milestone_id == milestone_id))
             .ok_or_else(|| Error::domain("milestone_not_found"))?
             .revision;
-        let milestone = milestone_mut(project, request.milestone_id)?;
+        let milestone = milestone_mut(project, milestone_id)?;
         if milestone.status != Some(MilestoneStatus::ChangesRequested) {
             return Err(DisputeError::NotRejected.into());
         }
@@ -67,7 +104,7 @@ impl State {
             .last()
             .ok_or_else(|| Error::domain("submission_not_current"))?;
         require(
-            submission.submission_id == request.rejected_submission_id,
+            submission.submission_id == rejected_submission_id,
             "submission_not_current",
         )?;
         require(
@@ -85,8 +122,8 @@ impl State {
             Dispute {
                 dispute_id: id,
                 project_id: project.project_id,
-                milestone_id: request.milestone_id,
-                rejected_submission_id: request.rejected_submission_id,
+                milestone_id,
+                rejected_submission_id,
                 status: DisputeStatus::Open,
                 opened_by: origin,
                 counterparty: if origin == project.client {
@@ -95,7 +132,8 @@ impl State {
                     project.client
                 },
                 opened_at: now,
-                evidence: request.evidence.clone(),
+                evidence,
+                opening_comment_id,
                 response: None,
                 proposal_revision: revision,
                 context_event_cursor: u64::try_from(self.events.len())

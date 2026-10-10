@@ -475,6 +475,7 @@ pub enum ProviderCommand {
         submission_id: EntityId,
         comment_id: EntityId,
     },
+    OpenDisputeWithComment(OpenDisputeWithCommentRequest),
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -652,6 +653,7 @@ impl ProviderCommand {
     pub const fn project_id(&self) -> Option<EntityId> {
         match self {
             Self::OpenDispute(request) => Some(request.project_id),
+            Self::OpenDisputeWithComment(request) => Some(request.project_id),
             Self::QuotePlanning { project_id, .. }
             | Self::AcceptPlanningQuote { project_id, .. }
             | Self::SetProposalDelivery { project_id, .. }

@@ -275,6 +275,7 @@ fn test_config(database_url: String, internal: &Server) -> Config {
         ]),
         cookie_secure: false,
         enable_mock_funding: true,
+        dispute_channel_allow_participants: false,
         admin_username: "admin".into(),
         admin_password: Zeroizing::new(PASSWORD.into()),
         openapi: "{}".into(),
@@ -1291,3 +1292,6 @@ async fn notifications_enrich_verified_author_and_visible_project_without_privat
 
 #[path = "submission_comments_tests.rs"]
 mod submission_comments;
+
+#[path = "disputes/conversations_tests.rs"]
+mod dispute_conversations;

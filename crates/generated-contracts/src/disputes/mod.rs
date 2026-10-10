@@ -24,6 +24,12 @@ struct EvidenceWire {
 }
 
 impl EvidenceReference {
+    /// Stored public reference; reading never dereferences it.
+    #[must_use]
+    pub fn url(&self) -> &str {
+        &self.url
+    }
+
     /// Validate an absolute HTTPS reference without contacting its host.
     pub fn new(url: String) -> Result<Self, ContractError> {
         if url.len() > 2048
@@ -167,6 +173,24 @@ pub struct OpenDisputeRequest {
     pub evidence: EvidenceReference,
 }
 
+/// Opening references an immutable argument verified and stored by the adapter.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[allow(
+    clippy::struct_field_names,
+    reason = "Explicit resource IDs identify the immutable opening target."
+)]
+pub struct OpenDisputeWithCommentRequest {
+    /// Target project.
+    pub project_id: EntityId,
+    /// Target milestone.
+    pub milestone_id: EntityId,
+    /// Exact current rejected submission.
+    pub rejected_submission_id: EntityId,
+    /// Adapter-owned opening argument.
+    pub comment_id: EntityId,
+}
+
 /// This proof of concept has no transition to a resolved state.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub enum DisputeStatus {
@@ -211,8 +235,11 @@ pub struct Dispute {
     pub counterparty: AccountId32,
     /// Provider opening timestamp.
     pub opened_at: UnixSeconds,
-    /// Public opening reference.
-    pub evidence: EvidenceReference,
+    /// Earlier reference-based opening, absent for a written argument.
+    pub evidence: Option<EvidenceReference>,
+    /// Immutable adapter opening argument, confirmed by this case.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opening_comment_id: Option<EntityId>,
     /// Present after exactly one counterparty response.
     pub response: Option<DisputeResponse>,
     /// Proposal revision at opening; not a historical task revision.

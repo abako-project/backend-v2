@@ -156,7 +156,8 @@ async fn authorize_project(
         }
         ProviderCommand::CancelProject { .. }
         | ProviderCommand::DisputePlanning { .. }
-        | ProviderCommand::OpenDispute(_) => {
+        | ProviderCommand::OpenDispute(_)
+        | ProviderCommand::OpenDisputeWithComment(_) => {
             project.client == account || project.coordinator == account
         }
         ProviderCommand::RespondDispute { dispute_id, .. } => {

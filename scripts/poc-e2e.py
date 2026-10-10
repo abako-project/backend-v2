@@ -419,7 +419,7 @@ def exercise_dispute(base, admin_password, _proxy):
 
     anonymous = Client(base)
     opening = {"projectId": project_id, "milestoneId": milestone["milestoneId"],
-               "rejectedSubmissionId": submission_id, "evidence": reference}
+               "rejectedSubmissionId": submission_id, "reason": "Written dispute: ipfs://supporting-notes"}
     anonymous.request("POST", "/api/disputes", opening, 401)
     opened = client.command("POST", "/api/disputes", opening)
     dispute_id = opened["receipt"]["createdEntityId"]
@@ -439,14 +439,23 @@ def exercise_dispute(base, admin_password, _proxy):
                              expected_outcome="Failed")
     require(blocked["receipt"]["outcome"]["code"] == "project_disputed",
             "project mutation bypassed the dispute freeze")
-    coordinator.command("POST", f"/api/disputes/{dispute_id}/response", {"evidence": reference})
-    answered = anonymous.request("GET", f"/api/disputes/{dispute_id}")
-    require(answered["dispute"]["response"]["author"] == coordinator.session["accountId"],
-            "counterparty response was not published")
-    duplicate = coordinator.command("POST", f"/api/disputes/{dispute_id}/response",
-                                    {"evidence": reference}, expected_outcome="Failed")
-    require(duplicate["receipt"]["outcome"]["code"] == "dispute_already_answered",
-            "case accepted a second response")
+    presentation = anonymous.request("GET", f"/api/disputes/{dispute_id}/presentation")
+    require(presentation["presentation"]["openingReason"] == opening["reason"], "written opening lost")
+    for actor, kind in ((coordinator, "RESPONSE"), (client, "ADDITIONAL"), (coordinator, "RESPONSE")):
+        payload = {"entryId": "0x" + secrets.token_hex(16), "content": "Written intervention", "argumentType": kind}
+        endpoint = f"/api/disputes/{dispute_id}/arguments"
+        saved = actor.request("POST", endpoint, payload, 201)
+        require(actor.request("POST", endpoint, payload) == saved, "entry retry changed the record")
+        actor.request("POST", endpoint, {**payload, "content": "edited"}, 409)
+    arguments = anonymous.request("GET", f"/api/disputes/{dispute_id}/arguments")
+    require(len(arguments["items"]) == 3, "multiple arguments were not retained")
+    message = {"entryId": "0x" + secrets.token_hex(16), "content": "Private conversation", "argumentType": "MESSAGE"}
+    client.request("POST", f"/api/disputes/{dispute_id}/messages", message, 201)
+    require(len(coordinator.request("GET", f"/api/disputes/{dispute_id}/messages")["items"]) == 1,
+            "counterparty cannot read the private channel")
+    anonymous.request("GET", f"/api/disputes/{dispute_id}/messages", expected=401)
+    worker.request("GET", f"/api/disputes/{dispute_id}/messages", expected=404)
+    require(all(item["argumentType"] != "MESSAGE" for item in arguments["items"]), "private channel leaked")
     balances_after = [actor.request("GET", "/api/balance") for actor in (client, coordinator, worker)]
     require(balances_after == balances_before, "dispute opening or response moved funds")
 def exercise_multi_milestone(base, admin_password, _proxy):

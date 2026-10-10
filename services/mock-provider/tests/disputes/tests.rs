@@ -419,3 +419,57 @@ async fn delivery_without_links_still_checks_actor_ratings_and_conserves_escrow(
     );
     Ok(())
 }
+
+#[cfg(feature = "storage-sqlite")]
+#[tokio::test]
+async fn written_opening_reference_freezes_without_url_or_payment() -> TestResult {
+    let file = std::env::temp_dir().join(format!(
+        "kunveno-written-case-{}-{}.sqlite",
+        std::process::id(),
+        OPERATIONS.fetch_add(1, Ordering::Relaxed)
+    ));
+    let provider = Provider::sqlite(
+        &format!("sqlite://{}?mode=rwc", file.display()),
+        account(&key(1)?),
+    )
+    .await?;
+    let (_, coordinator, worker, client, project_id, proposal_id, milestone_id) =
+        prepare_project(&provider).await?;
+    let submission_id = submit(&provider, &coordinator, &worker, project_id, milestone_id).await?;
+    let comment_id = EntityId::from_bytes([101; 16]);
+    let command = ProviderCommand::OpenDisputeWithComment(OpenDisputeWithCommentRequest {
+        project_id,
+        milestone_id,
+        rejected_submission_id: submission_id,
+        comment_id,
+    });
+    assert_eq!(
+        send(&provider, &client, command.clone()).await?.outcome,
+        ExecutionOutcome::Failed("milestone_not_changes_requested".into())
+    );
+    success(
+        &provider,
+        &client,
+        reject(project_id, milestone_id, submission_id)?,
+    )
+    .await?;
+    assert_eq!(
+        send(&provider, &worker, command.clone()).await?.outcome,
+        ExecutionOutcome::Failed("project_party_required".into())
+    );
+    let before = provider.snapshot().await?;
+    let signed = signed(&provider, &coordinator, command).await?;
+    let receipt = provider.execute(signed.clone(), NOW).await?;
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+    assert_eq!(provider.execute(signed, NOW).await?, receipt);
+    let case = provider
+        .dispute(receipt.created_entity_id.ok_or("missing case")?)
+        .await?;
+    assert!(case.dispute.evidence.is_none());
+    assert_eq!(case.dispute.opening_comment_id, Some(comment_id));
+    assert_eq!(provider.snapshot().await?.balances, before.balances);
+    assert_frozen(&provider, &coordinator, &client, project_id, proposal_id).await?;
+    drop(provider);
+    std::fs::remove_file(file)?;
+    Ok(())
+}

@@ -2,7 +2,29 @@
 
 Status: APPROVED — implemented and verified on the mock stack.
 
-Updated: 2026-09-23
+Updated: 2026-10-10
+
+## Approved amendments
+
+The original flow below records the September contract. The approved C/E/F
+recovery supersedes these parts:
+
+- Deliveries no longer require a URL or per-worker ratings. Descriptive
+  Documentation/Other Links are optional adapter text; project evaluations
+  occur separately at completion, with scores 1–5.
+- Rejections use a verified written-comment reference; acceptance retains
+  atomic milestone payout but does not require evaluation votes.
+- SPEC-0008 replaces the opening HTTPS reference with a provider-confirmed
+  reference to written adapter content, and replaces the UI's single-response
+  limit with multiple immutable public arguments plus a private case channel.
+- The provider still owns case state and whole-project freeze. The adapter
+  stores descriptive content, not a competing business state.
+- DSP-007 remains unchanged: resolution authority, settlement and unlock
+  require a separately approved rule.
+
+Use [SPEC-0008](../0008-dispute-conversations/spec.md), current OpenAPI and
+handlers for these amended REST bodies. The old /response operation is
+deprecated; the recovered frontend uses /arguments and /messages.
 
 ## Goal and authority
 

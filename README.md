@@ -96,9 +96,17 @@ membership, real Kreivo calls, banking and generic payments are outside this
 phase. The formal public dispute case described in `Disputas.md` is implemented
 for the approved current scope and consolidated in
 [SPEC-0005](specs/0005-dispute-opening/spec.md): current rejection, public
-URL/SHA-256 references, project-wide freeze and one counterparty response.
-Signed E2E covers opening and one public response; chat, timeout and DAO resolution
-remain excluded. See the [current port review](docs/project/porting-coverage.md).
+written opening arguments, project-wide freeze and public case presentation.
+[SPEC-0008](specs/0008-dispute-conversations/spec.md) adds immutable repeated
+public arguments and a private case conversation in adapter/PostgreSQL. Public
+history includes later arguments but never private messages. By default only the
+coordinator writes in the channel, while client/coordinator can read it. Set
+`DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true` in the Compose launch environment to
+permit client, coordinator and assigned project workers to read/write that channel;
+public arguments remain client/coordinator only. The API returns `canWrite`.
+Timeout and formal dispute resolution/settlement remain excluded. Normal final
+milestone acceptance completes the project and settles funds independently;
+final evaluations do not move funds. See the [current port review](docs/project/porting-coverage.md).
 
 ## Core Layout
 

@@ -269,3 +269,19 @@ projects newest first and leave undated records last.
   missing-vote and rounding rules. Client-to-worker voting is forbidden.
 
 Documentation and Other Links in the adapter submission presentation are optional free text, limited to 2048 UTF-8 bytes per field, with no protocol restriction. They do not need to be provider evidence URLs. The API does not fetch or execute these references.
+
+## Written dispute arguments and conversation (F1–F3)
+
+POST /api/disputes accepts projectId, milestoneId, rejectedSubmissionId and
+written reason, with a stable Idempotency-Key. Poll the operation before opening
+the created case. GET its presentation/history for names, opening and confirmed
+delivery/rejection history. /arguments supports multiple RESPONSE/ADDITIONAL
+entries; /messages is private: client/coordinator read and only coordinator writes by default.
+DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true permits the client, coordinator and assigned
+project workers to read/write that channel; public arguments remain party-only.
+GET messages returns canWrite for the authenticated session. Each POST has an
+entryId; identical retries return the immutable row, changed content conflicts.
+Neither channel supports edit/delete. Formal arguments are public; conversation
+and emails are not. Ordinary text and references such as IPFS/SFTP are accepted.
+The provider freeze and the per-milestone happy-path payments remain unchanged.
+Formal resolution authority and dispute settlement are pending approval.
