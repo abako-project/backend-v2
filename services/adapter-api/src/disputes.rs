@@ -22,27 +22,6 @@ pub(crate) async fn public_case(
     Ok(Json(read(&app, parse(&id)?).await?))
 }
 
-pub(crate) async fn rejection(
-    app: &App,
-    id: EntityId,
-    request: EvidenceRequest,
-) -> Result<ProviderCommand, Error> {
-    let snapshot = app.snapshot().await?;
-    for project in snapshot.projects {
-        for milestone in project.proposals.iter().flat_map(|p| &p.milestones) {
-            if milestone.submissions.iter().any(|s| s.submission_id == id) {
-                return Ok(ProviderCommand::RejectMilestoneCompletion {
-                    project_id: project.project_id,
-                    milestone_id: milestone.milestone_id,
-                    submission_id: id,
-                    request,
-                });
-            }
-        }
-    }
-    Err(Error::NotFound)
-}
-
 pub(crate) async fn response(
     app: &App,
     id: EntityId,

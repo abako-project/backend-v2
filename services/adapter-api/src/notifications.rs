@@ -4,7 +4,8 @@ use crate::{
 };
 use axum::response::sse::{Event, KeepAlive, Sse};
 use generated_contracts::{
-    AccountId32, NotificationView, NotificationsPage, ProviderEvents, ProviderInfo, UnixSeconds,
+    AccountId32, NotificationActorView, NotificationView, NotificationsPage, ProviderEvents,
+    ProviderInfo, UnixSeconds,
 };
 use sqlx::{Row, postgres::PgRow};
 use std::{
@@ -79,6 +80,8 @@ fn view(row: &PgRow) -> Result<NotificationView, Error> {
         notification_id: u64::try_from(row.try_get::<i64, _>("notification_id")?)
             .map_err(|_| Error::Internal)?,
         event: serde_json::from_str(row.try_get("event_json")?)?,
+        actor: None,
+        project_title: None,
         read_at: row
             .try_get::<Option<i64>, _>("read_at")?
             .map(|value| {
@@ -89,6 +92,56 @@ fn view(row: &PgRow) -> Result<NotificationView, Error> {
             .transpose()?,
     })
 }
+async fn enrich(
+    app: &App,
+    account: AccountId32,
+    notifications: &mut [NotificationView],
+) -> Result<(), Error> {
+    // Durable notifications remain readable while the provider is unavailable.
+    let snapshot = if notifications.iter().any(|n| n.event.project_id.is_some()) {
+        match app.snapshot().await {
+            Ok(snapshot) => Some(snapshot),
+            Err(Error::Dependency | Error::NotFound) => None,
+            Err(error) => return Err(error),
+        }
+    } else {
+        None
+    };
+    for notification in notifications {
+        if let Some(origin) = notification.event.origin {
+            let row = sqlx::query("SELECT p.principal_id, p.display_name, w.name AS worker_name, c.name AS client_name, w.image_data IS NOT NULL AS worker_image, c.image_data IS NOT NULL AS client_image FROM principals p LEFT JOIN worker_profiles w USING(principal_id) LEFT JOIN client_profiles c USING(principal_id) WHERE p.account_id=$1")
+                .bind(origin.to_string()).fetch_optional(&app.db).await?;
+            if let Some(row) = row {
+                let principal: String = row.try_get("principal_id")?;
+                let worker_image: bool = row.try_get("worker_image")?;
+                let client_image: bool = row.try_get("client_image")?;
+                let name: Option<String> = row.try_get("worker_name")?;
+                let client_name: Option<String> = row.try_get("client_name")?;
+                notification.actor = Some(NotificationActorView {
+                    account_id: origin,
+                    display_name: name.or(client_name).unwrap_or(row.try_get("display_name")?),
+                    image_url: if worker_image {
+                        Some(format!("/api/profiles/{principal}/worker/image"))
+                    } else if client_image {
+                        Some(format!("/api/profiles/{principal}/client/image"))
+                    } else {
+                        None
+                    },
+                });
+            }
+        }
+        if let Some(snapshot) = &snapshot
+            && snapshot.info.provider_instance_id == notification.event.provider_instance_id
+            && let Some(project) = snapshot.projects.iter().find(|p| {
+                Some(p.project_id) == notification.event.project_id
+                    && crate::operations::visible(p, account)
+            })
+        {
+            notification.project_title = Some(project.title.clone());
+        }
+    }
+    Ok(())
+}
 pub(crate) async fn page(
     app: &App,
     account: AccountId32,
@@ -96,7 +149,8 @@ pub(crate) async fn page(
 ) -> Result<NotificationsPage, Error> {
     let rows = sqlx::query("SELECT notification_id, event_json, read_at FROM notifications WHERE account_id = $1 AND notification_id > $2 ORDER BY notification_id LIMIT 100")
         .bind(account.to_string()).bind(i64::try_from(after).map_err(|_| Error::Invalid)?).fetch_all(&app.db).await?;
-    let notifications = rows.iter().map(view).collect::<Result<Vec<_>, _>>()?;
+    let mut notifications = rows.iter().map(view).collect::<Result<Vec<_>, _>>()?;
+    enrich(app, account, &mut notifications).await?;
     let next_cursor = notifications
         .last()
         .map_or(after, |notification| notification.notification_id);
@@ -114,8 +168,9 @@ pub(crate) async fn mark_read(
     let row = sqlx::query("UPDATE notifications SET read_at = coalesce(read_at, $1) WHERE notification_id = $2 AND account_id = $3 RETURNING notification_id, event_json, read_at")
         .bind(now()?).bind(i64::try_from(id).map_err(|_| Error::Invalid)?).bind(account.to_string())
         .fetch_optional(&mut *tx).await?.ok_or(Error::NotFound)?;
-    let notification = view(&row)?;
+    let mut notification = view(&row)?;
     tx.commit().await?;
+    enrich(app, account, std::slice::from_mut(&mut notification)).await?;
     Ok(notification)
 }
 pub(crate) async fn run(app: Arc<App>, mut stop: watch::Receiver<bool>) -> Result<(), Error> {

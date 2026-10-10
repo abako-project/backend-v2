@@ -27,6 +27,16 @@ pub enum ValidationError {
     ReversedWindow,
 }
 
+/// Validate a canonical Gregorian date without a timezone or time of day.
+pub fn validate_calendar_date(value: &str) -> Result<(), ValidationError> {
+    let date = NaiveDate::parse_from_str(value, "%Y-%m-%d")
+        .map_err(|_| ValidationError::OutOfRange("calendar date"))?;
+    if value.len() != 10 || !(1..=9999).contains(&date.year()) || date.to_string() != value {
+        return Err(ValidationError::OutOfRange("calendar date"));
+    }
+    Ok(())
+}
+
 fn parse_hex<const N: usize>(value: &str) -> Result<[u8; N], ValidationError> {
     let value = value.strip_prefix("0x").unwrap_or(value);
     if value.len() != N * 2 || !value.is_ascii() {
@@ -284,7 +294,7 @@ unsigned_quantity!(
 unsigned_quantity!(UnixSeconds, u64, "A UTC Unix timestamp in whole seconds.");
 
 macro_rules! bounded_quantity {
-    ($name:ident, $max:expr, $doc:literal) => {
+    ($name:ident, $min:expr, $max:expr, $doc:literal) => {
         #[doc = $doc]
         #[derive(
             Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Encode, Serialize, Deserialize,
@@ -294,7 +304,7 @@ macro_rules! bounded_quantity {
         impl $name {
             /// Validate and construct the quantity.
             pub fn new(value: u8) -> Result<Self, ValidationError> {
-                if value <= $max {
+                if ($min..=$max).contains(&value) {
                     Ok(Self(value))
                 } else {
                     Err(ValidationError::OutOfRange(stringify!($name)))
@@ -326,13 +336,15 @@ macro_rules! bounded_quantity {
 }
 bounded_quantity!(
     Percentage,
+    0,
     100,
     "An integer percentage between zero and one hundred."
 );
 bounded_quantity!(
     Score,
-    10,
-    "An individual rating between zero and ten, inclusive."
+    1,
+    5,
+    "An individual rating between one and five stars, inclusive."
 );
 
 /// A validated ISO week-year and week number, ordered chronologically.

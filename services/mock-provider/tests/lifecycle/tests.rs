@@ -18,7 +18,7 @@ async fn complete(
                 deliverable: evidence()?,
                 worker_ratings: vec![WorkerRating {
                     worker: account(worker),
-                    score: Score::new(10)?,
+                    score: Score::new(5)?,
                 }],
             },
         },
@@ -32,7 +32,7 @@ async fn complete(
             milestone_id,
             request: AcceptMilestoneCompletionRequest {
                 submission_id: receipt.created_entity_id.ok_or("missing submission")?,
-                coordinator_score: Score::new(8)?,
+                coordinator_score: Score::new(4)?,
                 team_rating: TeamRating::DelegateToCoordinator,
             },
         },
@@ -271,7 +271,7 @@ pub(super) async fn sequential_and_continuity(provider: Provider) -> TestResult 
                     deliverable: evidence()?,
                     worker_ratings: vec![WorkerRating {
                         worker: account(&worker),
-                        score: Score::new(8)?,
+                        score: Score::new(4)?,
                     }],
                 },
             },

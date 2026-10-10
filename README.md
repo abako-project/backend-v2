@@ -2,6 +2,26 @@
 
 Kunveno is a product under development. This Rust workspace provides its REST adapter, custodial signing, a transactional mock provider for development and an independent Leptos test frontend. Mock funds, contracts and keys are disposable test data, never real assets.
 
+## Current delivery dates and final evaluations
+
+The desktop frontend preserves the legacy **global** proposal calendar. A milestone's
+“Specific date” selector does not collect/persist an independent milestone date or
+bind it to the global date. The mock owns the global preference/date and separate
+operational ISO-week windows. Individual milestone dates, their editing and their
+scheduling effect are **pending a product decision**; do not infer them from the label.
+
+After completion, 1–5-star evaluations allow only client → coordinator,
+coordinator → client and assigned workers, and worker → coordinator. The provider
+rejects other targets, duplicate evaluations and self-votes. Reviews do not move funds.
+Worker reputation uses only the coordinator evaluation. Coordinator reputation includes
+the client and each worker equally by default, weighted by project coordination minutes.
+`PUT /api/admin/score-policy` exposes `coordinatorClientVoteWeight` and
+`coordinatorWorkerVoteWeight`: relative integers 0–100, default 1/1, not both zero.
+Changing these parameters affects future votes only. Counting the **team average as
+one vote** alongside the client is documented pending work, not an active mode.
+See [approved scoring rules](specs/0003-transactional-marketplace/spec.md#milestones-tracking-scores-and-funds)
+and the [happy path](docs/project/happy-path.md).
+
 ## Run locally
 
 Use Rust 1.96.1. The [Compose guide](infra/README.md) creates private runtime secrets and starts the services behind Nginx at `http://localhost:8088`. Users and agents run ordinary Cargo, Python and Docker commands. No production deployment exists.

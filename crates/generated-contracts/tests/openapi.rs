@@ -116,7 +116,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 79);
+    assert_eq!(operation_ids.len(), 88);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "kunveno_session"
@@ -150,6 +150,7 @@ fn documented_examples_roundtrip_through_the_frozen_rust_dtos()
     check_examples::<EvidenceReference>(&doc, "EvidenceReference")?;
     check_examples::<EvidenceRequest>(&doc, "EvidenceRequest")?;
     check_examples::<CompletionSubmission>(&doc, "CompletionSubmission")?;
+    check_examples::<SubmitMilestoneCompletionRequest>(&doc, "SubmitMilestoneCompletionRequest")?;
     check_examples::<OpenDisputeRequest>(&doc, "OpenDisputeRequest")?;
     check_examples::<Week>(&doc, "Week")?;
     check_examples::<PlanningQuote>(&doc, "PlanningQuote")?;

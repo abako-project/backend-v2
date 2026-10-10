@@ -28,6 +28,10 @@ fn comment(row: &PgRow) -> Result<ReviewComment, Error> {
         created_at: row.try_get("created_at")?,
         message: row.try_get("message")?,
         definition: serde_json::from_str(&row.try_get::<String, _>("definition")?)?,
+        delivery: row
+            .try_get::<Option<String>, _>("delivery")?
+            .map(|value| serde_json::from_str(&value))
+            .transpose()?,
         presentation: row
             .try_get::<Option<String>, _>("presentation")?
             .map(|v| serde_json::from_str(&v))
@@ -95,7 +99,7 @@ pub(super) async fn comments(
     c: &Context,
     after: i64,
 ) -> Result<CommentsPage, Error> {
-    let rows = sqlx::query("SELECT comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text FROM proposal_review_comments WHERE provider_instance_id=$1 AND project_id=$2 AND proposal_id=$3 AND comment_id>$4 ORDER BY comment_id LIMIT 21")
+    let rows = sqlx::query("SELECT comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text,delivery::text FROM proposal_review_comments WHERE provider_instance_id=$1 AND project_id=$2 AND proposal_id=$3 AND comment_id>$4 ORDER BY comment_id LIMIT 21")
         .bind(c.instance.to_string()).bind(c.project_id.to_string()).bind(c.proposal.proposal_id.to_string()).bind(after).fetch_all(pool).await?;
     let has_more = rows.len() > 20;
     let items = rows
@@ -131,7 +135,7 @@ pub(super) async fn post_comment(
         ))
         .execute(&mut *tx)
         .await?;
-    let prior=sqlx::query("SELECT comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text FROM proposal_review_comments WHERE provider_instance_id=$1 AND project_id=$2 AND proposal_id=$3 AND author_account=$4 AND request_id=$5")
+    let prior=sqlx::query("SELECT comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text,delivery::text FROM proposal_review_comments WHERE provider_instance_id=$1 AND project_id=$2 AND proposal_id=$3 AND author_account=$4 AND request_id=$5")
         .bind(&instance).bind(&project).bind(&proposal).bind(&author).bind(&request_id).fetch_optional(&mut *tx).await?;
     if let Some(row) = prior {
         let saved = comment(&row)?;
@@ -146,9 +150,9 @@ pub(super) async fn post_comment(
     if c.proposal.revision != request.expected_proposal_revision {
         return Err(Error::Conflict("proposal_revision_conflict"));
     }
-    let row=sqlx::query("INSERT INTO proposal_review_comments (provider_instance_id,project_id,proposal_id,request_id,author_account,proposal_revision,created_at,message,definition,presentation) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb) RETURNING comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text")
+    let row=sqlx::query("INSERT INTO proposal_review_comments (provider_instance_id,project_id,proposal_id,request_id,author_account,proposal_revision,created_at,message,definition,presentation,delivery) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11::jsonb) RETURNING comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text,delivery::text")
         .bind(&instance).bind(&project).bind(&proposal).bind(&request_id).bind(&author).bind(i64::try_from(c.proposal.revision).map_err(|_|Error::Invalid)?).bind(now()?).bind(&request.message)
-        .bind(serde_json::to_string(&definition(&c.proposal))?).bind(presentation.map(|p|serde_json::to_string(&p)).transpose()?).fetch_one(&mut *tx).await?;
+        .bind(serde_json::to_string(&definition(&c.proposal))?).bind(presentation.map(|p|serde_json::to_string(&p)).transpose()?).bind(c.proposal.delivery.as_ref().map(serde_json::to_string).transpose()?).fetch_one(&mut *tx).await?;
     let saved = comment(&row)?;
     tx.commit().await?;
     Ok((true, saved))

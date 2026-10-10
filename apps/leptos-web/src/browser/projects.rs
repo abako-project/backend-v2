@@ -3,13 +3,12 @@ use super::{
     forms::{Action, Field, Form, Values},
 };
 use generated_contracts::{
-    AcceptMilestoneCompletionRequest, AccountId32, CreateProjectRequest, EntityId,
-    EvidenceReference, EvidenceRequest, MilestoneDefinition, MilestoneStatus, MilestoneView,
-    Minutes, Money, OpenDisputeRequest, PayloadHash, PlanningQuote, PlanningStatus, ProjectView,
-    ProposalDefinition, ProposalStatus, ProposalView, ReasonRequest, RequestChangesRequest,
-    RequestMilestoneCompletionRequest, RequirementDefinition, RevisionRequest, Score,
-    TaskDefinition, TaskPriority, TaskProgressRequest, TaskStatus, TaskType, TaskView, TeamRating,
-    UnixSeconds, WeekWindow, WorkerRating,
+    AcceptMilestoneDeliveryRequest, AccountId32, CreateProjectRequest, EntityId, EvidenceReference,
+    EvidenceRequest, MilestoneDefinition, MilestoneStatus, MilestoneView, Minutes, Money,
+    OpenDisputeRequest, PlanningQuote, PlanningStatus, ProjectView, ProposalDefinition,
+    ProposalStatus, ProposalView, ReasonRequest, RequestChangesRequest, RequirementDefinition,
+    RevisionRequest, SubmitMilestoneCompletionRequest, TaskDefinition, TaskPriority,
+    TaskProgressRequest, TaskStatus, TaskType, TaskView, UnixSeconds, WeekWindow,
 };
 use leptos::prelude::*;
 use leptos_web::{parse_ids, parse_week, week_input};
@@ -22,16 +21,8 @@ fn window(values: &Values) -> Result<WeekWindow, String> {
     .map_err(|_| "La semana final no puede ser anterior a la inicial".into())
 }
 
-fn score(values: &Values, key: &str) -> Result<Score, String> {
-    Score::new(values.parse(key)?)
-        .map_err(|_| "La puntuación debe ser un entero entre 0 y 10".into())
-}
 fn evidence(values: &Values) -> Result<EvidenceReference, String> {
-    let hash = values
-        .text("sha256")
-        .parse::<PayloadHash>()
-        .map_err(|_| "El SHA-256 debe tener 32 bytes hexadecimales con prefijo 0x")?;
-    EvidenceReference::new(values.text("url"), hash)
+    EvidenceReference::new(values.text("url"))
         .map_err(|_| "La evidencia debe ser una URL HTTPS válida y sin credenciales".into())
 }
 
@@ -226,21 +217,11 @@ fn Milestone(
     let id = milestone.milestone_id;
     let status = milestone.status;
     let storage = milestone.task_storage.task_storage_id;
-    let assignments = milestone.assignments.clone();
-    let mut rating_fields = assignments
-        .iter()
-        .map(|assignment| {
-            Field::number(
-                assignment.worker.to_string(),
-                format!("Score 0–10 para {}", assignment.worker),
-                5,
-            )
-        })
-        .collect::<Vec<_>>();
-    rating_fields.extend([
-        Field::text("url", "URL HTTPS del entregable", ""),
-        Field::text("sha256", "SHA-256 del entregable (0x…)", ""),
-    ]);
+    let delivery_fields = vec![Field::text(
+        "url",
+        "URL HTTPS del entregable (opcional)",
+        "",
+    )];
     let submission_id = milestone
         .submissions
         .last()
@@ -251,7 +232,7 @@ fn Milestone(
         {milestone.frozen.then(|| view! { <p class="notice">"Fondos congelados. No hay resolución automática de disputas."</p> })}
         {((client || coordinator) && active && status == Some(MilestoneStatus::ChangesRequested)).then(|| view! {
             <details><summary>"Abrir disputa por el rechazo vigente"</summary>
-            <Form fields=vec![Field::text("url", "URL HTTPS de los argumentos públicos", ""), Field::text("sha256", "SHA-256 de los argumentos (0x…)", "")] submit="Abrir disputa y congelar el proyecto"
+            <Form fields=vec![Field::text("url", "URL HTTPS de los argumentos públicos", "")] submit="Abrir disputa y congelar el proyecto"
             on_submit=Callback::new(move |values: Values| {
                 let rejected_submission_id = submission_id.ok_or("No existe una entrega rechazada vigente")?;
                 context.command("POST", "/disputes".into(), &OpenDisputeRequest { project_id, milestone_id: id, rejected_submission_id, evidence: evidence(&values)? })
@@ -262,20 +243,20 @@ fn Milestone(
             view! { <tr><td>{requirement.key}</td><td>{format!("{:?}", requirement.skill_ids)}</td><td>{requirement.minutes.get()}</td><td>{requirement.budget.units().to_string()}</td><td><code>{assigned}</code></td></tr> }
         }).collect_view()}</tbody></table></div>
         {(coordinator && active && matches!(status, Some(MilestoneStatus::InProgress | MilestoneStatus::ChangesRequested))).then(|| view! {
-            <h4>"Entregar una versión para revisión"</h4><Form fields=rating_fields submit="Pedir aceptación del hito" on_submit=Callback::new(move |values: Values| {
-                let worker_ratings = assignments.iter().map(|assignment| Ok(WorkerRating { worker: assignment.worker, score: score(&values, &assignment.worker.to_string())? })).collect::<Result<Vec<_>, String>>()?;
-                context.command("POST", format!("/projects/{project_id}/milestones/{id}/request-completion"), &RequestMilestoneCompletionRequest { worker_ratings, deliverable: evidence(&values)? })
+            <h4>"Entregar una versión para revisión"</h4><Form fields=delivery_fields submit="Pedir aceptación del hito" on_submit=Callback::new(move |values: Values| {
+                let deliverable = if values.text("url").trim().is_empty() { None } else { Some(evidence(&values)?) };
+                context.command("POST", format!("/projects/{project_id}/milestones/{id}/request-completion"), &SubmitMilestoneCompletionRequest { deliverable })
             })/>
         })}
         {(client && active && status == Some(MilestoneStatus::CompletionRequested)).then(|| view! {
-            <h4>"Revisar la entrega vigente"</h4><p class="muted">"Aceptar liquida los pagos y registra la reputación una sola vez. Rechazar solicita cambios; no abre una disputa."</p>
-            <Form fields=vec![Field::number("coordinator", "Score del coordinador (0–10)", 5), Field::select("team_mode", "Valoración del equipo", "Client", &["Client", "DelegateToCoordinator"]), Field::number("team", "Score del equipo (ignorado si delegas)", 5)] submit="Aceptar hito terminado y pagar"
-            on_submit=Callback::new(move |values: Values| {
+            <h4>"Revisar la entrega vigente"</h4><p class="muted">"Aceptar liquida el pago una sola vez. Las evaluaciones se realizan por separado. Rechazar solicita cambios; no abre una disputa."</p>
+            <Form fields=vec![] submit="Aceptar hito terminado y pagar"
+            on_submit=Callback::new(move |_values: Values| {
                 let submission_id = submission_id.ok_or("No existe una entrega pendiente")?;
-                context.command("POST", format!("/projects/{project_id}/milestones/{id}/accept-completion"), &AcceptMilestoneCompletionRequest { submission_id, coordinator_score: score(&values, "coordinator")?, team_rating: if values.text("team_mode") == "DelegateToCoordinator" { TeamRating::DelegateToCoordinator } else { TeamRating::Client(score(&values, "team")?) } })
+                context.command("POST", format!("/projects/{project_id}/milestones/{id}/accept-completion"), &AcceptMilestoneDeliveryRequest { submission_id })
             }) />
             <details><summary>"Rechazar y solicitar cambios"</summary>
-            <Form fields=vec![Field::text("url", "URL HTTPS del motivo público", ""), Field::text("sha256", "SHA-256 del motivo (0x…)", "")] submit="Rechazar esta entrega"
+            <Form fields=vec![Field::text("url", "URL HTTPS del motivo público", "")] submit="Rechazar esta entrega"
             on_submit=Callback::new(move |values: Values| {
                 let submission_id = submission_id.ok_or("No existe una entrega pendiente")?;
                 context.command("POST", format!("/completion-submissions/{submission_id}/rejection"), &EvidenceRequest { evidence: evidence(&values)? })

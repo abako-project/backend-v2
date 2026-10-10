@@ -20,6 +20,7 @@ mod catalog_requests;
 mod commands;
 mod dispute_validation;
 mod disputes;
+mod evaluations;
 mod project;
 mod submissions;
 #[cfg(test)]
@@ -297,6 +298,7 @@ impl State {
                     entity_id: effect.entity_id,
                     recipients: effect.recipients.into_iter().collect(),
                     occurred_at: now,
+                    origin: Some(call.origin),
                 });
                 self = tentative;
                 (ExecutionOutcome::Success, effect.entity_id, Some(cursor))
@@ -337,24 +339,33 @@ fn empty_score() -> ReputationView {
 }
 fn validate_score(score: &ReputationView) -> Result<()> {
     require(
-        score.weighted_score_sum <= u128::from(score.rated_minutes) * 1000,
+        score.weighted_score_sum <= u128::from(score.rated_minutes) * 500,
         "invalid_score_state",
     )
 }
 fn add_rating(score: &mut ReputationView, hundredths: u16, minutes: Minutes) -> Result<()> {
+    add_weighted_rating(score, hundredths, minutes, 1)
+}
+fn add_weighted_rating(
+    score: &mut ReputationView,
+    hundredths: u16,
+    minutes: Minutes,
+    weight: u8,
+) -> Result<()> {
+    let weighted_minutes = u64::from(minutes.get()) * u64::from(weight);
     score.rated_minutes = score
         .rated_minutes
-        .checked_add(u64::from(minutes.get()))
+        .checked_add(weighted_minutes)
         .ok_or_else(|| Error::domain("score_overflow"))?;
     score.weighted_score_sum = score
         .weighted_score_sum
-        .checked_add(u128::from(hundredths) * u128::from(minutes.get()))
+        .checked_add(u128::from(hundredths) * u128::from(weighted_minutes))
         .ok_or_else(|| Error::domain("score_overflow"))?;
     validate_score(score)
 }
 fn score_fraction(score: &ReputationView) -> (u128, u128) {
     if score.rated_minutes == 0 {
-        (500, 1)
+        (250, 1)
     } else {
         (score.weighted_score_sum, u128::from(score.rated_minutes))
     }

@@ -24,6 +24,7 @@ use std::{
     sync::Arc,
 };
 
+#[allow(clippy::too_many_lines)] // Keep declarative routes together.
 pub(crate) fn router(app: Arc<App>) -> Router {
     Router::new()
         .route("/health", get(|| async { StatusCode::OK }))
@@ -71,6 +72,14 @@ pub(crate) fn router(app: Arc<App>) -> Router {
         .route(
             "/api/profiles/{principalId}/{section}/image",
             get(crate::profiles::get_image),
+        )
+        .route(
+            "/api/completion-submissions/{submissionId}/comments",
+            get(crate::submission_comments::get).post(crate::submission_comments::post),
+        )
+        .route(
+            "/api/completion-submissions/{submissionId}/presentation",
+            get(crate::submission_presentations::get).put(crate::submission_presentations::put),
         )
         .route("/api/catalog", get(catalog))
         .route("/api/catalog/skill-requests", post(command))
@@ -139,6 +148,7 @@ fn marketplace_routes() -> Router<Arc<App>> {
         )
         .route("/api/disputes/{disputeId}/response", post(command))
         .route("/api/projects/{projectId}", get(project))
+        .route("/api/projects/{projectId}/evaluations", post(command))
         .route(
             "/api/projects/{projectId}/proposals/{proposalId}/presentation",
             get(crate::proposal_reviews::get_presentation)
@@ -167,6 +177,14 @@ fn marketplace_routes() -> Router<Arc<App>> {
         .route(
             "/api/projects/{projectId}/proposals/{proposalId}",
             put(command).delete(command),
+        )
+        .route(
+            "/api/projects/{projectId}/proposals/{proposalId}/delivery",
+            put(command),
+        )
+        .route(
+            "/api/projects/{projectId}/proposals/{proposalId}/withdraw",
+            post(command),
         )
         .route(
             "/api/projects/{projectId}/proposals/{proposalId}/submit",
@@ -199,7 +217,7 @@ fn marketplace_routes() -> Router<Arc<App>> {
         )
         .route(
             "/api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}",
-            put(command),
+            put(command).delete(command),
         )
         .route(
             "/api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}/progress",
@@ -209,7 +227,7 @@ fn marketplace_routes() -> Router<Arc<App>> {
         .route("/api/task-storages/{storageId}/tasks", post(command))
         .route(
             "/api/task-storages/{storageId}/tasks/{taskId}",
-            get(task).put(command).patch(command),
+            get(task).put(command).patch(command).delete(command),
         )
 }
 
@@ -620,6 +638,10 @@ async fn command(
             }
         }
         "/api/projects" => ProviderCommand::CreateProject(json(&headers, &body)?),
+        "/api/projects/{projectId}/evaluations" => ProviderCommand::EvaluateProject {
+            project_id: id("projectId")?,
+            request: json(&headers, &body)?,
+        },
         "/api/projects/{projectId}/planning/quote" => ProviderCommand::QuotePlanning {
             project_id: id("projectId")?,
             quote: json(&headers, &body)?,
@@ -656,6 +678,20 @@ async fn command(
                 proposal_id: id("proposalId")?,
             }
         }
+        "/api/projects/{projectId}/proposals/{proposalId}/delivery" => {
+            ProviderCommand::SetProposalDelivery {
+                project_id: id("projectId")?,
+                proposal_id: id("proposalId")?,
+                request: json(&headers, &body)?,
+            }
+        }
+        "/api/projects/{projectId}/proposals/{proposalId}/withdraw" => {
+            ProviderCommand::WithdrawProposal {
+                project_id: id("projectId")?,
+                proposal_id: id("proposalId")?,
+                expected_revision: revision()?,
+            }
+        }
         "/api/projects/{projectId}/proposals/{proposalId}/submit" => {
             no_body()?;
             ProviderCommand::SubmitProposal {
@@ -683,22 +719,30 @@ async fn command(
         },
         "/api/projects/{projectId}/milestones/{milestoneId}/request-completion"
         | "/api/projects/{projectId}/milestones/{milestoneId}/completion-submissions" => {
-            ProviderCommand::RequestMilestoneCompletion {
+            ProviderCommand::SubmitMilestoneDelivery {
                 project_id: id("projectId")?,
                 milestone_id: id("milestoneId")?,
                 request: json(&headers, &body)?,
             }
         }
         "/api/projects/{projectId}/milestones/{milestoneId}/accept-completion" => {
-            ProviderCommand::AcceptMilestoneCompletion {
+            let request: generated_contracts::AcceptMilestoneDeliveryRequest =
+                json(&headers, &body)?;
+            ProviderCommand::AcceptMilestoneDelivery {
                 project_id: id("projectId")?,
                 milestone_id: id("milestoneId")?,
-                request: json(&headers, &body)?,
+                submission_id: request.submission_id,
             }
         }
         "/api/disputes" => ProviderCommand::OpenDispute(json(&headers, &body)?),
         "/api/completion-submissions/{submissionId}/rejection" => {
-            crate::disputes::rejection(&app, id("submissionId")?, json(&headers, &body)?).await?
+            crate::submission_comments::rejection(
+                &app,
+                &session,
+                id("submissionId")?,
+                json(&headers, &body)?,
+            )
+            .await?
         }
         "/api/disputes/{disputeId}/response" => {
             crate::disputes::response(&app, id("disputeId")?, json(&headers, &body)?).await?
@@ -708,6 +752,21 @@ async fn command(
                 project_id: id("projectId")?,
                 task_storage_id: id("storageId")?,
                 task: json(&headers, &body)?,
+            }
+        }
+        "/api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}"
+        | "/api/task-storages/{storageId}/tasks/{taskId}"
+            if method == Method::DELETE =>
+        {
+            ProviderCommand::DeleteTask {
+                project_id: if params.contains_key("projectId") {
+                    id("projectId")?
+                } else {
+                    visible_storage(&app, &session, id("storageId")?).await?.0
+                },
+                task_storage_id: id("storageId")?,
+                task_id: parse(params.get("taskId").ok_or(Error::Invalid)?)?,
+                expected_revision: revision()?,
             }
         }
         "/api/projects/{projectId}/task-storages/{storageId}/tasks/{taskId}" => {

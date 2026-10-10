@@ -357,11 +357,9 @@ def exercise(base, admin_password, proxy):
     worker.command("PATCH", storage_path + f"/tasks/{task_id}/progress", {"status": "Done", "loggedMinutes": 999})
     milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
     submission = coordinator.command("POST", milestone_path + "/request-completion", {
-        "workerRatings": [{"worker": worker_account, "score": 8}],
         "deliverable": {"url": "https://example.test/delivery"},
     })
-    acceptance = {"coordinatorScore": 9, "teamRating": {"type": "Client", "score": 6},
-                  "submissionId": submission["receipt"]["createdEntityId"]}
+    acceptance = {"submissionId": submission["receipt"]["createdEntityId"]}
     key = "0x" + secrets.token_hex(16)
     proxy.drop_next = True
     first = client.command("POST", milestone_path + "/accept-completion", acceptance, key)
@@ -372,10 +370,10 @@ def exercise(base, admin_password, proxy):
     project = client.request("GET", project_path)
     require(project["executionEscrow"] == "0", "settled funds left in escrow")
     directory = {entry["account"]: entry for entry in client.request("GET", "/api/workers")}
-    require(directory[worker_account]["workerScore"] == {"weightedScoreSum": "84000", "ratedMinutes": 120},
-            "worker score did not use committed minutes and 50/50 weights")
-    require(directory[coordinator_account]["coordinatorScore"] == {"weightedScoreSum": "54000", "ratedMinutes": 60},
-            "coordinator score did not use its separate committed duration")
+    require(directory[worker_account]["workerScore"] == {"weightedScoreSum": "0", "ratedMinutes": 0},
+            "settlement must not fabricate a worker vote")
+    require(directory[coordinator_account]["coordinatorScore"] == {"weightedScoreSum": "0", "ratedMinutes": 0},
+            "settlement must not fabricate a coordinator vote")
     for account, committed in ((worker_account, 120), (coordinator_account, 160)):
         calendar = directory[account]["calendar"]
         require("reservations" not in calendar, "worker directory leaked reservation project identifiers")
@@ -409,7 +407,6 @@ def exercise_dispute(base, admin_password, _proxy):
     reference = {"url": "https://example.test/dispute-evidence"}
     balances_before = [actor.request("GET", "/api/balance") for actor in (client, coordinator, worker)]
     submission = coordinator.command("POST", milestone_path + "/request-completion", {
-        "workerRatings": [{"worker": worker_account, "score": 8}],
         "deliverable": {"url": "https://example.test/delivery"},
     })
     submission_id = submission["receipt"]["createdEntityId"]
@@ -563,24 +560,18 @@ def exercise_multi_milestone(base, admin_password, _proxy):
             workers[slot].command("PATCH", path + "/progress", {"status": "Done", "loggedMinutes": 999})
         path = project_path + "/milestones/" + milestone["milestoneId"]
         submission = coordinator.command("POST", path + "/request-completion", {
-            "workerRatings": [{"worker": workers[slot].session["accountId"], "score": 8} for slot in team],
             "deliverable": {"url": "https://example.test/delivery"},
         })
         requested = client.request("GET", project_path)["proposals"][0]["milestones"][index]
         require(requested["status"] == "CompletionRequested", "completion request was not recorded")
         require(client.request("GET", project_path)["executionEscrow"] == str(escrow), "request prematurely paid escrow")
-        acceptance = {"submissionId": submission["receipt"]["createdEntityId"],
-                      "coordinatorScore": 9, "teamRating": (
-                          {"type": "DelegateToCoordinator"} if index == 3 else {"type": "Client", "score": 6})}
+        acceptance = {"submissionId": submission["receipt"]["createdEntityId"]}
         key = "0x" + secrets.token_hex(16)
         first = client.command("POST", path + "/accept-completion", acceptance, key)
         require(client.command("POST", path + "/accept-completion", acceptance, key) == first,
                 "multi-milestone acceptance replay changed receipt")
         escrow -= 100 + 900 * len(team)
         for slot in team:
-            minutes = 60 * (index + 1)
-            expected_minutes[slot] += minutes
-            expected_scores[slot] += minutes * (800 if index == 3 else 700)
             expected_balances[slot] += 900
         project = client.request("GET", project_path)
         require(project["executionEscrow"] == str(escrow), "milestone settlement consumed the wrong escrow")
@@ -599,9 +590,8 @@ def exercise_multi_milestone(base, admin_password, _proxy):
             require(directory[worker.session["accountId"]]["workerScore"] == {
                 "weightedScoreSum": str(expected_scores[slot]), "ratedMinutes": expected_minutes[slot]},
                 "reputation did not accumulate committed minutes exactly once")
-        coordinator_minutes = sum(30 * (number + 1) for number in range(index + 1))
         require(directory[coordinator.session["accountId"]]["coordinatorScore"] == {
-            "weightedScoreSum": str(900 * coordinator_minutes), "ratedMinutes": coordinator_minutes},
+            "weightedScoreSum": "0", "ratedMinutes": 0},
             "coordinator reputation differs from accepted coordination minutes")
     for slot, worker in enumerate(workers):
         calendar = directory[worker.session["accountId"]]["calendar"]

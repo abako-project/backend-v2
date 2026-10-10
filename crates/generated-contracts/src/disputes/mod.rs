@@ -105,6 +105,16 @@ pub enum SubmissionReview {
         /// Provider timestamp.
         reviewed_at: UnixSeconds,
     },
+    /// Refused with a private adapter comment bound to this delivery.
+    #[codec(index = 3)]
+    RejectedWithComment {
+        /// Immutable adapter reason identity.
+        comment_id: EntityId,
+        /// Verified client account.
+        reviewed_by: AccountId32,
+        /// Provider timestamp.
+        reviewed_at: UnixSeconds,
+    },
     /// Accepted and settled atomically.
     #[codec(index = 2)]
     Accepted {
@@ -123,8 +133,8 @@ pub struct CompletionSubmission {
     pub submission_id: EntityId,
     /// One-based, increasing within the milestone.
     pub version: u64,
-    /// Submitted artifact reference.
-    pub deliverable: EvidenceReference,
+    /// Optional submitted artifact; descriptive links live in the adapter.
+    pub deliverable: Option<EvidenceReference>,
     /// Verified coordinator.
     pub submitted_by: AccountId32,
     /// Provider timestamp.

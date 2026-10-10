@@ -20,6 +20,35 @@ impl State {
         now: UnixSeconds,
     ) -> Result<Effect> {
         let transition = match command {
+            ProviderCommand::EvaluateProject { request, .. } => {
+                self.evaluate_project(project, origin, request, now)?;
+                Ok((DomainEventKind::ProjectEvaluated, Some(project.project_id)))
+            }
+            ProviderCommand::RejectMilestoneDelivery {
+                milestone_id,
+                submission_id,
+                comment_id,
+                ..
+            } => {
+                client(project, origin)?;
+                let milestone = milestone_mut(project, *milestone_id)?;
+                require(
+                    milestone.status == Some(MilestoneStatus::CompletionRequested)
+                        && !milestone.frozen,
+                    "invalid_milestone_state",
+                )?;
+                super::submissions::pending(milestone, *submission_id)?.review =
+                    generated_contracts::SubmissionReview::RejectedWithComment {
+                        comment_id: *comment_id,
+                        reviewed_by: origin,
+                        reviewed_at: now,
+                    };
+                milestone.status = Some(MilestoneStatus::ChangesRequested);
+                Ok((
+                    DomainEventKind::MilestoneCompletionRejected,
+                    Some(*submission_id),
+                ))
+            }
             ProviderCommand::RejectMilestoneCompletion {
                 milestone_id,
                 submission_id,
@@ -58,24 +87,30 @@ impl State {
             }
             ProviderCommand::CreateProposal { .. }
             | ProviderCommand::UpdateProposal { .. }
-            | ProviderCommand::DeleteProposal { .. } => {
+            | ProviderCommand::DeleteProposal { .. }
+            | ProviderCommand::SetProposalDelivery { .. } => {
                 self.draft_proposal_command(project, origin, command)
             }
             ProviderCommand::SubmitProposal { .. }
             | ProviderCommand::ApproveExecution { .. }
-            | ProviderCommand::RequestProposalChanges { .. } => {
+            | ProviderCommand::RequestProposalChanges { .. }
+            | ProviderCommand::WithdrawProposal { .. } => {
                 self.proposal_review_command(project, origin, command)
             }
             ProviderCommand::CancelProject { .. } | ProviderCommand::DisputePlanning { .. } => {
                 self.lifecycle_command(project, origin, command, now)
             }
             ProviderCommand::CreateTask { .. }
+            | ProviderCommand::DeleteTask { .. }
             | ProviderCommand::EditTask { .. }
             | ProviderCommand::UpdateTaskProgress { .. } => {
                 self.task_command(project, origin, command, now)
             }
-            ProviderCommand::RequestMilestoneCompletion { .. }
-            | ProviderCommand::AcceptMilestoneCompletion { .. } => {
+            ProviderCommand::RequestMilestoneCompletionWithoutDeliverable { .. }
+            | ProviderCommand::RequestMilestoneCompletion { .. }
+            | ProviderCommand::AcceptMilestoneCompletion { .. }
+            | ProviderCommand::SubmitMilestoneDelivery { .. }
+            | ProviderCommand::AcceptMilestoneDelivery { .. } => {
                 self.milestone_command(project, origin, command, now)
             }
             _ => Err(Error::bad("invalid_project_message")),
@@ -177,6 +212,7 @@ impl State {
                     status: ProposalStatus::Draft,
                     milestones: make_milestones(proposal, &[])?,
                     change_request: None,
+                    delivery: None,
                 });
                 (DomainEventKind::ProposalCreated, proposal_id)
             }
@@ -196,6 +232,23 @@ impl State {
                 current.milestones = make_milestones(proposal, &current.milestones)?;
                 current.title.clone_from(&proposal.title);
                 current.description.clone_from(&proposal.description);
+                bump(&mut current.revision)?;
+                (DomainEventKind::ProposalUpdated, *proposal_id)
+            }
+            ProviderCommand::SetProposalDelivery {
+                proposal_id,
+                request,
+                ..
+            } => {
+                coordinator(project, origin)?;
+                planning_active(project)?;
+                let current = proposal_mut(project, *proposal_id)?;
+                require(
+                    current.status == ProposalStatus::Draft,
+                    "proposal_not_draft",
+                )?;
+                revision(current.revision, request.expected_revision)?;
+                current.delivery = Some(request.delivery.clone());
                 bump(&mut current.revision)?;
                 (DomainEventKind::ProposalUpdated, *proposal_id)
             }
@@ -222,6 +275,34 @@ impl State {
         command: &ProviderCommand,
     ) -> Result<Transition> {
         let (kind, proposal_id) = match command {
+            ProviderCommand::WithdrawProposal {
+                proposal_id,
+                expected_revision,
+                ..
+            } => {
+                coordinator(project, origin)?;
+                planning_active(project)?;
+                require(
+                    !project
+                        .proposals
+                        .iter()
+                        .any(|p| p.status == ProposalStatus::Approved),
+                    "execution_already_approved",
+                )?;
+                let proposal = proposal_mut(project, *proposal_id)?;
+                revision(proposal.revision, *expected_revision)?;
+                require(
+                    proposal.status == ProposalStatus::PendingApproval,
+                    "proposal_not_pending",
+                )?;
+                proposal.status = ProposalStatus::Draft;
+                bump(&mut proposal.revision)?;
+                if project.planning.status == PlanningStatus::Delivered {
+                    project.planning.status = PlanningStatus::Accepted;
+                }
+                bump(&mut project.planning.revision)?;
+                (DomainEventKind::ProposalWithdrawn, *proposal_id)
+            }
             ProviderCommand::SubmitProposal { proposal_id, .. } => {
                 coordinator(project, origin)?;
                 planning_active(project)?;
@@ -409,6 +490,40 @@ impl State {
         now: UnixSeconds,
     ) -> Result<Transition> {
         let (kind, storage_id) = match command {
+            ProviderCommand::DeleteTask {
+                task_storage_id,
+                task_id,
+                expected_revision,
+                ..
+            } => {
+                coordinator(project, origin)?;
+                let proposal = project
+                    .proposals
+                    .iter_mut()
+                    .find(|p| {
+                        p.milestones
+                            .iter()
+                            .any(|m| m.task_storage.task_storage_id == *task_storage_id)
+                    })
+                    .ok_or_else(|| Error::domain("task_storage_not_found"))?;
+                require(
+                    proposal.status == ProposalStatus::Draft,
+                    "proposal_not_draft",
+                )?;
+                revision(proposal.revision, *expected_revision)?;
+                let storage = &mut proposal
+                    .milestones
+                    .iter_mut()
+                    .find(|m| m.task_storage.task_storage_id == *task_storage_id)
+                    .ok_or_else(Error::internal)?
+                    .task_storage;
+                require(
+                    storage.tasks.iter().any(|t| t.task_id == *task_id),
+                    "task_not_found",
+                )?;
+                storage.tasks.retain(|t| t.task_id != *task_id);
+                (DomainEventKind::TaskDeleted, *task_storage_id)
+            }
             ProviderCommand::CreateTask {
                 task_storage_id,
                 task,
@@ -475,12 +590,54 @@ impl State {
         now: UnixSeconds,
     ) -> Result<Transition> {
         match command {
+            ProviderCommand::SubmitMilestoneDelivery {
+                milestone_id,
+                request,
+                ..
+            } => {
+                let id = super::submissions::submit(
+                    project,
+                    origin,
+                    *milestone_id,
+                    request.deliverable.clone(),
+                    None,
+                    now,
+                )?;
+                Ok((DomainEventKind::MilestoneCompletionRequested, Some(id)))
+            }
+            ProviderCommand::AcceptMilestoneDelivery {
+                milestone_id,
+                submission_id,
+                ..
+            } => self.settle_delivery(project, origin, *milestone_id, *submission_id, now),
             ProviderCommand::RequestMilestoneCompletion {
                 milestone_id,
                 request,
                 ..
             } => {
-                let id = super::submissions::submit(project, origin, *milestone_id, request, now)?;
+                let id = super::submissions::submit(
+                    project,
+                    origin,
+                    *milestone_id,
+                    Some(request.deliverable.clone()),
+                    Some(&request.worker_ratings),
+                    now,
+                )?;
+                Ok((DomainEventKind::MilestoneCompletionRequested, Some(id)))
+            }
+            ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
+                milestone_id,
+                worker_ratings,
+                ..
+            } => {
+                let id = super::submissions::submit(
+                    project,
+                    origin,
+                    *milestone_id,
+                    None,
+                    Some(worker_ratings),
+                    now,
+                )?;
                 Ok((DomainEventKind::MilestoneCompletionRequested, Some(id)))
             }
             ProviderCommand::AcceptMilestoneCompletion {
@@ -497,8 +654,7 @@ impl State {
                     "invalid_milestone_state",
                 )?;
                 super::submissions::pending(milestone, request.submission_id)?;
-                let total = milestone.definition.total()?;
-                self.credit(coordinator, milestone.definition.coordinator_fee)?;
+
                 add_rating(
                     &mut self.worker_mut(coordinator)?.coordinator_score,
                     u16::from(request.coordinator_score.get()) * 100,
@@ -519,25 +675,53 @@ impl State {
                         TeamRating::Client(score) => self.score_policy.blend(rating.score, score),
                         TeamRating::DelegateToCoordinator => u16::from(rating.score.get()) * 100,
                     };
-                    self.credit(assignment.worker, requirement.budget)?;
+
                     add_rating(
                         &mut self.worker_mut(assignment.worker)?.worker_score,
                         contribution,
                         requirement.minutes,
                     )?;
                 }
-                super::submissions::pending(milestone, request.submission_id)?.review =
-                    generated_contracts::SubmissionReview::Accepted {
-                        reviewed_by: origin,
-                        reviewed_at: now,
-                    };
-                milestone.status = Some(MilestoneStatus::Completed);
-                project.execution_escrow = project.execution_escrow.checked_sub(total)?;
-                activate_next_milestone(project, *milestone_id)?;
-                Ok((DomainEventKind::MilestoneCompleted, Some(*milestone_id)))
+                self.settle_delivery(project, origin, *milestone_id, request.submission_id, now)
             }
             _ => Err(Error::bad("invalid_project_message")),
         }
+    }
+    fn settle_delivery(
+        &mut self,
+        project: &mut ProjectView,
+        origin: AccountId32,
+        milestone_id: EntityId,
+        submission_id: EntityId,
+        now: UnixSeconds,
+    ) -> Result<Transition> {
+        client(project, origin)?;
+        let coordinator = project.coordinator;
+        let milestone = milestone_mut(project, milestone_id)?;
+        require(
+            milestone.status == Some(MilestoneStatus::CompletionRequested) && !milestone.frozen,
+            "invalid_milestone_state",
+        )?;
+        super::submissions::pending(milestone, submission_id)?;
+        let total = milestone.definition.total()?;
+        self.credit(coordinator, milestone.definition.coordinator_fee)?;
+        for requirement in &milestone.definition.requirements {
+            let assignment = milestone
+                .assignments
+                .iter()
+                .find(|a| a.requirement_key == requirement.key)
+                .ok_or_else(Error::internal)?;
+            self.credit(assignment.worker, requirement.budget)?;
+        }
+        super::submissions::pending(milestone, submission_id)?.review =
+            generated_contracts::SubmissionReview::Accepted {
+                reviewed_by: origin,
+                reviewed_at: now,
+            };
+        milestone.status = Some(MilestoneStatus::Completed);
+        project.execution_escrow = project.execution_escrow.checked_sub(total)?;
+        activate_next_milestone(project, milestone_id)?;
+        Ok((DomainEventKind::MilestoneCompleted, Some(milestone_id)))
     }
 }
 

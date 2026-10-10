@@ -30,12 +30,18 @@ field-level source of truth and is also served at `GET /api/openapi.json`.
    relevant score ranks candidates within that group. Only the first milestone
    enters `InProgress`; the others remain `NotStarted`.
 5. Workers report task progress. For each milestone, the coordinator submits a
-   versioned deliverable reference and rates each assigned worker. The client
-   accepts that exact submission, rates the coordinator and either rates the
-   team or delegates its rating to the coordinator. Acceptance releases that
-   milestone's escrow and updates minute-weighted reputation. Acceptance starts
-   the next milestone, or marks the project `Completed` after the last one.
-6. The client and coordinator can read balances, project state and notifications.
+   versioned delivery, with optional Documentation and Other Links and no scores.
+   The client accepts that exact submission without scores. Acceptance releases
+   that milestone's escrow and starts the next milestone, or marks the project
+   `Completed` after the last one.
+6. After completion, the client evaluates only the coordinator,
+   the coordinator evaluates the client and workers, and workers evaluate the
+   coordinator. Each participant submits once with integer 1–5 stars through
+   `POST /api/projects/{projectId}/evaluations`. These votes update minute-weighted
+   reputation without any further payment. Worker reputation uses only the coordinator
+   vote. The client and each worker contribute equally to coordinator reputation by
+   default; the admin score policy exposes relative weights for future votes.
+7. The client and coordinator can read balances, project state and notifications.
    Authenticated SSE streams notifications; replay does not mark them read.
 
 The real-service E2E also repeats steps 3–5 with four milestones and teams of
@@ -43,7 +49,11 @@ The real-service E2E also repeats steps 3–5 with four milestones and teams of
 approved redesign, not full wire or behavioral parity with the legacy API.
 
 If the client rejects a delivery, the milestone becomes `ChangesRequested`;
-rejection alone does not create a dispute. The client or assigned coordinator
+rejection alone does not create a dispute. A written rejection is stored with
+`POST /api/completion-submissions/{submissionId}/comments` (kind Rejection), then
+bound to the provider decision with `POST .../rejection` and its commentId.
+Client and coordinator can save/read private comments for that delivery version;
+old versions remain readable, but new comments require the current version. The client or assigned coordinator
 may then open a public dispute against the *current* rejected submission.
 Opening freezes the entire project, including all task storages and unpaid
 escrow. The other party may publish one response. The case remains Open:
@@ -163,8 +173,8 @@ use the three Bramp rows instead.
 | Client | `POST /api/projects/{projectId}/proposals/{proposalId}/approve` | `{"expectedRevision":<current proposal.revision>}`; inspect assignments and execution escrow in a fresh project read. |
 | Coordinator | `PUT /api/task-storages/{storageId}/tasks/{taskId}` | Full `TaskDefinition` with an assigned worker in `assignees`. |
 | Assigned worker | `PATCH /api/task-storages/{storageId}/tasks/{taskId}` | `{"status":"Done","loggedMinutes":120}`. Logged time does not alter the reserved contractual minutes. |
-| Coordinator | `POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions` | `{"workerRatings":[{"worker":"<assigned accountId>","score":8}],"deliverable":{"url":"https://example.test/delivery"}}`. Receipt yields `submissionId`. The older `request-completion` path is an alias. No hash is required; the API does not fetch or verify the URL. |
-| Client | `POST /api/projects/{projectId}/milestones/{milestoneId}/accept-completion` | `{"submissionId":"<current submissionId>","coordinatorScore":9,"teamRating":{"type":"Client","score":6}}`. Alternatively use `{"type":"DelegateToCoordinator"}` for `teamRating`. This settles that milestone only. |
+| Coordinator | `POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions` | `{"deliverable":{"url":"https://example.test/delivery"}}`. Receipt yields `submissionId`. The older `request-completion` path is an alias. `deliverable:null` allows submission without a supporting URL. No hash is required; the API does not fetch or verify the URL. After finality, the coordinator saves optional `documentation` and `links` via `PUT /api/completion-submissions/{submissionId}/presentation` with `expectedRevision:0`. That write is immutable and safely retryable; it must never resubmit completion. |
+| Client | `POST /api/projects/{projectId}/milestones/{milestoneId}/accept-completion` | `{"submissionId":"<current submissionId>"}`. This settles that milestone only, without recording votes. Evaluations belong to the separate project-completion flow. |
 
 `GET /api/task-storages/{storageId}` and
 `GET /api/task-storages/{storageId}/tasks/{taskId}` read the same provider-owned
@@ -246,3 +256,16 @@ creation commits; later planning, proposal and milestone changes leave it intact
 Existing snapshots recover it from durable `ProjectCreated` events. A missing
 historical event yields `null`, never a fabricated date. Clients may sort dated
 projects newest first and leave undated records last.
+
+## Explicit pending decisions — 2026-10-10
+
+- Per-milestone “Specific date” has no independent date/calendar in legacy. Keep the
+  global proposal calendar; the mock stores it independently of operative milestone
+  ISO-week windows. A future per-milestone date needs its own model, persistence and
+  agreed scheduling effect. It must not silently inherit the global date.
+- The client and each worker vote independently about the coordinator, with equal
+  relative weights (1/1) by default. The admin score policy can change weights for
+  future votes. Treating the team's average as one vote is deferred, including its
+  missing-vote and rounding rules. Client-to-worker voting is forbidden.
+
+Documentation and Other Links in the adapter submission presentation are optional free text, limited to 2048 UTF-8 bytes per field, with no protocol restriction. They do not need to be provider evidence URLs. The API does not fetch or execute these references.

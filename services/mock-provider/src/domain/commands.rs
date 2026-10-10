@@ -262,6 +262,7 @@ impl State {
                 execution_escrow: Money::ZERO,
                 cancelled: false,
                 completed: false,
+                evaluations: Vec::new(),
                 active_dispute_id: None,
             },
         );

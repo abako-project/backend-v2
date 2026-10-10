@@ -11,6 +11,8 @@ mod project_briefs;
 mod project_participants;
 mod proposal_reviews;
 mod state;
+mod submission_comments;
+mod submission_presentations;
 
 use state::{App, Config, Error};
 use std::{sync::Arc, time::Duration};

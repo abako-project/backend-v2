@@ -111,17 +111,35 @@ async fn authorize_project(
         ProviderCommand::QuotePlanning { .. }
         | ProviderCommand::CreateProposal { .. }
         | ProviderCommand::UpdateProposal { .. }
+        | ProviderCommand::SetProposalDelivery { .. }
+        | ProviderCommand::DeleteTask { .. }
+        | ProviderCommand::WithdrawProposal { .. }
         | ProviderCommand::DeleteProposal { .. }
         | ProviderCommand::SubmitProposal { .. }
         | ProviderCommand::CreateTask { .. }
         | ProviderCommand::EditTask { .. }
-        | ProviderCommand::RequestMilestoneCompletion { .. } => project.coordinator == account,
+        | ProviderCommand::RequestMilestoneCompletionWithoutDeliverable { .. }
+        | ProviderCommand::RequestMilestoneCompletion { .. }
+        | ProviderCommand::SubmitMilestoneDelivery { .. } => project.coordinator == account,
         ProviderCommand::AcceptPlanningQuote { .. }
         | ProviderCommand::AcceptPlanningDelivery { .. }
         | ProviderCommand::ApproveExecution { .. }
         | ProviderCommand::RequestProposalChanges { .. }
         | ProviderCommand::AcceptMilestoneCompletion { .. }
-        | ProviderCommand::RejectMilestoneCompletion { .. } => project.client == account,
+        | ProviderCommand::AcceptMilestoneDelivery { .. }
+        | ProviderCommand::RejectMilestoneCompletion { .. }
+        | ProviderCommand::RejectMilestoneDelivery { .. } => project.client == account,
+        ProviderCommand::EvaluateProject { .. } => {
+            project.client == account
+                || project.coordinator == account
+                || project
+                    .proposals
+                    .iter()
+                    .filter(|p| p.status == generated_contracts::ProposalStatus::Approved)
+                    .flat_map(|p| &p.milestones)
+                    .flat_map(|m| &m.assignments)
+                    .any(|a| a.worker == account)
+        }
         ProviderCommand::UpdateTaskProgress {
             task_storage_id,
             task_id,

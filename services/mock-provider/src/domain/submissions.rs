@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
 use generated_contracts::{
-    AccountId32, CompletionSubmission, EntityId, EvidenceRequest, MilestoneStatus, MilestoneView,
-    ProjectView, RequestMilestoneCompletionRequest, SubmissionReview, UnixSeconds,
+    AccountId32, CompletionSubmission, EntityId, EvidenceReference, EvidenceRequest,
+    MilestoneStatus, MilestoneView, ProjectView, SubmissionReview, UnixSeconds, WorkerRating,
 };
 
 use super::project::milestone_mut;
@@ -12,7 +12,8 @@ pub(super) fn submit(
     project: &mut ProjectView,
     origin: AccountId32,
     milestone_id: EntityId,
-    request: &RequestMilestoneCompletionRequest,
+    deliverable: Option<EvidenceReference>,
+    worker_ratings: Option<&[WorkerRating]>,
     now: UnixSeconds,
 ) -> Result<EntityId> {
     require(project.coordinator == origin, "coordinator_required")?;
@@ -24,10 +25,12 @@ pub(super) fn submit(
         ) && !milestone.frozen,
         "invalid_milestone_state",
     )?;
+    let legacy_ratings = worker_ratings.is_some();
+    let worker_ratings = worker_ratings.unwrap_or_default();
     let assigned: BTreeSet<_> = milestone.assignments.iter().map(|a| a.worker).collect();
-    let rated: BTreeSet<_> = request.worker_ratings.iter().map(|r| r.worker).collect();
+    let rated: BTreeSet<_> = worker_ratings.iter().map(|r| r.worker).collect();
     require(
-        assigned == rated && rated.len() == request.worker_ratings.len(),
+        !legacy_ratings || (assigned == rated && rated.len() == worker_ratings.len()),
         "worker_ratings_mismatch",
     )?;
     let version = u64::try_from(milestone.submissions.len())
@@ -38,13 +41,13 @@ pub(super) fn submit(
     milestone.submissions.push(CompletionSubmission {
         submission_id,
         version,
-        deliverable: request.deliverable.clone(),
+        deliverable,
         submitted_by: origin,
         submitted_at: now,
-        worker_ratings: request.worker_ratings.clone(),
+        worker_ratings: worker_ratings.to_vec(),
         review: SubmissionReview::PendingReview,
     });
-    milestone.worker_ratings.clone_from(&request.worker_ratings);
+    milestone.worker_ratings = worker_ratings.to_vec();
     milestone.status = Some(MilestoneStatus::CompletionRequested);
     Ok(submission_id)
 }

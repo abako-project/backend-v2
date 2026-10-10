@@ -55,6 +55,7 @@ pub(crate) struct ReviewComment {
     pub(crate) created_at: i64,
     pub(crate) message: String,
     pub(crate) definition: ProposalDefinition,
+    pub(crate) delivery: Option<generated_contracts::DeliveryPreference>,
     pub(crate) presentation: Option<PresentationView>,
 }
 #[derive(Debug, Serialize, Deserialize)]

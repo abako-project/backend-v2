@@ -7,7 +7,7 @@ use generated_contracts::{
     RegisterWorkerRequest, ReputationView, UnixSeconds, WorkerMode,
 };
 
-use super::{State, add_rating, compare_scores, empty_score};
+use super::{State, add_rating, add_weighted_rating, compare_scores, empty_score};
 #[cfg(feature = "storage-sqlite")]
 use crate::Error;
 use crate::Result;
@@ -15,11 +15,11 @@ use crate::Result;
 #[test]
 fn exact_scores_do_not_round_or_overflow() -> Result<()> {
     let low = ReputationView {
-        weighted_score_sum: u128::from(u64::MAX) * 999 - 1,
+        weighted_score_sum: u128::from(u64::MAX) * 499 - 1,
         rated_minutes: u64::MAX,
     };
     let high = ReputationView {
-        weighted_score_sum: u128::from(u64::MAX) * 999,
+        weighted_score_sum: u128::from(u64::MAX) * 499,
         rated_minutes: u64::MAX,
     };
     assert_eq!(compare_scores(&low, &high), Ordering::Less);
@@ -28,16 +28,16 @@ fn exact_scores_do_not_round_or_overflow() -> Result<()> {
         compare_scores(
             &empty_score(),
             &ReputationView {
-                weighted_score_sum: 3500,
+                weighted_score_sum: 1750,
                 rated_minutes: 7,
             },
         ),
         Ordering::Equal
     );
     let mut score = empty_score();
-    add_rating(&mut score, 1000, Minutes::new(100))?;
+    add_rating(&mut score, 500, Minutes::new(100))?;
     add_rating(&mut score, 100, Minutes::new(1000))?;
-    assert_eq!(score.weighted_score_sum, 200_000);
+    assert_eq!(score.weighted_score_sum, 150_000);
     assert_eq!(score.rated_minutes, 1100);
     Ok(())
 }
@@ -65,7 +65,7 @@ fn selection_uses_only_the_reputation_for_the_requested_mode() -> Result<()> {
         )?;
     }
     state.worker_mut(first)?.worker_score = ReputationView {
-        weighted_score_sum: 900,
+        weighted_score_sum: 450,
         rated_minutes: 1,
     };
     state.worker_mut(first)?.coordinator_score = ReputationView {
@@ -77,7 +77,7 @@ fn selection_uses_only_the_reputation_for_the_requested_mode() -> Result<()> {
         rated_minutes: 1,
     };
     state.worker_mut(second)?.coordinator_score = ReputationView {
-        weighted_score_sum: 1000,
+        weighted_score_sum: 500,
         rated_minutes: 1,
     };
     assert_eq!(state.select(&[first, second], WorkerMode::Worker)?, first);
@@ -151,6 +151,7 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
         entity_id: Some(id),
         recipients: vec![root, coordinator],
         occurred_at: created_at,
+        origin: Some(root),
     });
     let mut old: serde_json::Value =
         serde_json::from_slice(&state.encode()?).map_err(|_| Error::internal())?;
@@ -175,5 +176,24 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
             .created_at,
         None
     );
+    Ok(())
+}
+
+#[test]
+fn coordinator_votes_use_exact_relative_weights() -> Result<()> {
+    let mut score = empty_score();
+    for vote in [5, 4, 2] {
+        add_weighted_rating(&mut score, vote * 100, Minutes::new(60), 1)?;
+    }
+    assert_eq!(score.weighted_score_sum, 66_000);
+    assert_eq!(score.rated_minutes, 180);
+    let mut weighted = empty_score();
+    add_weighted_rating(&mut weighted, 500, Minutes::new(60), 2)?;
+    add_weighted_rating(&mut weighted, 200, Minutes::new(60), 1)?;
+    assert_eq!(weighted.weighted_score_sum, 72_000);
+    assert_eq!(weighted.rated_minutes, 180);
+    add_weighted_rating(&mut weighted, 100, Minutes::new(60), 0)?;
+    assert_eq!(weighted.weighted_score_sum, 72_000);
+    assert_eq!(weighted.rated_minutes, 180);
     Ok(())
 }

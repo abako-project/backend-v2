@@ -17,7 +17,7 @@ async fn submit(
                 deliverable: evidence()?,
                 worker_ratings: vec![WorkerRating {
                     worker: account(worker),
-                    score: Score::new(8)?,
+                    score: Score::new(4)?,
                 }],
             },
         },
@@ -117,7 +117,7 @@ async fn exercise(provider: Provider) -> TestResult {
                 milestone_id,
                 request: AcceptMilestoneCompletionRequest {
                     submission_id: first,
-                    coordinator_score: Score::new(8)?,
+                    coordinator_score: Score::new(4)?,
                     team_rating: TeamRating::DelegateToCoordinator,
                 },
             }
@@ -360,5 +360,62 @@ async fn sqlite_rejection_freeze_response_and_restore() -> TestResult {
     );
     drop(restored);
     std::fs::remove_file(file)?;
+    Ok(())
+}
+
+#[cfg(feature = "storage-memory")]
+#[tokio::test]
+async fn delivery_without_links_still_checks_actor_ratings_and_conserves_escrow() -> TestResult {
+    let provider = Provider::memory(account(&key(1)?))?;
+    let (_, coordinator, worker, client, project_id, _, milestone_id) =
+        prepare_project(&provider).await?;
+    let before = provider.snapshot().await?;
+    let command = ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
+        project_id,
+        milestone_id,
+        worker_ratings: vec![WorkerRating {
+            worker: account(&worker),
+            score: Score::new(4)?,
+        }],
+    };
+    assert_eq!(
+        send(&provider, &worker, command.clone()).await?.outcome,
+        ExecutionOutcome::Failed("coordinator_required".into())
+    );
+    let invalid = ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
+        project_id,
+        milestone_id,
+        worker_ratings: vec![],
+    };
+    assert_eq!(
+        send(&provider, &coordinator, invalid).await?.outcome,
+        ExecutionOutcome::Failed("worker_ratings_mismatch".into())
+    );
+    let signed = signed(&provider, &coordinator, command).await?;
+    let receipt = provider.execute(signed.clone(), NOW).await?;
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+    assert_eq!(provider.execute(signed, NOW).await?, receipt);
+    let after = provider.snapshot().await?;
+    assert_eq!(before.balances, after.balances);
+    assert_eq!(before.workers, after.workers);
+    let view = project(&provider, project_id).await?;
+    assert_eq!(view.execution_escrow, before.projects[0].execution_escrow);
+    let submission = view.proposals[0].milestones[0]
+        .submissions
+        .last()
+        .ok_or("submission")?;
+    assert!(submission.deliverable.is_none());
+    success(
+        &provider,
+        &client,
+        reject(project_id, milestone_id, submission.submission_id)?,
+    )
+    .await?;
+    assert!(
+        project(&provider, project_id)
+            .await?
+            .active_dispute_id
+            .is_none()
+    );
     Ok(())
 }

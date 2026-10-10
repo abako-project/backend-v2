@@ -58,7 +58,10 @@ fn validate_milestone(
                 Some(SubmissionReview::PendingReview)
             ) | (
                 Some(MilestoneStatus::ChangesRequested | MilestoneStatus::Disputed),
-                Some(SubmissionReview::Rejected { .. })
+                Some(
+                    SubmissionReview::Rejected { .. }
+                        | SubmissionReview::RejectedWithComment { .. }
+                )
             ) | (
                 Some(MilestoneStatus::Completed),
                 Some(SubmissionReview::Accepted { .. })
@@ -105,6 +108,11 @@ fn validate_submission(
             reviewed_at,
             ..
         }
+        | SubmissionReview::RejectedWithComment {
+            reviewed_by,
+            reviewed_at,
+            ..
+        }
         | SubmissionReview::Accepted {
             reviewed_by,
             reviewed_at,
@@ -115,7 +123,10 @@ fn validate_submission(
     }
     if index + 1 < count {
         require(
-            matches!(submission.review, SubmissionReview::Rejected { .. }),
+            matches!(
+                submission.review,
+                SubmissionReview::Rejected { .. } | SubmissionReview::RejectedWithComment { .. }
+            ),
             "invalid_submission_history",
         )?;
     }

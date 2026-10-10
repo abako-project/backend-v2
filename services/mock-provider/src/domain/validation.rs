@@ -65,6 +65,9 @@ impl State {
             for proposal in &project.proposals {
                 require(identities.insert(proposal.proposal_id), "duplicate_entity")?;
                 proposal_definition(proposal).validate()?;
+                if let Some(delivery) = &proposal.delivery {
+                    delivery.validate()?;
+                }
                 for milestone in &proposal.milestones {
                     require(
                         identities.insert(milestone.milestone_id)

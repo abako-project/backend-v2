@@ -1645,8 +1645,8 @@
         "tags": [
           "Marketplace"
         ],
-        "summary": "Request completion with each worker's rating",
-        "description": "Versioned HTTPS deliverable and SHA-256 plus worker ratings. Receipt createdEntityId is the submission ID.",
+        "summary": "Submit a milestone delivery without evaluations",
+        "description": "Versioned delivery with an optional supporting HTTPS URL. Descriptive links are saved separately in adapter presentation. Receipt createdEntityId is the submission ID. Evaluations occur after project completion.",
         "security": [
           {
             "sessionCookie": [],
@@ -1708,7 +1708,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RequestMilestoneCompletionRequest"
+                "$ref": "#/components/schemas/SubmitMilestoneCompletionRequest"
               }
             }
           }
@@ -1721,8 +1721,8 @@
         "tags": [
           "Marketplace"
         ],
-        "summary": "Accept completion, pay and score the team",
-        "description": "Coordinator score plus client team rating or delegation. Settlement and reputation updates occur together once; exact replay does not score or pay again. Must reference the current PendingReview submissionId.",
+        "summary": "Accept completion and settle milestone payments",
+        "description": "Accept the current submission and settle milestone payments once. Evaluations are separate.",
         "security": [
           {
             "sessionCookie": [],
@@ -1784,7 +1784,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AcceptMilestoneCompletionRequest"
+                "$ref": "#/components/schemas/AcceptMilestoneDeliveryRequest"
               }
             }
           }
@@ -1940,6 +1940,81 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/TaskDefinition"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteDraftTask",
+        "tags": [
+          "Marketplace"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/TaskId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionRequest"
               }
             }
           }
@@ -2668,8 +2743,8 @@
         "tags": [
           "Marketplace"
         ],
-        "summary": "Request completion with each worker's rating",
-        "description": "",
+        "summary": "Submit a milestone delivery without evaluations",
+        "description": "Versioned delivery with an optional supporting HTTPS URL. Descriptive links are saved separately in adapter presentation. Receipt createdEntityId is the submission ID. Evaluations occur after project completion.",
         "security": [
           {
             "sessionCookie": [],
@@ -2731,7 +2806,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RequestMilestoneCompletionRequest"
+                "$ref": "#/components/schemas/SubmitMilestoneCompletionRequest"
               }
             }
           }
@@ -2947,7 +3022,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/EvidenceRequest"
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/RejectDeliveryRequest"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EvidenceRequest"
+                  }
+                ]
               }
             }
           }
@@ -2956,238 +3038,1142 @@
     },
     "/api/task-storages/{storageId}": {
       "get": {
-        "operationId": "getTaskStorage", "tags": ["Marketplace"],
+        "operationId": "getTaskStorage",
+        "tags": [
+          "Marketplace"
+        ],
         "summary": "Read an attached task storage through its canonical route",
         "description": "Only visible project participants can read it; project and milestone ownership are resolved by the adapter.",
-        "parameters": [{"$ref": "#/components/parameters/StorageId"}],
-        "responses": {"200": {"description": "Task storage", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskStorageView"}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "404": {"$ref": "#/components/responses/NotFound"}}
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/StorageId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStorageView"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     },
     "/api/task-storages/{storageId}/tasks": {
       "post": {
-        "operationId": "createTaskCanonical", "tags": ["Marketplace"],
+        "operationId": "createTaskCanonical",
+        "tags": [
+          "Marketplace"
+        ],
         "summary": "Create a task in an attached storage",
         "description": "Coordinator only. The legacy project-nested route remains an alias. A disputed project rejects writes.",
-        "parameters": [{"$ref": "#/components/parameters/StorageId"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskDefinition"}}}},
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskDefinition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/task-storages/{storageId}/tasks/{taskId}": {
       "get": {
-        "operationId": "getTaskCanonical", "tags": ["Marketplace"], "summary": "Read a task through its canonical route",
-        "parameters": [{"$ref": "#/components/parameters/StorageId"}, {"$ref": "#/components/parameters/TaskId"}],
-        "responses": {"200": {"description": "Task", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskView"}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "404": {"$ref": "#/components/responses/NotFound"}}
+        "operationId": "getTaskCanonical",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Read a task through its canonical route",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/TaskId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Task",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       },
       "put": {
-        "operationId": "editTaskCanonical", "tags": ["Marketplace"], "summary": "Edit coordinator-controlled task fields",
-        "parameters": [{"$ref": "#/components/parameters/StorageId"}, {"$ref": "#/components/parameters/TaskId"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskDefinition"}}}},
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "operationId": "editTaskCanonical",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Edit coordinator-controlled task fields",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/TaskId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskDefinition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       },
       "patch": {
-        "operationId": "updateTaskProgressCanonical", "tags": ["Marketplace"], "summary": "Update assignee-controlled task progress",
-        "parameters": [{"$ref": "#/components/parameters/StorageId"}, {"$ref": "#/components/parameters/TaskId"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/TaskProgressRequest"}}}},
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "operationId": "updateTaskProgressCanonical",
+        "tags": [
+          "Marketplace"
+        ],
+        "summary": "Update assignee-controlled task progress",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/TaskId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskProgressRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteDraftTaskByStorage",
+        "tags": [
+          "Marketplace"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/StorageId"
+          },
+          {
+            "$ref": "#/components/parameters/TaskId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/profiles/me": {
       "get": {
-        "operationId": "getMyProfiles", "tags": ["Profiles"], "summary": "Read both private descriptive profile sections",
-        "responses": {"200": {"description": "Current principal's profile sections", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ProfilesView"}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}}
+        "operationId": "getMyProfiles",
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Read both private descriptive profile sections",
+        "responses": {
+          "200": {
+            "description": "Current principal's profile sections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfilesView"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
       },
       "put": {
-        "operationId": "putMyProfile", "tags": ["Profiles"], "summary": "Replace one descriptive profile section",
+        "operationId": "putMyProfile",
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Replace one descriptive profile section",
         "description": "The session determines the owner. The other profile section is unchanged; null optional fields are cleared.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PutProfileRequest"}}}},
-        "responses": {"200": {"description": "Updated private profile sections", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/ProfilesView"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutProfileRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated private profile sections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfilesView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       }
     },
     "/api/profiles/{principalId}": {
       "get": {
-        "operationId": "getPublicProfiles", "tags": ["Profiles"], "summary": "Read public descriptive profile fields without login",
-        "security": [], "parameters": [{"$ref": "#/components/parameters/PrincipalId"}],
-        "responses": {"200": {"description": "Public profile sections without email, department, session, custody or qualifications", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PublicProfilesView"}}}}, "404": {"$ref": "#/components/responses/NotFound"}}
+        "operationId": "getPublicProfiles",
+        "tags": [
+          "Profiles"
+        ],
+        "summary": "Read public descriptive profile fields without login",
+        "security": [],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PrincipalId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public profile sections without email, department, session, custody or qualifications",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicProfilesView"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     },
     "/api/profiles/me/{section}/image": {
       "put": {
-        "operationId": "putMyProfileImage", "tags": ["Profiles"],
+        "operationId": "putMyProfileImage",
+        "tags": [
+          "Profiles"
+        ],
         "summary": "Replace my client or worker profile image",
         "description": "Raw PNG, JPEG or WebP bytes, at most 1 MiB. The authenticated owner is taken from the session; the profile section must already exist.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/ProfileSection"}],
-        "requestBody": {"required": true, "content": {
-          "image/png": {"schema": {"type": "string", "format": "binary"}},
-          "image/jpeg": {"schema": {"type": "string", "format": "binary"}},
-          "image/webp": {"schema": {"type": "string", "format": "binary"}}
-        }},
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProfileSection"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
         "responses": {
-          "204": {"description": "Image stored"},
-          "400": {"$ref": "#/components/responses/BadRequest"},
-          "401": {"$ref": "#/components/responses/Unauthenticated"},
-          "403": {"$ref": "#/components/responses/Forbidden"},
-          "404": {"$ref": "#/components/responses/NotFound"},
-          "413": {"description": "Image exceeds 1 MiB"}
+          "204": {
+            "description": "Image stored"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "description": "Image exceeds 1 MiB"
+          }
         }
       }
     },
     "/api/profiles/{principalId}/{section}/image": {
       "get": {
-        "operationId": "getPublicProfileImage", "tags": ["Profiles"],
+        "operationId": "getPublicProfileImage",
+        "tags": [
+          "Profiles"
+        ],
         "summary": "Read a public client or worker profile image without login",
         "security": [],
-        "parameters": [{"$ref": "#/components/parameters/PrincipalId"}, {"$ref": "#/components/parameters/ProfileSection"}],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PrincipalId"
+          },
+          {
+            "$ref": "#/components/parameters/ProfileSection"
+          }
+        ],
         "responses": {
-          "200": {"description": "Image bytes", "content": {
-            "image/png": {"schema": {"type": "string", "format": "binary"}},
-            "image/jpeg": {"schema": {"type": "string", "format": "binary"}},
-            "image/webp": {"schema": {"type": "string", "format": "binary"}}
-          }},
-          "404": {"$ref": "#/components/responses/NotFound"}
+          "200": {
+            "description": "Image bytes",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
         }
       }
     },
     "/api/catalog/skill-requests": {
       "post": {
-        "operationId": "requestSkill", "tags": ["Workers"], "summary": "Ask an operator to add a skill",
+        "operationId": "requestSkill",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Ask an operator to add a skill",
         "description": "Worker only. The request does not change the catalog or qualifications until approved.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateSkillRequest"}}}},
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSkillRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/catalog/skill-requests/me": {
       "get": {
-        "operationId": "getMySkillRequests", "tags": ["Workers"], "summary": "Read my skill requests",
-        "responses": {"200": {"description": "Requests owned by the session's account", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/SkillRequestView"}}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}}
+        "operationId": "getMySkillRequests",
+        "tags": [
+          "Workers"
+        ],
+        "summary": "Read my skill requests",
+        "responses": {
+          "200": {
+            "description": "Requests owned by the session's account",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SkillRequestView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
       }
     },
     "/api/admin/catalog/skill-requests": {
       "get": {
-        "operationId": "getAllSkillRequests", "tags": ["Administration"], "summary": "Read skill requests as system operator",
-        "responses": {"200": {"description": "All skill requests", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/SkillRequestView"}}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+        "operationId": "getAllSkillRequests",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Read skill requests as system operator",
+        "responses": {
+          "200": {
+            "description": "All skill requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SkillRequestView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       }
     },
     "/api/admin/catalog/skill-requests/{requestId}/decision": {
       "post": {
-        "operationId": "decideSkillRequest", "tags": ["Administration"], "summary": "Approve or reject a pending skill request",
+        "operationId": "decideSkillRequest",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Approve or reject a pending skill request",
         "description": "Operator-only; body is the JSON enum string \"Approve\" or \"Reject\".",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/RequestId"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SkillRequestDecision"}}}},
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/RequestId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SkillRequestDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/bramp/deposits": {
       "post": {
-        "operationId": "createMockDeposit", "tags": ["Bramp"], "summary": "Request a simulated KVN deposit",
+        "operationId": "createMockDeposit",
+        "tags": [
+          "Bramp"
+        ],
+        "summary": "Request a simulated KVN deposit",
         "description": "The provider records fixed owner, destination and amount. No spendable balance changes before operator confirmation.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateDepositRequest"}}}},
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDepositRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/bramp/deposits/{depositId}": {
       "get": {
-        "operationId": "getMockDeposit", "tags": ["Bramp"], "summary": "Read my simulated deposit",
+        "operationId": "getMockDeposit",
+        "tags": [
+          "Bramp"
+        ],
+        "summary": "Read my simulated deposit",
         "description": "Only the owner or system operator can read the request.",
-        "parameters": [{"$ref": "#/components/parameters/DepositId"}],
-        "responses": {"200": {"description": "Deposit request", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/DepositView"}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "404": {"$ref": "#/components/responses/NotFound"}}
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DepositId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deposit request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DepositView"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     },
     "/api/admin/bramp/deposits/{depositId}/confirm": {
       "post": {
-        "operationId": "confirmMockDeposit", "tags": ["Bramp", "Administration"], "summary": "Credit a simulated deposit once",
+        "operationId": "confirmMockDeposit",
+        "tags": [
+          "Bramp",
+          "Administration"
+        ],
+        "summary": "Credit a simulated deposit once",
         "description": "Operator-only signed command. It cannot replace owner, destination or amount; no request body.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/DepositId"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/DepositId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/bramp/withdrawals": {
       "post": {
-        "operationId": "createMockWithdrawal", "tags": ["Bramp"], "summary": "Hold free KVN for a simulated withdrawal",
+        "operationId": "createMockWithdrawal",
+        "tags": [
+          "Bramp"
+        ],
+        "summary": "Hold free KVN for a simulated withdrawal",
         "description": "No bank settlement exists. Project escrow and other holds cannot be withdrawn.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/IdempotencyKey"}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/CreateWithdrawalRequest"}}}},
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWithdrawalRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/bramp/withdrawals/{withdrawalId}": {
       "get": {
-        "operationId": "getMockWithdrawal", "tags": ["Bramp"], "summary": "Read my simulated withdrawal",
+        "operationId": "getMockWithdrawal",
+        "tags": [
+          "Bramp"
+        ],
+        "summary": "Read my simulated withdrawal",
         "description": "Only the owner or system operator can read the request.",
-        "parameters": [{"$ref": "#/components/parameters/WithdrawalId"}],
-        "responses": {"200": {"description": "Withdrawal request", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/WithdrawalView"}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "404": {"$ref": "#/components/responses/NotFound"}}
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WithdrawalId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Withdrawal request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithdrawalView"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     },
     "/api/bramp/withdrawals/{withdrawalId}/cancel": {
       "post": {
-        "operationId": "cancelMockWithdrawal", "tags": ["Bramp"], "summary": "Return a pending withdrawal hold to free balance",
+        "operationId": "cancelMockWithdrawal",
+        "tags": [
+          "Bramp"
+        ],
+        "summary": "Return a pending withdrawal hold to free balance",
         "description": "Owner or operator; actor is derived from the session. No request body. A settled bank withdrawal is not simulated.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/WithdrawalId"}, {"$ref": "#/components/parameters/IdempotencyKey"}],
-        "responses": {"202": {"$ref": "#/components/responses/AcceptedOperation"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "409": {"$ref": "#/components/responses/Conflict"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WithdrawalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "responses": {
+          "202": {
+            "$ref": "#/components/responses/AcceptedOperation"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          }
+        }
       }
     },
     "/api/auth/passkeys/register/options": {
       "post": {
-        "operationId": "beginPasskeyRegistration", "tags": ["Authentication"], "summary": "Start passkey registration for the current principal",
+        "operationId": "beginPasskeyRegistration",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Start passkey registration for the current principal",
         "description": "Requires a session, CSRF token and fresh password. Options include a single-use ceremony ID, expire after five minutes, and require user verification.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyPasswordRequest"}}}},
-        "responses": {"200": {"description": "WebAuthn creation options and ceremony ID", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyCreationOptions"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "WebAuthn creation options and ceremony ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyCreationOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       }
     },
     "/api/auth/passkeys/register/verify": {
       "post": {
-        "operationId": "verifyPasskeyRegistration", "tags": ["Authentication"], "summary": "Complete passkey registration",
+        "operationId": "verifyPasskeyRegistration",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Complete passkey registration",
         "description": "Consumes the ceremony once; verifies challenge, configured RP/origin, credential ownership and user verification.",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyCeremonyCredential"}}}},
-        "responses": {"201": {"description": "Passkey linked to the current principal"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyCeremonyCredential"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Passkey linked to the current principal"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       }
     },
     "/api/auth/passkeys": {
       "get": {
-        "operationId": "listMyPasskeys", "tags": ["Authentication"], "summary": "List my registered passkeys",
-        "responses": {"200": {"description": "Credential references; no key material", "content": {"application/json": {"schema": {"type": "array", "items": {"$ref": "#/components/schemas/PasskeyView"}}}}}, "401": {"$ref": "#/components/responses/Unauthenticated"}}
+        "operationId": "listMyPasskeys",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "List my registered passkeys",
+        "responses": {
+          "200": {
+            "description": "Credential references; no key material",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PasskeyView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          }
+        }
       }
     },
     "/api/auth/passkeys/{credentialId}/remove": {
       "post": {
-        "operationId": "removeMyPasskey", "tags": ["Authentication"], "summary": "Remove my passkey after password reauthentication",
-        "security": [{"sessionCookie": [], "csrfToken": []}],
-        "parameters": [{"$ref": "#/components/parameters/CredentialId"}],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyPasswordRequest"}}}},
-        "responses": {"204": {"description": "Credential removed"}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}, "404": {"$ref": "#/components/responses/NotFound"}}
+        "operationId": "removeMyPasskey",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Remove my passkey after password reauthentication",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/CredentialId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyPasswordRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Credential removed"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
       }
     },
     "/api/auth/passkeys/login/options": {
       "post": {
-        "operationId": "beginPasskeyLogin", "tags": ["Authentication"], "summary": "Start passkey login by username",
+        "operationId": "beginPasskeyLogin",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Start passkey login by username",
         "description": "Uses the same case-insensitive username as password login. No existing session, email or password is required. The challenge is single-use and expires after five minutes. Unknown usernames and accounts without a passkey return the same authentication error.",
         "security": [],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyLoginOptionsRequest"}}}},
-        "responses": {"200": {"description": "WebAuthn request options and ceremony ID", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyRequestOptions"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyLoginOptionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "WebAuthn request options and ceremony ID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasskeyRequestOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       }
     },
     "/api/auth/passkeys/login/verify": {
       "post": {
-        "operationId": "verifyPasskeyLogin", "tags": ["Authentication"], "summary": "Complete a previously started passkey login",
+        "operationId": "verifyPasskeyLogin",
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Complete a previously started passkey login",
         "description": "Verifies and consumes the username-bound ceremony, then issues the same opaque session and CSRF contract as password login.",
         "security": [],
-        "requestBody": {"required": true, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/PasskeyCeremonyCredential"}}}},
-        "responses": {"200": {"description": "Existing principal session", "headers": {"Set-Cookie": {"description": "Opaque HttpOnly session cookie, same policy as password login.", "schema": {"type": "string"}}}, "content": {"application/json": {"schema": {"$ref": "#/components/schemas/SessionView"}}}}, "400": {"$ref": "#/components/responses/BadRequest"}, "401": {"$ref": "#/components/responses/Unauthenticated"}, "403": {"$ref": "#/components/responses/Forbidden"}}
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasskeyCeremonyCredential"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing principal session",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Opaque HttpOnly session cookie, same policy as password login.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionView"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          }
+        }
       }
     },
     "/api/disputes/{disputeId}": {
@@ -3886,6 +4872,417 @@
         },
         "operationId": "postProposalComments"
       }
+    },
+    "/api/completion-submissions/{submissionId}/presentation": {
+      "get": {
+        "summary": "Read private delivery supporting links",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved presentation or null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SubmissionPresentation"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "404": {
+            "description": "Missing submission or not a client/coordinator of this project"
+          }
+        },
+        "operationId": "getSubmissionPresentation",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubmissionId"
+          }
+        ]
+      },
+      "put": {
+        "summary": "Save immutable delivery supporting links; identical retries are safe",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubmissionId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PutSubmissionPresentation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Identical retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionPresentation"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionPresentation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid supporting link"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Not delivery author or invalid CSRF/Origin"
+          },
+          "404": {
+            "description": "Missing or invisible submission"
+          },
+          "409": {
+            "description": "Presentation already has different content"
+          }
+        },
+        "operationId": "putSubmissionPresentation"
+      }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}/delivery": {
+      "put": {
+        "operationId": "setProposalDelivery",
+        "tags": [
+          "Marketplace"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalDeliveryRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/proposals/{proposalId}/withdraw": {
+      "post": {
+        "operationId": "withdrawProposal",
+        "tags": [
+          "Marketplace"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/ProposalId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/projects/{projectId}/evaluations": {
+      "post": {
+        "operationId": "evaluateProject",
+        "summary": "Submit immutable final participant evaluations (1\u20135 stars)",
+        "tags": [
+          "Projects"
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ProjectId"
+          },
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateProjectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        }
+      }
+    },
+    "/api/completion-submissions/{submissionId}/comments": {
+      "get": {
+        "operationId": "submissionComments",
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubmissionId"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private discussion; only confirmed rejection reasons are visible.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionCommentsPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        }
+      },
+      "post": {
+        "operationId": "postSubmissionComment",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/SubmissionId"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmissionCommentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment persisted (identical retry returns existing record).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionComment"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Comment persisted (identical retry returns existing record).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionComment"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4034,34 +5431,69 @@
         }
       },
       "PrincipalId": {
-        "name": "principalId", "in": "path", "required": true,
-        "schema": {"$ref": "#/components/schemas/PrincipalId"}
+        "name": "principalId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/PrincipalId"
+        }
       },
       "ProfileSection": {
-        "name": "section", "in": "path", "required": true,
-        "schema": {"type": "string", "enum": ["client", "worker"]}
+        "name": "section",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "client",
+            "worker"
+          ]
+        }
       },
       "RequestId": {
-        "name": "requestId", "in": "path", "required": true,
-        "schema": {"$ref": "#/components/schemas/EntityId"}
+        "name": "requestId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
       },
       "DepositId": {
-        "name": "depositId", "in": "path", "required": true,
-        "schema": {"$ref": "#/components/schemas/EntityId"}
+        "name": "depositId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
       },
       "WithdrawalId": {
-        "name": "withdrawalId", "in": "path", "required": true,
-        "schema": {"$ref": "#/components/schemas/EntityId"}
+        "name": "withdrawalId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "$ref": "#/components/schemas/EntityId"
+        }
       },
       "CredentialId": {
-        "name": "credentialId", "in": "path", "required": true,
-        "schema": {"type": "string", "minLength": 1}
+        "name": "credentialId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "responses": {
       "AcceptedOperation": {
         "description": "Signed operation queued. Poll the ID; acceptance is not business success.",
-        "content": {"application/json": {"schema": {"$ref": "#/components/schemas/OperationRef"}}}
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/OperationRef"
+            }
+          }
+        }
       },
       "BadRequest": {
         "description": "Malformed input, unknown fields, invalid cursor, invalid primitive or structural constraint.",
@@ -4192,171 +5624,691 @@
     },
     "schemas": {
       "KvnAmount": {
-        "allOf": [{"$ref": "#/components/schemas/Money"}, {"type": "string", "pattern": "^[1-9][0-9]*$"}],
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Money"
+          },
+          {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          }
+        ],
         "description": "Strictly positive KVN integer token units. Asset 1 only."
       },
       "CreateDepositRequest": {
-        "type": "object", "additionalProperties": false, "required": ["amount"],
-        "properties": {"amount": {"$ref": "#/components/schemas/KvnAmount"}}
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/KvnAmount"
+          }
+        }
       },
       "CreateWithdrawalRequest": {
-        "type": "object", "additionalProperties": false, "required": ["amount"],
-        "properties": {"amount": {"$ref": "#/components/schemas/KvnAmount"}}
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/KvnAmount"
+          }
+        }
       },
       "DepositView": {
-        "type": "object", "additionalProperties": false,
-        "required": ["depositId", "owner", "destination", "amount", "status", "createdAt", "confirmedAt"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "depositId",
+          "owner",
+          "destination",
+          "amount",
+          "status",
+          "createdAt",
+          "confirmedAt"
+        ],
         "properties": {
-          "depositId": {"$ref": "#/components/schemas/EntityId"},
-          "owner": {"$ref": "#/components/schemas/AccountId32"},
-          "destination": {"$ref": "#/components/schemas/AccountId32"},
-          "amount": {"$ref": "#/components/schemas/KvnAmount"},
-          "status": {"type": "string", "enum": ["Pending", "Confirmed"]},
-          "createdAt": {"$ref": "#/components/schemas/UnixSeconds"},
-          "confirmedAt": {"oneOf": [{"$ref": "#/components/schemas/UnixSeconds"}, {"type": "null"}]}
+          "depositId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/KvnAmount"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Pending",
+              "Confirmed"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "confirmedAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UnixSeconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "WithdrawalView": {
-        "type": "object", "additionalProperties": false,
-        "required": ["withdrawalId", "owner", "amount", "status", "createdAt", "cancelledAt"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "withdrawalId",
+          "owner",
+          "amount",
+          "status",
+          "createdAt",
+          "cancelledAt"
+        ],
         "properties": {
-          "withdrawalId": {"$ref": "#/components/schemas/EntityId"},
-          "owner": {"$ref": "#/components/schemas/AccountId32"},
-          "amount": {"$ref": "#/components/schemas/KvnAmount"},
-          "status": {"type": "string", "enum": ["Pending", "Cancelled"]},
-          "createdAt": {"$ref": "#/components/schemas/UnixSeconds"},
-          "cancelledAt": {"oneOf": [{"$ref": "#/components/schemas/UnixSeconds"}, {"type": "null"}]}
+          "withdrawalId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "owner": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/KvnAmount"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Pending",
+              "Cancelled"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "cancelledAt": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UnixSeconds"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "SkillRoleAssociation": {
-        "type": "object", "additionalProperties": false, "required": ["skillId", "roleIds"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "skillId",
+          "roleIds"
+        ],
         "properties": {
-          "skillId": {"type": "integer", "minimum": 1, "maximum": 4294967295},
-          "roleIds": {"type": "array", "uniqueItems": true, "items": {"type": "integer", "minimum": 1, "maximum": 4294967295}}
+          "skillId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "roleIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          }
         },
         "description": "Descriptive metadata only; assignments do not match by role."
       },
       "CreateSkillRequest": {
-        "type": "object", "additionalProperties": false, "required": ["name", "roleIds"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "roleIds"
+        ],
         "properties": {
-          "name": {"type": "string", "minLength": 1},
-          "roleIds": {"type": "array", "uniqueItems": true, "items": {"type": "integer", "minimum": 1, "maximum": 4294967295}}
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "roleIds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          }
         }
       },
-      "SkillRequestDecision": {"type": "string", "enum": ["Approve", "Reject"]},
+      "SkillRequestDecision": {
+        "type": "string",
+        "enum": [
+          "Approve",
+          "Reject"
+        ]
+      },
       "SkillRequestView": {
-        "type": "object", "additionalProperties": false,
-        "required": ["requestId", "requester", "name", "roleIds", "status", "skillId"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestId",
+          "requester",
+          "name",
+          "roleIds",
+          "status",
+          "skillId"
+        ],
         "properties": {
-          "requestId": {"$ref": "#/components/schemas/EntityId"},
-          "requester": {"$ref": "#/components/schemas/AccountId32"},
-          "name": {"type": "string"},
-          "roleIds": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 4294967295}},
-          "status": {"type": "string", "enum": ["Pending", "Approved", "Rejected"]},
-          "skillId": {"oneOf": [{"type": "integer", "minimum": 1, "maximum": 4294967295}, {"type": "null"}]}
+          "requestId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "requester": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "name": {
+            "type": "string"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 4294967295
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Pending",
+              "Approved",
+              "Rejected"
+            ]
+          },
+          "skillId": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4294967295
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "PasskeyPasswordRequest": {
-        "type": "object", "additionalProperties": false, "required": ["currentPassword"],
-        "properties": {"currentPassword": {"type": "string", "minLength": 1, "writeOnly": true}}
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "currentPassword"
+        ],
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1,
+            "writeOnly": true
+          }
+        }
       },
       "PasskeyLoginOptionsRequest": {
-        "type": "object", "additionalProperties": false, "required": ["username"],
-        "properties": {"username": {"type": "string", "minLength": 3, "maxLength": 64, "pattern": "^[A-Za-z0-9._-]+$"}}
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9._-]+$"
+          }
+        }
       },
       "PasskeyCreationOptions": {
-        "type": "object", "additionalProperties": false, "required": ["ceremonyId", "options"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ceremonyId",
+          "options"
+        ],
         "properties": {
-          "ceremonyId": {"type": "string", "description": "Opaque, single-use challenge reference; expires after five minutes."},
-          "options": {"type": "object", "description": "WebAuthn creation options from the server; pass them to a compatible browser WebAuthn JSON helper.", "additionalProperties": true}
+          "ceremonyId": {
+            "type": "string",
+            "description": "Opaque, single-use challenge reference; expires after five minutes."
+          },
+          "options": {
+            "type": "object",
+            "description": "WebAuthn creation options from the server; pass them to a compatible browser WebAuthn JSON helper.",
+            "additionalProperties": true
+          }
         }
       },
       "PasskeyRequestOptions": {
-        "type": "object", "additionalProperties": false, "required": ["ceremonyId", "options"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ceremonyId",
+          "options"
+        ],
         "properties": {
-          "ceremonyId": {"type": "string", "description": "Opaque, single-use challenge reference; expires after five minutes."},
-          "options": {"type": "object", "description": "WebAuthn request options from the server; pass them to a compatible browser WebAuthn JSON helper.", "additionalProperties": true}
+          "ceremonyId": {
+            "type": "string",
+            "description": "Opaque, single-use challenge reference; expires after five minutes."
+          },
+          "options": {
+            "type": "object",
+            "description": "WebAuthn request options from the server; pass them to a compatible browser WebAuthn JSON helper.",
+            "additionalProperties": true
+          }
         }
       },
       "PasskeyCeremonyCredential": {
-        "type": "object", "additionalProperties": false, "required": ["ceremonyId", "credential"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ceremonyId",
+          "credential"
+        ],
         "properties": {
-          "ceremonyId": {"type": "string"},
-          "credential": {"type": "object", "description": "JSON-serialized WebAuthn credential returned by the browser; the server validates challenge, RP, origin, signature and user verification.", "additionalProperties": true}
+          "ceremonyId": {
+            "type": "string"
+          },
+          "credential": {
+            "type": "object",
+            "description": "JSON-serialized WebAuthn credential returned by the browser; the server validates challenge, RP, origin, signature and user verification.",
+            "additionalProperties": true
+          }
         }
       },
       "PasskeyView": {
-        "type": "object", "additionalProperties": false, "required": ["id", "createdAt"],
-        "properties": {"id": {"type": "string"}, "createdAt": {"$ref": "#/components/schemas/UnixSeconds"}}
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          }
+        }
       },
       "ClientProfile": {
-        "type": "object", "additionalProperties": false,
-        "required": ["name", "company", "department", "website", "description", "location", "languages"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "company",
+          "department",
+          "website",
+          "description",
+          "location",
+          "languages"
+        ],
         "properties": {
-          "name": {"type": "string", "minLength": 1, "maxLength": 128},
-          "company": {"type": ["string", "null"], "maxLength": 128},
-          "department": {"type": ["string", "null"], "maxLength": 128},
-          "website": {"type": ["string", "null"], "format": "uri", "maxLength": 2048},
-          "description": {"type": ["string", "null"], "maxLength": 4096},
-          "location": {"type": ["string", "null"], "maxLength": 128},
-          "languages": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 64}}
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "department": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "maxLength": 2048
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4096
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "languages": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
         }
       },
       "WorkerProfile": {
-        "type": "object", "additionalProperties": false,
-        "required": ["name", "githubUsername", "portfolioUrl", "biography", "background", "proficiency", "location", "languages"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "githubUsername",
+          "portfolioUrl",
+          "biography",
+          "background",
+          "proficiency",
+          "location",
+          "languages"
+        ],
         "properties": {
-          "name": {"type": "string", "minLength": 1, "maxLength": 128},
-          "contactEmail": {"type": ["string", "null"], "format": "email", "maxLength": 254, "description": "Private, unverified contact email; never used for authentication or exposed in public profiles. Optional on writes; missing/null clears it. At most 254 UTF-8 bytes; one @ with nonempty parts, no whitespace or control characters."},
-          "githubUsername": {"type": ["string", "null"], "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"},
-          "portfolioUrl": {"type": ["string", "null"], "format": "uri", "maxLength": 2048},
-          "biography": {"type": ["string", "null"], "maxLength": 4096},
-          "background": {"type": ["string", "null"], "maxLength": 4096},
-          "proficiency": {"oneOf": [{"type": "string", "enum": ["junior", "mid-level", "senior"]}, {"type": "null"}]},
-          "location": {"type": ["string", "null"], "maxLength": 128},
-          "languages": {"type": "array", "maxItems": 32, "items": {"type": "string", "minLength": 1, "maxLength": 64}}
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "contactEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "maxLength": 254,
+            "description": "Private, unverified contact email; never used for authentication or exposed in public profiles. Optional on writes; missing/null clears it. At most 254 UTF-8 bytes; one @ with nonempty parts, no whitespace or control characters."
+          },
+          "githubUsername": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$"
+          },
+          "portfolioUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri",
+            "maxLength": 2048
+          },
+          "biography": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4096
+          },
+          "background": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4096
+          },
+          "proficiency": {
+            "oneOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "junior",
+                  "mid-level",
+                  "senior"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "languages": {
+            "type": "array",
+            "maxItems": 32,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            }
+          }
         }
       },
       "PutProfileRequest": {
         "oneOf": [
-          {"type": "object", "additionalProperties": false, "required": ["section", "profile"], "properties": {"section": {"const": "client"}, "profile": {"$ref": "#/components/schemas/ClientProfile"}}},
-          {"type": "object", "additionalProperties": false, "required": ["section", "profile"], "properties": {"section": {"const": "worker"}, "profile": {"$ref": "#/components/schemas/WorkerProfile"}}}
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "section",
+              "profile"
+            ],
+            "properties": {
+              "section": {
+                "const": "client"
+              },
+              "profile": {
+                "$ref": "#/components/schemas/ClientProfile"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "section",
+              "profile"
+            ],
+            "properties": {
+              "section": {
+                "const": "worker"
+              },
+              "profile": {
+                "$ref": "#/components/schemas/WorkerProfile"
+              }
+            }
+          }
         ]
       },
       "ProfilesView": {
-        "type": "object", "additionalProperties": false, "required": ["principalId", "client", "worker"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "principalId",
+          "client",
+          "worker"
+        ],
         "properties": {
-          "principalId": {"$ref": "#/components/schemas/PrincipalId"},
-          "client": {"oneOf": [{"$ref": "#/components/schemas/ClientProfile"}, {"type": "null"}]},
-          "worker": {"oneOf": [{"$ref": "#/components/schemas/WorkerProfile"}, {"type": "null"}]}
+          "principalId": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "client": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ClientProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "worker": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/WorkerProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "PublicClientProfile": {
-        "type": "object", "additionalProperties": false,
-        "required": ["name", "company", "website", "description", "location", "languages"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "company",
+          "website",
+          "description",
+          "location",
+          "languages"
+        ],
         "properties": {
-          "name": {"type": "string"}, "company": {"type": ["string", "null"]},
-          "website": {"type": ["string", "null"], "format": "uri"},
-          "description": {"type": ["string", "null"]}, "location": {"type": ["string", "null"]},
-          "languages": {"type": "array", "items": {"type": "string"}}
+          "name": {
+            "type": "string"
+          },
+          "company": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "PublicWorkerProfile": {
-        "type": "object", "additionalProperties": false,
-        "required": ["name", "githubUsername", "portfolioUrl", "biography", "location", "languages"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "githubUsername",
+          "portfolioUrl",
+          "biography",
+          "location",
+          "languages"
+        ],
         "properties": {
-          "name": {"type": "string"}, "githubUsername": {"type": ["string", "null"]},
-          "portfolioUrl": {"type": ["string", "null"], "format": "uri"},
-          "biography": {"type": ["string", "null"]}, "location": {"type": ["string", "null"]},
-          "languages": {"type": "array", "items": {"type": "string"}}
+          "name": {
+            "type": "string"
+          },
+          "githubUsername": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "portfolioUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uri"
+          },
+          "biography": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "languages": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       },
       "PublicProfilesView": {
-        "type": "object", "additionalProperties": false, "required": ["principalId", "client", "worker"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "principalId",
+          "client",
+          "worker"
+        ],
         "properties": {
-          "principalId": {"$ref": "#/components/schemas/PrincipalId"},
-          "client": {"oneOf": [{"$ref": "#/components/schemas/PublicClientProfile"}, {"type": "null"}]},
-          "worker": {"oneOf": [{"$ref": "#/components/schemas/PublicWorkerProfile"}, {"type": "null"}]}
+          "principalId": {
+            "$ref": "#/components/schemas/PrincipalId"
+          },
+          "client": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PublicClientProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "worker": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PublicWorkerProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
         }
       },
       "AccountId32": {
@@ -4416,8 +6368,9 @@
       },
       "Score": {
         "type": "integer",
-        "minimum": 0,
-        "maximum": 10
+        "minimum": 1,
+        "maximum": 5,
+        "description": "One to five stars."
       },
       "Percentage": {
         "type": "integer",
@@ -4736,13 +6689,29 @@
           },
           "clientPercent": {
             "$ref": "#/components/schemas/Percentage"
+          },
+          "coordinatorClientVoteWeight": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 1,
+            "description": "Relative weight for future coordinator reputation votes; the two vote weights cannot both be zero."
+          },
+          "coordinatorWorkerVoteWeight": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "default": 1,
+            "description": "Relative weight for future coordinator reputation votes; the two vote weights cannot both be zero."
           }
         },
-        "description": "Integer percentages must sum to exactly 100. Initial policy is 50/50.",
+        "description": "Legacy milestone blend percentages sum to 100. Final worker reputation uses only the coordinator vote. Final coordinator reputation uses each client/worker vote with relative weights (both default 1); changes affect future votes only. Team-average aggregation is not implemented.",
         "examples": [
           {
             "coordinatorPercent": 50,
-            "clientPercent": 50
+            "clientPercent": 50,
+            "coordinatorClientVoteWeight": 1,
+            "coordinatorWorkerVoteWeight": 1
           }
         ]
       },
@@ -5154,7 +7123,7 @@
         "examples": [
           {
             "type": "Client",
-            "score": 8
+            "score": 4
           },
           {
             "type": "DelegateToCoordinator"
@@ -5337,7 +7306,9 @@
           },
           "skillRoles": {
             "type": "array",
-            "items": {"$ref": "#/components/schemas/SkillRoleAssociation"}
+            "items": {
+              "$ref": "#/components/schemas/SkillRoleAssociation"
+            }
           },
           "scorePolicy": {
             "$ref": "#/components/schemas/ScorePolicy"
@@ -5365,7 +7336,7 @@
             "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
           }
         },
-        "description": "Mean score is weightedScoreSum / (100 * ratedMinutes). Unrated score is 5. Use exact rational comparison before display rounding."
+        "description": "Mean stars = weightedScoreSum / (100 * ratedMinutes). Unrated score is 2.5. ratedMinutes includes relative vote weights. Use exact rational comparison before display rounding."
       },
       "AssignmentView": {
         "type": "object",
@@ -5537,6 +7508,16 @@
                 "type": "null"
               }
             ]
+          },
+          "delivery": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProposalDeliveryPreference"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         }
       },
@@ -5648,6 +7629,12 @@
                 "type": "null"
               }
             ]
+          },
+          "evaluations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectEvaluation"
+            }
           }
         },
         "description": "Only visible to authorized project participants. Cancellation freezes unreleased escrow and does not reverse completed transfers.",
@@ -5729,13 +7716,15 @@
                     "submissions": []
                   }
                 ],
-                "changeRequest": null
+                "changeRequest": null,
+                "delivery": null
               }
             ],
             "executionEscrow": "0",
             "cancelled": false,
             "completed": false,
-            "activeDisputeId": null
+            "activeDisputeId": null,
+            "evaluations": []
           }
         ]
       },
@@ -6013,7 +8002,10 @@
           "WithdrawalCancelled",
           "SkillRequested",
           "SkillRequestApproved",
-          "SkillRequestRejected"
+          "SkillRequestRejected",
+          "TaskDeleted",
+          "ProposalWithdrawn",
+          "ProjectEvaluated"
         ]
       },
       "DomainEvent": {
@@ -6074,6 +8066,17 @@
           },
           "occurredAt": {
             "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "origin": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AccountId32"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Verified origin of the operation; null for historical records."
           }
         },
         "description": "Provider cursor is scoped to its instance and is not the browser notification cursor."
@@ -6084,7 +8087,9 @@
         "required": [
           "notificationId",
           "event",
-          "readAt"
+          "readAt",
+          "actor",
+          "projectTitle"
         ],
         "properties": {
           "notificationId": {
@@ -6106,7 +8111,9 @@
                 "type": "null"
               }
             ]
-          }
+          },
+          "actor": null,
+          "projectTitle": null
         },
         "description": "Session-owned notification. Only explicit read mutation sets readAt; fetching or SSE delivery does not.",
         "examples": [
@@ -6122,9 +8129,12 @@
               "recipients": [
                 "0x0202020202020202020202020202020202020202020202020202020202020202"
               ],
-              "occurredAt": 1788912000
+              "occurredAt": 1788912000,
+              "origin": null
             },
-            "readAt": null
+            "readAt": null,
+            "actor": null,
+            "projectTitle": null
           }
         ]
       },
@@ -6166,9 +8176,12 @@
                   "recipients": [
                     "0x0202020202020202020202020202020202020202020202020202020202020202"
                   ],
-                  "occurredAt": 1788912000
+                  "occurredAt": 1788912000,
+                  "origin": null
                 },
-                "readAt": null
+                "readAt": null,
+                "actor": null,
+                "projectTitle": null
               }
             ],
             "nextCursor": 1
@@ -6406,6 +8419,30 @@
                 "$ref": "#/components/schemas/UnixSeconds"
               }
             }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "commentId",
+              "reviewedBy",
+              "reviewedAt"
+            ],
+            "properties": {
+              "type": {
+                "const": "RejectedWithComment"
+              },
+              "commentId": {
+                "$ref": "#/components/schemas/EntityId"
+              },
+              "reviewedBy": {
+                "$ref": "#/components/schemas/AccountId32"
+              },
+              "reviewedAt": {
+                "$ref": "#/components/schemas/UnixSeconds"
+              }
+            }
           }
         ]
       },
@@ -6429,7 +8466,14 @@
             "$ref": "#/components/schemas/Revision"
           },
           "deliverable": {
-            "$ref": "#/components/schemas/EvidenceReference"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "submittedBy": {
             "$ref": "#/components/schemas/AccountId32"
@@ -6666,7 +8710,7 @@
                 "type": "string",
                 "format": "date",
                 "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-                "description": "Real Gregorian date, year 0001–9999; not a contracted scheduling window."
+                "description": "Real Gregorian date, year 0001\u20139999; not a contracted scheduling window."
               }
             },
             "required": [
@@ -6876,7 +8920,15 @@
           },
           "contactEmail": {
             "description": "Contact address from the worker profile, shared only with authorized participants of this project; null when absent.",
-            "oneOf": [{"type": "string", "format": "email"}, {"type": "null"}]
+            "oneOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "profiles": {
             "oneOf": [
@@ -6913,7 +8965,9 @@
           },
           "workers": {
             "type": "array",
-            "items": {"$ref": "#/components/schemas/ProjectParticipantView"}
+            "items": {
+              "$ref": "#/components/schemas/ProjectParticipantView"
+            }
           }
         }
       },
@@ -7073,7 +9127,8 @@
           "createdAt",
           "message",
           "definition",
-          "presentation"
+          "presentation",
+          "delivery"
         ],
         "properties": {
           "commentId": {
@@ -7102,6 +9157,16 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/ProposalPresentation"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delivery": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/ProposalDeliveryPreference"
               },
               {
                 "type": "null"
@@ -7137,6 +9202,373 @@
             ]
           }
         }
+      },
+      "SubmissionPresentation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "submissionId",
+          "revision",
+          "documentation",
+          "links"
+        ],
+        "properties": {
+          "submissionId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "revision": {
+            "type": "integer",
+            "const": 1
+          },
+          "documentation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Optional free text or reference, up to 2048 UTF-8 bytes. No URL scheme is required."
+          },
+          "links": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Optional free text or reference, up to 2048 UTF-8 bytes. No URL scheme is required."
+          }
+        },
+        "description": "Private immutable supporting references for one delivery version. Optional free text with no protocol restriction; maximum 2048 UTF-8 bytes per field. Null means absent."
+      },
+      "PutSubmissionPresentation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevision",
+          "documentation",
+          "links"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "type": "integer",
+            "const": 0
+          },
+          "documentation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Optional free text or reference, up to 2048 UTF-8 bytes. No URL scheme is required."
+          },
+          "links": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2048,
+            "description": "Optional free text or reference, up to 2048 UTF-8 bytes. No URL scheme is required."
+          }
+        },
+        "description": "Private immutable supporting references for one delivery version. Optional free text with no protocol restriction; maximum 2048 UTF-8 bytes per field. Null means absent."
+      },
+      "ProposalDeliveryPreference": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "preference"
+            ],
+            "properties": {
+              "preference": {
+                "const": "WithinOneMonth"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "preference"
+            ],
+            "properties": {
+              "preference": {
+                "const": "OneToThreeMonths"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "preference"
+            ],
+            "properties": {
+              "preference": {
+                "const": "ThreeToSixMonths"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "preference",
+              "date"
+            ],
+            "properties": {
+              "preference": {
+                "const": "SpecificDate"
+              },
+              "date": {
+                "type": "string",
+                "format": "date",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+              }
+            }
+          }
+        ]
+      },
+      "ProposalDeliveryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expectedRevision",
+          "delivery"
+        ],
+        "properties": {
+          "expectedRevision": {
+            "$ref": "#/components/schemas/Revision"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/ProposalDeliveryPreference"
+          }
+        }
+      },
+      "NotificationActorView": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "accountId",
+          "displayName",
+          "imageUrl"
+        ],
+        "properties": {
+          "accountId": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Same adapter public profile-image path used by participant avatars."
+          }
+        }
+      },
+      "AcceptMilestoneDeliveryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "submissionId"
+        ],
+        "properties": {
+          "submissionId": {
+            "$ref": "#/components/schemas/EntityId"
+          }
+        }
+      },
+      "AccountRating": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "account",
+          "score"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 5
+          }
+        }
+      },
+      "EvaluateProjectRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ratings"
+        ],
+        "properties": {
+          "ratings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountRating"
+            }
+          }
+        },
+        "description": "After completion: client rates only coordinator; coordinator rates client and every distinct assigned worker; assigned workers rate only coordinator. Exact targets, no duplicates or self-votes; score 1\u20135. Provider rejects mismatches without modifying votes, balances or reputation."
+      },
+      "ProjectEvaluation": {
+        "type": "object",
+        "required": [
+          "author",
+          "submittedAt",
+          "ratings"
+        ],
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "submittedAt": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "ratings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountRating"
+            }
+          }
+        }
+      },
+      "RejectDeliveryRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commentId"
+        ],
+        "properties": {
+          "commentId": {
+            "$ref": "#/components/schemas/EntityId"
+          }
+        }
+      },
+      "SubmissionCommentRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commentId",
+          "message",
+          "kind"
+        ],
+        "properties": {
+          "commentId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank, maximum 4000 UTF-8 bytes; no NUL."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "Comment",
+              "Rejection"
+            ]
+          }
+        }
+      },
+      "SubmissionComment": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "commentId",
+          "message",
+          "kind",
+          "cursor",
+          "submissionId",
+          "authorAccount",
+          "createdAt"
+        ],
+        "properties": {
+          "commentId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "message": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank, maximum 4000 UTF-8 bytes; no NUL."
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "Comment",
+              "Rejection"
+            ]
+          },
+          "cursor": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "submissionId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "authorAccount": {
+            "$ref": "#/components/schemas/AccountId32"
+          },
+          "createdAt": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "SubmissionCommentsPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextAfter"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "$ref": "#/components/schemas/SubmissionComment"
+            }
+          },
+          "nextAfter": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1
+          }
+        }
+      },
+      "SubmitMilestoneCompletionRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "deliverable"
+        ],
+        "properties": {
+          "deliverable": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "Submit a milestone without ratings. Supporting URL may be null; descriptive links are stored in adapter presentation.",
+        "examples": [
+          {
+            "deliverable": null
+          }
+        ]
       }
     }
   },

@@ -115,7 +115,19 @@ fn acceptance_requires_and_signs_the_observed_revision() -> Result<(), Box<dyn s
 #[test]
 fn score_policy_does_not_round_or_accept_bad_weights() -> Result<(), Box<dyn std::error::Error>> {
     let policy = ScorePolicy::new(Percentage::new(50)?, Percentage::new(50)?)?;
-    assert_eq!(policy.blend(Score::new(9)?, Score::new(8)?), 850);
+    assert_eq!(policy.blend(Score::new(5)?, Score::new(4)?), 450);
+    assert_eq!(policy.coordinator_client_vote_weight(), 1);
+    assert_eq!(policy.coordinator_worker_vote_weight(), 1);
+    let weighted = policy.with_coordinator_vote_weights(2, 1)?;
+    assert_eq!(ScorePolicy::decode(&mut &weighted.encode()[..])?, weighted);
+    assert_eq!(
+        serde_json::from_value::<ScorePolicy>(serde_json::to_value(weighted)?)?,
+        weighted
+    );
+    assert!(policy.with_coordinator_vote_weights(0, 0).is_err());
+    assert!(policy.with_coordinator_vote_weights(101, 1).is_err());
+    assert!(serde_json::from_str::<ScorePolicy>(r#"{"coordinatorPercent":50,"clientPercent":50,"coordinatorClientVoteWeight":0,"coordinatorWorkerVoteWeight":0}"#).is_err());
+
     assert!(ScorePolicy::new(Percentage::new(40)?, Percentage::new(40)?).is_err());
     assert!(ScorePolicy::decode(&mut &[40_u8, 40][..]).is_err());
     assert!(
@@ -210,4 +222,67 @@ fn debug_output_never_formats_credentials_or_session_tokens() {
         is_admin: false,
     };
     assert!(!format!("{session:?}").contains(&session.csrf_token));
+}
+
+#[test]
+fn optional_deliveries_preserve_existing_command_bytes() -> Result<(), Box<dyn std::error::Error>> {
+    let project_id = EntityId::from_bytes([5; 16]);
+    let milestone_id = EntityId::from_bytes([6; 16]);
+    let request = RequestMilestoneCompletionRequest {
+        worker_ratings: vec![],
+        deliverable: EvidenceReference::new("https://example.test/old".into())?,
+    };
+    let old = ProviderCommand::RequestMilestoneCompletion {
+        project_id,
+        milestone_id,
+        request: request.clone(),
+    };
+    let expected = (27_u8, project_id, milestone_id, request).encode();
+    assert_eq!(old.encode(), expected);
+    assert_eq!(ProviderCommand::decode(&mut expected.as_slice())?, old);
+    let new = ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
+        project_id,
+        milestone_id,
+        worker_ratings: vec![],
+    };
+    new.validate()?;
+    assert_eq!(new.encode()[0], 35);
+    assert_eq!(ProviderCommand::decode(&mut new.encode().as_slice())?, new);
+    let body: SubmitMilestoneCompletionRequest = serde_json::from_str(r#"{"deliverable":null}"#)?;
+    assert!(body.deliverable.is_none());
+    assert!(
+        serde_json::from_str::<SubmitMilestoneCompletionRequest>(r#"{"deliverable":{"url":""}}"#)
+            .is_err()
+    );
+    let doc: serde_json::Value =
+        serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+    let legacy: CompletionSubmission = serde_json::from_value(
+        doc["components"]["schemas"]["CompletionSubmission"]["examples"][0].clone(),
+    )?;
+    assert!(legacy.deliverable.is_some());
+    let mut absent = legacy;
+    absent.deliverable = None;
+    assert_eq!(
+        serde_json::from_str::<CompletionSubmission>(&serde_json::to_string(&absent)?)?,
+        absent
+    );
+    Ok(())
+}
+
+#[test]
+fn proposal_dates_validate_real_calendar_dates() {
+    for value in ["2026-02-29", "2026-2-09", "0000-01-01", ""] {
+        assert!(
+            DeliveryPreference::SpecificDate { date: value.into() }
+                .validate()
+                .is_err()
+        );
+    }
+    assert!(
+        DeliveryPreference::SpecificDate {
+            date: "2028-02-29".into()
+        }
+        .validate()
+        .is_ok()
+    );
 }

@@ -208,6 +208,19 @@ impl App {
         sqlx::raw_sql(include_str!("../migrations/0007_proposal_reviews.sql"))
             .execute(&mut *migration)
             .await?;
+        sqlx::raw_sql(include_str!(
+            "../migrations/0008_submission_presentations.sql"
+        ))
+        .execute(&mut *migration)
+        .await?;
+        sqlx::raw_sql(include_str!(
+            "../migrations/0009_proposal_review_delivery.sql"
+        ))
+        .execute(&mut *migration)
+        .await?;
+        sqlx::raw_sql(include_str!("../migrations/0010_submission_comments.sql"))
+            .execute(&mut *migration)
+            .await?;
         migration.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))

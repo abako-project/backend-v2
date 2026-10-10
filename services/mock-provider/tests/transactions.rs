@@ -13,8 +13,12 @@ use subxt_signer::sr25519::Keypair;
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 #[path = "disputes/tests.rs"]
 mod disputes;
+#[path = "lifecycle/draft_editing.rs"]
+mod draft_editing;
 #[path = "lifecycle/tests.rs"]
 mod lifecycle;
+#[path = "lifecycle/unrated_delivery.rs"]
+mod unrated_delivery;
 
 fn evidence() -> TestResult<EvidenceReference> {
     Ok(EvidenceReference::new(
@@ -481,7 +485,7 @@ async fn complete_milestone_and_assert_settlement(
         deliverable: evidence()?,
         worker_ratings: vec![WorkerRating {
             worker: account(worker),
-            score: Score::new(9)?,
+            score: Score::new(5)?,
         }],
     };
     success(
@@ -499,8 +503,8 @@ async fn complete_milestone_and_assert_settlement(
         milestone_id,
         request: AcceptMilestoneCompletionRequest {
             submission_id: submission(provider, project_id).await?,
-            coordinator_score: Score::new(8)?,
-            team_rating: TeamRating::Client(Score::new(7)?),
+            coordinator_score: Score::new(4)?,
+            team_rating: TeamRating::Client(Score::new(3)?),
         },
     };
     let signed = signed(provider, client, command.clone()).await?;
@@ -550,7 +554,7 @@ fn assert_settlement_snapshot(
     assert_eq!(
         worker_view.worker_score,
         ReputationView {
-            weighted_score_sum: 48_000,
+            weighted_score_sum: 24_000,
             rated_minutes: 60
         }
     );
@@ -563,7 +567,7 @@ fn assert_settlement_snapshot(
     assert_eq!(
         coordinator_view.coordinator_score,
         ReputationView {
-            weighted_score_sum: 8000,
+            weighted_score_sum: 4000,
             rated_minutes: 10
         }
     );
@@ -991,7 +995,7 @@ async fn delegated_ratings(provider: Provider) -> TestResult {
                 deliverable: evidence()?,
                 worker_ratings: vec![WorkerRating {
                     worker: account(&worker),
-                    score: Score::new(9)?,
+                    score: Score::new(5)?,
                 }],
             },
         },
@@ -1005,7 +1009,7 @@ async fn delegated_ratings(provider: Provider) -> TestResult {
             milestone_id,
             request: AcceptMilestoneCompletionRequest {
                 submission_id: submission(&provider, id).await?,
-                coordinator_score: Score::new(6)?,
+                coordinator_score: Score::new(3)?,
                 team_rating: TeamRating::DelegateToCoordinator,
             },
         },
@@ -1020,7 +1024,7 @@ async fn delegated_ratings(provider: Provider) -> TestResult {
     assert_eq!(
         worker.worker_score,
         ReputationView {
-            weighted_score_sum: 54_000,
+            weighted_score_sum: 30_000,
             rated_minutes: 60
         }
     );
@@ -1155,7 +1159,7 @@ async fn assert_milestone_dispute_and_cancellation_freeze(
                 deliverable: evidence()?,
                 worker_ratings: vec![WorkerRating {
                     worker: account(worker),
-                    score: Score::new(8)?,
+                    score: Score::new(4)?,
                 }],
             },
         },
@@ -1204,7 +1208,7 @@ async fn assert_milestone_dispute_and_cancellation_freeze(
                 milestone_id,
                 request: AcceptMilestoneCompletionRequest {
                     submission_id: submission(provider, project_id).await?,
-                    coordinator_score: Score::new(7)?,
+                    coordinator_score: Score::new(3)?,
                     team_rating: TeamRating::DelegateToCoordinator
                 }
             }
@@ -1293,6 +1297,14 @@ macro_rules! suite {
             #[tokio::test]
             async fn empty_task_storages_preserve_lifecycle_and_payments() -> TestResult {
                 lifecycle::empty_task_storages(provider().await?).await
+            }
+            #[tokio::test]
+            async fn draft_dates_deletion_and_withdrawal_preserve_paid_planning() -> TestResult {
+                draft_editing::editing(provider().await?).await
+            }
+            #[tokio::test]
+            async fn delivery_and_settlement_do_not_require_or_fabricate_votes() -> TestResult {
+                unrated_delivery::unrated_delivery(provider().await?).await
             }
             #[tokio::test]
             async fn execution_activates_in_order_and_preserves_team() -> TestResult {
@@ -1462,6 +1474,7 @@ async fn assert_http_receipt_and_events(
         .json::<ProviderEvents>()
         .await?;
     assert_eq!(events.events.len(), 1);
+    assert_eq!(events.events[0].origin, Some(call.call.origin));
     let repeated = client
         .get(format!("{base}/internal/events?after=0&limit=100"))
         .bearer_auth(token)

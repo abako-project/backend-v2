@@ -71,7 +71,10 @@ impl State {
             "submission_not_current",
         )?;
         require(
-            matches!(submission.review, SubmissionReview::Rejected { .. }),
+            matches!(
+                submission.review,
+                SubmissionReview::Rejected { .. } | SubmissionReview::RejectedWithComment { .. }
+            ),
             "submission_not_rejected",
         )?;
         let id = random_id()?;

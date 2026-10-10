@@ -30,8 +30,8 @@ fn quantities_validate_json_scale_and_overflow() -> Result<(), Box<dyn std::erro
     }
     assert!(Money::new(u64::MAX).checked_add(Money::new(1)).is_err());
     assert!(Money::ZERO.checked_sub(Money::new(1)).is_err());
-    assert!(serde_json::from_str::<Score>("11").is_err());
-    assert!(Score::decode(&mut &[11_u8][..]).is_err());
+    assert!(serde_json::from_str::<Score>("6").is_err());
+    assert!(Score::decode(&mut &[0_u8][..]).is_err());
     assert!(Percentage::decode(&mut &[101_u8][..]).is_err());
     assert!(serde_json::from_str::<Minutes>("-1").is_err());
     Ok(())

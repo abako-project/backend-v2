@@ -33,6 +33,8 @@ mod project_participants;
 
 #[path = "proposal_reviews/http_tests.rs"]
 mod proposal_reviews;
+#[path = "submission_presentations_tests.rs"]
+mod submission_presentations;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
@@ -879,6 +881,7 @@ async fn only_client_and_assigned_coordinator_can_cancel_or_dispute() -> TestRes
     let project_id = EntityId::from_bytes([8; 16]);
     fake.lock().await.snapshot.projects.push(ProjectView {
         completed: false,
+        evaluations: Vec::new(),
         project_id,
         client: client.view.account_id,
         coordinator: coordinator.view.account_id,
@@ -942,6 +945,7 @@ async fn notifications_are_atomic_private_resumable_and_explicitly_read() -> Tes
         entity_id: None,
         recipients: vec![recipient],
         occurred_at: UnixSeconds::new(1000),
+        origin: None,
     };
     let provider_page = ProviderEvents {
         provider_instance_id: info().provider_instance_id,
@@ -1039,6 +1043,7 @@ async fn postgres_restart_preserves_queue_and_unread_notifications() -> TestResu
         entity_id: None,
         recipients: vec![alice.view.account_id],
         occurred_at: UnixSeconds::new(1000),
+        origin: None,
     };
     notifications::persist(
         &app,
@@ -1205,3 +1210,84 @@ async fn signup_catalog_is_public_and_contact_email_is_private() -> TestResult {
     internal.finish().await?;
     Ok(())
 }
+
+#[tokio::test]
+async fn notifications_enrich_verified_author_and_visible_project_without_private_contacts()
+-> TestResult {
+    let fake = fake()?;
+    let internal = Server::start(internal(fake.clone())).await?;
+    let app = app(&internal).await?;
+    let (owner, _) = register(&app, "notification_client").await?;
+    let (coordinator, _) = register(&app, "notification_coordinator").await?;
+    let doc: serde_json::Value =
+        serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+    let mut project: ProjectView =
+        serde_json::from_value(doc["components"]["schemas"]["ProjectView"]["examples"][0].clone())?;
+    project.client = owner.view.account_id;
+    project.coordinator = coordinator.view.account_id;
+    project.title = "Real project title".into();
+    fake.lock().await.snapshot.projects.push(project.clone());
+    sqlx::query("INSERT INTO worker_profiles(principal_id,name,contact_email,languages,image_data,image_mime_type,updated_at) VALUES($1,'Real coordinator','private@example.test',ARRAY[]::text[],$2,'image/png',1)")
+        .bind(coordinator.view.principal_id.to_string()).bind(vec![1_u8,2,3]).execute(&app.db).await?;
+    let event = DomainEvent {
+        provider_instance_id: info().provider_instance_id,
+        cursor: 1,
+        operation_id: OperationId::from_bytes([8; 16]),
+        kind: DomainEventKind::ProposalSubmitted,
+        project_id: Some(project.project_id),
+        entity_id: None,
+        recipients: vec![owner.view.account_id],
+        occurred_at: UnixSeconds::new(1000),
+        origin: Some(coordinator.view.account_id),
+    };
+    notifications::persist(
+        &app,
+        0,
+        ProviderEvents {
+            provider_instance_id: info().provider_instance_id,
+            events: vec![event],
+            next_cursor: 1,
+        },
+    )
+    .await?;
+    let page = notifications::page(&app, owner.view.account_id, 0).await?;
+    let notification = &page.notifications[0];
+    assert_eq!(
+        notification.project_title.as_deref(),
+        Some("Real project title")
+    );
+    let actor = notification.actor.as_ref().ok_or("missing actor")?;
+    assert_eq!(actor.account_id, coordinator.view.account_id);
+    assert_eq!(actor.display_name, "Real coordinator");
+    assert_eq!(
+        actor.image_url,
+        Some(format!(
+            "/api/profiles/{}/worker/image",
+            coordinator.view.principal_id
+        ))
+    );
+    assert!(!serde_json::to_string(notification)?.contains("private@example.test"));
+    let read =
+        notifications::mark_read(&app, owner.view.account_id, notification.notification_id).await?;
+    assert_eq!(read.actor, notification.actor);
+    assert_eq!(read.project_title, notification.project_title);
+    assert!(
+        notifications::page(&app, coordinator.view.account_id, 0)
+            .await?
+            .notifications
+            .is_empty()
+    );
+    fake.lock().await.snapshot.projects.clear();
+    assert!(
+        notifications::page(&app, owner.view.account_id, 0)
+            .await?
+            .notifications[0]
+            .project_title
+            .is_none()
+    );
+    internal.finish().await?;
+    Ok(())
+}
+
+#[path = "submission_comments_tests.rs"]
+mod submission_comments;

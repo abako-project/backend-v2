@@ -133,12 +133,21 @@ dto!(/// Dev-only mint, authorized against the configured system account.
 pub struct ScorePolicy {
     coordinator_percent: Percentage,
     client_percent: Percentage,
+    coordinator_client_vote_weight: u8,
+    coordinator_worker_vote_weight: u8,
 }
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct ScorePolicyWire {
     coordinator_percent: Percentage,
     client_percent: Percentage,
+    #[serde(default = "default_vote_weight")]
+    coordinator_client_vote_weight: u8,
+    #[serde(default = "default_vote_weight")]
+    coordinator_worker_vote_weight: u8,
+}
+fn default_vote_weight() -> u8 {
+    1
 }
 impl ScorePolicy {
     /// Percentages must sum to exactly 100.
@@ -152,7 +161,32 @@ impl ScorePolicy {
         Ok(Self {
             coordinator_percent,
             client_percent,
+            coordinator_client_vote_weight: 1,
+            coordinator_worker_vote_weight: 1,
         })
+    }
+    /// Relative weight for the client's vote and each worker's vote about the coordinator.
+    pub fn with_coordinator_vote_weights(
+        mut self,
+        client: u8,
+        worker: u8,
+    ) -> Result<Self, ContractError> {
+        if client > 100 || worker > 100 || (client == 0 && worker == 0) {
+            return Err(ContractError::Invalid("coordinator vote weights"));
+        }
+        self.coordinator_client_vote_weight = client;
+        self.coordinator_worker_vote_weight = worker;
+        Ok(self)
+    }
+    /// Relative contribution of the client vote to coordinator reputation.
+    #[must_use]
+    pub const fn coordinator_client_vote_weight(self) -> u8 {
+        self.coordinator_client_vote_weight
+    }
+    /// Relative contribution of each worker vote to coordinator reputation.
+    #[must_use]
+    pub const fn coordinator_worker_vote_weight(self) -> u8 {
+        self.coordinator_worker_vote_weight
     }
     /// Coordinator contribution percentage.
     #[must_use]
@@ -174,7 +208,10 @@ impl ScorePolicy {
 impl TryFrom<ScorePolicyWire> for ScorePolicy {
     type Error = ContractError;
     fn try_from(value: ScorePolicyWire) -> Result<Self, Self::Error> {
-        Self::new(value.coordinator_percent, value.client_percent)
+        Self::new(value.coordinator_percent, value.client_percent)?.with_coordinator_vote_weights(
+            value.coordinator_client_vote_weight,
+            value.coordinator_worker_vote_weight,
+        )
     }
 }
 impl From<ScorePolicy> for ScorePolicyWire {
@@ -182,6 +219,8 @@ impl From<ScorePolicy> for ScorePolicyWire {
         Self {
             coordinator_percent: value.coordinator_percent,
             client_percent: value.client_percent,
+            coordinator_client_vote_weight: value.coordinator_client_vote_weight,
+            coordinator_worker_vote_weight: value.coordinator_worker_vote_weight,
         }
     }
 }
@@ -189,8 +228,13 @@ impl Decode for ScorePolicy {
     fn decode<I: parity_scale_codec::Input>(
         input: &mut I,
     ) -> Result<Self, parity_scale_codec::Error> {
-        Self::new(Percentage::decode(input)?, Percentage::decode(input)?)
-            .map_err(|_| "score percentages must sum to 100".into())
+        let coordinator = Percentage::decode(input)?;
+        let client = Percentage::decode(input)?;
+        let client_weight = u8::decode(input)?;
+        let worker_weight = u8::decode(input)?;
+        Self::new(coordinator, client)
+            .and_then(|p| p.with_coordinator_vote_weights(client_weight, worker_weight))
+            .map_err(|_| "invalid score policy".into())
     }
 }
 
@@ -206,6 +250,35 @@ dto!(/// One milestone quote with a provider-created attached task storage.
     MilestoneDefinition { key: u32, title: String, window: WeekWindow, coordinator_fee: Money, coordinator_minutes: Minutes, requirements: Vec<RequirementDefinition> });
 dto!(/// Editable draft definition; resource identities are provider generated.
     ProposalDefinition { title: String, description: String, milestones: Vec<MilestoneDefinition> });
+/// Descriptive delivery preference, independent of committed capacity windows.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[serde(tag = "preference", deny_unknown_fields)]
+#[allow(clippy::cast_possible_truncation)]
+pub enum DeliveryPreference {
+    /// Delivery within one month.
+    WithinOneMonth {},
+    /// Delivery between one and three months.
+    OneToThreeMonths {},
+    /// Delivery between three and six months.
+    ThreeToSixMonths {},
+    /// Exact Gregorian calendar date.
+    SpecificDate {
+        /// Calendar date in YYYY-MM-DD format.
+        date: String,
+    },
+}
+impl DeliveryPreference {
+    /// Reject malformed dates at both signing and provider boundaries.
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if let Self::SpecificDate { date } = self {
+            validate_calendar_date(date)?;
+        }
+        Ok(())
+    }
+}
+dto!(/// Coordinator edits a draft delivery preference at an observed revision.
+    ProposalDeliveryRequest { expected_revision: u64, delivery: DeliveryPreference });
+
 dto!(/// A changes request references the client's explanation.
     RequestChangesRequest { reference: String });
 dto!(/// Unresolved cancellation or dispute explanation, without a payout instruction.
@@ -214,10 +287,21 @@ dto!(/// Task content controlled by a coordinator, not a contractual assignment.
     TaskDefinition { title: String, description: String, task_type: TaskType, priority: TaskPriority, status: TaskStatus, assignees: Vec<AccountId32>, estimated_minutes: Minutes, logged_minutes: Minutes, due_at: Option<UnixSeconds> });
 dto!(/// The only task changes allowed to an assignee.
     TaskProgressRequest { status: TaskStatus, logged_minutes: Minutes });
+dto!(/// One participant vote, using the same one-to-five scale as the UI.
+    AccountRating { account: AccountId32, score: Score });
+dto!(/// Immutable evaluation submitted after the project completes.
+    ProjectEvaluation { author: AccountId32, submitted_at: UnixSeconds, ratings: Vec<AccountRating> });
+dto!(/// Rate exactly the participants permitted for the authenticated actor.
+    EvaluateProjectRequest { ratings: Vec<AccountRating> });
+
 dto!(/// Coordinator rating of one assigned worker.
     WorkerRating { worker: AccountId32, score: Score });
 dto!(/// Completion request includes each contractual worker's individual rating.
     RequestMilestoneCompletionRequest { worker_ratings: Vec<WorkerRating>, deliverable: EvidenceReference });
+dto!(/// Browser completion request; supporting links are optional.
+    SubmitMilestoneCompletionRequest { deliverable: Option<EvidenceReference> });
+dto!(/// Accept a delivery and settle payment; evaluations are separate.
+    AcceptMilestoneDeliveryRequest { submission_id: EntityId });
 
 /// A client supplies one team score or delegates to individual coordinator scores.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
@@ -349,6 +433,48 @@ pub enum ProviderCommand {
     },
     CreateSkillRequest(CreateSkillRequest),
     DecideSkillRequest(DecideSkillRequest),
+    // Append to preserve every existing signed command's SCALE index.
+    RequestMilestoneCompletionWithoutDeliverable {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        worker_ratings: Vec<WorkerRating>,
+    },
+    SetProposalDelivery {
+        project_id: EntityId,
+        proposal_id: EntityId,
+        request: ProposalDeliveryRequest,
+    },
+    DeleteTask {
+        project_id: EntityId,
+        task_storage_id: EntityId,
+        task_id: u32,
+        expected_revision: u64,
+    },
+    WithdrawProposal {
+        project_id: EntityId,
+        proposal_id: EntityId,
+        expected_revision: u64,
+    },
+    SubmitMilestoneDelivery {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        request: SubmitMilestoneCompletionRequest,
+    },
+    AcceptMilestoneDelivery {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        submission_id: EntityId,
+    },
+    EvaluateProject {
+        project_id: EntityId,
+        request: EvaluateProjectRequest,
+    },
+    RejectMilestoneDelivery {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        submission_id: EntityId,
+        comment_id: EntityId,
+    },
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -483,6 +609,15 @@ impl ProviderCommand {
                 }
                 catalog_ids(&request.role_ids, "skill role IDs")
             }
+            Self::EvaluateProject { request, .. } => unique(
+                &request
+                    .ratings
+                    .iter()
+                    .map(|r| r.account)
+                    .collect::<Vec<_>>(),
+                "evaluation participants",
+            ),
+            Self::SetProposalDelivery { request, .. } => request.delivery.validate(),
             Self::CreateProject(request) => nonempty(&request.title, "project title"),
             Self::CreateProposal { proposal, .. } | Self::UpdateProposal { proposal, .. } => {
                 proposal.validate()
@@ -494,6 +629,13 @@ impl ProviderCommand {
                 nonempty(&request.reason, "reason")
             }
             Self::CreateTask { task, .. } | Self::EditTask { task, .. } => task.validate(),
+            Self::RequestMilestoneCompletionWithoutDeliverable { worker_ratings, .. } => unique(
+                &worker_ratings
+                    .iter()
+                    .map(|item| item.worker)
+                    .collect::<Vec<_>>(),
+                "worker ratings",
+            ),
             Self::RequestMilestoneCompletion { request, .. } => unique(
                 &request
                     .worker_ratings
@@ -512,6 +654,9 @@ impl ProviderCommand {
             Self::OpenDispute(request) => Some(request.project_id),
             Self::QuotePlanning { project_id, .. }
             | Self::AcceptPlanningQuote { project_id, .. }
+            | Self::SetProposalDelivery { project_id, .. }
+            | Self::DeleteTask { project_id, .. }
+            | Self::WithdrawProposal { project_id, .. }
             | Self::CreateProposal { project_id, .. }
             | Self::UpdateProposal { project_id, .. }
             | Self::DeleteProposal { project_id, .. }
@@ -526,8 +671,13 @@ impl ProviderCommand {
             | Self::CreateTask { project_id, .. }
             | Self::EditTask { project_id, .. }
             | Self::UpdateTaskProgress { project_id, .. }
+            | Self::RequestMilestoneCompletionWithoutDeliverable { project_id, .. }
             | Self::RequestMilestoneCompletion { project_id, .. }
-            | Self::AcceptMilestoneCompletion { project_id, .. } => Some(*project_id),
+            | Self::AcceptMilestoneCompletion { project_id, .. }
+            | Self::SubmitMilestoneDelivery { project_id, .. }
+            | Self::EvaluateProject { project_id, .. }
+            | Self::RejectMilestoneDelivery { project_id, .. }
+            | Self::AcceptMilestoneDelivery { project_id, .. } => Some(*project_id),
             _ => None,
         }
     }
@@ -663,24 +813,26 @@ dto!(/// Storage created and attached atomically with its milestone.
 dto!(/// Quote, execution state, contractual workers and attached tracking storage.
     MilestoneView { milestone_id: EntityId, definition: MilestoneDefinition, status: Option<MilestoneStatus>, assignments: Vec<AssignmentView>, worker_ratings: Vec<WorkerRating>, task_storage: TaskStorageView, frozen: bool, submissions: Vec<CompletionSubmission> });
 dto!(/// Proposal read model; its total is derived from checked quote line items.
-    ProposalView { proposal_id: EntityId, revision: u64, title: String, description: String, status: ProposalStatus, milestones: Vec<MilestoneView>, change_request: Option<String> });
+    ProposalView { proposal_id: EntityId, revision: u64, title: String, description: String, status: ProposalStatus, milestones: Vec<MilestoneView>, change_request: Option<String>, #[serde(default)] delivery: Option<DeliveryPreference> });
 dto!(/// Negotiation and settlement of planning, separate from execution.
     PlanningView { revision: u64, status: PlanningStatus, quote: Option<PlanningQuote>, escrow: Money, frozen: bool });
 dto!(/// Project read model; completion follows acceptance of the final funded milestone.
-    ProjectView { project_id: EntityId, #[serde(default)] created_at: Option<UnixSeconds>, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, completed: bool, active_dispute_id: Option<EntityId> });
+    ProjectView { project_id: EntityId, #[serde(default)] created_at: Option<UnixSeconds>, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, completed: bool, #[serde(default)] evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId> });
 dto!(/// Available balance for the initial KVN asset, excluding locked escrow.
     BalanceView { account: AccountId32, asset_id: u32, available: Money });
 dto!(/// Internal read-only snapshot. Adapter filters confidential project/task data.
     ProviderSnapshot { info: ProviderInfo, catalog: CatalogView, workers: Vec<WorkerView>, projects: Vec<ProjectView>, balances: Vec<BalanceView> });
 
 wire_enum!(/// Durable state-change event vocabulary, committed with its command.
-    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded, DepositRequested, DepositConfirmed, WithdrawalRequested, WithdrawalCancelled, SkillRequested, SkillRequestApproved, SkillRequestRejected });
+    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded, DepositRequested, DepositConfirmed, WithdrawalRequested, WithdrawalCancelled, SkillRequested, SkillRequestApproved, SkillRequestRejected, TaskDeleted, ProposalWithdrawn, ProjectEvaluated });
 dto!(/// Durable provider event with explicit recipients, no secret or raw payload.
-    DomainEvent { provider_instance_id: ProviderInstanceId, cursor: u64, operation_id: OperationId, kind: DomainEventKind, project_id: Option<EntityId>, entity_id: Option<EntityId>, recipients: Vec<AccountId32>, occurred_at: UnixSeconds });
+    DomainEvent { provider_instance_id: ProviderInstanceId, cursor: u64, operation_id: OperationId, kind: DomainEventKind, project_id: Option<EntityId>, entity_id: Option<EntityId>, recipients: Vec<AccountId32>, occurred_at: UnixSeconds, #[serde(default)] origin: Option<AccountId32> });
 dto!(/// Cursor-based provider event page; cursor always refers to this instance.
     ProviderEvents { provider_instance_id: ProviderInstanceId, events: Vec<DomainEvent>, next_cursor: u64 });
 dto!(/// Session-owned persisted notification; SSE delivery never changes `read_at`.
-    NotificationView { notification_id: u64, event: DomainEvent, read_at: Option<UnixSeconds> });
+    NotificationView { notification_id: u64, event: DomainEvent, read_at: Option<UnixSeconds>, actor: Option<NotificationActorView>, project_title: Option<String> });
+dto!(/// Public identity of the verified account that caused an event.
+    NotificationActorView { account_id: AccountId32, display_name: String, image_url: Option<String> });
 dto!(/// Public notification page, resumable by its monotonically increasing ID.
     NotificationsPage { notifications: Vec<NotificationView>, next_cursor: u64 });
 
