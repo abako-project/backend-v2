@@ -36,13 +36,13 @@ def seed(base, admin_password):
             account = actor.session["accountId"]
             poc.require(not actor.session["isAdmin"], "fixture unexpectedly has administrator authority")
             if kind == "client":
-                profile = {"name": name, "company": f"Company {index}", "department": None,
+                profile = {"name": name, "contactEmail": f"{username}@example.test", "company": f"Company {index}", "department": None,
                            "website": None, "description": "Development test client", "location": "Spain", "languages": ["eng", "spa"]}
                 section = "client"
             else:
                 profile = {"name": name, "contactEmail": f"{username}@example.test", "githubUsername": None,
                            "portfolioUrl": None, "biography": "Development test worker", "background": None,
-                           "proficiency": "senior", "location": "Spain", "languages": ["eng", "spa"]}
+                           "proficiency": "senior", "roleExperiences": [{"roleId": role, "proficiency": "senior"} for role in roles], "location": "Spain", "languages": ["eng", "spa"]}
                 section = "worker"
             saved = actor.request("PUT", "/api/profiles/me", {"section": section, "profile": profile})
             poc.require(saved[section]["name"] == name, "profile was not persisted")

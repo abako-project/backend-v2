@@ -28,7 +28,20 @@ pub(crate) async fn put_me(
     let id = session.view.principal_id;
     match request {
         PutProfileRequest::Client(profile) => store::write_client(&app.db, id, profile).await?,
-        PutProfileRequest::Worker(profile) => store::write_worker(&app.db, id, profile).await?,
+        PutProfileRequest::Worker(profile) => {
+            profile.validate()?;
+            if !profile.role_experiences.is_empty() {
+                let catalog = app.snapshot().await?.catalog;
+                if profile
+                    .role_experiences
+                    .iter()
+                    .any(|entry| !catalog.roles.iter().any(|role| role.id == entry.role_id))
+                {
+                    return Err(Error::Invalid);
+                }
+            }
+            store::write_worker(&app.db, id, profile).await?;
+        }
     }
     Ok(Json(store::read(&app.db, id).await?))
 }

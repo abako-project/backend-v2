@@ -6425,6 +6425,15 @@
               "minLength": 1,
               "maxLength": 64
             }
+          },
+          "contactEmail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "email",
+            "maxLength": 254,
+            "description": "Private, unverified contact email; never used for authentication or exposed in public profiles. Optional on writes; missing/null clears it. At most 254 UTF-8 bytes; one @ with nonempty parts, no whitespace or control characters."
           }
         }
       },
@@ -6515,6 +6524,14 @@
               "minLength": 1,
               "maxLength": 64
             }
+          },
+          "roleExperiences": {
+            "type": "array",
+            "maxItems": 64,
+            "items": {
+              "$ref": "#/components/schemas/RoleExperience"
+            },
+            "description": "Private descriptive experience by catalog role; unique role IDs. Adapter-owned; never authorizes roles or filters provider matching. Missing on PUT replaces it with an empty list."
           }
         }
       },
@@ -9336,7 +9353,7 @@
             ]
           },
           "contactEmail": {
-            "description": "Contact address from the worker profile, shared only with authorized participants of this project; null when absent.",
+            "description": "Contact address from the client profile for the project client, or worker profile for coordinator/workers. Shared only with authorized participants of this project; null when absent. Never exposed in public profiles.",
             "oneOf": [
               {
                 "type": "string",
@@ -10437,6 +10454,29 @@
           "nextAfter",
           "canWrite"
         ]
+      },
+      "RoleExperience": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "roleId",
+          "proficiency"
+        ],
+        "properties": {
+          "roleId": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+          },
+          "proficiency": {
+            "type": "string",
+            "enum": [
+              "junior",
+              "mid-level",
+              "senior"
+            ]
+          }
+        }
       }
     }
   },

@@ -36,7 +36,7 @@ async fn participants_return_team_contacts_only_to_authorized_project_members() 
             &owner,
             &owner_cookie,
             "client",
-            json!({"name":"Client Name", "company":"Company", "department":"PRIVATE DEPARTMENT", "website":"https://example.test", "description":null, "location":null, "languages":[]}),
+            json!({"name":"Client Name", "contactEmail":"client@example.test", "company":"Company", "department":"PRIVATE DEPARTMENT", "website":"https://example.test", "description":null, "location":null, "languages":[]}),
         ),
         (
             &coordinator,
@@ -111,7 +111,12 @@ async fn participants_return_team_contacts_only_to_authorized_project_members() 
             body["coordinator"]["contactEmail"],
             "coordinator@example.test"
         );
-        assert!(body["client"]["contactEmail"].is_null());
+        assert_eq!(body["client"]["contactEmail"], "client@example.test");
+        assert!(
+            body["client"]["profiles"]["client"]
+                .get("contactEmail")
+                .is_none()
+        );
         assert_eq!(
             body["workers"].as_array().ok_or("workers missing")?.len(),
             1

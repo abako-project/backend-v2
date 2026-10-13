@@ -214,3 +214,5 @@ python3 scripts/seed-dev-users.py --base-url http://localhost:8088 \
 The script reuses existing actors, verifies their profiles and coordinator modes,
 and tops up balances below 1000 KVN through simulated Bramp deposits. It never
 resets the databases. Development passwords above are not production credentials.
+
+The API seed also saves private contact email for clients/workers and descriptive experience for each worker role in adapter/PostgreSQL. Experience does not change provider matching. Keep `KUNVENO_LOCAL_DIR` in persistent storage outside `/tmp`; the current local review uses `$HOME/.local/share/kunveno-dev/abako-auth-review`.

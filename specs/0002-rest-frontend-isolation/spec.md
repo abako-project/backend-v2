@@ -15,6 +15,10 @@ Owner: Kunveno product owner
 - REST-007: Build and serve Leptos independently. Configure its API location without coupling backend code to a particular frontend origin.
 - REST-008: Compose may provide explicit Nginx routing to adapter and frontend containers. Disable SSE buffering and set stream-appropriate timeouts. Do not publish custody or mock internal ports through Nginx.
 
+## Private descriptive profiles
+
+The adapter stores optional client contact email and worker experience by catalog role (`junior`, `mid-level`, `senior`) in PostgreSQL. These fields are descriptive, not provider matching inputs. Only the owner writes `/api/profiles/me`; public profiles exclude contact email and role experience. The existing project-participants endpoint shares client/worker contact email only with authorized project participants.
+
 ## Non-goals
 
 Leptos server-function APIs, production deployment, Kubernetes, automatic proxy discovery, and pricing-policy decisions.

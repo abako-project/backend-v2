@@ -1,11 +1,13 @@
 use crate::state::Error;
 use generated_contracts::PrincipalId;
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub(crate) struct ClientProfile {
     pub(crate) name: String,
+    pub(crate) contact_email: Option<String>,
     pub(crate) company: Option<String>,
     pub(crate) department: Option<String>,
     pub(crate) website: Option<String>,
@@ -24,8 +26,17 @@ pub(crate) struct WorkerProfile {
     pub(crate) biography: Option<String>,
     pub(crate) background: Option<String>,
     pub(crate) proficiency: Option<Proficiency>,
+    #[serde(default)]
+    pub(crate) role_experiences: Vec<RoleExperience>,
     pub(crate) location: Option<String>,
     pub(crate) languages: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub(crate) struct RoleExperience {
+    pub(crate) role_id: u32,
+    pub(crate) proficiency: Proficiency,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -146,6 +157,22 @@ fn url(value: Option<&str>) -> Result<(), Error> {
     Ok(())
 }
 
+fn contact_email(value: Option<&str>) -> Result<(), Error> {
+    // shortcut: basic contact syntax, use a mailbox parser if full RFC support is needed.
+    if let Some(email) = value {
+        required_text(email, 254)?;
+        let (local, domain) = email.split_once('@').ok_or(Error::Invalid)?;
+        if local.is_empty()
+            || domain.is_empty()
+            || domain.contains('@')
+            || email.chars().any(char::is_whitespace)
+        {
+            return Err(Error::Invalid);
+        }
+    }
+    Ok(())
+}
+
 fn languages(values: &[String]) -> Result<(), Error> {
     if values.len() > 32 {
         return Err(Error::Invalid);
@@ -159,6 +186,7 @@ fn languages(values: &[String]) -> Result<(), Error> {
 impl ClientProfile {
     pub(super) fn validate(&self) -> Result<(), Error> {
         required_text(&self.name, 128)?;
+        contact_email(self.contact_email.as_deref())?;
         optional_text(self.company.as_deref(), 128)?;
         optional_text(self.department.as_deref(), 128)?;
         url(self.website.as_deref())?;
@@ -171,17 +199,15 @@ impl ClientProfile {
 impl WorkerProfile {
     pub(super) fn validate(&self) -> Result<(), Error> {
         required_text(&self.name, 128)?;
-        // ponytail: basic contact syntax; use a mailbox parser if full RFC support is required.
-        if let Some(email) = &self.contact_email {
-            required_text(email, 254)?;
-            let (local, domain) = email.split_once('@').ok_or(Error::Invalid)?;
-            if local.is_empty()
-                || domain.is_empty()
-                || domain.contains('@')
-                || email.chars().any(char::is_whitespace)
-            {
-                return Err(Error::Invalid);
-            }
+        contact_email(self.contact_email.as_deref())?;
+        let mut roles = BTreeSet::new();
+        if self.role_experiences.len() > 64
+            || self
+                .role_experiences
+                .iter()
+                .any(|entry| entry.role_id == 0 || !roles.insert(entry.role_id))
+        {
+            return Err(Error::Invalid);
         }
         if let Some(username) = &self.github_username
             && (username.len() > 39

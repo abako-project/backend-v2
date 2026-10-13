@@ -1087,7 +1087,17 @@ async fn postgres_restart_preserves_queue_and_unread_notifications() -> TestResu
 
 #[tokio::test]
 async fn signup_catalog_is_public_and_contact_email_is_private() -> TestResult {
-    let internal = Server::start(internal(fake()?)).await?;
+    let state = fake()?;
+    state
+        .lock()
+        .await
+        .snapshot
+        .catalog
+        .roles
+        .push(serde_json::from_value(
+            serde_json::json!({"id":2,"name":"frontend","fixed":true}),
+        )?);
+    let internal = Server::start(internal(state)).await?;
     let app = app(&internal).await?;
     let adapter = Server::start(http::router(app.clone())).await?;
     let client = reqwest::Client::new();
@@ -1137,7 +1147,7 @@ async fn signup_catalog_is_public_and_contact_email_is_private() -> TestResult {
     let profile_url = format!("{}/api/profiles/me", adapter.url);
     let mut body = serde_json::json!({"section":"worker", "profile":{"name":"Worker", "contactEmail":"worker@example.test",
         "githubUsername":null, "portfolioUrl":null, "biography":null, "background":null,
-        "proficiency":null, "location":null, "languages":[]}});
+        "proficiency":null, "roleExperiences":[{"roleId":2,"proficiency":"senior"}], "location":null, "languages":[]}});
     let response = client
         .put(&profile_url)
         .header(header::COOKIE, &cookie)
@@ -1169,6 +1179,80 @@ async fn signup_catalog_is_public_and_contact_email_is_private() -> TestResult {
         .json::<serde_json::Value>()
         .await?;
     assert!(public["worker"].get("contactEmail").is_none());
+    assert!(public["worker"].get("roleExperiences").is_none());
+    assert_eq!(
+        private["worker"]["roleExperiences"],
+        body["profile"]["roleExperiences"]
+    );
+    let client_body = serde_json::json!({"section":"client", "profile":{
+        "name":"Client", "contactEmail":"client@example.test", "company":null,
+        "department":null,"website":null,"description":null,"location":null,"languages":[]
+    }});
+    let saved = client
+        .put(&profile_url)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", &owner.view.csrf_token)
+        .json(&client_body)
+        .send()
+        .await?;
+    assert_eq!(saved.status(), StatusCode::OK);
+    assert_eq!(
+        saved.json::<serde_json::Value>().await?["client"]["contactEmail"],
+        "client@example.test"
+    );
+    let private_client = client
+        .get(&profile_url)
+        .header(header::COOKIE, &cookie)
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
+    assert_eq!(
+        private_client["client"]["contactEmail"],
+        "client@example.test"
+    );
+    let public_client = client
+        .get(format!(
+            "{}/api/profiles/{}",
+            adapter.url, owner.view.principal_id
+        ))
+        .send()
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
+    assert!(public_client["client"].get("contactEmail").is_none());
+    let mut invalid_client = client_body.clone();
+    invalid_client["profile"]["contactEmail"] = serde_json::json!("not an email");
+    assert_eq!(
+        client
+            .put(&profile_url)
+            .header(header::COOKIE, &cookie)
+            .header("X-CSRF-Token", &owner.view.csrf_token)
+            .json(&invalid_client)
+            .send()
+            .await?
+            .status(),
+        StatusCode::BAD_REQUEST
+    );
+    for roles in [
+        serde_json::json!([{"roleId":0,"proficiency":"senior"}]),
+        serde_json::json!([{"roleId":99,"proficiency":"senior"}]),
+        serde_json::json!([{"roleId":2,"proficiency":"senior"},{"roleId":2,"proficiency":"junior"}]),
+    ] {
+        let mut invalid = body.clone();
+        invalid["profile"]["roleExperiences"] = roles;
+        assert_eq!(
+            client
+                .put(&profile_url)
+                .header(header::COOKIE, &cookie)
+                .header("X-CSRF-Token", &owner.view.csrf_token)
+                .json(&invalid)
+                .send()
+                .await?
+                .status(),
+            StatusCode::BAD_REQUEST
+        );
+    }
     let other = client
         .get(&profile_url)
         .header(header::COOKIE, &other_cookie)

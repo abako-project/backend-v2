@@ -24,13 +24,14 @@ impl Proficiency {
 }
 
 async fn client(pool: &PgPool, id: PrincipalId) -> Result<Option<ClientProfile>, Error> {
-    let row = sqlx::query("SELECT name, company, department, website, description, location, languages FROM client_profiles WHERE principal_id = $1")
+    let row = sqlx::query("SELECT name, contact_email, company, department, website, description, location, languages FROM client_profiles WHERE principal_id = $1")
         .bind(id.to_string())
         .fetch_optional(pool)
         .await?;
     row.map(|row| {
         Ok(ClientProfile {
             name: row.try_get("name")?,
+            contact_email: row.try_get("contact_email")?,
             company: row.try_get("company")?,
             department: row.try_get("department")?,
             website: row.try_get("website")?,
@@ -43,7 +44,7 @@ async fn client(pool: &PgPool, id: PrincipalId) -> Result<Option<ClientProfile>,
 }
 
 async fn worker(pool: &PgPool, id: PrincipalId) -> Result<Option<WorkerProfile>, Error> {
-    let row = sqlx::query("SELECT name, contact_email, github_username, portfolio_url, biography, background, proficiency, location, languages FROM worker_profiles WHERE principal_id = $1")
+    let row = sqlx::query("SELECT name, contact_email, github_username, portfolio_url, biography, background, proficiency, role_experiences::text AS role_experiences, location, languages FROM worker_profiles WHERE principal_id = $1")
         .bind(id.to_string())
         .fetch_optional(pool)
         .await?;
@@ -56,6 +57,7 @@ async fn worker(pool: &PgPool, id: PrincipalId) -> Result<Option<WorkerProfile>,
             portfolio_url: row.try_get("portfolio_url")?,
             biography: row.try_get("biography")?,
             background: row.try_get("background")?,
+            role_experiences: serde_json::from_str(&row.try_get::<String, _>("role_experiences")?)?,
             proficiency: proficiency
                 .as_deref()
                 .map(Proficiency::from_db_value)
@@ -91,9 +93,10 @@ pub(super) async fn write_client(
     profile: ClientProfile,
 ) -> Result<(), Error> {
     profile.validate()?;
-    sqlx::query("INSERT INTO client_profiles (principal_id, name, company, department, website, description, location, languages, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT (principal_id) DO UPDATE SET name=EXCLUDED.name, company=EXCLUDED.company, department=EXCLUDED.department, website=EXCLUDED.website, description=EXCLUDED.description, location=EXCLUDED.location, languages=EXCLUDED.languages, updated_at=EXCLUDED.updated_at")
+    sqlx::query("INSERT INTO client_profiles (principal_id, name, contact_email, company, department, website, description, location, languages, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (principal_id) DO UPDATE SET name=EXCLUDED.name, contact_email=EXCLUDED.contact_email, company=EXCLUDED.company, department=EXCLUDED.department, website=EXCLUDED.website, description=EXCLUDED.description, location=EXCLUDED.location, languages=EXCLUDED.languages, updated_at=EXCLUDED.updated_at")
         .bind(id.to_string())
         .bind(profile.name)
+        .bind(profile.contact_email)
         .bind(profile.company)
         .bind(profile.department)
         .bind(profile.website)
@@ -112,7 +115,7 @@ pub(super) async fn write_worker(
     profile: WorkerProfile,
 ) -> Result<(), Error> {
     profile.validate()?;
-    sqlx::query("INSERT INTO worker_profiles (principal_id, name, contact_email, github_username, portfolio_url, biography, background, proficiency, location, languages, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) ON CONFLICT (principal_id) DO UPDATE SET name=EXCLUDED.name, contact_email=EXCLUDED.contact_email, github_username=EXCLUDED.github_username, portfolio_url=EXCLUDED.portfolio_url, biography=EXCLUDED.biography, background=EXCLUDED.background, proficiency=EXCLUDED.proficiency, location=EXCLUDED.location, languages=EXCLUDED.languages, updated_at=EXCLUDED.updated_at")
+    sqlx::query("INSERT INTO worker_profiles (principal_id, name, contact_email, github_username, portfolio_url, biography, background, proficiency, role_experiences, location, languages, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10,$11,$12) ON CONFLICT (principal_id) DO UPDATE SET name=EXCLUDED.name, contact_email=EXCLUDED.contact_email, github_username=EXCLUDED.github_username, portfolio_url=EXCLUDED.portfolio_url, biography=EXCLUDED.biography, background=EXCLUDED.background, proficiency=EXCLUDED.proficiency, role_experiences=EXCLUDED.role_experiences, location=EXCLUDED.location, languages=EXCLUDED.languages, updated_at=EXCLUDED.updated_at")
         .bind(id.to_string())
         .bind(profile.name)
         .bind(profile.contact_email)
@@ -121,6 +124,7 @@ pub(super) async fn write_worker(
         .bind(profile.biography)
         .bind(profile.background)
         .bind(profile.proficiency.as_ref().map(Proficiency::as_db_value))
+        .bind(serde_json::to_string(&profile.role_experiences)?)
         .bind(profile.location)
         .bind(profile.languages)
         .bind(now()?)
