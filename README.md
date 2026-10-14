@@ -22,6 +22,14 @@ one vote** alongside the client is documented pending work, not an active mode.
 See [approved scoring rules](specs/0003-transactional-marketplace/spec.md#milestones-tracking-scores-and-funds)
 and the [happy path](docs/project/happy-path.md).
 
+The mock owns execution compensation separately from reputation: `GET /api/catalog`
+returns `compensationPolicy.coordinatorPercent` (initially 10). The coordinator receives
+that share of each milestone budget; workers split the rest by planned approved minutes.
+System authority can update it through `PUT /api/admin/compensation-policy`. Draft
+create/update captures the policy; submitted or approved prices stay fixed. Preparing
+and accepting a plan have no separate price or transfer. Execution approval reserves
+funds, and each accepted milestone settles its stored shares.
+
 ## Run locally
 
 Use Rust 1.96.1. The [Compose guide](infra/README.md) creates private runtime secrets and starts the services behind Nginx at `http://localhost:8088`. Users and agents run ordinary Cargo, Python and Docker commands. No production deployment exists.

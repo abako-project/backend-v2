@@ -122,6 +122,7 @@ pub(crate) fn router(app: Arc<App>) -> Router {
             axum::routing::delete(command),
         )
         .route("/api/admin/score-policy", put(command))
+        .route("/api/admin/compensation-policy", put(command))
         .route("/api/admin/fund", post(command))
         .route("/api/balance", get(balance))
         .route("/api/operations/{operationId}", get(operation))
@@ -864,6 +865,9 @@ async fn command(
             })
         }
         "/api/admin/score-policy" => ProviderCommand::SetScorePolicy(json(&headers, &body)?),
+        "/api/admin/compensation-policy" => {
+            ProviderCommand::SetCompensationPolicy(json(&headers, &body)?)
+        }
         "/api/admin/fund" if app.config.enable_mock_funding => {
             ProviderCommand::FundAccount(json(&headers, &body)?)
         }

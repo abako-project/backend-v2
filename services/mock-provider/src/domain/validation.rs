@@ -65,6 +65,16 @@ impl State {
             for proposal in &project.proposals {
                 require(identities.insert(proposal.proposal_id), "duplicate_entity")?;
                 proposal_definition(proposal).validate()?;
+                if let Some(policy) = &proposal.compensation_policy {
+                    for milestone in &proposal.milestones {
+                        let mut expected = milestone.definition.clone();
+                        expected.allocate_budget(policy)?;
+                        require(
+                            expected == milestone.definition,
+                            "invalid_compensation_state",
+                        )?;
+                    }
+                }
                 if let Some(delivery) = &proposal.delivery {
                     delivery.validate()?;
                 }

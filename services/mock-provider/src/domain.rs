@@ -54,6 +54,8 @@ pub(crate) struct State {
     #[serde(default)]
     skill_requests: BTreeMap<EntityId, SkillRequestView>,
     score_policy: ScorePolicy,
+    #[serde(default)]
+    compensation_policy: generated_contracts::CompensationPolicy,
     workers: BTreeMap<AccountId32, WorkerView>,
     projects: BTreeMap<EntityId, ProjectView>,
     balances: BTreeMap<AccountId32, Money>,
@@ -121,6 +123,7 @@ impl State {
             skill_metadata: BTreeMap::new(),
             skill_requests: BTreeMap::new(),
             score_policy: ScorePolicy::new(Percentage::new(50)?, Percentage::new(50)?)?,
+            compensation_policy: generated_contracts::CompensationPolicy::default(),
             workers: BTreeMap::new(),
             projects: BTreeMap::new(),
             balances: BTreeMap::new(),
@@ -180,6 +183,7 @@ impl State {
                     })
                     .collect(),
                 score_policy: self.score_policy,
+                compensation_policy: self.compensation_policy.clone(),
             },
             workers: self.workers.values().cloned().collect(),
             projects: self.projects.values().cloned().collect(),

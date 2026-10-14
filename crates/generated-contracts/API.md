@@ -117,6 +117,7 @@ adapter, but clients needing retry safety should always supply one.
 | PUT /api/admin/catalog | UpsertCatalogEntryRequest | UpsertCatalogEntry |
 | DELETE /api/admin/catalog/{kind}/{id} | — | DeleteCatalogEntry; kind is Role or Skill |
 | PUT /api/admin/score-policy | ScorePolicy | SetScorePolicy |
+| PUT /api/admin/compensation-policy | CompensationPolicy | SetCompensationPolicy |
 | POST /api/admin/fund | FundAccountRequest | FundAccount; fixture-only with `ENABLE_MOCK_FUNDING=true` |
 
 Administrator-only typed routes map catalog edits, coordinator promotion, score
@@ -207,3 +208,5 @@ session 401, permission/CSRF/Origin denial 403, unavailable resource 404, identi
 or idempotency conflict 409, oversized request 413, capacity limit 429, unexpected
 failure 500, and unavailable dependency 503. Domain failures after enqueue appear
 in `OperationView`; they do not change the already returned HTTP 202.
+
+Coordinator execution share is provider-owned (initially 10%), read from GET /api/catalog and captured on draft create/update. Separate planning quote/accept commands are retired; planning delivery acceptance transfers no funds. Positive budgets require worker effort. Execution approval reserves the full budget and each accepted milestone settles its stored shares.

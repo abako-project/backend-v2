@@ -476,6 +476,7 @@ pub enum ProviderCommand {
         comment_id: EntityId,
     },
     OpenDisputeWithComment(OpenDisputeWithCommentRequest),
+    SetCompensationPolicy(CompensationPolicy),
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -563,6 +564,73 @@ impl ProposalDefinition {
     }
 }
 impl MilestoneDefinition {
+    /// Keep the milestone total, assigning the provider percentage to coordination
+    /// and the remainder to workers by planned minutes. Largest fractions receive
+    /// residual units; ties keep coordinator then declared requirement order.
+    pub fn allocate_budget(&mut self, policy: &CompensationPolicy) -> Result<(), ContractError> {
+        let total = u128::from(self.total()?.units());
+        let effort: u128 = self.requirements.iter().try_fold(0_u128, |sum, r| {
+            sum.checked_add(u128::from(r.minutes.get()))
+                .ok_or(ContractError::Invalid("budget overflow"))
+        })?;
+        if total > 0 && effort == 0 {
+            return Err(ContractError::Invalid(
+                "positive budget requires worker hours",
+            ));
+        }
+        let percent = u128::from(policy.coordinator_percent.get());
+        let denominator = effort
+            .checked_mul(100)
+            .ok_or(ContractError::Invalid("budget overflow"))?;
+        let weights: Vec<_> = std::iter::once(percent * effort)
+            .chain(
+                self.requirements
+                    .iter()
+                    .map(|r| (100 - percent) * u128::from(r.minutes.get())),
+            )
+            .collect();
+        let numerators: Vec<_> = weights
+            .iter()
+            .map(|weight| {
+                total
+                    .checked_mul(*weight)
+                    .ok_or(ContractError::Invalid("budget overflow"))
+            })
+            .collect::<Result<_, _>>()?;
+        let mut shares: Vec<_> = numerators
+            .iter()
+            .map(|amount| amount.checked_div(denominator).unwrap_or(0))
+            .collect();
+        let mut remainder = total - shares.iter().sum::<u128>();
+        let mut order: Vec<_> = (0..shares.len()).collect();
+        order.sort_by(|a, b| {
+            let fraction = |index: usize| {
+                if denominator == 0 {
+                    0
+                } else {
+                    numerators[index] % denominator
+                }
+            };
+            fraction(*b).cmp(&fraction(*a)).then_with(|| a.cmp(b))
+        });
+        for index in order {
+            if remainder == 0 {
+                break;
+            }
+            shares[index] += 1;
+            remainder -= 1;
+        }
+        self.coordinator_fee = Money::new(
+            u64::try_from(shares[0]).map_err(|_| ContractError::Invalid("budget overflow"))?,
+        );
+        for (requirement, share) in self.requirements.iter_mut().zip(shares.into_iter().skip(1)) {
+            requirement.budget = Money::new(
+                u64::try_from(share).map_err(|_| ContractError::Invalid("budget overflow"))?,
+            );
+        }
+        Ok(())
+    }
+
     /// Coordinator fee plus each requirement budget, with checked arithmetic.
     pub fn total(&self) -> Result<Money, ContractError> {
         self.requirements
@@ -788,8 +856,22 @@ dto!(/// Editable role/skill seed entry; protected entries expose their restrict
     CatalogEntry { id: u32, name: String, fixed: bool });
 dto!(/// Descriptive association, never an assignment matching filter.
     SkillRoleAssociation { skill_id: u32, role_ids: Vec<u32> });
+dto!(/// Execution compensation policy owned by the provider; separate from reputation weights.
+    CompensationPolicy { coordinator_percent: Percentage });
+impl Default for CompensationPolicy {
+    #[allow(
+        clippy::expect_used,
+        reason = "The constant 10 is within the validated percentage range."
+    )]
+    fn default() -> Self {
+        Self {
+            coordinator_percent: Percentage::new(10).expect("10 is a valid percentage"),
+        }
+    }
+}
+
 dto!(/// Provider-owned role/skill catalogs and score policy.
-    CatalogView { roles: Vec<CatalogEntry>, skills: Vec<CatalogEntry>, skill_roles: Vec<SkillRoleAssociation>, score_policy: ScorePolicy });
+    CatalogView { roles: Vec<CatalogEntry>, skills: Vec<CatalogEntry>, skill_roles: Vec<SkillRoleAssociation>, score_policy: ScorePolicy, compensation_policy: CompensationPolicy });
 dto!(/// Provider-owned request visible only to its worker and the system operator.
     SkillRequestView { request_id: EntityId, requester: AccountId32, name: String, role_ids: Vec<u32>, status: SkillRequestStatus, skill_id: Option<u32> });
 dto!(/// Exact reputation numerator is hundredths-of-score times committed minutes.
@@ -815,7 +897,7 @@ dto!(/// Storage created and attached atomically with its milestone.
 dto!(/// Quote, execution state, contractual workers and attached tracking storage.
     MilestoneView { milestone_id: EntityId, definition: MilestoneDefinition, status: Option<MilestoneStatus>, assignments: Vec<AssignmentView>, worker_ratings: Vec<WorkerRating>, task_storage: TaskStorageView, frozen: bool, submissions: Vec<CompletionSubmission> });
 dto!(/// Proposal read model; its total is derived from checked quote line items.
-    ProposalView { proposal_id: EntityId, revision: u64, title: String, description: String, status: ProposalStatus, milestones: Vec<MilestoneView>, change_request: Option<String>, #[serde(default)] delivery: Option<DeliveryPreference> });
+    ProposalView { proposal_id: EntityId, revision: u64, title: String, description: String, status: ProposalStatus, milestones: Vec<MilestoneView>, change_request: Option<String>, #[serde(default)] delivery: Option<DeliveryPreference>, #[serde(default)] compensation_policy: Option<CompensationPolicy> });
 dto!(/// Negotiation and settlement of planning, separate from execution.
     PlanningView { revision: u64, status: PlanningStatus, quote: Option<PlanningQuote>, escrow: Money, frozen: bool });
 dto!(/// Project read model; completion follows acceptance of the final funded milestone.
@@ -826,7 +908,7 @@ dto!(/// Internal read-only snapshot. Adapter filters confidential project/task 
     ProviderSnapshot { info: ProviderInfo, catalog: CatalogView, workers: Vec<WorkerView>, projects: Vec<ProjectView>, balances: Vec<BalanceView> });
 
 wire_enum!(/// Durable state-change event vocabulary, committed with its command.
-    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded, DepositRequested, DepositConfirmed, WithdrawalRequested, WithdrawalCancelled, SkillRequested, SkillRequestApproved, SkillRequestRejected, TaskDeleted, ProposalWithdrawn, ProjectEvaluated });
+    DomainEventKind { WorkerRegistered, WorkerUpdated, CalendarUpdated, CatalogUpdated, CoordinatorPromoted, ScorePolicyUpdated, AccountFunded, ProjectCreated, PlanningQuoted, PlanningAccepted, ProposalCreated, ProposalUpdated, ProposalDeleted, ProposalSubmitted, PlanningCompleted, ExecutionApproved, ProposalChangesRequested, ProjectCancelled, PlanningDisputed, MilestoneDisputed, TaskCreated, TaskUpdated, MilestoneCompletionRequested, MilestoneCompleted, MilestoneCompletionRejected, DisputeOpened, DisputeResponseAdded, DepositRequested, DepositConfirmed, WithdrawalRequested, WithdrawalCancelled, SkillRequested, SkillRequestApproved, SkillRequestRejected, TaskDeleted, ProposalWithdrawn, ProjectEvaluated, CompensationPolicyUpdated });
 dto!(/// Durable provider event with explicit recipients, no secret or raw payload.
     DomainEvent { provider_instance_id: ProviderInstanceId, cursor: u64, operation_id: OperationId, kind: DomainEventKind, project_id: Option<EntityId>, entity_id: Option<EntityId>, recipients: Vec<AccountId32>, occurred_at: UnixSeconds, #[serde(default)] origin: Option<AccountId32> });
 dto!(/// Cursor-based provider event page; cursor always refers to this instance.

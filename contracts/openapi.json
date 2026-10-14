@@ -850,7 +850,7 @@
           "Marketplace"
         ],
         "summary": "Quote the fixed planning fee and capacity",
-        "description": "",
+        "description": "Separate planning pricing is removed. The retained command fails with separate_planning_price_removed and does not alter balances, calendars or project state. Start drafting after project creation.",
         "security": [
           {
             "sessionCookie": [],
@@ -913,7 +913,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/projects/{projectId}/planning/accept": {
@@ -923,7 +924,7 @@
           "Marketplace"
         ],
         "summary": "Accept the reviewed planning quote",
-        "description": "Use project.planning.revision from the reviewed quote. Atomically locks the fee and reserves planning minutes. A stale revision causes revision_conflict without these business effects.",
+        "description": "Separate planning pricing is removed. The retained command fails with separate_planning_price_removed and does not alter balances, calendars or project state. Start drafting after project creation.",
         "security": [
           {
             "sessionCookie": [],
@@ -986,7 +987,8 @@
               }
             }
           }
-        }
+        },
+        "deprecated": true
       }
     },
     "/api/projects/{projectId}/planning/accept-delivery": {
@@ -5681,6 +5683,76 @@
         },
         "description": "Default: client and coordinator can write. With DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true assigned project workers can also write. Public arguments remain client/coordinator only."
       }
+    },
+    "/api/admin/compensation-policy": {
+      "put": {
+        "operationId": "setCompensationPolicy",
+        "tags": [
+          "Administration"
+        ],
+        "summary": "Set the coordinator execution budget percentage",
+        "description": "Administrator only, checked again by provider root authority. Changes affect subsequently created or updated drafts, not submitted/approved proposals or past payments. Defaults to 10 percent in new mock state.",
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfToken": []
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Operation durably accepted. Poll its ID; acknowledgement is not execution success.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationRef"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthenticated"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/TooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/CapacityExceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          },
+          "503": {
+            "$ref": "#/components/responses/Unavailable"
+          }
+        },
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IdempotencyKey"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompensationPolicy"
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -7291,7 +7363,7 @@
             }
           }
         },
-        "description": "Checked total equals coordinatorFee plus every requirement budget. Distinct slots in this milestone receive distinct workers."
+        "description": "Milestone budget is the checked sum of its line items. Provider recalculates coordinator/worker shares using the current compensation policy and planned worker minutes on draft create/update. A positive budget requires at least one worker with positive planned minutes. Coordination time does not affect the monetary share."
       },
       "ProposalDefinition": {
         "type": "object",
@@ -7318,7 +7390,7 @@
             "minItems": 1
           }
         },
-        "description": "Milestone keys must be unique. Provider creates one attached task storage per milestone; callers cannot supply its identity.",
+        "description": "Milestone budget is the checked sum of its line items. Provider recalculates coordinator/worker shares using the current compensation policy and planned worker minutes on draft create/update. A positive budget requires at least one worker with positive planned minutes. Coordination time does not affect the monetary share.",
         "examples": [
           {
             "title": "Delivery plan",
@@ -7713,7 +7785,8 @@
           "roles",
           "skills",
           "skillRoles",
-          "scorePolicy"
+          "scorePolicy",
+          "compensationPolicy"
         ],
         "properties": {
           "roles": {
@@ -7736,6 +7809,9 @@
           },
           "scorePolicy": {
             "$ref": "#/components/schemas/ScorePolicy"
+          },
+          "compensationPolicy": {
+            "$ref": "#/components/schemas/CompensationPolicy"
           }
         }
       },
@@ -7942,6 +8018,17 @@
                 "type": "null"
               }
             ]
+          },
+          "compensationPolicy": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/CompensationPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Policy captured when this draft was created/updated; approved quotes and past settlements do not change when the global policy changes. Null identifies previously saved proposals."
           }
         }
       },
@@ -8073,21 +8160,8 @@
             "planning": {
               "revision": 2,
               "status": "Delivered",
-              "quote": {
-                "fee": "250",
-                "minutes": 120,
-                "window": {
-                  "start": {
-                    "isoYear": 2026,
-                    "week": 40
-                  },
-                  "end": {
-                    "isoYear": 2026,
-                    "week": 40
-                  }
-                }
-              },
-              "escrow": "250",
+              "quote": null,
+              "escrow": "0",
               "frozen": false
             },
             "proposals": [
@@ -8113,7 +8187,7 @@
                           "week": 40
                         }
                       },
-                      "coordinatorFee": "100",
+                      "coordinatorFee": "130",
                       "coordinatorMinutes": 60,
                       "requirements": [
                         {
@@ -8124,7 +8198,7 @@
                             2
                           ],
                           "minutes": 600,
-                          "budget": "1200"
+                          "budget": "1170"
                         }
                       ]
                     },
@@ -8141,7 +8215,10 @@
                   }
                 ],
                 "changeRequest": null,
-                "delivery": null
+                "delivery": null,
+                "compensationPolicy": {
+                  "coordinatorPercent": 10
+                }
               }
             ],
             "executionEscrow": "0",
@@ -10477,6 +10554,24 @@
             ]
           }
         }
+      },
+      "CompensationPolicy": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "coordinatorPercent"
+        ],
+        "properties": {
+          "coordinatorPercent": {
+            "$ref": "#/components/schemas/Percentage"
+          }
+        },
+        "description": "Execution budget share paid to the coordinator; initial mock value is 10. Remaining units are allocated to workers by their approved planned minutes. Integer residual units follow largest fractions, ties coordinator then requirement order. Independent of reputation vote weights.",
+        "examples": [
+          {
+            "coordinatorPercent": 10
+          }
+        ]
       }
     }
   },

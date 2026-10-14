@@ -39,6 +39,7 @@ fn privileged(command: &ProviderCommand) -> bool {
             | ProviderCommand::ConfirmDeposit { .. }
             | ProviderCommand::DecideSkillRequest(_)
             | ProviderCommand::SetScorePolicy(_)
+            | ProviderCommand::SetCompensationPolicy(_)
     )
 }
 

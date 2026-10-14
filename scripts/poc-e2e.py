@@ -312,9 +312,7 @@ def prepare_single(base, admin_password):
     year, week_number, _ = (date.today() + timedelta(weeks=2)).isocalendar()
     week = {"isoYear": year, "week": week_number}
     window = {"start": week, "end": week}
-    coordinator.command("POST", project_path + "/planning/quote", {"fee": "100", "minutes": 100, "window": window})
-    project = client.request("GET", project_path)
-    client.command("POST", project_path + "/planning/accept", {"expectedRevision": project["planning"]["revision"]})
+    require(project["planning"]["status"] == "Accepted", "planning cannot start directly")
     definition = {
         "title": "Implementation", "description": "One milestone",
         "milestones": [{"key": 1, "title": "Ship", "window": window,
@@ -335,7 +333,7 @@ def prepare_single(base, admin_password):
     coordinator.command("POST", proposal_path + "/submit")
     project = client.request("GET", project_path)
     client.command("POST", project_path + "/planning/accept-delivery", {"expectedRevision": project["planning"]["revision"]})
-    require(coordinator.request("GET", "/api/balance")["available"] == "100", "planning fee not settled")
+    require(coordinator.request("GET", "/api/balance")["available"] == "0", "plan acceptance transferred funds")
     project = client.request("GET", project_path)
     client.command("POST", proposal_path + "/approve", {"expectedRevision": project["proposals"][0]["revision"]})
     project = client.request("GET", project_path)
@@ -366,7 +364,7 @@ def exercise(base, admin_password, proxy):
     replay = client.command("POST", milestone_path + "/accept-completion", acceptance, key)
     require(first == replay and proxy.dropped == 1, "lost-response recovery or idempotent replay failed")
     balances = [int(actor.request("GET", "/api/balance")["available"]) for actor in (client, coordinator, worker)]
-    require(balances == [8900, 200, 900] and sum(balances) == 10000, "escrow payout conservation failed")
+    require(balances == [9000, 100, 900] and sum(balances) == 10000, "escrow payout conservation failed")
     project = client.request("GET", project_path)
     require(project["executionEscrow"] == "0", "settled funds left in escrow")
     directory = {entry["account"]: entry for entry in client.request("GET", "/api/workers")}
@@ -495,11 +493,7 @@ def exercise_multi_milestone(base, admin_password, _proxy):
         year, week_number, _ = (date.today() + timedelta(weeks=2 + offset)).isocalendar()
         week = {"isoYear": year, "week": week_number}
         windows.append({"start": week, "end": week})
-    coordinator.command("POST", project_path + "/planning/quote", {
-        "fee": "100", "minutes": 100, "window": windows[0],
-    })
-    project = client.request("GET", project_path)
-    client.command("POST", project_path + "/planning/accept", {"expectedRevision": project["planning"]["revision"]})
+    require(project["planning"]["status"] == "Accepted", "planning cannot start directly")
     definition = {"title": "Multi-team implementation", "description": "Four independently tracked milestones", "milestones": []}
     for index, team in enumerate(teams):
         definition["milestones"].append({
@@ -553,6 +547,7 @@ def exercise_multi_milestone(base, admin_password, _proxy):
     expected_minutes = [0] * 5
     expected_scores = [0] * 5
     expected_balances = [0] * 5
+    expected_coordinator_balance = 0
     escrow = 13000
     for index, (milestone, team) in enumerate(zip(milestones, teams)):
         expected = [{"requirementKey": slot + 1, "worker": workers[slot].session["accountId"]} for slot in team]
@@ -580,8 +575,9 @@ def exercise_multi_milestone(base, admin_password, _proxy):
         require(client.command("POST", path + "/accept-completion", acceptance, key) == first,
                 "multi-milestone acceptance replay changed receipt")
         escrow -= 100 + 900 * len(team)
-        for slot in team:
-            expected_balances[slot] += 900
+        expected_coordinator_balance += int(milestone["definition"]["coordinatorFee"])
+        for slot, requirement in zip(team, milestone["definition"]["requirements"]):
+            expected_balances[slot] += int(requirement["budget"])
         project = client.request("GET", project_path)
         require(project["executionEscrow"] == str(escrow), "milestone settlement consumed the wrong escrow")
         require([item["status"] for item in project["proposals"][0]["milestones"]]
@@ -590,9 +586,9 @@ def exercise_multi_milestone(base, admin_password, _proxy):
                 + ["NotStarted"] * max(0, 2 - index), "settlement changed milestone sequence")
         require(project["completed"] == (index == 3), "project completion did not follow final milestone")
         balances = [int(actor.request("GET", "/api/balance")["available"]) for actor in people]
-        require(balances[0] == 6900 and sum(balances) + escrow == 20000, "multi-team token conservation failed")
+        require(balances[0] == 7000 and sum(balances) + escrow == 20000, "multi-team token conservation failed")
         require(balances[3:8] == expected_balances and balances[8:] == [0] * 5, "wrong workers received payments")
-        require(coordinator.request("GET", "/api/balance")["available"] == str(100 + 100 * (index + 1)),
+        require(coordinator.request("GET", "/api/balance")["available"] == str(expected_coordinator_balance),
                 "coordinator fee missing or duplicated")
         directory = {entry["account"]: entry for entry in client.request("GET", "/api/workers")}
         for slot, worker in enumerate(workers):
