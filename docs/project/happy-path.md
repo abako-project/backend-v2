@@ -14,15 +14,15 @@ field-level source of truth and is also served at `GET /api/openapi.json`.
    coordinators. In a normal mock deployment the client requests a Bramp deposit
    and an operator confirms it; the fixture-only admin funding route is disabled.
 2. The client requests a project. The provider assigns a coordinator in
-   Coordinator mode. The coordinator quotes a fixed planning fee and duration;
-   the client accepts the quote. The coordinator then prepares a proposal.
+   Coordinator mode. The coordinator prepares a proposal immediately, with no
+   separately priced planning quote or planning escrow.
 3. The proposal defines milestones, each with required skills, committed minutes
    and a budget for every worker slot. Creating its draft also creates one task
    storage per milestone. Storages may remain empty when submitting the proposal,
    accepting planning delivery or approving execution. Task edits do not change the contractual budget
    or assignment requirements.
 4. The coordinator submits the proposal and delivers the plan. The client accepts
-   that delivery, paying the planning fee, then approves execution. Approval
+   that delivery without payment, then approves execution. Approval
    reserves the full execution budget and worker/coordinator calendar minutes
    atomically. Every required skill must match; role IDs are recorded but are
    not an assignment filter. A worker in Coordinator mode cannot fill a worker
@@ -164,12 +164,10 @@ use the three Bramp rows instead.
 | Administrator | `POST /api/admin/bramp/deposits/{depositId}/confirm` | No body. This credits the fixed amount once. No bank or currency conversion is involved. |
 | Administrator, fixture only | `POST /api/admin/fund` | `{"account":"<client accountId>","amount":"10000"}`. Requires `ENABLE_MOCK_FUNDING=true`; disabled in normal Compose. |
 | Client | `POST /api/projects` | `{"title":"Signed Project","description":"Integration flow"}`; receipt yields `projectId`. `GET /api/projects/{projectId}` reveals its assigned `coordinator`. |
-| Assigned coordinator | `POST /api/projects/{projectId}/planning/quote` | `{"fee":"100","minutes":100,"window":{"start":{"isoYear":2026,"week":40},"end":{"isoYear":2026,"week":40}}}`. |
-| Client | `POST /api/projects/{projectId}/planning/accept` | `{"expectedRevision":<current planning.revision>}`. |
 | Coordinator | `POST /api/projects/{projectId}/proposals` | `{"title":"Implementation","description":"One milestone","milestones":[{"key":1,"title":"Ship","window":<future week window>,"coordinatorFee":"100","coordinatorMinutes":60,"requirements":[{"key":1,"roleId":2,"skillIds":[1,5,13],"minutes":120,"budget":"900"}]}]}`. Read the project to obtain `proposalId`, `milestoneId` and `taskStorage.taskStorageId`. |
 | Coordinator | `POST /api/task-storages/{storageId}/tasks` | `{"title":"Implement","description":"Tracked separately","taskType":"Task","priority":"Medium","status":"ToDo","assignees":[],"estimatedMinutes":120,"loggedMinutes":0,"dueAt":null}`. Optional tracking: task creation is not required before submission. |
 | Coordinator | `POST /api/projects/{projectId}/proposals/{proposalId}/submit` | No JSON body. |
-| Client | `POST /api/projects/{projectId}/planning/accept-delivery` | `{"expectedRevision":<current planning.revision>}`; planning fee is settled. |
+| Client | `POST /api/projects/{projectId}/planning/accept-delivery` | `{"expectedRevision":<current planning.revision>}`; plan acceptance transfers no funds. |
 | Client | `POST /api/projects/{projectId}/proposals/{proposalId}/approve` | `{"expectedRevision":<current proposal.revision>}`; inspect assignments and execution escrow in a fresh project read. |
 | Coordinator | `PUT /api/task-storages/{storageId}/tasks/{taskId}` | Full `TaskDefinition` with an assigned worker in `assignees`. |
 | Assigned worker | `PATCH /api/task-storages/{storageId}/tasks/{taskId}` | `{"status":"Done","loggedMinutes":120}`. Logged time does not alter the reserved contractual minutes. |
@@ -285,3 +283,21 @@ Neither channel supports edit/delete. Formal arguments are public; conversation
 and emails are not. Ordinary text and references such as IPFS/SFTP are accepted.
 The provider freeze and the per-milestone happy-path payments remain unchanged.
 Formal resolution authority and dispute settlement are pending approval.
+
+## Coordinator compensation — 2026-10-14
+
+`GET /api/catalog` exposes `compensationPolicy.coordinatorPercent`, initially 10.
+An administrator may submit `PUT /api/admin/compensation-policy` with
+`{"coordinatorPercent":10}`, a CSRF token and an idempotency key, then await the
+operation result. Provider root authorization is checked independently.
+
+New projects start in Accepted planning with no quote and zero planning escrow.
+The coordinator prepares and submits a proposal directly. Planning delivery acceptance
+moves no money. Execution approval reserves the full execution budget. Each milestone
+settlement pays its stored coordinator share plus workers' shares. The percentage is
+included in that budget: 100 KVN means 10 KVN for coordination and 90 KVN for workers.
+Workers split the remainder by planned approved requirement minutes. Largest fractional
+shares receive integer leftovers without losing units. Coordination minutes still control
+capacity and reputation, not the monetary share. A positive budget needs worker hours.
+Global policy edits apply on subsequent draft create/update; submitted/approved prices
+and already completed payments remain unchanged.

@@ -5,10 +5,10 @@ use super::{
 use generated_contracts::{
     AcceptMilestoneDeliveryRequest, AccountId32, CreateProjectRequest, EntityId, EvidenceReference,
     EvidenceRequest, MilestoneDefinition, MilestoneStatus, MilestoneView, Minutes, Money,
-    OpenDisputeRequest, PlanningQuote, PlanningStatus, ProjectView, ProposalDefinition,
-    ProposalStatus, ProposalView, ReasonRequest, RequestChangesRequest, RequirementDefinition,
-    RevisionRequest, SubmitMilestoneCompletionRequest, TaskDefinition, TaskPriority,
-    TaskProgressRequest, TaskStatus, TaskType, TaskView, UnixSeconds, WeekWindow,
+    OpenDisputeRequest, PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus,
+    ProposalView, ReasonRequest, RequestChangesRequest, RequirementDefinition, RevisionRequest,
+    SubmitMilestoneCompletionRequest, TaskDefinition, TaskPriority, TaskProgressRequest,
+    TaskStatus, TaskType, TaskView, UnixSeconds, WeekWindow,
 };
 use leptos::prelude::*;
 use leptos_web::{parse_ids, parse_week, week_input};
@@ -36,7 +36,7 @@ pub(super) fn Projects(account: AccountId32) -> impl IntoView {
     let context = expect_context::<Context>();
     view! {
         <section id="projects"><h2>"Proyectos"</h2><details><summary>"Solicitar un nuevo trabajo"</summary>
-        <p class="muted">"Se propondrá un coordinador elegible. Antes de empezar, revisa y acepta su tarifa de planificación."</p>
+        <p class="muted">"Se asignará un coordinador elegible. La coordinación se paga dentro del presupuesto aprobado de ejecución."</p>
         <Form fields=vec![Field::text("title", "Título", ""), Field::area("description", "Qué necesitas", "")] submit="Solicitar trabajo"
         on_submit=Callback::new(move |values: Values| context.command("POST", "/projects".into(), &CreateProjectRequest { title: values.text("title"), description: values.text("description") })) /></details></section>
         {move || context.projects.with(Vec::is_empty).then(|| view! { <p class="empty">"Todavía no participas en proyectos."</p> })}
@@ -63,12 +63,7 @@ fn Project(project: ProjectView, account: AccountId32) -> impl IntoView {
         <div class="compact"><h3>"1. Acuerdo de planificación"</h3><p>"Estado: "{format!("{planning_status:?}")} " · Revisión "{revision}</p>
         {quote.clone().map(|quote| view! { <p>{format!("Precio: {} KVN · {} minutos · {} a {}", quote.fee.units(), quote.minutes.get(), week_input(quote.window.start()), week_input(quote.window.end()))}</p> })}
         <p>{format!("Fondos bloqueados de planificación: {} KVN{}", planning.escrow.units(), if planning.frozen { " · congelados" } else { "" })}</p>
-        {(coordinator && active && matches!(planning_status, PlanningStatus::AwaitingQuote | PlanningStatus::Quoted)).then(|| view! {
-            <Form fields=vec![Field::number("fee", "Tarifa fija de planificación (KVN)", quote.as_ref().map_or(0, |q| q.fee.units())), Field::number("minutes", "Minutos comprometidos de planificación", quote.as_ref().map_or(60, |q| q.minutes.get())), Field::week("start", "Semana inicial", quote.as_ref().map_or_else(String::new, |q| week_input(q.window.start()))), Field::week("end", "Semana final (incluida)", quote.as_ref().map_or_else(String::new, |q| week_input(q.window.end())))] submit="Proponer tarifa de planificación"
-            on_submit=Callback::new(move |values: Values| context.command("POST", format!("/projects/{id}/planning/quote"), &PlanningQuote { fee: Money::new(values.parse("fee")?), minutes: Minutes::new(values.parse("minutes")?), window: window(&values)? })) />
-        })}
-        {(client && active && planning_status == PlanningStatus::Quoted).then(|| view! { <p class="muted">"Aceptar bloquea esta tarifa y reserva el tiempo del coordinador; aún no le paga."</p><Action label="Aceptar esta tarifa y reservar planificación" on_click=Callback::new(move |()| context.command("POST", format!("/projects/{id}/planning/accept"), &RevisionRequest { expected_revision: revision }))/> })}
-        {(client && active && planning_status == PlanningStatus::Delivered).then(|| view! { <p class="muted">"Revisa el plan abajo. Aceptar la entrega paga la planificación, pero NO contrata la ejecución."</p><Action label="Aceptar entrega y pagar planificación" on_click=Callback::new(move |()| context.command("POST", format!("/projects/{id}/planning/accept-delivery"), &RevisionRequest { expected_revision: revision }))/> })}
+        {(client && active && planning_status == PlanningStatus::Delivered).then(|| view! { <p class="muted">"Revisa el plan abajo. Aceptar la entrega no mueve fondos ni contrata la ejecución."</p><Action label="Aceptar entrega del plan" on_click=Callback::new(move |()| context.command("POST", format!("/projects/{id}/planning/accept-delivery"), &RevisionRequest { expected_revision: revision }))/> })}
         {((client || coordinator) && active).then(|| view! {
             <details><summary>"Abrir disputa de planificación"</summary><p class="muted">"Congela los fondos no liquidados. No hay pago ni reembolso automático."</p>
             <Form fields=vec![Field::text("reason", "Motivo de la disputa", "")] submit="Disputar planificación" on_submit=Callback::new(move |values: Values| context.command("POST", format!("/projects/{id}/planning/dispute"), &ReasonRequest { reason: values.text("reason") })) /></details>

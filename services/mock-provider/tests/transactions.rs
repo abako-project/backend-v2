@@ -233,31 +233,11 @@ async fn delivered_plan(
     .await?
     .created_entity_id
     .ok_or("missing project ID")?;
-    let quote = PlanningQuote {
-        fee: Money::new(10),
-        minutes: Minutes::new(30),
-        window: window()?,
-    };
-    success(
-        provider,
-        coordinator,
-        ProviderCommand::QuotePlanning {
-            project_id: id,
-            quote,
-        },
-    )
-    .await?;
     let view = project(provider, id).await?;
     assert_eq!(view.created_at, Some(NOW));
-    success(
-        provider,
-        client,
-        ProviderCommand::AcceptPlanningQuote {
-            project_id: id,
-            expected_revision: view.planning.revision,
-        },
-    )
-    .await?;
+    assert_eq!(view.planning.status, PlanningStatus::Accepted);
+    assert_eq!(view.planning.escrow, Money::ZERO);
+    assert!(view.planning.quote.is_none());
     let proposal_id = success(
         provider,
         coordinator,
@@ -579,7 +559,7 @@ fn assert_settlement_snapshot(
             .find(|balance| balance.account == account(client))
             .ok_or("client balance")?
             .available,
-        Money::new(870)
+        Money::new(880)
     );
     assert_eq!(
         snapshot
@@ -588,7 +568,7 @@ fn assert_settlement_snapshot(
             .find(|balance| balance.account == account(coordinator))
             .ok_or("coordinator balance")?
             .available,
-        Money::new(30)
+        Money::new(12)
     );
     assert_eq!(
         snapshot
@@ -597,7 +577,7 @@ fn assert_settlement_snapshot(
             .find(|balance| balance.account == account(worker))
             .ok_or("worker balance")?
             .available,
-        Money::new(100)
+        Money::new(108)
     );
     Ok(())
 }
@@ -724,45 +704,27 @@ async fn assert_planning_revisions(
     .await?
     .created_entity_id
     .ok_or("project ID")?;
-    for fee in [10, 20] {
-        success(
-            provider,
-            coordinator,
-            ProviderCommand::QuotePlanning {
-                project_id: quoted_id,
-                quote: PlanningQuote {
-                    fee: Money::new(fee),
-                    minutes: Minutes::new(30),
-                    window: window()?,
-                },
+    let before = provider.snapshot().await?;
+    for command in [
+        ProviderCommand::QuotePlanning {
+            project_id: quoted_id,
+            quote: PlanningQuote {
+                fee: Money::new(10),
+                minutes: Minutes::new(30),
+                window: window()?,
             },
-        )
-        .await?;
-    }
-    let before_quote = provider.snapshot().await?;
-    assert_eq!(
-        send(
-            provider,
-            client,
-            ProviderCommand::AcceptPlanningQuote {
-                project_id: quoted_id,
-                expected_revision: 1
-            }
-        )
-        .await?
-        .outcome,
-        ExecutionOutcome::Failed("revision_conflict".into())
-    );
-    assert_eq!(provider.snapshot().await?, before_quote);
-    success(
-        provider,
-        client,
+        },
         ProviderCommand::AcceptPlanningQuote {
             project_id: quoted_id,
-            expected_revision: 2,
+            expected_revision: 0,
         },
-    )
-    .await?;
+    ] {
+        assert_eq!(
+            send(provider, coordinator, command).await?.outcome,
+            ExecutionOutcome::Failed("separate_planning_price_removed".into())
+        );
+        assert_eq!(provider.snapshot().await?, before);
+    }
     assert_delivery_revision(provider, coordinator, client, quoted_id).await
 }
 
@@ -1060,7 +1022,7 @@ async fn freezing_permissions(provider: Provider) -> TestResult {
 
 async fn assert_planning_dispute_freezes(
     provider: &Provider,
-    coordinator: &Keypair,
+    _coordinator: &Keypair,
     worker: &Keypair,
     client: &Keypair,
     actor: &Keypair,
@@ -1077,28 +1039,6 @@ async fn assert_planning_dispute_freezes(
     .await?
     .created_entity_id
     .ok_or("project ID")?;
-    success(
-        provider,
-        coordinator,
-        ProviderCommand::QuotePlanning {
-            project_id: planning_id,
-            quote: PlanningQuote {
-                fee: Money::new(10),
-                minutes: Minutes::new(30),
-                window: window()?,
-            },
-        },
-    )
-    .await?;
-    success(
-        provider,
-        client,
-        ProviderCommand::AcceptPlanningQuote {
-            project_id: planning_id,
-            expected_revision: 1,
-        },
-    )
-    .await?;
     let before = provider.snapshot().await?;
     let dispute = ProviderCommand::DisputePlanning {
         project_id: planning_id,
@@ -1112,7 +1052,7 @@ async fn assert_planning_dispute_freezes(
     success(provider, actor, dispute).await?;
     let view = project(provider, planning_id).await?;
     assert_eq!(view.planning.status, PlanningStatus::Disputed);
-    assert_eq!(view.planning.escrow, Money::new(10));
+    assert_eq!(view.planning.escrow, Money::ZERO);
     assert!(view.planning.frozen);
     assert_eq!(provider.snapshot().await?.balances, before.balances);
     assert_eq!(provider.snapshot().await?.workers, before.workers);
@@ -1265,6 +1205,179 @@ async fn assert_cancellation_freezes(
     Ok(())
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "One financial scenario verifies policy changes, replay and settlement without breaking its sequence."
+)]
+async fn fair_compensation(provider: Provider) -> TestResult {
+    let (root, coordinator, worker, client) = setup(&provider).await?;
+    assert_eq!(
+        provider.snapshot().await?.catalog.compensation_policy,
+        CompensationPolicy::default()
+    );
+    let policy = CompensationPolicy {
+        coordinator_percent: Percentage::new(20)?,
+    };
+    let before = provider.snapshot().await?;
+    assert_ne!(
+        send(
+            &provider,
+            &worker,
+            ProviderCommand::SetCompensationPolicy(policy.clone())
+        )
+        .await?
+        .outcome,
+        ExecutionOutcome::Success
+    );
+    assert_eq!(provider.snapshot().await?, before);
+    let mut definition = proposal()?;
+    definition.milestones[0].coordinator_fee = Money::new(120);
+    definition.milestones[0].requirements[0].budget = Money::ZERO;
+    let (project_id, proposal_id) =
+        delivered_plan(&provider, &coordinator, &client, definition).await?;
+    let view = project(&provider, project_id).await?;
+    assert_eq!(
+        view.proposals[0].compensation_policy,
+        Some(CompensationPolicy::default())
+    );
+    let milestone = &view.proposals[0].milestones[0];
+    assert_eq!(milestone.definition.coordinator_fee, Money::new(12));
+    assert_eq!(milestone.definition.requirements[0].budget, Money::new(108));
+    assert_eq!(
+        provider
+            .snapshot()
+            .await?
+            .balances
+            .iter()
+            .find(|b| b.account == account(&client))
+            .ok_or("balance")?
+            .available,
+        Money::new(1000)
+    );
+    success(
+        &provider,
+        &root,
+        ProviderCommand::SetCompensationPolicy(policy.clone()),
+    )
+    .await?;
+    assert_eq!(
+        provider.snapshot().await?.catalog.compensation_policy,
+        policy
+    );
+    assert_eq!(
+        approve(&provider, &client, project_id, proposal_id)
+            .await?
+            .outcome,
+        ExecutionOutcome::Success
+    );
+    let view = project(&provider, project_id).await?;
+    assert_eq!(view.execution_escrow, Money::new(120));
+    assert_eq!(
+        view.proposals[0].milestones[0].definition.coordinator_fee,
+        Money::new(12)
+    );
+    let receipt = success(
+        &provider,
+        &coordinator,
+        ProviderCommand::SubmitMilestoneDelivery {
+            project_id,
+            milestone_id: milestone.milestone_id,
+            request: SubmitMilestoneCompletionRequest { deliverable: None },
+        },
+    )
+    .await?;
+    let call = signed(
+        &provider,
+        &client,
+        ProviderCommand::AcceptMilestoneDelivery {
+            project_id,
+            milestone_id: milestone.milestone_id,
+            submission_id: receipt.created_entity_id.ok_or("submission")?,
+        },
+    )
+    .await?;
+    let first = provider.execute(call.clone(), NOW).await?;
+    assert_eq!(first.outcome, ExecutionOutcome::Success);
+    assert_eq!(provider.execute(call, NOW).await?, first);
+    let after = provider.snapshot().await?;
+    assert_eq!(
+        project(&provider, project_id).await?.execution_escrow,
+        Money::ZERO
+    );
+    assert_eq!(
+        after
+            .balances
+            .iter()
+            .find(|b| b.account == account(&coordinator))
+            .ok_or("coordinator balance")?
+            .available,
+        Money::new(12)
+    );
+    assert_eq!(
+        after
+            .balances
+            .iter()
+            .find(|b| b.account == account(&worker))
+            .ok_or("worker balance")?
+            .available,
+        Money::new(108)
+    );
+    let new_project = success(
+        &provider,
+        &client,
+        ProviderCommand::CreateProject(CreateProjectRequest {
+            title: "New policy".into(),
+            description: String::new(),
+        }),
+    )
+    .await?
+    .created_entity_id
+    .ok_or("project")?;
+    let created = success(
+        &provider,
+        &coordinator,
+        ProviderCommand::CreateProposal {
+            project_id: new_project,
+            proposal: proposal()?,
+        },
+    )
+    .await?
+    .created_entity_id
+    .ok_or("proposal")?;
+    let changed = project(&provider, new_project).await?;
+    assert_eq!(changed.proposals[0].proposal_id, created);
+    assert_eq!(changed.proposals[0].compensation_policy, Some(policy));
+    assert_eq!(
+        changed.proposals[0].milestones[0]
+            .definition
+            .coordinator_fee,
+        Money::new(24)
+    );
+    assert_eq!(
+        changed.proposals[0].milestones[0].definition.requirements[0].budget,
+        Money::new(96)
+    );
+    let mut no_worker = proposal()?;
+    no_worker.milestones[0].requirements.clear();
+    let before = provider.snapshot().await?;
+    assert_ne!(
+        send(
+            &provider,
+            &coordinator,
+            ProviderCommand::UpdateProposal {
+                project_id: new_project,
+                proposal_id: created,
+                proposal: no_worker
+            }
+        )
+        .await?
+        .outcome,
+        ExecutionOutcome::Success
+    );
+    assert_eq!(provider.snapshot().await?, before);
+    Ok(())
+}
+
 macro_rules! suite {
     ($feature:literal, $module:ident, $factory:expr) => {
         #[cfg(feature = $feature)]
@@ -1301,6 +1414,14 @@ macro_rules! suite {
             #[tokio::test]
             async fn draft_dates_deletion_and_withdrawal_preserve_paid_planning() -> TestResult {
                 draft_editing::editing(provider().await?).await
+            }
+            #[tokio::test]
+            async fn estimated_delivery_checks_all_weeks_only_at_submission() -> TestResult {
+                draft_editing::estimated_delivery(provider().await?).await
+            }
+            #[tokio::test]
+            async fn fair_percentage_payouts_are_authoritative_and_immutable() -> TestResult {
+                fair_compensation(provider().await?).await
             }
             #[tokio::test]
             async fn delivery_and_settlement_do_not_require_or_fabricate_votes() -> TestResult {
@@ -1341,6 +1462,14 @@ async fn independent_runtimes_share_transactions_and_retained_generation() -> Te
         name: "Rust edited".into(),
     });
     success(&first, &root, rename).await?;
+    success(
+        &first,
+        &root,
+        ProviderCommand::SetCompensationPolicy(CompensationPolicy {
+            coordinator_percent: Percentage::new(17)?,
+        }),
+    )
+    .await?;
     let command = ProviderCommand::FundAccount(FundAccountRequest {
         account: account(&key(9)?),
         amount: Money::new(5),
@@ -1354,6 +1483,16 @@ async fn independent_runtimes_share_transactions_and_retained_generation() -> Te
     drop(second);
     let restored = Provider::sqlite(&url, account(&root)).await?;
     assert_eq!(restored.info().await?, generation);
+    assert_eq!(
+        restored
+            .snapshot()
+            .await?
+            .catalog
+            .compensation_policy
+            .coordinator_percent
+            .get(),
+        17
+    );
     assert_eq!(
         restored.snapshot().await?.catalog.skills[0].name,
         "Rust edited"

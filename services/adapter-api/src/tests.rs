@@ -90,6 +90,7 @@ fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
                 roles: vec![],
                 skills: vec![],
                 skill_roles: vec![],
+                compensation_policy: generated_contracts::CompensationPolicy::default(),
                 score_policy: ScorePolicy::new(Percentage::new(50)?, Percentage::new(50)?)?,
             },
             workers: vec![],

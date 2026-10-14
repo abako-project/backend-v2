@@ -1,13 +1,15 @@
 use std::collections::BTreeSet;
 
+use chrono::{Duration, NaiveDate, Weekday};
+
 use generated_contracts::{
-    AccountId32, DomainEventKind, EntityId, MilestoneStatus, MilestoneView, Minutes, Money,
-    PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView, ProviderCommand,
-    ReservationView, TaskStorageView, TaskView, TeamRating, UnixSeconds,
+    AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, MilestoneView,
+    Money, PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView,
+    ProviderCommand, TaskStorageView, TaskView, TeamRating, UnixSeconds,
 };
 
 use super::{Effect, RecordedReason, State, add_rating};
-use crate::{Error, Result, calendar, random_id, require};
+use crate::{Error, Result, random_id, require};
 
 type Transition = (DomainEventKind, Option<EntityId>);
 
@@ -133,51 +135,8 @@ impl State {
         command: &ProviderCommand,
     ) -> Result<Transition> {
         let kind = match command {
-            ProviderCommand::QuotePlanning { quote, .. } => {
-                coordinator(project, origin)?;
-                require(
-                    matches!(
-                        project.planning.status,
-                        PlanningStatus::AwaitingQuote | PlanningStatus::Quoted
-                    ),
-                    "invalid_planning_state",
-                )?;
-                project.planning.quote = Some(quote.clone());
-                project.planning.status = PlanningStatus::Quoted;
-                bump(&mut project.planning.revision)?;
-                DomainEventKind::PlanningQuoted
-            }
-            ProviderCommand::AcceptPlanningQuote {
-                expected_revision, ..
-            } => {
-                client(project, origin)?;
-                revision(project.planning.revision, *expected_revision)?;
-                require(
-                    project.planning.status == PlanningStatus::Quoted && !project.planning.frozen,
-                    "invalid_planning_state",
-                )?;
-                let quote = project
-                    .planning
-                    .quote
-                    .as_ref()
-                    .ok_or_else(Error::internal)?;
-                self.debit(project.client, quote.fee)?;
-                calendar::reserve(
-                    &mut self.worker_mut(project.coordinator)?.calendar,
-                    quote.window,
-                    quote.minutes,
-                    &ReservationView {
-                        project_id: project.project_id,
-                        milestone_id: None,
-                        requirement_key: None,
-                        week: quote.window.start(),
-                        minutes: Minutes::ZERO,
-                    },
-                )?;
-                project.planning.escrow = quote.fee;
-                project.planning.status = PlanningStatus::Accepted;
-                bump(&mut project.planning.revision)?;
-                DomainEventKind::PlanningAccepted
+            ProviderCommand::QuotePlanning { .. } | ProviderCommand::AcceptPlanningQuote { .. } => {
+                return Err(Error::domain("separate_planning_price_removed"));
             }
             ProviderCommand::AcceptPlanningDelivery {
                 expected_revision, ..
@@ -211,6 +170,10 @@ impl State {
                 coordinator(project, origin)?;
                 planning_active(project)?;
                 self.proposal_qualifications(proposal)?;
+                let mut proposal = proposal.clone();
+                for milestone in &mut proposal.milestones {
+                    milestone.allocate_budget(&self.compensation_policy)?;
+                }
                 let proposal_id = random_id()?;
                 project.proposals.push(ProposalView {
                     proposal_id,
@@ -218,9 +181,10 @@ impl State {
                     title: proposal.title.clone(),
                     description: proposal.description.clone(),
                     status: ProposalStatus::Draft,
-                    milestones: make_milestones(proposal, &[])?,
+                    milestones: make_milestones(&proposal, &[])?,
                     change_request: None,
                     delivery: None,
+                    compensation_policy: Some(self.compensation_policy.clone()),
                 });
                 (DomainEventKind::ProposalCreated, proposal_id)
             }
@@ -232,12 +196,17 @@ impl State {
                 coordinator(project, origin)?;
                 planning_active(project)?;
                 self.proposal_qualifications(proposal)?;
+                let mut proposal = proposal.clone();
+                for milestone in &mut proposal.milestones {
+                    milestone.allocate_budget(&self.compensation_policy)?;
+                }
                 let current = proposal_mut(project, *proposal_id)?;
                 require(
                     current.status == ProposalStatus::Draft,
                     "proposal_not_draft",
                 )?;
-                current.milestones = make_milestones(proposal, &current.milestones)?;
+                current.milestones = make_milestones(&proposal, &current.milestones)?;
+                current.compensation_policy = Some(self.compensation_policy.clone());
                 current.title.clone_from(&proposal.title);
                 current.description.clone_from(&proposal.description);
                 bump(&mut current.revision)?;
@@ -319,6 +288,7 @@ impl State {
                     proposal.status == ProposalStatus::Draft,
                     "proposal_not_draft",
                 )?;
+                validate_delivery_estimate(proposal)?;
                 proposal.status = ProposalStatus::PendingApproval;
                 bump(&mut proposal.revision)?;
                 if project.planning.status != PlanningStatus::Completed {
@@ -879,4 +849,37 @@ fn make_milestones(
             }
         })
         .collect()
+}
+
+fn validate_delivery_estimate(proposal: &ProposalView) -> Result<()> {
+    let Some(DeliveryPreference::SpecificDate { date }) = &proposal.delivery else {
+        return Ok(());
+    };
+    let monday = |week: generated_contracts::Week| {
+        NaiveDate::from_isoywd_opt(week.iso_year(), u32::from(week.week()), Weekday::Mon)
+            .ok_or_else(|| Error::bad("invalid_delivery_schedule"))
+    };
+    let first = proposal
+        .milestones
+        .first()
+        .ok_or_else(|| Error::bad("empty_milestones"))?;
+    let start = monday(first.definition.window.start())?;
+    let days = proposal
+        .milestones
+        .iter()
+        .try_fold(0_i64, |sum, milestone| {
+            let window = milestone.definition.window;
+            let duration = monday(window.end())?
+                .signed_duration_since(monday(window.start())?)
+                .num_days();
+            sum.checked_add(duration)
+                .and_then(|total| total.checked_add(7))
+                .ok_or_else(|| Error::bad("invalid_delivery_schedule"))
+        })?;
+    let minimum = Duration::try_days(days)
+        .and_then(|duration| start.checked_add_signed(duration))
+        .ok_or_else(|| Error::bad("invalid_delivery_schedule"))?;
+    let estimated = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .map_err(|_| Error::bad("invalid_delivery_date"))?;
+    require(estimated >= minimum, "delivery_date_before_milestones")
 }

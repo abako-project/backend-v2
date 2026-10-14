@@ -150,6 +150,11 @@ impl State {
                 self.score_policy = *policy;
                 Effect::new(DomainEventKind::ScorePolicyUpdated, None, origin)
             }
+            ProviderCommand::SetCompensationPolicy(policy) => {
+                self.root(origin)?;
+                self.compensation_policy = policy.clone();
+                Effect::new(DomainEventKind::CompensationPolicyUpdated, None, origin)
+            }
             ProviderCommand::CreateProject(request) => {
                 self.create_project(origin, &request.title, &request.description, now)?
             }
@@ -227,8 +232,7 @@ impl State {
         description: &str,
         now: UnixSeconds,
     ) -> Result<Effect> {
-        // Initial selection has no quoted window yet: this indicative filter uses
-        // the current week. Quote acceptance reserves against fresh capacity.
+        // Selection uses current capacity; approved execution reserves milestone coordination.
         let week = calendar::current_week(now)?;
         let mut candidates = Vec::new();
         for worker in self.workers.values().filter(|worker| {
@@ -253,7 +257,7 @@ impl State {
                 description: description.into(),
                 planning: PlanningView {
                     revision: 0,
-                    status: PlanningStatus::AwaitingQuote,
+                    status: PlanningStatus::Accepted,
                     quote: None,
                     escrow: Money::ZERO,
                     frozen: false,

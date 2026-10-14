@@ -56,28 +56,6 @@ async fn empty_draft(
     .await?
     .created_entity_id
     .ok_or("project ID")?;
-    success(
-        provider,
-        &coordinator,
-        ProviderCommand::QuotePlanning {
-            project_id,
-            quote: PlanningQuote {
-                fee: Money::new(10),
-                minutes: Minutes::new(30),
-                window: window()?,
-            },
-        },
-    )
-    .await?;
-    success(
-        provider,
-        &client,
-        ProviderCommand::AcceptPlanningQuote {
-            project_id,
-            expected_revision: 1,
-        },
-    )
-    .await?;
     let mut definition = proposal()?;
     let mut second = definition.milestones[0].clone();
     second.key = 2;

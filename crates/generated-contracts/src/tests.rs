@@ -286,3 +286,72 @@ fn proposal_dates_validate_real_calendar_dates() {
         .is_ok()
     );
 }
+
+#[test]
+fn compensation_uses_provider_percentage_and_worker_minutes()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut milestone = MilestoneDefinition {
+        key: 0,
+        title: "Budget".into(),
+        window: WeekWindow::new(Week::new(2026, 42)?, Week::new(2026, 42)?)?,
+        coordinator_fee: Money::new(570),
+        coordinator_minutes: Minutes::new(999),
+        requirements: vec![
+            RequirementDefinition {
+                key: 0,
+                role_id: 2,
+                skill_ids: vec![1],
+                minutes: Minutes::new(120),
+                budget: Money::ZERO,
+            },
+            RequirementDefinition {
+                key: 1,
+                role_id: 2,
+                skill_ids: vec![1],
+                minutes: Minutes::new(3000),
+                budget: Money::ZERO,
+            },
+        ],
+    };
+    let policy = CompensationPolicy::default();
+    milestone.allocate_budget(&policy)?;
+    assert_eq!(milestone.coordinator_fee, Money::new(57));
+    assert_eq!(milestone.requirements[0].budget, Money::new(20));
+    assert_eq!(milestone.requirements[1].budget, Money::new(493));
+    for percent in [0, 10, 25, 100] {
+        for budget in (0..150).chain([u64::MAX]) {
+            milestone.coordinator_fee = Money::new(budget);
+            for r in &mut milestone.requirements {
+                r.budget = Money::ZERO;
+            }
+            milestone.allocate_budget(&CompensationPolicy {
+                coordinator_percent: Percentage::new(percent)?,
+            })?;
+            assert_eq!(milestone.total()?, Money::new(budget));
+            let amounts = [
+                milestone.coordinator_fee,
+                milestone.requirements[0].budget,
+                milestone.requirements[1].budget,
+            ];
+            let weights = [
+                u128::from(percent) * 3120,
+                u128::from(100 - percent) * 120,
+                u128::from(100 - percent) * 3000,
+            ];
+            for (amount, weight) in amounts.into_iter().zip(weights) {
+                let numerator = u128::from(budget) * weight;
+                let denominator = 312_000;
+                assert!(u128::from(amount.units()) >= numerator / denominator);
+                assert!(u128::from(amount.units()) <= numerator.div_ceil(denominator));
+            }
+        }
+    }
+    milestone.requirements.clear();
+    milestone.coordinator_fee = Money::new(1);
+    assert!(milestone.allocate_budget(&policy).is_err());
+    milestone.coordinator_fee = Money::ZERO;
+    milestone.allocate_budget(&policy)?;
+    assert!(serde_json::from_str::<CompensationPolicy>(r#"{"coordinatorPercent":101}"#).is_err());
+    assert!(serde_json::from_str::<CompensationPolicy>(r#"{"coordinatorPercent":1.5}"#).is_err());
+    Ok(())
+}

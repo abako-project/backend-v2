@@ -22,6 +22,14 @@ one vote** alongside the client is documented pending work, not an active mode.
 See [approved scoring rules](specs/0003-transactional-marketplace/spec.md#milestones-tracking-scores-and-funds)
 and the [happy path](docs/project/happy-path.md).
 
+The mock owns execution compensation separately from reputation: `GET /api/catalog`
+returns `compensationPolicy.coordinatorPercent` (initially 10). The coordinator receives
+that share of each milestone budget; workers split the rest by planned approved minutes.
+System authority can update it through `PUT /api/admin/compensation-policy`. Draft
+create/update captures the policy; submitted or approved prices stay fixed. Preparing
+and accepting a plan have no separate price or transfer. Execution approval reserves
+funds, and each accepted milestone settles its stored shares.
+
 ## Run locally
 
 Use Rust 1.96.1. The [Compose guide](infra/README.md) creates private runtime secrets and starts the services behind Nginx at `http://localhost:8088`. Users and agents run ordinary Cargo, Python and Docker commands. No production deployment exists.
@@ -216,3 +224,7 @@ and tops up balances below 1000 KVN through simulated Bramp deposits. It never
 resets the databases. Development passwords above are not production credentials.
 
 The API seed also saves private contact email for clients/workers and descriptive experience for each worker role in adapter/PostgreSQL. Experience does not change provider matching. Keep `KUNVENO_LOCAL_DIR` in persistent storage outside `/tmp`; the current local review uses `$HOME/.local/share/kunveno-dev/abako-auth-review`.
+
+### Estimated project delivery date
+
+The proposal's global date remains stored in the mock and visible as the accepted project's target. Submission checks: first milestone start Monday + 7 days × sum of all inclusive milestone weeks. Drafts may retain an earlier date during editing; relative preferences keep their current behavior. The target is advisory, with no overdue penalties, state changes or automatic payment effects. Individual milestone calendar dates and time-extension requests remain future work.
