@@ -224,3 +224,7 @@ and tops up balances below 1000 KVN through simulated Bramp deposits. It never
 resets the databases. Development passwords above are not production credentials.
 
 The API seed also saves private contact email for clients/workers and descriptive experience for each worker role in adapter/PostgreSQL. Experience does not change provider matching. Keep `KUNVENO_LOCAL_DIR` in persistent storage outside `/tmp`; the current local review uses `$HOME/.local/share/kunveno-dev/abako-auth-review`.
+
+### Estimated project delivery date
+
+The proposal's global date remains stored in the mock and visible as the accepted project's target. Submission checks: first milestone start Monday + 7 days × sum of all inclusive milestone weeks. Drafts may retain an earlier date during editing; relative preferences keep their current behavior. The target is advisory, with no overdue penalties, state changes or automatic payment effects. Individual milestone calendar dates and time-extension requests remain future work.

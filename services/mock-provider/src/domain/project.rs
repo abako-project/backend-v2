@@ -1,9 +1,11 @@
 use std::collections::BTreeSet;
 
+use chrono::{Duration, NaiveDate, Weekday};
+
 use generated_contracts::{
-    AccountId32, DomainEventKind, EntityId, MilestoneStatus, MilestoneView, Money, PlanningStatus,
-    ProjectView, ProposalDefinition, ProposalStatus, ProposalView, ProviderCommand,
-    TaskStorageView, TaskView, TeamRating, UnixSeconds,
+    AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, MilestoneView,
+    Money, PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView,
+    ProviderCommand, TaskStorageView, TaskView, TeamRating, UnixSeconds,
 };
 
 use super::{Effect, RecordedReason, State, add_rating};
@@ -286,6 +288,7 @@ impl State {
                     proposal.status == ProposalStatus::Draft,
                     "proposal_not_draft",
                 )?;
+                validate_delivery_estimate(proposal)?;
                 proposal.status = ProposalStatus::PendingApproval;
                 bump(&mut proposal.revision)?;
                 if project.planning.status != PlanningStatus::Completed {
@@ -846,4 +849,37 @@ fn make_milestones(
             }
         })
         .collect()
+}
+
+fn validate_delivery_estimate(proposal: &ProposalView) -> Result<()> {
+    let Some(DeliveryPreference::SpecificDate { date }) = &proposal.delivery else {
+        return Ok(());
+    };
+    let monday = |week: generated_contracts::Week| {
+        NaiveDate::from_isoywd_opt(week.iso_year(), u32::from(week.week()), Weekday::Mon)
+            .ok_or_else(|| Error::bad("invalid_delivery_schedule"))
+    };
+    let first = proposal
+        .milestones
+        .first()
+        .ok_or_else(|| Error::bad("empty_milestones"))?;
+    let start = monday(first.definition.window.start())?;
+    let days = proposal
+        .milestones
+        .iter()
+        .try_fold(0_i64, |sum, milestone| {
+            let window = milestone.definition.window;
+            let duration = monday(window.end())?
+                .signed_duration_since(monday(window.start())?)
+                .num_days();
+            sum.checked_add(duration)
+                .and_then(|total| total.checked_add(7))
+                .ok_or_else(|| Error::bad("invalid_delivery_schedule"))
+        })?;
+    let minimum = Duration::try_days(days)
+        .and_then(|duration| start.checked_add_signed(duration))
+        .ok_or_else(|| Error::bad("invalid_delivery_schedule"))?;
+    let estimated = NaiveDate::parse_from_str(date, "%Y-%m-%d")
+        .map_err(|_| Error::bad("invalid_delivery_date"))?;
+    require(estimated >= minimum, "delivery_date_before_milestones")
 }

@@ -1416,6 +1416,10 @@ macro_rules! suite {
                 draft_editing::editing(provider().await?).await
             }
             #[tokio::test]
+            async fn estimated_delivery_checks_all_weeks_only_at_submission() -> TestResult {
+                draft_editing::estimated_delivery(provider().await?).await
+            }
+            #[tokio::test]
             async fn fair_percentage_payouts_are_authoritative_and_immutable() -> TestResult {
                 fair_compensation(provider().await?).await
             }

@@ -1357,7 +1357,7 @@
           "Marketplace"
         ],
         "summary": "Deliver a proposal for client approval",
-        "description": "",
+        "description": "An exact global delivery estimate must cover all milestone durations: Monday of the first milestone start week plus seven days times the sum of inclusive milestone week counts. Earlier estimates fail atomically with delivery_date_before_milestones in the operation receipt. Draft saves may retain an earlier date; relative preferences remain descriptive. The estimate is advisory and passing it does not change payments, reservations or project states.",
         "security": [
           {
             "sessionCookie": [],
@@ -5050,7 +5050,8 @@
               }
             }
           }
-        }
+        },
+        "description": "Save the existing global estimated delivery preference in the provider-owned draft. Calendar validity is checked when saving; its lower bound against all milestone weeks is checked when submitting the proposal. No individual milestone calendar date is introduced."
       }
     },
     "/api/projects/{projectId}/proposals/{proposalId}/withdraw": {
@@ -9221,7 +9222,7 @@
                 "type": "string",
                 "format": "date",
                 "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
-                "description": "Real Gregorian date, year 0001–9999; not a contracted scheduling window."
+                "description": "Real Gregorian date, year 0001–9999. For submitted proposals this global advisory estimate must be on or after the first milestone start Monday plus the sum of every inclusive milestone week count times seven days. It is not a contracted scheduling window."
               }
             },
             "required": [
