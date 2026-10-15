@@ -1,0 +1,134 @@
+name: ${DIGESTA_PROJECT_NAME:-digesta-preview}
+
+x-backend: &backend
+  user: "${DIGESTA_UID:?Set DIGESTA_UID}:${DIGESTA_GID:?Set DIGESTA_GID}"
+  restart: unless-stopped
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  pids_limit: 256
+  tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+  stop_grace_period: 20s
+  logging: &logging
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+
+services:
+  postgres:
+    image: postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: digesta
+      POSTGRES_DB: digesta_adapter
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres-password
+    secrets: [postgres-password]
+    volumes: [adapter-postgres-data:/var/lib/postgresql/data]
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U digesta -d digesta_adapter"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+    logging: *logging
+
+  wallet:
+    <<: *backend
+    image: ghcr.io/abako-project/digesta-wallet@sha256:88a41ae8c369b1e96e26f2daf3c8aa769bf1795efa493c17bdc8a1dd6f0aa5ef
+    environment:
+      BIND_ADDR: 0.0.0.0:8081
+      CUSTODY_DATABASE_URL: sqlite:///data/custody.sqlite?mode=rwc
+      CUSTODY_MASTER_KEY_FILE: /run/secrets/master-key.hex
+      CUSTODY_ROOT_SEED_FILE: /run/secrets/root-seed.hex
+      INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
+    secrets: [master-key.hex, root-seed.hex, service-token]
+    volumes:
+      - type: bind
+        source: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/data/custody
+        target: /data
+        bind: {create_host_path: false}
+    networks: [backend]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8081/health]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
+  mock-provider:
+    <<: *backend
+    image: ghcr.io/abako-project/digesta-mock-provider@sha256:68b0c1a7199ef159031508b90f33bae5af27c4c3afe15d61210e16bdaeeb5bc6
+    environment:
+      BIND_ADDR: 0.0.0.0:8082
+      MOCK_STORAGE: sqlite
+      MOCK_DATABASE_URL: sqlite:///data/mock.sqlite?mode=rwc
+      MOCK_ROOT_ACCOUNT_FILE: /run/secrets/root-account.hex
+      INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
+    secrets: [root-account.hex, service-token]
+    volumes:
+      - type: bind
+        source: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/data/mock
+        target: /data
+        bind: {create_host_path: false}
+    networks: [backend]
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8082/health]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
+  adapter-api:
+    <<: *backend
+    image: ghcr.io/abako-project/digesta-adapter-api@sha256:c121368e5d11061be93e466ec2483046b4270cf61b8b456640f3c664ae4e7dd2
+    env_file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/adapter.env
+    environment:
+      BIND_ADDR: 0.0.0.0:8080
+      OPENAPI_PATH: /app/contracts/openapi.json
+      CUSTODY_URL: http://wallet:8081
+      MOCK_PROVIDER_URL: http://mock-provider:8082
+      INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
+      BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/bootstrap-admin-password
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?Set exact ALLOWED_ORIGINS}
+      WEBAUTHN_RP_ID: ${PREVIEW_HOST:?Set PREVIEW_HOST}
+      WEBAUTHN_ORIGIN: https://${PREVIEW_HOST:?Set PREVIEW_HOST}
+      COOKIE_SECURE: "true"
+      ENABLE_MOCK_FUNDING: "false"
+      DISPUTE_CHANNEL_ALLOW_PARTICIPANTS: "false"
+    secrets: [service-token, bootstrap-admin-password]
+    ports: ["127.0.0.1:${ADAPTER_HOST_PORT:-4080}:8080"]
+    networks: [edge, backend]
+    depends_on:
+      postgres: {condition: service_healthy}
+      wallet: {condition: service_healthy}
+      mock-provider: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8080/ready]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
+networks:
+  edge: {}
+  backend: {internal: true}
+
+volumes:
+  adapter-postgres-data: {}
+
+secrets:
+  postgres-password:
+    file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/postgres-password
+  master-key.hex:
+    file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/master-key.hex
+  root-seed.hex:
+    file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/root-seed.hex
+  root-account.hex:
+    file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/root-account.hex
+  service-token:
+    file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/service-token
+  bootstrap-admin-password:
+    file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/bootstrap-admin-password
