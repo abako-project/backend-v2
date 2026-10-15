@@ -179,7 +179,7 @@ def main():
     with http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler) as server:
         thread = threading.Thread(target=server.serve_forever, daemon=True)
         thread.start()
-        with tempfile.TemporaryDirectory(prefix="kunveno-browser-smoke-") as profile:
+        with tempfile.TemporaryDirectory(prefix="digesta-browser-smoke-") as profile:
             result = subprocess.run([chromium, "--headless=new", "--disable-gpu", "--no-first-run", "--no-default-browser-check", f"--user-data-dir={profile}", "--dump-dom", "--virtual-time-budget=20000", f"http://127.0.0.1:{server.server_port}/"], capture_output=True, text=True, timeout=60, check=False)
         server.shutdown()
         thread.join(timeout=2)

@@ -1,4 +1,4 @@
-name: kunveno-local
+name: digesta-local
 
 x-backend: &backend
   user: "${LOCAL_UID:?Set LOCAL_UID to your non-root user ID}:${LOCAL_GID:?Set LOCAL_GID to your group ID}"
@@ -13,14 +13,14 @@ services:
   postgres:
     image: postgres:17.11-alpine3.24
     environment:
-      POSTGRES_USER: kunveno
-      POSTGRES_DB: kunveno_adapter
-      POSTGRES_PASSWORD: ${ADAPTER_POSTGRES_PASSWORD:-kunveno-local-only}
+      POSTGRES_USER: digesta
+      POSTGRES_DB: digesta_adapter
+      POSTGRES_PASSWORD: ${ADAPTER_POSTGRES_PASSWORD:-digesta-local-only}
     volumes:
       - adapter-postgres-data:/var/lib/postgresql/data
     networks: [backend]
     healthcheck:
-      test: [CMD-SHELL, "pg_isready -U kunveno -d kunveno_adapter"]
+      test: [CMD-SHELL, "pg_isready -U digesta -d digesta_adapter"]
       interval: 5s
       timeout: 3s
       start_period: 15s
@@ -28,7 +28,7 @@ services:
 
   wallet:
     <<: *backend
-    image: kunveno-wallet:local
+    image: digesta-wallet:local
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
@@ -42,7 +42,7 @@ services:
     secrets: [master-key.hex, root-seed.hex, service-token]
     volumes:
       - type: bind
-        source: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/data/custody
+        source: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/data/custody
         target: /data
         bind: {create_host_path: false}
     networks: [backend]
@@ -55,7 +55,7 @@ services:
 
   mock-provider:
     <<: *backend
-    image: kunveno-mock-provider:local
+    image: digesta-mock-provider:local
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
@@ -69,7 +69,7 @@ services:
     secrets: [root-account.hex, service-token]
     volumes:
       - type: bind
-        source: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/data/mock
+        source: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/data/mock
         target: /data
         bind: {create_host_path: false}
     networks: [backend]
@@ -82,14 +82,14 @@ services:
 
   adapter-api:
     <<: *backend
-    image: kunveno-adapter-api:local
+    image: digesta-adapter-api:local
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
       target: adapter-api
     environment:
       BIND_ADDR: 0.0.0.0:8080
-      ADAPTER_DATABASE_URL: ${ADAPTER_DATABASE_URL:-postgres://kunveno:kunveno-local-only@postgres:5432/kunveno_adapter}
+      ADAPTER_DATABASE_URL: ${ADAPTER_DATABASE_URL:-postgres://digesta:digesta-local-only@postgres:5432/digesta_adapter}
       OPENAPI_PATH: /app/contracts/openapi.json
       CUSTODY_URL: http://wallet:8081
       MOCK_PROVIDER_URL: http://mock-provider:8082
@@ -115,7 +115,7 @@ services:
       retries: 12
 
   frontend:
-    image: kunveno-leptos-web:local
+    image: digesta-leptos-web:local
     build:
       context: ..
       dockerfile: infra/frontend.Dockerfile
@@ -168,12 +168,12 @@ volumes:
 
 secrets:
   master-key.hex:
-    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/master-key.hex
+    file: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/secrets/master-key.hex
   root-seed.hex:
-    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/root-seed.hex
+    file: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/secrets/root-seed.hex
   root-account.hex:
-    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/root-account.hex
+    file: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/secrets/root-account.hex
   service-token:
-    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/service-token
+    file: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/secrets/service-token
   bootstrap-admin-password:
-    file: ${KUNVENO_LOCAL_DIR:?Set KUNVENO_LOCAL_DIR outside the repository}/secrets/bootstrap-admin-password
+    file: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/secrets/bootstrap-admin-password

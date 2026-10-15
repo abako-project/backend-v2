@@ -2,7 +2,7 @@
 
 Status: APPROVED
 
-Owner: Kunveno product owner
+Owner: Digesta product owner
 
 Created: 2026-09-02
 

@@ -56,7 +56,7 @@ impl Context {
     fn new() -> Self {
         let base = web_sys::window()
             .and_then(|window| {
-                js_sys::Reflect::get(&window, &"KUNVENO_API_BASE".into())
+                js_sys::Reflect::get(&window, &"DIGESTA_API_BASE".into())
                     .ok()?
                     .as_string()
             })
@@ -453,7 +453,7 @@ pub(super) fn App() -> impl IntoView {
     }
     view! {
         <a href="#main" class="skip">"Saltar al contenido"</a>
-        <header><strong>"kunveno"</strong><span class="badge">"Prueba de concepto · KVN simulado"</span></header>
+        <header><strong>"Digesta"</strong><span class="badge">"Prueba de concepto · KVN simulado"</span></header>
         <main id="main">
             <h1>"Tu espacio de trabajo"</h1>
             <p class="muted">"Planifica por semanas, acuerda precios y sigue cada hito. Las operaciones se firman en el backend."</p>

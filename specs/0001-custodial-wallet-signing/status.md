@@ -2,7 +2,7 @@
 
 State: APPROVED
 
-Owner: Kunveno product owner
+Owner: Digesta product owner
 
 Legacy source commit: `d408641`
 
@@ -84,7 +84,7 @@ for the local POC only.
 
 ## Approval Record
 
-Approver: Kunveno product owner
+Approver: Digesta product owner
 
 Date: 2026-09-08
 

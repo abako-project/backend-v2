@@ -1447,7 +1447,7 @@ async fn independent_runtimes_share_transactions_and_retained_generation() -> Te
     let root = key(1)?;
     let id = OPERATIONS.fetch_add(1, Ordering::Relaxed);
     let path = std::env::temp_dir().join(format!(
-        "kunveno-mock-test-{}-{id}.sqlite",
+        "digesta-mock-test-{}-{id}.sqlite",
         std::process::id()
     ));
     assert!(!path.exists());

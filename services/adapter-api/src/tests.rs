@@ -301,6 +301,7 @@ async fn register(app: &App, name: &str) -> Result<(Session, String), Box<dyn st
         .next()
         .ok_or("cookie missing")?
         .to_owned();
+    assert!(cookie.starts_with("digesta_session="));
     let mut headers = HeaderMap::new();
     headers.insert(header::COOKIE, cookie.parse()?);
     Ok((auth::authenticate(app, &headers).await?, cookie))

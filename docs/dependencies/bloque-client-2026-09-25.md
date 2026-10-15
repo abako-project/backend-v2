@@ -6,7 +6,7 @@ Date: 2026-09-25
 
 ## Requirement
 
-Kunveno talks to Bloque (on/off-ramp provider) through `crates/bloque-rs`, an
+Digesta talks to Bloque (on/off-ramp provider) through `crates/bloque-rs`, an
 unofficial Rust client. Bloque's API is HTTPS-only, and the workspace `reqwest`
 had no TLS backend.
 

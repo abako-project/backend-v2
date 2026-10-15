@@ -22,4 +22,6 @@ worktrees/
 .claude/settings.local.json
 
 # Independent frontend checkout.
+/digesta-web/
+# Keep the existing checkout ignored until it is moved separately.
 /abako-web/

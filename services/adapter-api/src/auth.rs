@@ -202,7 +202,7 @@ fn view(row: &PgRow) -> Result<SessionView, Error> {
 }
 fn cookie(value: &str, secure: bool, seconds: i64) -> Result<HeaderValue, Error> {
     HeaderValue::from_str(&format!(
-        "kunveno_session={value}; HttpOnly; SameSite=Lax; Path=/api; Max-Age={seconds}{}",
+        "digesta_session={value}; HttpOnly; SameSite=Lax; Path=/api; Max-Age={seconds}{}",
         if secure { "; Secure" } else { "" }
     ))
     .map_err(|_| Error::Internal)
@@ -259,7 +259,7 @@ pub(crate) async fn authenticate(app: &App, headers: &HeaderMap) -> Result<Sessi
         .iter()
         .filter_map(|v| v.to_str().ok())
         .flat_map(|v| v.split(';'))
-        .filter_map(|part| part.trim().strip_prefix("kunveno_session="));
+        .filter_map(|part| part.trim().strip_prefix("digesta_session="));
     let token = values.next().ok_or(Error::Unauthorized)?;
     if values.next().is_some() || token.len() != 66 || parse::<AccountId32>(token).is_err() {
         return Err(Error::Unauthorized);

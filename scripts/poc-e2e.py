@@ -44,17 +44,17 @@ def temporary_postgres(stack, directory):
     socket_dir = directory / "pg-socket"
     socket_dir.mkdir()
     port = available_port()
-    subprocess.run(["initdb", "-D", str(data), "-U", "kunveno", "-A", "trust",
+    subprocess.run(["initdb", "-D", str(data), "-U", "digesta", "-A", "trust",
                     "--no-instructions"], check=True, stdout=subprocess.DEVNULL)
     subprocess.run(["pg_ctl", "-D", str(data), "-o",
                     f"-F -c listen_addresses=127.0.0.1 -p {port} -k {socket_dir}",
                     "-w", "start"], check=True, stdout=subprocess.DEVNULL)
     stack.callback(subprocess.run, ["pg_ctl", "-D", str(data), "-m", "immediate",
                                    "-w", "stop"], check=True, stdout=subprocess.DEVNULL)
-    subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(port), "-U", "kunveno",
+    subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(port), "-U", "digesta",
                     "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
-                    "CREATE DATABASE kunveno"], check=True, stdout=subprocess.DEVNULL)
-    return f"postgres://kunveno@127.0.0.1:{port}/kunveno"
+                    "CREATE DATABASE digesta"], check=True, stdout=subprocess.DEVNULL)
+    return f"postgres://digesta@127.0.0.1:{port}/digesta"
 
 
 class Client:
@@ -778,7 +778,7 @@ def scan_secret_logs(logs):
 
 def run(storage, binaries, scenario=exercise):
     with ExitStack() as stack:
-        directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="kunveno-e2e-")))
+        directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="digesta-e2e-")))
         logs = []
         adapter_database_url = temporary_postgres(stack, directory)
         secret_dir = directory / "secrets"

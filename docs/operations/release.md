@@ -11,6 +11,10 @@ Pushing a tag that matches `v*.*.*` runs `.github/workflows/release.yml`:
 1. **verify** fails unless the tagged commit is on `master`. It then runs fmt, clippy, Nextest (against a PostgreSQL service) and doc tests with Rust 1.96.1, the same compiler `infra/backend.Dockerfile` uses.
 2. **publish** builds the `adapter-api`, `wallet` and `mock-provider` targets of `infra/backend.Dockerfile` and pushes them to GHCR. It runs only if verify passes.
 
+The registry namespace is the lowercase GitHub repository owner, derived at
+runtime. In the image references below, replace `<repository-owner>` with that
+owner. Transferring the repository changes the destination for future releases.
+
 ```sh
 git switch master && git pull --ff-only
 git tag -a v0.2.0 -m "v0.2.0"
@@ -19,9 +23,9 @@ git push origin v0.2.0
 
 | Image | Source target |
 |---|---|
-| `ghcr.io/abako-project/kunveno-adapter-api` | `adapter-api` |
-| `ghcr.io/abako-project/kunveno-wallet` | `wallet` |
-| `ghcr.io/abako-project/kunveno-mock-provider` | `mock-provider` |
+| `ghcr.io/<repository-owner>/digesta-adapter-api` | `adapter-api` |
+| `ghcr.io/<repository-owner>/digesta-wallet` | `wallet` |
+| `ghcr.io/<repository-owner>/digesta-mock-provider` | `mock-provider` |
 
 Each release gets these tags. `v1.4.2` is shown as an example:
 
@@ -38,7 +42,7 @@ A prerelease such as `v1.5.0-rc.1` gets only its exact tag. It never moves `late
 
 ### GHCR access
 
-The workflow pushes with the job's `GITHUB_TOKEN`, so no repository secret is needed. The first push creates each package as **private** in the `abako-project` organization. Hosts that pull a private package need `podman login ghcr.io` with a token that has `read:packages`. Package visibility is set in the organization's package settings, not in the workflow.
+The workflow pushes with the job's `GITHUB_TOKEN`, so no repository secret is needed. Packages belong to the repository owner and are private on first publication. Hosts that pull a private package need `podman login ghcr.io` with a token that has `read:packages`. Package visibility is set in the owner's package settings, not in the workflow. The rename creates new `digesta-*` packages on the next successful release; existing packages remain until removed separately.
 
 ### Podman auto-update
 
@@ -47,11 +51,11 @@ Published images carry the label `io.containers.autoupdate=registry`. Podman cop
 - The container must run under a systemd unit, for example a Quadlet `.container` file.
 - `Image=` must be a fully qualified reference that names a moving tag. A container pinned to `1.4.2` never changes.
 
-A minimal Quadlet unit, for example `~/.config/containers/systemd/kunveno-wallet.container`:
+A minimal Quadlet unit, for example `~/.config/containers/systemd/digesta-wallet.container`:
 
 ```ini
 [Container]
-Image=ghcr.io/abako-project/kunveno-wallet:0.2
+Image=ghcr.io/<repository-owner>/digesta-wallet:0.2
 # Optional: the image label already opts in. Set AutoUpdate= here to make it explicit or to override it.
 AutoUpdate=registry
 # Environment, secrets, volumes and networks: mirror the wallet service in infra/compose.yaml.
@@ -62,7 +66,7 @@ WantedBy=default.target
 
 ```sh
 systemctl --user daemon-reload
-systemctl --user start kunveno-wallet.service
+systemctl --user start digesta-wallet.service
 systemctl --user enable --now podman-auto-update.timer
 podman auto-update --dry-run
 ```

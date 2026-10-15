@@ -2,7 +2,7 @@
 
 Updated 2026-09-25 against local `master`.
 
-Kunveno is a Rust port of the core mock-backed marketplace with approved changes.
+Digesta is a Rust port of the core mock-backed marketplace with approved changes.
 Legacy: the separate backend repository. Its `main` contains the
 provider-owned task-storage change (`d408641`) through merge `3e2b929`.
 This is not a complete compatibility port of every legacy package.

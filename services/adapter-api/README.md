@@ -11,7 +11,7 @@ served here. See `crates/generated-contracts/API.md` and `contracts/openapi.json
 Set these environment variables; only `ADAPTER_DATABASE_URL` is optional:
 
 - `ADAPTER_DATABASE_URL`: PostgreSQL URL for a non-Compose deployment. If unset,
-  the adapter uses `postgres://kunveno:kunveno-local-only@postgres:5432/kunveno_adapter`,
+  the adapter uses `postgres://digesta:digesta-local-only@postgres:5432/digesta_adapter`,
   valid for the default local Compose service. Set an explicit secure URL elsewhere.
 - `CUSTODY_URL` and `MOCK_PROVIDER_URL`: private HTTP service origins.
 - `INTERNAL_SERVICE_TOKEN_FILE`: service token file, at least 32 bytes.

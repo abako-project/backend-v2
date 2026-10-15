@@ -21,7 +21,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 FROM nginx:1.28.3-alpine AS frontend
 COPY infra/nginx/frontend.conf /etc/nginx/nginx.conf
-COPY infra/nginx/config.js /etc/kunveno/config.js
+COPY infra/nginx/config.js /etc/digesta/config.js
 COPY --from=build /dist /usr/share/nginx/html
 USER 101:101
 ENTRYPOINT ["nginx"]

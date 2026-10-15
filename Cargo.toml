@@ -14,7 +14,7 @@ members = [
 edition = "2024"
 rust-version = "1.96.1"
 license = "Apache-2.0"
-repository = "https://example.invalid/kunveno-local-only"
+repository = "https://example.invalid/digesta-local-only"
 
 [workspace.dependencies]
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }

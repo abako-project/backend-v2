@@ -2,9 +2,9 @@
   "openapi": "3.1.1",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
   "info": {
-    "title": "Kunveno public REST API",
+    "title": "Digesta public REST API",
     "version": "0.1.0",
-    "description": "Independent external and Leptos frontends use this REST/JSON API and authenticated SSE; no frontend-specific server functions. All business mutations return an asynchronous operation reference. JSON fields are camelCase; enum values are PascalCase. KVN amounts are exact decimal strings in integer token units. Both browser clients send credentials: include and X-CSRF-Token from SessionView for authenticated mutations. Configure an exact Origin allowlist; wildcard credentialed CORS is forbidden. Default cookie is kunveno_session, HttpOnly, SameSite=Lax, Path=/api, 24 hours, Secure outside local HTTP. Separate same-site origins are supported; unrelated cross-site deployment needs an explicit TLS/cookie policy, not relaxed defaults. HTTP errors are ApiError; asynchronously rejected business actions appear in OperationView. No public route accepts raw signatures, signable bytes, nonces, arbitrary provider commands or actor spoofing. Local proof of concept only; no production funds or keys."
+    "description": "Independent external and Leptos frontends use this REST/JSON API and authenticated SSE; no frontend-specific server functions. All business mutations return an asynchronous operation reference. JSON fields are camelCase; enum values are PascalCase. KVN amounts are exact decimal strings in integer token units. Both browser clients send credentials: include and X-CSRF-Token from SessionView for authenticated mutations. Configure an exact Origin allowlist; wildcard credentialed CORS is forbidden. Default cookie is digesta_session, HttpOnly, SameSite=Lax, Path=/api, 24 hours, Secure outside local HTTP. Separate same-site origins are supported; unrelated cross-site deployment needs an explicit TLS/cookie policy, not relaxed defaults. HTTP errors are ApiError; asynchronously rejected business actions appear in OperationView. No public route accepts raw signatures, signable bytes, nonces, arbitrary provider commands or actor spoofing. Local proof of concept only; no production funds or keys."
   },
   "servers": [
     {
@@ -68,7 +68,7 @@
             },
             "headers": {
               "Set-Cookie": {
-                "description": "kunveno_session=<opaque>; HttpOnly; SameSite=Lax; Path=/api; Max-Age=86400. Secure is required outside local HTTP development. Cookie is not available to JavaScript.",
+                "description": "digesta_session=<opaque>; HttpOnly; SameSite=Lax; Path=/api; Max-Age=86400. Secure is required outside local HTTP development. Cookie is not available to JavaScript.",
                 "schema": {
                   "type": "string"
                 }
@@ -116,7 +116,7 @@
           "Authentication"
         ],
         "summary": "Log in with classic credentials",
-        "description": "Sets kunveno_session; send credentials: include from either allowed frontend. Registration/login have no existing CSRF token, but a supplied Origin must be allowed.",
+        "description": "Sets digesta_session; send credentials: include from either allowed frontend. Registration/login have no existing CSRF token, but a supplied Origin must be allowed.",
         "security": [],
         "responses": {
           "200": {
@@ -130,7 +130,7 @@
             },
             "headers": {
               "Set-Cookie": {
-                "description": "kunveno_session=<opaque>; HttpOnly; SameSite=Lax; Path=/api; Max-Age=86400. Secure is required outside local HTTP development. Cookie is not available to JavaScript.",
+                "description": "digesta_session=<opaque>; HttpOnly; SameSite=Lax; Path=/api; Max-Age=86400. Secure is required outside local HTTP development. Cookie is not available to JavaScript.",
                 "schema": {
                   "type": "string"
                 }
@@ -5761,7 +5761,7 @@
       "sessionCookie": {
         "type": "apiKey",
         "in": "cookie",
-        "name": "kunveno_session",
+        "name": "digesta_session",
         "description": "Opaque session set by registration/login. HttpOnly; SameSite=Lax; Path=/api; 24-hour lifetime. Browser fetch uses credentials: include."
       },
       "csrfToken": {

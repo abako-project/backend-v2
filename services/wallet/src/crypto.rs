@@ -35,6 +35,7 @@ pub(crate) struct EncryptedSeed {
 
 // Fixed-width identities and discriminants make the associated data unambiguous.
 fn aad(wallet: WalletId, principal: Option<PrincipalId>) -> Vec<u8> {
+    // Keep format-1 associated data stable so existing wallet seeds still decrypt.
     let mut data = b"kunveno:custody:sr25519:format=1:key=1:".to_vec();
     data.extend_from_slice(wallet.as_bytes());
     data.push(u8::from(principal.is_some()));

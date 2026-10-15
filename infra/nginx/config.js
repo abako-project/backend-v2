@@ -1,1 +1,1 @@
-window.KUNVENO_API_BASE = "/api";
+window.DIGESTA_API_BASE = "/api";

@@ -160,7 +160,7 @@ Registration, login, the schema document, public profile projections and individ
 dispute reads are public;
 every other route requires a session.
 
-The cookie is `kunveno_session`, HttpOnly, SameSite=Lax, Path=/api, with a 24-hour
+The cookie is `digesta_session`, HttpOnly, SameSite=Lax, Path=/api, with a 24-hour
 lifetime. Secure is enabled outside local HTTP development. Both frontend clients
 send `credentials: "include"`. Credentialed cross-origin access requires an exact
 allowed Origin. Separate same-site origins work with this cookie policy; unrelated

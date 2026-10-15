@@ -24,7 +24,7 @@ The host/process owner remains trusted. These keys must never control real asset
 Create development secrets outside the repository:
 
 ```sh
-cargo run -p wallet -- init-dev-secrets /tmp/kunveno-local-secrets
+cargo run -p wallet -- init-dev-secrets /tmp/digesta-local-secrets
 ```
 
 The new directory is mode `0700`; all five files are created with `0600`, fresh OS

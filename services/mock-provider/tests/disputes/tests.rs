@@ -326,7 +326,7 @@ async fn memory_rejection_freeze_response_and_replay() -> TestResult {
 #[tokio::test]
 async fn sqlite_rejection_freeze_response_and_restore() -> TestResult {
     let file = std::env::temp_dir().join(format!(
-        "kunveno-disputes-{}-{}.sqlite",
+        "digesta-disputes-{}-{}.sqlite",
         std::process::id(),
         OPERATIONS.fetch_add(1, Ordering::Relaxed)
     ));
@@ -424,7 +424,7 @@ async fn delivery_without_links_still_checks_actor_ratings_and_conserves_escrow(
 #[tokio::test]
 async fn written_opening_reference_freezes_without_url_or_payment() -> TestResult {
     let file = std::env::temp_dir().join(format!(
-        "kunveno-written-case-{}-{}.sqlite",
+        "digesta-written-case-{}-{}.sqlite",
         std::process::id(),
         OPERATIONS.fetch_add(1, Ordering::Relaxed)
     ));

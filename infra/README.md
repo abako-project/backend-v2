@@ -4,15 +4,17 @@ This Compose stack implements REST-007/008 and ADR-0001. It is a local POC, not 
 
 ## Start
 
+For an existing environment, first read the [Digesta rename notes](../docs/project/digesta-rename.md) to retain its database, volume and secrets.
+
 Run from the workspace root on Linux with Docker Compose 2.24.4 or newer and a running Docker daemon accessible to your user. Host Rust 1.96.1 is used to generate development secrets. Container builds install their own toolchain and wasm-bindgen-cli 0.2.128.
 
 ```sh
 export LOCAL_UID="$(id -u)"
 export LOCAL_GID="$(id -g)"
-export KUNVENO_LOCAL_DIR="$(mktemp -d /tmp/kunveno-local.XXXXXX)"
-install -d -m 700 "$KUNVENO_LOCAL_DIR/secrets" \
-  "$KUNVENO_LOCAL_DIR/data/custody" "$KUNVENO_LOCAL_DIR/data/mock"
-cargo run --locked -p wallet -- init-dev-secrets "$KUNVENO_LOCAL_DIR/secrets"
+export DIGESTA_LOCAL_DIR="$(mktemp -d /tmp/digesta-local.XXXXXX)"
+install -d -m 700 "$DIGESTA_LOCAL_DIR/secrets" \
+  "$DIGESTA_LOCAL_DIR/data/custody" "$DIGESTA_LOCAL_DIR/data/mock"
+cargo run --locked -p wallet -- init-dev-secrets "$DIGESTA_LOCAL_DIR/secrets"
 docker compose -f infra/compose.yaml config --quiet
 docker compose -f infra/compose.yaml up --build -d --wait
 ```
@@ -46,7 +48,7 @@ retains the local-only default. Use a secure, private connection string outside
 this local setup.
 
 The example uses `/tmp`, which the operating system may clear between host reboots.
-Save the value of `KUNVENO_LOCAL_DIR` and export it again, along with your UID/GID, to
+Save the value of `DIGESTA_LOCAL_DIR` and export it again, along with your UID/GID, to
 resume the same environment. Use a private directory outside the repository on a
 persistent filesystem if you need longer-lived local data. Never rerun secret
 generation over an existing environment. This deployment uses the current file-backed
@@ -54,7 +56,7 @@ custody key, not an HSM or the discussed envelope-encryption/rotation design.
 
 ## Another frontend
 
-Both frontends consume the same `/api` REST and authenticated SSE contract. Leptos does not run inside the adapter and has no server-function dependency. Its runtime API URL is supplied by `/config.js`, which defaults to `window.KUNVENO_API_BASE = "/api"`; changing the URL requires no backend rebuild. A different public config can be mounted read-only at `/etc/kunveno/config.js` in the frontend container. Never put secrets in that file.
+Both frontends consume the same `/api` REST and authenticated SSE contract. Leptos does not run inside the adapter and has no server-function dependency. Its runtime API URL is supplied by `/config.js`, which defaults to `window.DIGESTA_API_BASE = "/api"`; changing the URL requires no backend rebuild. A different public config can be mounted read-only at `/etc/digesta/config.js` in the frontend container. Never put secrets in that file.
 
 To replace only the frontend with an existing team image that listens on port 8080:
 

@@ -160,7 +160,7 @@ impl Config {
         Ok(Self {
             bind_addr: env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into()),
             database_url: env::var("ADAPTER_DATABASE_URL").unwrap_or_else(|_| {
-                "postgres://kunveno:kunveno-local-only@postgres:5432/kunveno_adapter".into()
+                "postgres://digesta:digesta-local-only@postgres:5432/digesta_adapter".into()
             }),
             custody_url: internal_url("CUSTODY_URL")?,
             provider_url: internal_url("MOCK_PROVIDER_URL")?,

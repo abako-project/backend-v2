@@ -18,6 +18,7 @@ use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 /// Signing domain prevents interpreting this format as another protocol.
+/// These protocol bytes survive product renames to preserve signed-call compatibility.
 pub const MOCK_SIGNING_DOMAIN: [u8; 16] = *b"KUNVENO-MOCK-V1!";
 /// The signed SCALE format, independent of the public HTTP path.
 pub const PAYLOAD_VERSION: u16 = 2;

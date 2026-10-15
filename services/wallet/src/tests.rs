@@ -296,7 +296,7 @@ async fn queue_bounds_do_not_block_exact_retries() -> TestResult {
 
 fn temp_path() -> Result<PathBuf, Error> {
     Ok(std::env::temp_dir().join(format!(
-        "kunveno-custody-test-{}",
+        "digesta-custody-test-{}",
         OperationId::from_bytes(crypto::random()?)
     )))
 }
