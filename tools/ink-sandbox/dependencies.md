@@ -97,4 +97,33 @@ Primary sources: [SQLx 0.9.0](https://crates.io/crates/sqlx/0.9.0),
 [sp-state-machine 0.48.0](https://crates.io/crates/sp-state-machine/0.48.0).
 
 The owner requested **proposed** scoped exceptions on 2026-10-22. They are
-[inactive review material](policy/README.md); this is not approval to adopt them.
+[the policy record](policy/README.md). The later owner approval and integration
+review below supersede the proposal's pending status.
+
+## Shared execution shell (2026-10-22)
+
+The owner approved the reviewed SDK exceptions for integration work. The active
+SDK policy uses exactly those four advisory IDs and thirteen package/version
+license exceptions; no root policy waiver was added. The renewed lock fingerprint
+includes the shared shell and wire crates. Registry additions to the SDK graph
+already exist in the reviewed app graph; no registry package version or SDK
+cohort changed. Application root Cargo.lock adds only the local execution crate.
+
+`provider-execution` shares the existing envelope logic between the working Rust
+provider and the candidate worker. It uses schnorrkel **=0.11.5**, defaults off,
+std only, for verification. That exact primitive is already locked and used by
+both subxt-signer and the SDK. Published metadata: BSD-3-Clause, no declared
+MSRV; tested here on Rust 1.96.1. The std/curve/hash platform code retains the
+existing transitive unsafe/cryptographic implications; no new native library or
+cryptographic family is introduced. Verification parses the same public key and
+signature bytes and uses the same `substrate` context as subxt-signer 0.50.3's
+published verifier. App tests sign with Subxt; SDK tests sign with sp-core.
+
+The alternative of importing the full signer into the runtime brought unused
+mnemonic/key-derivation APIs and an additional unapproved bip39 license exception.
+The verification-only primitive avoids that expansion while retaining the same
+signature semantics. Wallet key handling and signing remain unchanged.
+
+Primary references: [schnorrkel 0.11.5](https://crates.io/crates/schnorrkel/0.11.5),
+[subxt sr25519 source](https://docs.rs/subxt-signer/0.50.3/src/subxt_signer/sr25519.rs.html).
+The published Cargo.toml/source were also inspected locally before this change.

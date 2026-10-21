@@ -2099,6 +2099,7 @@ dependencies = [
  "generated-contracts",
  "getrandom 0.4.3",
  "parity-scale-codec",
+ "provider-execution",
  "rand 0.10.2",
  "reqwest",
  "serde",
@@ -2505,6 +2506,17 @@ dependencies = [
  "syn 2.0.119",
  "version_check",
  "yansi",
+]
+
+[[package]]
+name = "provider-execution"
+version = "0.1.0"
+dependencies = [
+ "generated-contracts",
+ "getrandom 0.4.3",
+ "schnorrkel",
+ "serde",
+ "thiserror 2.0.20",
 ]
 
 [[package]]

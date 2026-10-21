@@ -55,6 +55,17 @@ impl Error {
     }
 }
 
+impl From<provider_execution::Error> for Error {
+    fn from(error: provider_execution::Error) -> Self {
+        if error.is_infrastructure() {
+            Self::internal()
+        } else if error.code() == "invalid_contract" {
+            Self::bad(error.code())
+        } else {
+            Self::domain(error.code())
+        }
+    }
+}
 impl From<generated_contracts::ValidationError> for Error {
     fn from(_: generated_contracts::ValidationError) -> Self {
         Self::domain("arithmetic_or_calendar_error")
@@ -86,10 +97,4 @@ pub(crate) fn require(condition: bool, code: &'static str) -> Result<()> {
     } else {
         Err(Error::domain(code))
     }
-}
-
-pub(crate) fn random_id() -> Result<generated_contracts::EntityId> {
-    let mut bytes = [0; 16];
-    getrandom::fill(&mut bytes).map_err(|_| Error::internal())?;
-    Ok(generated_contracts::EntityId::from_bytes(bytes))
 }

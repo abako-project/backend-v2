@@ -48,7 +48,8 @@ bash scripts/verify.sh ink-sandbox
 
 This separate native workspace checks the pinned v5 WASM against the proposed
 FRAME runtime. It runs formatting, check, strict Clippy, tests and build with its
-own lockfile. It needs neither PostgreSQL nor a node nor cargo-contract at test
+own lockfile. It also exercises the shared signed-operation shell against real
+WASM fixtures. It needs neither PostgreSQL nor a node nor cargo-contract at test
 runtime. The path-filtered `ink! v5 compatibility` workflow runs it only when the
 proof or its verification command changes; normal app builds keep their current
 dependency graph. It does not establish application parity or enable a provider
@@ -108,3 +109,13 @@ not silently included in the PR application gate.
 Record the tested commit, commands, results and limitations when reporting
 verification. Signed images, SBOMs and production promotion are not established
 by these workflows.
+
+SDK integration has a separate owner-approved, exact-lock dependency check:
+
+```sh
+bash scripts/verify.sh ink-sandbox-dependencies
+```
+
+The SDK policy expires on 2026-12-01 and accepts only its recorded package/version
+licenses and advisory IDs. A changed SDK lock requires a new review. The root
+application policy and its existing findings remain unchanged.

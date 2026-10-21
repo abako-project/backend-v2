@@ -4,6 +4,11 @@ Status: APPROVED.
 Approval: owner accepted the staged design and requested implementation on
 2026-10-21. This approves the embedded FRAME/pallet-contracts dependency family
 for the compatibility proof; it does not authorize publication or deployment.
+On 2026-10-22 the owner explicitly approved the reviewed four maintenance-advisory
+and thirteen exact-version license exceptions for SDK provider-integration work
+and requested continued implementation. The approved scope and review expiry
+are in `tools/ink-sandbox/policy/`. This does not approve additional exceptions,
+authority promotion, publication or deployment.
 
 ## Scope and invariants
 

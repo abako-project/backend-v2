@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Evaluate an inactive policy proposal against only its reviewed locked graph."""
+"""Check the owner-approved SDK policy against only its reviewed locked graph."""
 import datetime
 import hashlib
 from pathlib import Path
@@ -7,14 +7,14 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_LOCK = "049816be87a853d149f0af97887c286c7aec92f39d2f72bebb057f818c6aa731"
+EXPECTED_LOCK = "3088f663e8eb095d78fdaa220e29763063183807453d696e5f2f3ed84419828d"
 REVIEW_BY = datetime.date(2026, 12, 1)
 if hashlib.sha256((ROOT / "Cargo.lock").read_bytes()).hexdigest() != EXPECTED_LOCK:
-    sys.exit("Proposal needs a new review: Cargo.lock changed.")
+    sys.exit("SDK policy needs a new review: Cargo.lock changed.")
 if datetime.date.today() >= REVIEW_BY:
-    sys.exit("Proposal expired; review the current graph before renewing it.")
+    sys.exit("SDK policy expired; review the current graph before renewing it.")
 sys.exit(subprocess.run([
     "cargo", "deny", "--manifest-path", str(ROOT / "Cargo.toml"), "--locked",
-    "--config", str(ROOT / "policy/deny.proposed.toml"),
+    "--config", str(ROOT / "policy/deny.sdk.toml"),
     "check", "--hide-inclusion-graph",
 ], cwd=ROOT.parents[1], check=False).returncode)

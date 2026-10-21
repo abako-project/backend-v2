@@ -12,6 +12,7 @@ storage-sqlite = ["dep:sqlx"]
 mock-seed = []
 
 [dependencies]
+provider-execution.workspace = true
 domain-primitives.workspace = true
 generated-contracts.workspace = true
 axum.workspace = true

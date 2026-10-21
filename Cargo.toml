@@ -4,6 +4,7 @@ members = [
   "crates/bloque-rs",
   "crates/domain-primitives",
   "crates/generated-contracts",
+  "crates/provider-execution",
   "services/mock-provider",
   "services/wallet",
   "services/adapter-api",
@@ -17,6 +18,8 @@ license = "Apache-2.0"
 repository = "https://github.com/abako-project/backend-v2"
 
 [workspace.dependencies]
+schnorrkel = { version = "=0.11.5", default-features = false, features = ["std"] }
+provider-execution = { version = "0.1.0", path = "crates/provider-execution" }
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 domain-primitives = { version = "0.1.0", path = "crates/domain-primitives" }
 generated-contracts = { version = "0.1.0", path = "crates/generated-contracts" }

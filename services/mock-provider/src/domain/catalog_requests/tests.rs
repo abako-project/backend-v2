@@ -170,7 +170,9 @@ fn rejected_request_does_not_change_catalog() -> Result<()> {
 #[test]
 fn transition_records_a_durable_request_event() -> Result<()> {
     let root = AccountId32::from_bytes([1; 32]);
-    let owner = AccountId32::from_bytes([2; 32]);
+    let key = subxt_signer::sr25519::Keypair::from_secret_key([2; 32])
+        .map_err(|_| crate::Error::internal())?;
+    let owner = AccountId32::from_bytes(key.public_key().0);
     let mut state = State::new(root)?;
     worker(&mut state, owner)?;
     let call = UnsignedContractCallV1::new(
@@ -184,8 +186,11 @@ fn transition_records_a_durable_request_event() -> Result<()> {
             role_ids: vec![1],
         }),
     )?;
-    let bytes = call.signable_bytes()?;
-    let (state, receipt) = state.execute(VerifiedCall { call, bytes }, NOW)?;
+    let signature =
+        generated_contracts::Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0);
+    let verified =
+        VerifiedCall::verify(generated_contracts::SignedContractCallV1 { call, signature })?;
+    let (state, receipt) = state.execute(verified, NOW)?;
     assert_eq!(receipt.outcome, ExecutionOutcome::Success);
     assert_eq!(state.events(0, 10).events.len(), 1);
     assert_eq!(state.events(0, 10).events[0].recipients.len(), 2);

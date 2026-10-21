@@ -28,13 +28,7 @@ mod submissions;
 mod tests;
 mod validation;
 
-#[derive(Clone, Serialize, Deserialize)]
-struct RecordedCall {
-    bytes: Vec<u8>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    inputs: Option<execution::ExecutionInputs>,
-    receipt: OperationReceipt,
-}
+use provider_execution::{Effect, RecordedCall};
 
 #[derive(Clone, Serialize, Deserialize)]
 struct RecordedReason {
@@ -83,22 +77,6 @@ struct RustEngine {
     skill_index: BTreeMap<u32, BTreeSet<AccountId32>>,
     #[serde(skip)]
     context: execution::EngineContext,
-}
-
-struct Effect {
-    kind: DomainEventKind,
-    entity_id: Option<EntityId>,
-    recipients: BTreeSet<AccountId32>,
-}
-
-impl Effect {
-    fn new(kind: DomainEventKind, entity_id: Option<EntityId>, recipient: AccountId32) -> Self {
-        Self {
-            kind,
-            entity_id,
-            recipients: BTreeSet::from([recipient]),
-        }
-    }
 }
 
 impl State {

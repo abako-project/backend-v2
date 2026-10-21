@@ -9,8 +9,10 @@ use crate::{
     new_externalities,
 };
 use frame_support::weights::Weight;
+use generated_contracts::{AccountId32, OperationReceipt, SignedContractCallV1, UnixSeconds};
 use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism};
 use parity_scale_codec::{Decode, Encode};
+use provider_execution::Shell;
 use sp_core::H256;
 use sp_runtime::DispatchError;
 use sqlx::{
@@ -28,6 +30,40 @@ use std::{
     time::Duration,
 };
 use tokio::sync::oneshot;
+mod signed;
+pub use signed::{CalendarFixture, FixtureWorker};
+
+#[derive(Clone, Copy)]
+enum Mode {
+    Raw,
+    Calendar { root: AccountId32, gas: Weight },
+}
+impl Mode {
+    fn key(self) -> &'static str {
+        match self {
+            Self::Raw => "raw-fixture-v1",
+            Self::Calendar { .. } => "signed-calendar-v1",
+        }
+    }
+}
+enum InitialState {
+    Raw {
+        accounts: Vec<Account>,
+        shell: Vec<u8>,
+    },
+    Calendar(CalendarFixture),
+}
+impl InitialState {
+    fn mode(&self) -> Mode {
+        match self {
+            Self::Raw { .. } => Mode::Raw,
+            Self::Calendar(fixture) => Mode::Calendar {
+                root: fixture.root,
+                gas: fixture.gas_limit,
+            },
+        }
+    }
+}
 
 pub const QUEUE_CAPACITY: usize = 8;
 pub const MAX_INPUT: usize = 64 * 1024;
@@ -43,6 +79,8 @@ pub enum Error {
     StaleRevision,
     Limit,
     InvalidState,
+    Shell(provider_execution::Error),
+    IncompleteCoverage,
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -58,6 +96,8 @@ impl std::fmt::Display for Error {
                 Self::StaleRevision => "stale revision",
                 Self::Limit => "resource limit",
                 Self::InvalidState => "invalid stored state",
+                Self::Shell(error) => error.code(),
+                Self::IncompleteCoverage => "incomplete contract coverage",
             }
         )
     }
@@ -66,6 +106,11 @@ impl std::error::Error for Error {}
 impl From<ProofError> for Error {
     fn from(e: ProofError) -> Self {
         Self::Runtime(e)
+    }
+}
+impl From<provider_execution::Error> for Error {
+    fn from(error: provider_execution::Error) -> Self {
+        Self::Shell(error)
     }
 }
 impl From<sqlx::Error> for Error {
@@ -134,6 +179,12 @@ impl<T> Ticket<T> {
 }
 enum Job {
     Stop,
+    Signed {
+        call: SignedContractCallV1,
+        now: UnixSeconds,
+        reply: oneshot::Sender<Result<OperationReceipt, Error>>,
+    },
+    Shell(oneshot::Sender<Result<Shell, Error>>),
     Execute {
         expected: i64,
         invocation: Invocation,
@@ -148,6 +199,7 @@ enum Job {
 }
 #[derive(Clone)]
 pub struct Client {
+    mode: Mode,
     sender: SyncSender<Job>,
     stopping: Arc<AtomicBool>,
 }
@@ -175,6 +227,9 @@ impl Client {
         invocation: Invocation,
         shell: ShellChanges,
     ) -> Result<Ticket<Outcome>, Error> {
+        if !matches!(self.mode, Mode::Raw) {
+            return Err(Error::InvalidState);
+        }
         invocation.validate()?;
         if shell.success.len() > MAX_SHELL || shell.rejection.len() > MAX_SHELL {
             return Err(Error::Limit);
@@ -192,6 +247,32 @@ impl Client {
         invocation.validate()?;
         let (reply, result) = oneshot::channel();
         self.send(Job::Query { invocation, reply })?;
+        Ok(Ticket(result))
+    }
+    /// Fixture-only signed execution uses the real provider shell; no caller
+    /// supplies a nonce update, receipt, outcome or event.
+    pub fn execute_signed(
+        &self,
+        call: SignedContractCallV1,
+        now: UnixSeconds,
+    ) -> Result<Ticket<OperationReceipt>, Error> {
+        if !matches!(self.mode, Mode::Calendar { .. }) {
+            return Err(Error::InvalidState);
+        }
+        if call.encoded_size() > MAX_INPUT {
+            return Err(Error::Limit);
+        }
+        let (reply, result) = oneshot::channel();
+        self.send(Job::Signed { call, now, reply })?;
+        Ok(Ticket(result))
+    }
+    /// Private fixture inspection, not a public provider or HTTP snapshot.
+    pub fn shell(&self) -> Result<Ticket<Shell>, Error> {
+        if !matches!(self.mode, Mode::Calendar { .. }) {
+            return Err(Error::InvalidState);
+        }
+        let (reply, result) = oneshot::channel();
+        self.send(Job::Shell(reply))?;
         Ok(Ticket(result))
     }
     pub fn diagnostics(&self) -> Result<Ticket<Diagnostics>, Error> {
@@ -217,6 +298,19 @@ impl Worker {
         if accounts.len() > 128 || shell.len() > MAX_SHELL {
             return Err(Error::Limit);
         }
+        Self::start_with(path, InitialState::Raw { accounts, shell }).await
+    }
+    /// Start an explicit legacy-calendar fixture; this never selects sandbox
+    /// authority for the app and reports other commands as incomplete coverage.
+    pub async fn start_calendar_fixture(
+        path: PathBuf,
+        fixture: CalendarFixture,
+    ) -> Result<Self, Error> {
+        fixture.validate()?;
+        Self::start_with(path, InitialState::Calendar(fixture)).await
+    }
+    async fn start_with(path: PathBuf, initial: InitialState) -> Result<Self, Error> {
+        let mode = initial.mode();
         let (sender, receiver) = mpsc::sync_channel(QUEUE_CAPACITY);
         let stopping = Arc::new(AtomicBool::new(false));
         let stop = stopping.clone();
@@ -234,8 +328,7 @@ impl Worker {
                             .build()
                             .map_err(|_| Error::Thread)?;
                         let bundles = Bundles::pinned()?;
-                        let pool =
-                            runtime.block_on(open(path, accounts, shell, bundles.identity()))?;
+                        let pool = runtime.block_on(open(path, initial, &bundles))?;
                         if ready.send(()).is_err() {
                             runtime.block_on(pool.close());
                             return Ok(());
@@ -247,6 +340,26 @@ impl Worker {
                             };
                             match job {
                                 Job::Stop => break,
+                                Job::Signed { call, now, reply } => {
+                                    if !reply.is_closed() {
+                                        respond(
+                                            reply,
+                                            runtime.block_on(signed::execute(
+                                                &pool, &bundles, mode, call, now,
+                                            )),
+                                        );
+                                    }
+                                }
+                                Job::Shell(reply) => {
+                                    if !reply.is_closed() {
+                                        respond(
+                                            reply,
+                                            runtime.block_on(signed::read_shell(
+                                                &pool, &bundles, mode,
+                                            )),
+                                        );
+                                    }
+                                }
                                 Job::Execute {
                                     expected,
                                     invocation,
@@ -266,7 +379,8 @@ impl Worker {
                                     if !reply.is_closed() {
                                         respond(
                                             reply,
-                                            runtime.block_on(query(&pool, &bundles, invocation)),
+                                            runtime
+                                                .block_on(query(&pool, &bundles, mode, invocation)),
                                         );
                                     }
                                 }
@@ -274,7 +388,11 @@ impl Worker {
                                     if !reply.is_closed() {
                                         respond(
                                             reply,
-                                            runtime.block_on(inspect(&pool, bundles.identity())),
+                                            runtime.block_on(inspect(
+                                                &pool,
+                                                bundles.identity(),
+                                                mode,
+                                            )),
                                         );
                                     }
                                 }
@@ -295,7 +413,11 @@ impl Worker {
             })
             .map_err(|_| Error::Thread)?;
         let mut worker = Self {
-            client: Client { sender, stopping },
+            client: Client {
+                mode,
+                sender,
+                stopping,
+            },
             join: Some(join),
             done: Some(done),
         };
@@ -353,10 +475,10 @@ fn respond<T>(reply: oneshot::Sender<Result<T, Error>>, result: Result<T, Error>
 
 async fn open(
     path: PathBuf,
-    accounts: Vec<Account>,
-    shell: Vec<u8>,
-    identity: Identity,
+    initial: InitialState,
+    bundles: &Bundles,
 ) -> Result<SqlitePool, Error> {
+    let mode = initial.mode();
     let options = SqliteConnectOptions::new()
         .filename(path)
         .create_if_missing(true)
@@ -367,21 +489,29 @@ async fn open(
         .acquire_timeout(Duration::from_secs(6))
         .connect_with(options)
         .await?;
-    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 1048576), outcome BLOB NOT NULL CHECK(length(outcome) <= 131072))").execute(&pool).await?;
+    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-calendar-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 1048576), outcome BLOB NOT NULL CHECK(length(outcome) <= 131072))").execute(&pool).await?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let exists: i64 = sqlx::query_scalar("SELECT count(*) FROM candidate_state")
         .fetch_one(&mut *tx)
         .await?;
     if exists == 0 {
-        let checkpoint = Checkpoint::capture(new_externalities(accounts)?)?.to_bytes()?;
-        sqlx::query("INSERT INTO candidate_state VALUES (1, 0, ?, ?, ?)")
+        let (ext, shell) = match initial {
+            InitialState::Raw { accounts, shell } => (new_externalities(accounts)?, shell),
+            InitialState::Calendar(fixture) => signed::initialize(bundles, fixture)?,
+        };
+        let checkpoint = Checkpoint::capture(ext)?.to_bytes()?;
+        sqlx::query("INSERT INTO candidate_state (singleton, revision, mode, runtime, shell, outcome) VALUES (1, 0, ?, ?, ?, ?)")
+            .bind(mode.key())
             .bind(checkpoint)
             .bind(shell)
             .bind(Vec::<u8>::new())
             .execute(&mut *tx)
             .await?;
     }
-    load(&mut tx, identity).await?;
+    let stored = load(&mut tx, bundles.identity(), mode).await?;
+    if let Mode::Calendar { root, .. } = mode {
+        signed::validate(&stored, bundles, root)?;
+    }
     tx.commit().await?;
     Ok(pool)
 }
@@ -389,19 +519,22 @@ struct Stored {
     revision: i64,
     checkpoint: Checkpoint,
     bytes: usize,
+    shell: Vec<u8>,
 }
 async fn load(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
     identity: Identity,
+    mode: Mode,
 ) -> Result<Stored, Error> {
     // Check lengths in SQL before materializing potentially corrupt blobs.
-    let row = sqlx::query("SELECT revision, runtime FROM candidate_state WHERE singleton = 1 AND revision >= 0 AND length(runtime) <= 67108864 AND length(shell) <= 1048576 AND length(outcome) <= 131072").fetch_optional(&mut **tx).await?.ok_or(Error::InvalidState)?;
+    let row = sqlx::query("SELECT revision, runtime, shell FROM candidate_state WHERE singleton = 1 AND mode = ? AND revision >= 0 AND length(runtime) <= 67108864 AND length(shell) <= 1048576 AND length(outcome) <= 131072").bind(mode.key()).fetch_optional(&mut **tx).await?.ok_or(Error::InvalidState)?;
     let revision: i64 = row.try_get("revision")?;
     let bytes: Vec<u8> = row.try_get("runtime")?;
     Ok(Stored {
         revision,
         checkpoint: Checkpoint::decode_for(&bytes, identity)?,
         bytes: bytes.len(),
+        shell: row.try_get("shell")?,
     })
 }
 fn run(
@@ -488,7 +621,7 @@ async fn execute(
     shell: ShellChanges,
 ) -> Result<Outcome, Error> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let stored = load(&mut tx, bundles.identity()).await?;
+    let stored = load(&mut tx, bundles.identity(), Mode::Raw).await?;
     if stored.revision != expected {
         tx.rollback().await?;
         return Err(Error::StaleRevision);
@@ -511,17 +644,18 @@ async fn execute(
 async fn query(
     pool: &SqlitePool,
     bundles: &Bundles,
+    mode: Mode,
     invocation: Invocation,
 ) -> Result<Outcome, Error> {
     let mut tx = pool.begin().await?;
-    let stored = load(&mut tx, bundles.identity()).await?;
+    let stored = load(&mut tx, bundles.identity(), mode).await?;
     let outcome = run(&mut stored.checkpoint.restore()?, bundles, invocation)?;
     tx.rollback().await?;
     Ok(outcome)
 }
-async fn inspect(pool: &SqlitePool, identity: Identity) -> Result<Diagnostics, Error> {
+async fn inspect(pool: &SqlitePool, identity: Identity, mode: Mode) -> Result<Diagnostics, Error> {
     let mut tx = pool.begin().await?;
-    let stored = load(&mut tx, identity).await?;
+    let stored = load(&mut tx, identity, mode).await?;
     tx.rollback().await?;
     Ok(Diagnostics {
         revision: stored.revision,
@@ -563,6 +697,7 @@ mod tests {
     fn full_queue_and_shutdown_reject_admission() {
         let (sender, _receiver) = mpsc::sync_channel(QUEUE_CAPACITY);
         let client = Client {
+            mode: Mode::Raw,
             sender,
             stopping: Arc::new(AtomicBool::new(false)),
         };

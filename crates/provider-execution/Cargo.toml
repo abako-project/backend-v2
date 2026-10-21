@@ -1,0 +1,18 @@
+[package]
+name = "provider-execution"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+generated-contracts.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+getrandom.workspace = true
+schnorrkel.workspace = true
+
+[lints]
+workspace = true

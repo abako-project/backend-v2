@@ -9,8 +9,10 @@
 
 Services access each other's HTTP interfaces, not databases. Identifiers link records across boundaries without cross-service foreign keys. Browser DTOs are defined in generated-contracts; service storage models remain private.
 
-Inside the provider, the Rust engine owns business state; the signed-envelope
-shell owns generation, nonces, receipts and event cursors. One captured time and
+Inside the provider, the Rust engine owns business state; the shared
+`provider-execution` shell owns generation, nonces, receipts and event cursors.
+The same shell is used by the SDK worker's explicit fixtures; the SDK is not a
+root workspace dependency or an application authority mode. One captured time and
 entropy input is retained for each new accepted execution, including recorded
 domain rejections. Old receipts remain readable without those inputs.
 

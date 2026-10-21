@@ -15,6 +15,9 @@ default = ["std"]
 std = []
 
 [dependencies]
+provider-execution = { version = "=0.1.0", path = "../../crates/provider-execution" }
+generated-contracts = { version = "=0.1.0", path = "../../crates/generated-contracts" }
+serde = { version = "1.0.229", features = ["derive"] }
 frame-support = "=43.0.0"
 frame-system = "=43.0.0"
 pallet-balances = "=44.0.0"

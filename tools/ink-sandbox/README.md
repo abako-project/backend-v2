@@ -70,20 +70,42 @@ unsupported or incompatible state rejects startup without resetting genesis.
 The old version-1 proof format was never a provider format and is not migrated.
 The existing Rust provider's JSON/SQLite format is unchanged.
 
-This is milestone 2's **isolated candidate infrastructure**, not a complete
-provider integration. `ShellChanges` carries fixture envelopes; the actual
-provider shell's nonce/receipt/event codec and operation ABI bridge have not
-been connected. There is no public raw-contract endpoint, shadow comparison or
-authority switch. Private diagnostics expose only revision, identity, trie root
-and checkpoint size through the Rust library. They are not an HTTP route.
+Milestone 2 also uses the real `provider-execution` shell shared with the
+working Rust provider. `Worker::start_calendar_fixture` opens explicit genesis
+fixtures, verifies signatures, admits/replays operations and commits the runtime
+with actual nonces, receipts, captured inputs and events. Clients cannot supply
+transport outcomes. Raw mutation admission rejects signed fixture stores; their
+mode, root, checkpoint and pinned Calendar code are checked on startup.
 
-Dependency-policy adoption remains a gate. The owner requested a concrete
-[exception proposal](policy/README.md), which is inactive pending review.
+The fixture bridge supports only `SetCalendar` whole-hour weekly capacity with
+no overrides, against pre-registered fixture accounts and explicit calendar IDs.
+Other commands or unsupported shapes return `IncompleteCoverage` with no nonce,
+receipt or business write. This demonstrates shell/ABI integration; it does not
+claim Directory/Calendar parity, which remains M3. There is no public raw-contract
+endpoint, sandbox authority selector, shadow success claim or frontend change.
+Private library diagnostics expose revision, identity, root and size only.
+
+The owner approved the exact [SDK exceptions](policy/README.md) for integration
+work on 2026-10-22. Check the expiring, exact-lock SDK policy separately:
+
+```sh
+bash scripts/verify.sh ink-sandbox-dependencies
+```
+
+The root application graph adds only the shared shell crate; it acquires no SDK
+packages. Its existing advisory/license findings are not waived. The full signer
+remains in wallet/app tests; the shared verification shell uses the exact same
+Schnorrkel primitive and context without importing key derivation into the SDK.
+
+The candidate SQLite schema now distinguishes raw and signed fixture modes.
+Earlier proof/candidate SQLite files without the mode column reject startup;
+these were never application provider data. Runtime/lock identity changes also
+reject old candidate checkpoints. Existing app SQLite/JSON opens unchanged.
+
 `NoRandomness` is still unused v5 host scaffolding, not matching entropy.
 Host-call weights are conservative finite proof limits, not production
 benchmarks. Passing tests establishes neither application parity nor the
-specified latency budgets. Full import/rollback, shell integration and domain
-contracts remain later work.
+specified latency budgets. Full import/rollback and domain contracts remain later work.
 
 See [dependency review](dependencies.md) and the recorded implementation evidence
 in [the handoff](../../progress/handoffs/SPEC-0013.md) before promoting this runtime into

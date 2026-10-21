@@ -4,12 +4,20 @@ on:
   pull_request:
     paths:
       - 'tools/ink-sandbox/**'
+      - 'crates/provider-execution/**'
+      - 'crates/generated-contracts/**'
+      - 'crates/domain-primitives/**'
+      - 'Cargo.toml'
       - 'scripts/verify.sh'
       - '.github/workflows/ink-sandbox.yml'
   push:
     branches: [master]
     paths:
       - 'tools/ink-sandbox/**'
+      - 'crates/provider-execution/**'
+      - 'crates/generated-contracts/**'
+      - 'crates/domain-primitives/**'
+      - 'Cargo.toml'
       - 'scripts/verify.sh'
       - '.github/workflows/ink-sandbox.yml'
   workflow_dispatch:

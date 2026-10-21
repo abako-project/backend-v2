@@ -1,32 +1,33 @@
-# SDK policy proposal
+# SDK integration dependency policy
 
-Status: **PROPOSED, awaiting owner review.** Requested 2026-10-22.
-No normal verification command, CI job or provider loads this configuration.
-The root `deny.toml` is unchanged. This proposal does not approve distribution,
-provider integration, images or deployment.
+Status: **APPROVED for provider-integration work**, owner confirmation 2026-10-22.
+The owner approved the four maintenance advisories and thirteen exact package
+license exceptions below. Approval does not cover extra exceptions, authority
+promotion, release publication or deployment. The application root policy is
+unchanged; SDK policy has its own explicit verification command.
 
-The proposed configuration keeps the root allowlist, source restrictions,
+The SDK configuration keeps the root allowlist, source restrictions,
 yanked-package check and bans. It adds only the entries below. It is limited to
 this standalone candidate workspace. License exceptions select exact package
 versions; advisory ignores select exact advisory IDs. The installed cargo-deny
 0.20.2 cannot constrain an advisory ignore by package version/parent (newer online
-docs describe unsupported keys), so the evaluation script pins the entire lockfile
+docs describe unsupported keys), so the policy script pins the entire lockfile
 by SHA-256 and refuses changes. It also expires on 2026-12-01. Both restrictions
 belong to the wrapper; invoking cargo-deny directly bypasses them.
 
 ```sh
-python3 tools/ink-sandbox/policy/check_proposal.py
+python3 tools/ink-sandbox/policy/check.py
 ```
 
-This fetches current advisory data, so the same proposal can still fail on a new
+This fetches current advisory data, so the same policy can still fail on a new
 advisory. No vulnerability, unsoundness or yanked-package finding is broadly
-suppressed. Evaluate this graph again before adopting a provider integration.
+suppressed. Review this graph again whenever its locked dependencies change.
 
 ## Maintenance advisories
 
 All four are unmaintained/deprecated notices, with no patched version reported
 by RustSec. Acceptance retains maintenance risk; it does not demonstrate that the
-code is safe. Proposed acceptance lasts only through the review date.
+code is safe. Acceptance lasts only through the review date.
 
 | Package / advisory | Exposure and reason | Replacement path |
 |---|---|---|
@@ -44,11 +45,10 @@ substitution to make the scanner green.
 
 ## License expressions
 
-These are package-specific proposed policy permissions, not a conclusion about
+These are package-specific approved policy permissions, not a conclusion about
 license compatibility or fulfillment of distribution obligations. In particular,
 allowing GPL-3.0-only in a scanner does not resolve obligations for a distributed
-combined executable. Owner review must address that before application linkage
-or distribution. Do not relabel upstream licenses or add GPL/CC0 globally.
+combined executable. Distribution obligations remain a separate release decision. Do not relabel upstream licenses or add GPL/CC0 globally.
 
 | Expression | Exact packages |
 |---|---|
@@ -66,8 +66,7 @@ explain why package-level permissions are narrower than a global allowlist.
 
 ## Observed evaluation
 
-2026-10-22, cargo-deny 0.20.2, locked graph: proposed configuration passes
-advisories, bans, licenses and sources. Multiple-version/deprecated-SPDX warnings
-remain. The normal policy still rejects the recorded SDK maintenance/license
-findings. A successful proposal scan is evidence for review, not active policy
-approval or a completed provider-integration gate.
+2026-10-22, cargo-deny 0.20.2: the locked integration graph passes advisories,
+bans, licenses and sources under these exact exceptions. Multiple-version and
+deprecated-SPDX warnings remain. The unchanged root policy still rejects its
+recorded findings; those findings remain unwaived.

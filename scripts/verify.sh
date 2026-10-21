@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 usage() {
-  echo "Usage: bash scripts/verify.sh [app|ink-sandbox|containers|dependencies]"
+  echo "Usage: bash scripts/verify.sh [app|ink-sandbox|ink-sandbox-dependencies|containers|dependencies]"
 }
 [[ $# -le 1 ]] || { usage >&2; exit 2; }
 case "${1:-app}" in
@@ -31,6 +31,9 @@ case "${1:-app}" in
     cargo clippy --manifest-path "$manifest" --all-targets --all-features --locked -- -D warnings
     cargo test --manifest-path "$manifest" --all-features --locked
     cargo build --manifest-path "$manifest" --all-targets --all-features --locked
+    ;;
+  ink-sandbox-dependencies)
+    python3 tools/ink-sandbox/policy/check.py
     ;;
   containers)
     # Rendering uses synthetic values; no application secret is read.
