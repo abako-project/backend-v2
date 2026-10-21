@@ -20,6 +20,31 @@ an endless storage-writing loop, including rollback after gas exhaustion.
 The marketplace fixture exercises **legacy** contract behavior to establish VM compatibility;
 it does not establish parity with the current application or authorize switching.
 
+## M3 Calendar slice
+
+The separate `calendar-v5` candidate implements integer minutes, ISO weeks,
+weekly overrides and append-only reservations from the current app. Its real
+WASM and the Rust engine independently replay
+[`calendar/fixtures/parity.json`](../../services/mock-provider/src/calendar/fixtures/parity.json).
+The cases compare allocations, availability, capacity changes, domain errors
+and retained project/milestone/requirement references. Additional WASM tests
+exercise caller restrictions, query isolation, malformed weeks, metering,
+competing SQLite workers and restart. The old four compatibility artifacts stay
+unchanged. Directory and signed candidate routing are the next M3 slice; the
+existing signed Calendar fixture still tests the legacy contract.
+
+Directory will create one Calendar instance per worker. Only the worker or its
+creating Directory can change capacity; only an immutable reservation controller
+can reserve. These tests pass explicit fixture accounts as those capabilities.
+They do not implement Project permissions or expose a new provider/browser API.
+No calendar release operation is added: the approved rules retain consumed hours.
+
+Adding the bundle changes the pinned candidate cohort identity. Existing private
+candidate databases fail closed; use a new disposable fixture database. Ordinary
+mock-provider SQLite data and its Rust authority remain unchanged. Large-state
+import, performance budgets and complete M3 parity remain open. See the
+[slice handoff](../../progress/handoffs/SPEC-0013-M3-CALENDAR.md).
+
 The committed `fixtures/manifest.json` pins canonical source commit, toolchain,
 artifact hashes and per-contract dependency locks. Tests verify artifact and
 lock hashes before instantiation. With cargo-contract 5.0.3, Rust 1.88.0 and its

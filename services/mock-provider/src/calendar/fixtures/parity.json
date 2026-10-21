@@ -1,0 +1,536 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "ISO year transition and retained reservations",
+      "initial": {
+        "calendarId": "0x01010101010101010101010101010101",
+        "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "definition": {
+          "defaultWeeklyMinutes": 60,
+          "overrides": [
+            {
+              "week": {
+                "isoYear": 2026,
+                "week": 53
+              },
+              "capacity": 0
+            },
+            {
+              "week": {
+                "isoYear": 2027,
+                "week": 1
+              },
+              "capacity": 20
+            }
+          ]
+        },
+        "reservations": []
+      },
+      "actions": [
+        {
+          "kind": "allocation",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 53
+            },
+            "end": {
+              "isoYear": 2027,
+              "week": 2
+            }
+          },
+          "minutes": 70,
+          "expected": [
+            [
+              {
+                "isoYear": 2027,
+                "week": 1
+              },
+              20
+            ],
+            [
+              {
+                "isoYear": 2027,
+                "week": 2
+              },
+              50
+            ]
+          ]
+        },
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 53
+            },
+            "end": {
+              "isoYear": 2027,
+              "week": 2
+            }
+          },
+          "minutes": 70,
+          "expected": [
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2027,
+                "week": 1
+              },
+              "minutes": 20
+            },
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2027,
+                "week": 2
+              },
+              "minutes": 50
+            }
+          ]
+        },
+        {
+          "kind": "available",
+          "week": {
+            "isoYear": 2027,
+            "week": 2
+          },
+          "expected": 10
+        },
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 53
+            },
+            "end": {
+              "isoYear": 2027,
+              "week": 2
+            }
+          },
+          "minutes": 11,
+          "error": "insufficient_capacity"
+        },
+        {
+          "kind": "setCalendar",
+          "definition": {
+            "defaultWeeklyMinutes": 49,
+            "overrides": [
+              {
+                "week": {
+                  "isoYear": 2026,
+                  "week": 53
+                },
+                "capacity": 0
+              },
+              {
+                "week": {
+                  "isoYear": 2027,
+                  "week": 1
+                },
+                "capacity": 20
+              }
+            ]
+          },
+          "error": "calendar_overcommitted"
+        },
+        {
+          "kind": "setCalendar",
+          "definition": {
+            "defaultWeeklyMinutes": 100,
+            "overrides": [
+              {
+                "week": {
+                  "isoYear": 2026,
+                  "week": 53
+                },
+                "capacity": 0
+              },
+              {
+                "week": {
+                  "isoYear": 2027,
+                  "week": 1
+                },
+                "capacity": 20
+              }
+            ]
+          },
+          "expected": [
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2027,
+                "week": 1
+              },
+              "minutes": 20
+            },
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2027,
+                "week": 2
+              },
+              "minutes": 50
+            }
+          ]
+        },
+        {
+          "kind": "available",
+          "week": {
+            "isoYear": 2027,
+            "week": 2
+          },
+          "expected": 50
+        },
+        {
+          "kind": "setCalendar",
+          "definition": {
+            "defaultWeeklyMinutes": 100,
+            "overrides": [
+              {
+                "week": {
+                  "isoYear": 2027,
+                  "week": 1
+                },
+                "capacity": 19
+              }
+            ]
+          },
+          "error": "calendar_overcommitted"
+        },
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 1900,
+              "week": 1
+            },
+            "end": {
+              "isoYear": 2100,
+              "week": 1
+            }
+          },
+          "minutes": 0,
+          "expected": [
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2027,
+                "week": 1
+              },
+              "minutes": 20
+            },
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2027,
+                "week": 2
+              },
+              "minutes": 50
+            }
+          ]
+        },
+        {
+          "kind": "allocation",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 53
+            },
+            "end": {
+              "isoYear": 2027,
+              "week": 2
+            }
+          },
+          "minutes": 0,
+          "expected": []
+        },
+        {
+          "kind": "setCalendar",
+          "definition": {
+            "defaultWeeklyMinutes": 100,
+            "overrides": [
+              {
+                "week": {
+                  "isoYear": 2027,
+                  "week": 1
+                },
+                "capacity": 20
+              },
+              {
+                "week": {
+                  "isoYear": 2027,
+                  "week": 1
+                },
+                "capacity": 20
+              }
+            ]
+          },
+          "error": "invalid_contract"
+        }
+      ]
+    },
+    {
+      "name": "full u32 capacity without wrapping",
+      "initial": {
+        "calendarId": "0x01010101010101010101010101010101",
+        "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "definition": {
+          "defaultWeeklyMinutes": 4294967295,
+          "overrides": []
+        },
+        "reservations": []
+      },
+      "actions": [
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 1
+            },
+            "end": {
+              "isoYear": 2026,
+              "week": 1
+            }
+          },
+          "minutes": 4294967295,
+          "expected": [
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2026,
+                "week": 1
+              },
+              "minutes": 4294967295
+            }
+          ]
+        },
+        {
+          "kind": "available",
+          "week": {
+            "isoYear": 2026,
+            "week": 1
+          },
+          "expected": 0
+        },
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 1
+            },
+            "end": {
+              "isoYear": 2026,
+              "week": 1
+            }
+          },
+          "minutes": 1,
+          "error": "insufficient_capacity"
+        },
+        {
+          "kind": "setCalendar",
+          "definition": {
+            "defaultWeeklyMinutes": 0,
+            "overrides": []
+          },
+          "error": "calendar_overcommitted"
+        }
+      ]
+    },
+    {
+      "name": "zero defaults and sparse overrides",
+      "initial": {
+        "calendarId": "0x01010101010101010101010101010101",
+        "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "definition": {
+          "defaultWeeklyMinutes": 0,
+          "overrides": [
+            {
+              "week": {
+                "isoYear": 2027,
+                "week": 1
+              },
+              "capacity": 15
+            }
+          ]
+        },
+        "reservations": []
+      },
+      "actions": [
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 53
+            },
+            "end": {
+              "isoYear": 2027,
+              "week": 2
+            }
+          },
+          "minutes": 15,
+          "expected": [
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2027,
+                "week": 1
+              },
+              "minutes": 15
+            }
+          ]
+        },
+        {
+          "kind": "available",
+          "week": {
+            "isoYear": 2027,
+            "week": 2
+          },
+          "expected": 0
+        },
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 53
+            },
+            "end": {
+              "isoYear": 2027,
+              "week": 2
+            }
+          },
+          "minutes": 1,
+          "error": "insufficient_capacity"
+        }
+      ]
+    },
+    {
+      "name": "ISO proleptic year zero",
+      "initial": {
+        "calendarId": "0x01010101010101010101010101010101",
+        "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "definition": {
+          "defaultWeeklyMinutes": 2,
+          "overrides": []
+        },
+        "reservations": []
+      },
+      "actions": [
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": -1,
+              "week": 52
+            },
+            "end": {
+              "isoYear": 0,
+              "week": 1
+            }
+          },
+          "minutes": 3,
+          "expected": [
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": -1,
+                "week": 52
+              },
+              "minutes": 2
+            },
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 0,
+                "week": 1
+              },
+              "minutes": 1
+            }
+          ]
+        },
+        {
+          "kind": "available",
+          "week": {
+            "isoYear": 0,
+            "week": 1
+          },
+          "expected": 1
+        }
+      ]
+    },
+    {
+      "name": "capacity has no invented weekly ceiling",
+      "initial": {
+        "calendarId": "0x01010101010101010101010101010101",
+        "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "definition": {
+          "defaultWeeklyMinutes": 200000,
+          "overrides": []
+        },
+        "reservations": []
+      },
+      "actions": [
+        {
+          "kind": "reserve",
+          "window": {
+            "start": {
+              "isoYear": 2026,
+              "week": 10
+            },
+            "end": {
+              "isoYear": 2026,
+              "week": 10
+            }
+          },
+          "minutes": 199999,
+          "expected": [
+            {
+              "projectId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+              "milestoneId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+              "requirementKey": 7,
+              "week": {
+                "isoYear": 2026,
+                "week": 10
+              },
+              "minutes": 199999
+            }
+          ]
+        },
+        {
+          "kind": "available",
+          "week": {
+            "isoYear": 2026,
+            "week": 10
+          },
+          "expected": 1
+        }
+      ]
+    }
+  ]
+}
