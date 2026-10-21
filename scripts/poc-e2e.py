@@ -23,6 +23,8 @@ import time
 import urllib.error
 import urllib.request
 
+from test_postgres import available_port, temporary_postgres
+
 
 ROOT = Path(__file__).resolve().parents[1]
 ORIGINS = ("http://localhost:8088", "http://localhost:5173")
@@ -31,30 +33,6 @@ ORIGINS = ("http://localhost:8088", "http://localhost:5173")
 def require(condition, message):
     if not condition:
         raise AssertionError(message)
-
-
-def available_port():
-    with socket.socket() as listener:
-        listener.bind(("127.0.0.1", 0))
-        return listener.getsockname()[1]
-
-
-def temporary_postgres(stack, directory):
-    data = directory / "postgres"
-    socket_dir = directory / "pg-socket"
-    socket_dir.mkdir()
-    port = available_port()
-    subprocess.run(["initdb", "-D", str(data), "-U", "digesta", "-A", "trust",
-                    "--no-instructions"], check=True, stdout=subprocess.DEVNULL)
-    subprocess.run(["pg_ctl", "-D", str(data), "-o",
-                    f"-F -c listen_addresses=127.0.0.1 -p {port} -k {socket_dir}",
-                    "-w", "start"], check=True, stdout=subprocess.DEVNULL)
-    stack.callback(subprocess.run, ["pg_ctl", "-D", str(data), "-m", "immediate",
-                                   "-w", "stop"], check=True, stdout=subprocess.DEVNULL)
-    subprocess.run(["psql", "-h", "127.0.0.1", "-p", str(port), "-U", "digesta",
-                    "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-c",
-                    "CREATE DATABASE digesta"], check=True, stdout=subprocess.DEVNULL)
-    return f"postgres://digesta@127.0.0.1:{port}/digesta"
 
 
 class Client:

@@ -65,7 +65,9 @@ is outside the intended scope.
   establish tenant isolation, DAO membership or automatic asset metadata queries.
 - Custody encrypts seeds using a file-backed master key. HSM/envelope encryption,
   online key rotation and production recovery policy remain future work.
-- Dependency-policy findings and production supply-chain gaps remain explicit in
+- The fresh dependency check reports six vulnerability advisories in locked TLS
+  dependencies, plus license-policy and maintenance findings. These and production
+  supply-chain gaps remain explicit in
   [supply-chain status](../security/supply-chain.md). Package metadata and the
   template license notice need an owner decision before being treated as a settled
   project licensing statement.

@@ -2,13 +2,13 @@
 
 This repository is a local POC. Its integrated commits and test handoffs are development evidence, not production releases. Published images are a delivery convenience; they do not make the backend production-ready.
 
-Before marking a feature complete, run its acceptance checks and applicable AGENTS.md gates and record the command results against the tested revision. POC-07 and TASK-005 have independent handoffs for local mock-backed POC acceptance; custody recovery and dependency-policy gaps still bar production claims.
+Before marking a feature complete, run its acceptance checks and applicable [verification commands](../../ci/README.md) and record the command results against the tested revision. POC-07 and TASK-005 have independent handoffs for local mock-backed POC acceptance; custody recovery and dependency-policy gaps still bar production claims.
 
 ## Container images
 
 Pushing a tag that matches `v*.*.*` runs `.github/workflows/release.yml`:
 
-1. **verify** fails unless the tagged commit is on `master`. It then runs fmt, clippy, Nextest (against a PostgreSQL service) and doc tests with Rust 1.96.1, the same compiler `infra/backend.Dockerfile` uses.
+1. **verify** calls the shared Verify workflow, requiring the tagged commit to belong to `master`. It runs `bash scripts/verify.sh app`, including disposable PostgreSQL tests, both mock E2E modes and the frontend WASM check, with Rust 1.96.1, the compiler used by `infra/backend.Dockerfile`. The same application checks run on PRs and pushes to `master`.
 2. **publish** builds the `adapter-api`, `wallet` and `mock-provider` targets of `infra/backend.Dockerfile` and pushes them to GHCR. It runs only if verify passes.
 
 The registry namespace is the lowercase GitHub repository owner, derived at

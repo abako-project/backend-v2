@@ -1,23 +1,95 @@
-# Verification and delivery
+# Verification and CI
 
-This is a mock-backed development backend. Tagged releases have a verification
-and image-publication workflow; they do not establish production readiness.
+Run the same application checks locally and in GitHub Actions:
 
-Run `bash scripts/verify.sh` for Cargo gates and the mock feature matrix,
-`python3 scripts/poc-e2e.py` after building for real-service E2E, and
-`python3 infra/verify.py` for Compose/Nginx checks.
-The full gate script needs Nextest, cargo-deny, cargo-audit and the wasm32 target.
+```sh
+bash scripts/install-dev-tools.sh
+bash scripts/verify.sh app
+```
 
-Dependency policy currently fails under the checked-in configuration. See
-[dependency evidence](../docs/dependencies/poc-audit-2026-09-10.md).
-POC-07 and TASK-005 have historical local acceptance evidence; see
-[project status](../docs/project/project-context.md).
+## Prerequisites
 
-Remote CI runs only on version tags. `.github/workflows/release.yml` verifies
-the tagged `master` commit and publishes the backend images to GHCR. See
-[release policy](../docs/operations/release.md). Pull requests and pushes to
-`master` have no CI yet. The approved simplification plan adds shared PR checks
-in milestone 3.
+- The pinned Rust 1.96.1 toolchain, rustfmt, Clippy and the
+  `wasm32-unknown-unknown` target. The installer sets up those components.
+- Python 3 and PostgreSQL server tools `initdb`, `pg_ctl` and `psql` on `PATH`.
+  On Debian/Ubuntu, install `postgresql` and add its versioned server bin
+  directory (for example `/usr/lib/postgresql/17/bin`) to `PATH`.
+- A non-root user able to start local processes and bind loopback test ports.
+  Tests use temporary directories; no existing application database or secret
+  directory is needed.
 
-Signed release artifacts, image scans and production promotion require an
-approved setup. Published images do not establish production readiness.
+Application verification runs formatting, workspace check, strict Clippy,
+workspace tests, doctests, the mock's isolated memory/SQLite feature combinations,
+workspace build, frontend WASM check and the real-service E2E in both mock modes.
+It uses Cargo's built-in test runner; Nextest is not a prerequisite.
+
+`scripts/test_postgres.py` starts disposable PostgreSQL for workspace tests and
+stops it after the command. An explicit `TEST_ADAPTER_DATABASE_URL` can select an
+existing **test** database instead; tests create isolated schemas there. E2E
+always starts its own disposable PostgreSQL and real services. Both helpers
+remove their temporary data and require local socket access. `CARGO_TARGET_DIR`
+is respected when selecting the E2E binaries.
+
+To run only backend E2E after building:
+
+```sh
+cargo build -p adapter-api -p wallet -p mock-provider --all-features --locked
+python3 scripts/poc-e2e.py
+```
+
+These are API checks. Browser behavior and the external frontend require a
+separate walkthrough.
+
+## Container and gateway checks
+
+With a running Docker daemon accessible to your user:
+
+```sh
+bash scripts/verify.sh containers
+```
+
+This checks Compose isolation, the independent frontend override, Nginx routing
+and SSE transport, then builds all three backend image targets as local
+`:verification` tags. It publishes nothing and reads no application secrets.
+To check Compose rendering alone without a daemon:
+
+```sh
+python3 infra/verify.py --config-only
+```
+
+See the [Compose guide](../infra/README.md) for the full stack and browser image.
+
+## Dependency policy and optional tools
+
+```sh
+bash scripts/install-dev-tools.sh --security
+bash scripts/verify.sh dependencies
+```
+
+The dependency command runs both cargo-deny and cargo-audit and fails if either
+fails or is unavailable. These checks remain separate from the application gate:
+existing license/advisory-policy findings are documented in
+[supply-chain status](../docs/security/supply-chain.md). Application verification
+passing does not mean the dependency policy passes.
+
+Coverage (`--coverage`) and nightly/Miri (`--miri`) are opt-in installer choices.
+Their installation does not run those checks or establish coverage evidence.
+
+## GitHub Actions and delivery
+
+[Verify](../.github/workflows/verify.yml) runs `scripts/verify.sh app` for pull
+requests and pushes to `master`. It is also the reusable verification job called
+by [Release](../.github/workflows/release.yml). CI installs native PostgreSQL
+server tools and the same pinned Rust toolchain/target; it requires no agent
+bootstrap or model credentials. Third-party actions remain SHA-pinned, checkout
+credentials are not persisted, and verification has read-only repository access.
+
+Version tags still require the tagged commit to belong to `master`. Only after
+shared verification succeeds does Release publish the three backend images.
+Image names and tag conventions are unchanged; see [release policy](../docs/operations/release.md).
+The container/gateway and dependency-policy commands are explicit separate checks,
+not silently included in the PR application gate.
+
+Record the tested commit, commands, results and limitations when reporting
+verification. Signed images, SBOMs and production promotion are not established
+by these workflows.

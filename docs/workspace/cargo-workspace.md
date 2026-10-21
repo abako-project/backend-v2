@@ -21,9 +21,7 @@ The mock defaults to `storage-sqlite` and `mock-seed`. `storage-memory` is an
 alternative; compiling both permits runtime selection through `MOCK_STORAGE`.
 SQLite is the Compose default. Catalog seeding preserves existing edits.
 
-The workspace uses edition 2024, resolver 3 and requires Rust 1.96.1. At this
-revision `rust-toolchain.toml` selects moving `stable`, while Docker and release
-CI explicitly select 1.96.1. The approved cleanup will align these declarations.
+The workspace uses edition 2024, resolver 3 and requires Rust 1.96.1. `rust-toolchain.toml`, Docker and CI all select 1.96.1.
 `Cargo.lock` pins dependency resolution. Release builds use thin LTO, one codegen
 unit, stripped symbols and abort-on-panic. Workspace membership changes are
 outside the current cleanup.

@@ -70,15 +70,16 @@ provider endpoints are internal.
 
 ## Verify
 
-For backend E2E without containers, install PostgreSQL server tools `initdb`,
+For application verification without containers, install PostgreSQL server tools `initdb`,
 `pg_ctl` and `psql` on `PATH`, then run as a non-root user:
 
 ```sh
-cargo build -p adapter-api -p wallet -p mock-provider --all-features --locked
-python3 scripts/poc-e2e.py
+bash scripts/install-dev-tools.sh
+bash scripts/verify.sh app
 ```
 
-The suite starts disposable PostgreSQL and real backend processes with fresh
+The command runs Rust checks, tests, the frontend WASM check and API E2E.
+The E2E suite starts disposable PostgreSQL and real backend processes with fresh
 secrets. It runs four scenarios on each mock storage backend: the signed
 lifecycle/security/SSE flow, a four-milestone team flow, disputes and auxiliary
 profile/catalog/Bramp checks. It removes temporary data. These are API tests;
