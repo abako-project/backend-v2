@@ -40,6 +40,21 @@ python3 scripts/poc-e2e.py
 These are API checks. Browser behavior and the external frontend require a
 separate walkthrough.
 
+## ink! v5 compatibility proof
+
+```sh
+bash scripts/verify.sh ink-sandbox
+```
+
+This separate native workspace checks the pinned v5 WASM against the proposed
+FRAME runtime. It runs formatting, check, strict Clippy, tests and build with its
+own lockfile. It needs neither PostgreSQL nor a node nor cargo-contract at test
+runtime. The path-filtered `ink! v5 compatibility` workflow runs it only when the
+proof or its verification command changes; normal app builds keep their current
+dependency graph. It does not establish application parity or enable a provider
+switch. Source rebuilds use the pinned contract toolchain separately; see the
+[proof guide](../tools/ink-sandbox/README.md).
+
 ## Container and gateway checks
 
 With a running Docker daemon accessible to your user:

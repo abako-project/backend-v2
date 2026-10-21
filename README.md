@@ -13,8 +13,9 @@ is Abako for software projects.
 
 **Funds and contract execution are simulated.** The mock verifies real sr25519
 signatures and executes Rust business logic. It does not execute the deployed
-ink! contracts or submit transactions to Kreivo. A compatible ink! v5 contract
-runtime and real-chain provider remain future work. See the
+ink! contracts or submit transactions to Kreivo. An isolated
+[ink! v5 compatibility proof](tools/ink-sandbox/README.md) now runs pinned WASM;
+provider integration, application parity and real-chain submission remain pending. See the
 [current status and limitations](docs/project/project-context.md).
 
 ## Architecture
@@ -96,6 +97,7 @@ dependency-policy checks. Historical results describe the revisions they tested.
 | `crates/` | Domain primitives, wire contracts and standalone Bloque client |
 | `apps/leptos-web/` | Independent browser frontend consuming the public API |
 | `contracts/` | Public OpenAPI and contract governance |
+| `tools/ink-sandbox/` | Isolated v5 WASM compatibility proof and pinned artifacts |
 | `infra/` | Local Compose, images, gateway and server-preview tooling |
 | `specs/` | Approved behavior; see the [specification index](SPECS.md) |
 | `docs/` | Architecture, development, operations and security guidance |

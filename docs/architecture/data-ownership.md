@@ -9,6 +9,11 @@
 
 Services access each other's HTTP interfaces, not databases. Identifiers link records across boundaries without cross-service foreign keys. Browser DTOs are defined in generated-contracts; service storage models remain private.
 
+Inside the provider, the Rust engine owns business state; the signed-envelope
+shell owns generation, nonces, receipts and event cursors. One captured time and
+entropy input is retained for each new accepted execution, including recorded
+domain rejections. Old receipts remain readable without those inputs.
+
 The mock SQLite implementation stores one serialized state row and commits business changes, nonces, receipts and events together. This is an explicit POC size/throughput trade-off. The memory implementation serializes execution too.
 
 Adapter notifications are a recipient-specific projection. Event ingestion and its cursor commit together. Reading notifications does not mark them read. Receipt reconciliation remains authoritative for ambiguous operation delivery.

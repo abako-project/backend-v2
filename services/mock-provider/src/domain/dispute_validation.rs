@@ -1,4 +1,4 @@
-use super::State;
+use super::RustEngine;
 use crate::{Error, Result, require};
 use generated_contracts::{
     CompletionSubmission, Dispute, EntityId, MilestoneStatus, MilestoneView, ProjectView,
@@ -6,7 +6,7 @@ use generated_contracts::{
 };
 use std::collections::BTreeSet;
 
-impl State {
+impl RustEngine {
     pub(super) fn validate_disputes(&self, identities: &mut BTreeSet<EntityId>) -> Result<()> {
         for project in self.projects.values() {
             for milestone in project.proposals.iter().flat_map(|p| &p.milestones) {
@@ -29,7 +29,7 @@ impl State {
 }
 
 fn validate_milestone(
-    state: &State,
+    state: &RustEngine,
     project: &ProjectView,
     milestone: &MilestoneView,
     identities: &mut BTreeSet<EntityId>,
@@ -134,7 +134,7 @@ fn validate_submission(
 }
 
 fn validate_case(
-    state: &State,
+    state: &RustEngine,
     id: EntityId,
     case: &Dispute,
     identities: &mut BTreeSet<EntityId>,
@@ -171,8 +171,7 @@ fn validate_case(
                 .submissions
                 .last()
                 .is_some_and(|submission| submission.submission_id == case.rejected_submission_id)
-            && case.context_event_cursor
-                <= u64::try_from(state.events.len()).map_err(|_| Error::internal())?,
+            && case.context_event_cursor <= state.context.event_cursor,
         "invalid_dispute_state",
     )?;
     require(

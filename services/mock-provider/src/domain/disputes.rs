@@ -4,8 +4,8 @@ use generated_contracts::{
     ProjectView, SubmissionReview, UnixSeconds,
 };
 
-use super::{State, project::milestone_mut};
-use crate::{Error, Result, random_id, require};
+use super::{RustEngine, project::milestone_mut};
+use crate::{Error, Result, require};
 
 #[derive(Debug, thiserror::Error)]
 pub(super) enum DisputeError {
@@ -34,7 +34,7 @@ impl From<DisputeError> for Error {
     }
 }
 
-impl State {
+impl RustEngine {
     pub(super) fn open_dispute(
         &mut self,
         project: &mut ProjectView,
@@ -114,7 +114,7 @@ impl State {
             ),
             "submission_not_rejected",
         )?;
-        let id = random_id()?;
+        let id = self.context.random_id();
         milestone.status = Some(MilestoneStatus::Disputed);
         milestone.frozen = true;
         self.disputes.insert(
@@ -136,8 +136,7 @@ impl State {
                 opening_comment_id,
                 response: None,
                 proposal_revision: revision,
-                context_event_cursor: u64::try_from(self.events.len())
-                    .map_err(|_| Error::internal())?,
+                context_event_cursor: self.context.event_cursor,
             },
         );
         project.active_dispute_id = Some(id);

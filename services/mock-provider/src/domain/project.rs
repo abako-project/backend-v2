@@ -8,12 +8,12 @@ use generated_contracts::{
     ProviderCommand, TaskStorageView, TaskView, TeamRating, UnixSeconds,
 };
 
-use super::{Effect, RecordedReason, State, add_rating};
-use crate::{Error, Result, random_id, require};
+use super::{Effect, RecordedReason, RustEngine, add_rating};
+use crate::{Error, Result, require};
 
 type Transition = (DomainEventKind, Option<EntityId>);
 
-impl State {
+impl RustEngine {
     #[allow(
         clippy::too_many_lines,
         reason = "Keep explicit command dispatch together; business logic remains in domain handlers."
@@ -174,14 +174,14 @@ impl State {
                 for milestone in &mut proposal.milestones {
                     milestone.allocate_budget(&self.compensation_policy)?;
                 }
-                let proposal_id = random_id()?;
+                let proposal_id = self.context.random_id();
                 project.proposals.push(ProposalView {
                     proposal_id,
                     revision: 0,
                     title: proposal.title.clone(),
                     description: proposal.description.clone(),
                     status: ProposalStatus::Draft,
-                    milestones: make_milestones(&proposal, &[])?,
+                    milestones: make_milestones(&self.context, &proposal, &[])?,
                     change_request: None,
                     delivery: None,
                     compensation_policy: Some(self.compensation_policy.clone()),
@@ -205,7 +205,8 @@ impl State {
                     current.status == ProposalStatus::Draft,
                     "proposal_not_draft",
                 )?;
-                current.milestones = make_milestones(&proposal, &current.milestones)?;
+                current.milestones =
+                    make_milestones(&self.context, &proposal, &current.milestones)?;
                 current.compensation_policy = Some(self.compensation_policy.clone());
                 current.title.clone_from(&proposal.title);
                 current.description.clone_from(&proposal.description);
@@ -574,6 +575,7 @@ impl State {
                 ..
             } => {
                 let id = super::submissions::submit(
+                    &self.context,
                     project,
                     origin,
                     *milestone_id,
@@ -594,6 +596,7 @@ impl State {
                 ..
             } => {
                 let id = super::submissions::submit(
+                    &self.context,
                     project,
                     origin,
                     *milestone_id,
@@ -609,6 +612,7 @@ impl State {
                 ..
             } => {
                 let id = super::submissions::submit(
+                    &self.context,
                     project,
                     origin,
                     *milestone_id,
@@ -816,6 +820,7 @@ pub(super) fn proposal_definition(proposal: &ProposalView) -> ProposalDefinition
 }
 
 fn make_milestones(
+    context: &super::execution::EngineContext,
     proposal: &ProposalDefinition,
     previous: &[MilestoneView],
 ) -> Result<Vec<MilestoneView>> {
@@ -831,7 +836,7 @@ fn make_milestones(
                 milestone.definition = definition.clone();
                 Ok(milestone)
             } else {
-                let milestone_id = random_id()?;
+                let milestone_id = context.random_id();
                 Ok(MilestoneView {
                     milestone_id,
                     definition: definition.clone(),
@@ -840,7 +845,7 @@ fn make_milestones(
                     worker_ratings: Vec::new(),
                     submissions: Vec::new(),
                     task_storage: TaskStorageView {
-                        task_storage_id: random_id()?,
+                        task_storage_id: context.random_id(),
                         milestone_id,
                         tasks: Vec::new(),
                     },

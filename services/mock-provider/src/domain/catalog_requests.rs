@@ -6,8 +6,8 @@ use generated_contracts::{
     UpsertCatalogEntryRequest,
 };
 
-use super::{Effect, State};
-use crate::{Error, Result, random_id, require, seed::SkillMetadata};
+use super::{Effect, RustEngine};
+use crate::{Error, Result, require, seed::SkillMetadata};
 
 #[cfg(test)]
 mod tests;
@@ -19,7 +19,7 @@ pub(super) fn normalized(name: &str) -> String {
         .to_lowercase()
 }
 
-impl State {
+impl RustEngine {
     pub(super) fn upsert_catalog_entry(
         &mut self,
         origin: AccountId32,
@@ -101,7 +101,7 @@ impl State {
     pub(crate) fn skill_requests(&self, origin: AccountId32) -> Vec<SkillRequestView> {
         self.skill_requests
             .values()
-            .filter(|request| origin == self.info.root_account || request.requester == origin)
+            .filter(|request| origin == self.context.root_account || request.requester == origin)
             .cloned()
             .collect()
     }
@@ -131,7 +131,7 @@ impl State {
                 .all(|id| self.roles.contains_key(id)),
             "unknown_role",
         )?;
-        let id = random_id()?;
+        let id = self.context.random_id();
         require(
             !self.skill_requests.contains_key(&id),
             "request_id_collision",
@@ -148,7 +148,7 @@ impl State {
             },
         );
         let mut effect = Effect::new(DomainEventKind::SkillRequested, Some(id), origin);
-        effect.recipients.insert(self.info.root_account);
+        effect.recipients.insert(self.context.root_account);
         Ok(effect)
     }
 

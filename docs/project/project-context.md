@@ -43,9 +43,13 @@ SCALE calls and runs Rust domain modules atomically. SQLite persists a serialize
 state row containing business changes, nonces, receipts and events; memory mode
 is disposable. Neither mode produces parachain blocks or executes contract WASM.
 
-The mock-backed app has evolved beyond the deployed ink! v5 contracts. Sharing
-that logic through a compatible contract runtime and implementing a real Kreivo
-provider are future work, not existing deployment options. Changing an endpoint
+The mock-backed app has evolved beyond the deployed ink! v5 contracts. The
+[isolated v5 proof](../../tools/ink-sandbox/README.md) executes pinned canonical
+WASM with cross-calls, Kreivo asset operations, rollback and trie persistence.
+The working provider still uses Rust; its envelope shell and business engine
+are separated while preserving legacy SQLite data. SDK integration is gated on
+dependency-policy findings; canonical app parity and a real Kreivo provider
+remain future work, not deployment options. Changing an endpoint
 URL cannot establish compatible encoding, execution or reconciliation. ink! v6
 is outside the intended scope.
 
@@ -79,4 +83,5 @@ records current local verification, draft review links and the pending Docker
 gateway/browser acceptance. No runtime or public contract changed during cleanup.
 The [platform handoff](../../progress/handoffs/PLATFORM-001.md) and
 [porting review](porting-coverage.md) retain historical evidence for their original
-revisions. The contract-runtime proposal remains separate future work.
+revisions. The [sandbox handoff](../../progress/handoffs/SPEC-0013.md) records the initial
+implementation, verification and remaining integration gate.

@@ -9,8 +9,8 @@ use generated_contracts::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::{Effect, State};
-use crate::{Error, Result, random_id, require};
+use super::{Effect, RustEngine};
+use crate::{Error, Result, require};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub(super) struct BrampState {
@@ -18,7 +18,7 @@ pub(super) struct BrampState {
     withdrawals: BTreeMap<EntityId, WithdrawalView>,
 }
 
-impl State {
+impl RustEngine {
     pub(super) fn bramp_command(
         &mut self,
         origin: AccountId32,
@@ -48,7 +48,7 @@ impl State {
         amount: KvnAmount,
         now: UnixSeconds,
     ) -> Result<Effect> {
-        let deposit_id = self.bramp.new_id()?;
+        let deposit_id = self.bramp.new_id(self.context.random_id())?;
         self.bramp.deposits.insert(
             deposit_id,
             DepositView {
@@ -111,7 +111,7 @@ impl State {
         amount: KvnAmount,
         now: UnixSeconds,
     ) -> Result<Effect> {
-        let withdrawal_id = self.bramp.new_id()?;
+        let withdrawal_id = self.bramp.new_id(self.context.random_id())?;
         self.debit(origin, amount.money())?;
         self.bramp.withdrawals.insert(
             withdrawal_id,
@@ -143,7 +143,7 @@ impl State {
             .get(&withdrawal_id)
             .ok_or_else(|| Error::domain("withdrawal_not_found"))?;
         require(
-            origin == withdrawal.owner || origin == self.info.root_account,
+            origin == withdrawal.owner || origin == self.context.root_account,
             "withdrawal_owner_or_system_required",
         )?;
         require(
@@ -181,7 +181,7 @@ impl State {
             .get(&deposit_id)
             .ok_or_else(|| Error::domain("deposit_not_found"))?;
         require(
-            origin == deposit.owner || origin == self.info.root_account,
+            origin == deposit.owner || origin == self.context.root_account,
             "deposit_owner_or_system_required",
         )?;
         Ok(deposit.clone())
@@ -199,7 +199,7 @@ impl State {
             .get(&withdrawal_id)
             .ok_or_else(|| Error::domain("withdrawal_not_found"))?;
         require(
-            origin == withdrawal.owner || origin == self.info.root_account,
+            origin == withdrawal.owner || origin == self.context.root_account,
             "withdrawal_owner_or_system_required",
         )?;
         Ok(withdrawal.clone())
@@ -239,8 +239,7 @@ impl State {
 }
 
 impl BrampState {
-    fn new_id(&self) -> Result<EntityId> {
-        let id = random_id()?;
+    fn new_id(&self, id: EntityId) -> Result<EntityId> {
         require(
             !self.deposits.contains_key(&id) && !self.withdrawals.contains_key(&id),
             "duplicate_entity",

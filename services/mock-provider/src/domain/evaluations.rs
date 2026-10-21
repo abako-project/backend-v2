@@ -1,4 +1,4 @@
-use super::{State, add_rating, add_weighted_rating};
+use super::{RustEngine, add_rating, add_weighted_rating};
 use crate::{Error, Result, require};
 use generated_contracts::{
     AccountId32, EvaluateProjectRequest, Minutes, ProjectEvaluation, ProjectView, ProposalStatus,
@@ -6,7 +6,7 @@ use generated_contracts::{
 };
 use std::collections::{BTreeMap, BTreeSet};
 
-impl State {
+impl RustEngine {
     pub(super) fn evaluate_project(
         &mut self,
         project: &mut ProjectView,

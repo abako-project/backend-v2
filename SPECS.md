@@ -20,6 +20,8 @@ status and each feature's recorded evidence for observed results.
 | [0011: backend dev host](specs/0011-backend-dev-host/spec.md) | APPROVED | Preview API hostname correction to dev.abako.xyz |
 | [0012: platform profile](specs/0012-platform-profile/spec.md) | APPROVED | Deployment branding, vocabulary, currency display and compatible custom project types |
 
+| [0013: ink! v5 sandbox](specs/0013-ink-v5-sandbox/spec.md) | APPROVED | Staged canonical contract execution with compatibility, persistence and migration gates |
+
 The [repository simplification plan](docs/project/repository-simplification.md)
 is approved as SIMPLIFY-001. It preserves application behavior and contracts.
 Historical acceptance reports remain under `progress/handoffs/`.

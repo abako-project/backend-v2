@@ -6,9 +6,10 @@ use generated_contracts::{
 };
 
 use super::project::milestone_mut;
-use crate::{Error, Result, random_id, require};
+use crate::{Error, Result, require};
 
 pub(super) fn submit(
+    context: &super::execution::EngineContext,
     project: &mut ProjectView,
     origin: AccountId32,
     milestone_id: EntityId,
@@ -37,7 +38,7 @@ pub(super) fn submit(
         .map_err(|_| Error::internal())?
         .checked_add(1)
         .ok_or_else(Error::internal)?;
-    let submission_id = random_id()?;
+    let submission_id = context.random_id();
     milestone.submissions.push(CompletionSubmission {
         submission_id,
         version,

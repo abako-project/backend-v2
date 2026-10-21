@@ -5,14 +5,16 @@ use generated_contracts::{
     Minutes, Money, PlanningStatus, PlanningView, ProjectView, ProviderCommand, Qualifications,
     ReputationView, ReservationView, TaskDefinition, UnixSeconds, WorkerMode, WorkerView,
 };
-use rand::RngExt;
 
-use super::{Effect, State, compare_scores, empty_score};
-use crate::{Error, Result, calendar, random_id, require};
+use super::{Effect, RustEngine, compare_scores, empty_score};
+use crate::{Error, Result, calendar, require};
 
-impl State {
+impl RustEngine {
     pub(super) fn root(&self, origin: AccountId32) -> Result<()> {
-        require(origin == self.info.root_account, "system_origin_required")
+        require(
+            origin == self.context.root_account,
+            "system_origin_required",
+        )
     }
 
     pub(super) fn qualifications(&self, qualifications: &Qualifications) -> Result<()> {
@@ -74,7 +76,7 @@ impl State {
             ProviderCommand::RegisterWorker(request) => {
                 require(!self.workers.contains_key(&origin), "worker_exists")?;
                 self.qualifications(&request.qualifications)?;
-                let calendar_id = random_id()?;
+                let calendar_id = self.context.random_id();
                 self.workers.insert(
                     origin,
                     WorkerView {
@@ -245,7 +247,7 @@ impl State {
             }
         }
         let coordinator = self.select(&candidates, WorkerMode::Coordinator)?;
-        let project_id = random_id()?;
+        let project_id = self.context.random_id();
         self.projects.insert(
             project_id,
             ProjectView {
@@ -353,7 +355,7 @@ impl State {
         let index = if winners.len() == 1 {
             0
         } else {
-            rand::rng().random_range(0..winners.len())
+            self.context.choose(winners.len())
         };
         Ok(winners[index])
     }

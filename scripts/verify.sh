@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 usage() {
-  echo "Usage: bash scripts/verify.sh [app|containers|dependencies]"
+  echo "Usage: bash scripts/verify.sh [app|ink-sandbox|containers|dependencies]"
 }
 [[ $# -le 1 ]] || { usage >&2; exit 2; }
 case "${1:-app}" in
@@ -23,6 +23,14 @@ case "${1:-app}" in
     cargo check -p leptos-web --target wasm32-unknown-unknown --locked
     target_dir="$(cargo metadata --no-deps --format-version 1 --locked | python3 -c 'import json, sys; print(json.load(sys.stdin)["target_directory"])')"
     python3 scripts/poc-e2e.py --binaries "$target_dir/debug"
+    ;;
+  ink-sandbox)
+    manifest=tools/ink-sandbox/Cargo.toml
+    cargo fmt --manifest-path "$manifest" -- --check
+    cargo check --manifest-path "$manifest" --all-targets --all-features --locked
+    cargo clippy --manifest-path "$manifest" --all-targets --all-features --locked -- -D warnings
+    cargo test --manifest-path "$manifest" --all-features --locked
+    cargo build --manifest-path "$manifest" --all-targets --all-features --locked
     ;;
   containers)
     # Rendering uses synthetic values; no application secret is read.
