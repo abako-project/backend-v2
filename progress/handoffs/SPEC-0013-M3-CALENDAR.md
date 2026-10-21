@@ -3,6 +3,7 @@
 Task: implement and review the Calendar part of approved SPEC-0013 M3.
 M3 remains in progress until Directory/catalog/registration/mode parity and its
 signed fixture bridge are complete. Rust remains the sole application authority.
+Calendar slice status: implemented, verified and independently reviewed.
 
 Backend branch: `feat/ink-v5-directory-calendar`, worktree
 `/tmp/kunveno-ink-v5-directory-calendar`, based on reviewed M2 `9900cfe`.
@@ -12,6 +13,10 @@ Write scope: new canonical `calendar-v5/` and target exclusion; pinned backend
 artifact/lock/manifest, sandbox bundle list/tests/docs, Rust Calendar tests and
 shared test fixtures, SDK CI path filter, and this progress record. No public
 contracts, normal app dependencies, business implementation or live data change.
+
+Draft PRs: [backend #16](https://github.com/abako-project/backend-v2/pull/16),
+stacked on #15; [canonical contracts #14](https://github.com/abako-dev/contracts/pull/14),
+stacked on its #13. Both feature branches are pushed; no master update or tag.
 
 ## Implemented
 
@@ -44,10 +49,32 @@ calendar-v5/Cargo.toml`; formatting and strict native Clippy passed. The new
 Chrono direct use matches the app's version, disables clock/time-zone/native JS
 features and is reviewed in canonical `calendar-v5/README.md`.
 
-Observed so far: native shared-case test passes; three initial WASM tests pass.
-Full app, full SDK (including added concurrency test), exact-lock SDK policy,
-fresh-source rebuild and independent high-reasoning review are being collected.
-This record must be updated with final results before the slice is handed off.
+Tested backend implementation: `2e52b39`; canonical implementation: `4687748`.
+
+| Command / check | Result |
+|---|---|
+| `bash scripts/verify.sh ink-sandbox` | PASS: formatting, check, strict Clippy, 27 tests (8 unit, 4 Calendar, 3 compatibility, 6 signed, 6 worker), build |
+| `bash scripts/verify.sh ink-sandbox-dependencies` | PASS: advisories, bans, licenses, sources; exact SDK lock and existing exceptions unchanged |
+| `python3 tools/ink-sandbox/rebuild.py /tmp/kunveno-contracts-directory-calendar --contract calendar-v5 --offline` | PASS: fresh Git archive reproduced pinned release WASM and ABI |
+| Canonical Rust 1.88 formatting and strict Clippy, all targets/features/locked/offline | PASS |
+| Native shared Calendar cases | PASS |
+| actionlint on modified workflow; Git whitespace check | PASS |
+| `bash scripts/verify.sh app` | PASS: formatting/check/strict Clippy, 110 workspace tests, 2 doctests, isolated memory/SQLite feature checks, all-target build, frontend WASM and all 8 real-service E2E flows |
+
+The full app gate uses the repository's disposable PostgreSQL helper with cached
+server binaries, loopback sockets and the existing Cargo target cache; no live
+application services or data. SDK and contract builds use their existing separate
+caches. Local logs are `/tmp/ink-calendar-{app-verification,sdk-verification,
+sdk-policy,rebuild,contract-clippy,actionlint}.log`.
+
+Independent reviewer `/root/review_sandbox_m0_m1`, retaining the owner's requested
+high reasoning setting (xhigh), approved `2e52b39` / `4687748` with no actionable
+findings. Its condition that the full app gate pass is now satisfied. It independently reran all
+four cached Calendar WASM tests and verified all five artifact/WASM/build-lock
+hashes and compiler pins. No correction or re-review was requested. Full M3,
+Directory, signed bridging, large-state import, performance and promotion remain
+open. The final evidence update changes documentation only; reviewed code and
+pinned source/artifacts remain unchanged.
 
 ## Compatibility and remaining work
 
