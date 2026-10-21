@@ -118,3 +118,8 @@ Implementation evidence and the current integration gate are recorded in
 Milestone 2's isolated worker/persistence slice and its remaining shell/policy
 gates are tracked in [the candidate handoff](../../progress/handoffs/SPEC-0013-M2.md).
 This progress record does not change the approved promotion requirements.
+
+M2 infrastructure and real-shell fixture integration are complete at reviewed
+implementation `65b9531`, with full application verification passing. See
+[the integration evidence](../../progress/handoffs/SPEC-0013-M2-SHELL.md). This
+does not complete domain parity, M0 performance acceptance or authority promotion.

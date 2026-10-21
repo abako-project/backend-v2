@@ -71,16 +71,33 @@ provider databases; existing application data is unchanged.
   invalid signature/expiry/generation/nonce, idempotency conflict, domain/gas
   rejection, unsupported operations, wrong mode/root, atomic SQL failure and
   two competing providers (one receipt/event for replay; one winner per nonce).
-- `bash scripts/verify.sh ink-sandbox-dependencies` uses the approved exact-lock
-  SDK policy. Result recorded after the command completes. No broader policy
-  is selected by normal app checks.
-- Full application verification is running. Its final result and the required
-  independent high-reasoning milestone review will be recorded before completion.
+- `bash scripts/verify.sh ink-sandbox-dependencies`: passed advisories, bans,
+  licenses and sources under the exact approved scope. A copied policy wrapper
+  rejected an altered lock before running Cargo. Root `cargo deny --locked
+  --offline check` still fails its documented advisory/license baseline;
+  bans/sources pass. No additional finding was waived.
+- Workflow actionlint passed in a read-only cached container with no network.
+  Python bytecode compilation, shell syntax and `git diff --check` passed.
+- An independent reviewer with xhigh reasoning approved M2 infrastructure at
+  exact commit `65b9531`, subject to the full app gate. No actionable findings
+  or code corrections. The reviewer independently ran 2 shared-shell unit tests,
+  8 SDK unit tests and 6 signed integration tests: all passed. It confirmed
+  verifier equivalence, legacy storage/envelope compatibility, failure atomicity,
+  replay and exact policy scope. No unrelated full gates were rerun by reviewer.
+- `bash scripts/verify.sh app`: passed at implementation commit `65b9531`.
+  Workspace fmt/check/strict Clippy, 109 workspace tests, 2 doctests, isolated
+  memory and SQLite suites, all builds, frontend WASM check and all 8 real-service
+  E2E scenarios passed. Fresh temporary databases and cached PostgreSQL binaries
+  were used. No browser API or signing/SCALE contract changes were needed.
+- Nextest and cargo-audit remain unavailable as recorded in the first slice;
+  the documented normal Cargo runner passed. No passing audit is claimed.
 
 ## Remaining scope
 
-M2 completion is pending final application verification and independent review
-of this exact implementation. M3–M8 still contain all business ports, full parity,
+M2 infrastructure is complete at reviewed implementation `65b9531`: the full
+application gate passed after the independent approval, satisfying its remaining
+condition. The final follow-up records evidence only. This is not a release or
+an authority promotion. M3–M8 still contain all business ports, full parity,
 preserving import and current-state rollback. M0 performance acceptance remains
 open until representative candidate domains exist; test duration is not p95
 proof. No sandbox/shadow authority selector or production contract deployment is
