@@ -1,13 +1,16 @@
 # Digesta backend preview
 
 Deployed on 2026-10-15 for frontend integration, using the published `v0.2.0`
-backend images and a mock provider. The existing frontend remains in place;
-the updated frontend will follow separately.
+backend images and a mock provider. On 2026-10-21 the API moved to the requested
+`dev.abako.xyz` hostname. Existing accounts, stores and keys were retained.
+The frontend remains at `web.dev.abako.xyz`; frontend delivery is managed separately.
 
-- API base: <https://web.dev.abako.xyz/api/>
-- OpenAPI: <https://web.dev.abako.xyz/api/openapi.json> (80 paths)
-- Approved scope: [SPEC-0010](../../specs/0010-backend-preview-deployment/spec.md)
-- Verification evidence: [DEPLOY-001 handoff](../../progress/handoffs/DEPLOY-001.md)
+- API base: <https://dev.abako.xyz/api/>
+- OpenAPI: <https://dev.abako.xyz/api/openapi.json> (80 paths)
+- Current approved scope: [SPEC-0011](../../specs/0011-backend-dev-host/spec.md)
+- Current verification: [DEPLOY-002 handoff](../../progress/handoffs/DEPLOY-002.md)
+- Initial deployment: [SPEC-0010](../../specs/0010-backend-preview-deployment/spec.md)
+  and [DEPLOY-001 evidence](../../progress/handoffs/DEPLOY-001.md)
 
 ## Test accounts
 
@@ -34,7 +37,10 @@ view's token as `X-CSRF-Token` on authenticated mutations. `GET /api/auth/sessio
 returns the current session view.
 
 The cookie is `Secure`, `HttpOnly`, `SameSite=Lax`, scoped to `/api`, and has a
-24-hour lifetime. The only allowed origin is `https://web.dev.abako.xyz`.
+24-hour lifetime. The exact allowed origins are `https://dev.abako.xyz` and
+`https://web.dev.abako.xyz`, retaining the existing frontend as an allowed client.
+A frontend on the web hostname must call the dev API URL with credentials
+enabled. The backend is no longer served from the web hostname.
 Missing/invalid CSRF and other origins are rejected. API clients such as curl
 or Postman should use a cookie jar and this exact `Origin` header.
 
@@ -68,9 +74,9 @@ server: {
   https: { key: localTlsKey, cert: localTlsCertificate },
   proxy: {
     '/api': {
-      target: 'https://web.dev.abako.xyz',
+      target: 'https://dev.abako.xyz',
       changeOrigin: true,
-      headers: { Origin: 'https://web.dev.abako.xyz' },
+      headers: { Origin: 'https://dev.abako.xyz' },
     },
   },
 }
@@ -81,7 +87,7 @@ frontend's existing development setup. Call relative `/api/...` URLs with
 credentials enabled. This is integration guidance; the new frontend and this
 browser setup have not been deployed or tested in this task. Test password login
 through the local proxy. Passkey ceremonies require the configured WebAuthn
-hostname `web.dev.abako.xyz`, so a localhost proxy cannot test those ceremonies.
+hostname `dev.abako.xyz`, so a localhost proxy cannot test those ceremonies.
 
 Cookie behavior follows [MDN's Set-Cookie reference](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie).
 Vite's HTTPS and proxy options are described in its
@@ -89,7 +95,7 @@ Vite's HTTPS and proxy options are described in its
 
 ## Server layout and checks
 
-Connect using `ssh digesta`; authentication requires the YubiKey touch.
+Connect using `ssh -F ~/.ssh/config digesta`; authentication requires the YubiKey touch.
 Operate the preview as root on this host:
 
 - Configuration and scripts: `/opt/digesta/preview`
@@ -111,8 +117,8 @@ docker compose --env-file /opt/digesta/preview/deployment.env \
   -f /opt/digesta/preview/compose.yaml ps
 curl --fail --silent http://127.0.0.1:4080/ready
 python3 /opt/digesta/preview/verify-api.py \
-  --base-url https://web.dev.abako.xyz \
-  --origin https://web.dev.abako.xyz \
+  --base-url https://dev.abako.xyz \
+  --origin https://dev.abako.xyz \
   --identity-file /srv/digesta/preview/secrets/smoke-identity.json
 ```
 
@@ -120,13 +126,17 @@ The verifier checks authentication, cookie flags, CSRF/origin denial, a fresh
 signed mock command, persisted state and SSE replay. It updates the private
 smoke account and prints no credentials. Public `/api/internal/...`,
 `/api/health` and `/api/ready` are denied; operational probes use loopback.
-The existing site's `/health` remains its legacy route.
+The dev site's `/health` remains its legacy route. The former
+`https://web.dev.abako.xyz/api/` route no longer serves Digesta; update client
+base URLs and log in on the new host. Host-scoped session cookies do not move
+between hosts. Passkeys registered for the previous RP may need enrollment
+on the new RP; password accounts are retained.
 
-The exact `/api/kreivo-rpc` location remains routed to its original upstream.
+The web site's exact `/api/kreivo-rpc` location remains routed to its original upstream.
 It now excludes application cookies so the external RPC cannot receive Digesta
 session cookies, as described by
 [Nginx's proxy header rules](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_set_header).
-A read-only `system_chain` probe returned HTTP 403 through the preserved route
+During the initial deployment, a read-only `system_chain` probe returned HTTP 403 through the preserved route
 and directly from its original upstream, `kreivo.kippu.rocks`. The upstream
 refusal remains unresolved.
 The deployed mock-backed Digesta API does not depend on this RPC route.
@@ -152,26 +162,32 @@ This briefly stops only the preview. Backups include secrets and require private
 handling. The drill proves recovery of this preview snapshot; scheduled/off-host
 backups, continuous recovery and production custody are not configured.
 
-The original Nginx site is saved at
-`/srv/digesta/preview/backups/nginx/web.dev.abako.xyz-1792060243.conf`.
-For rollback, first check that the active site still matches the deployed hash
-below. A changed hash needs review so later edits are not overwritten.
-Then restore only this site, validate/reload Nginx, and stop only this preview:
+The hostname move has a separate configuration backup at
+`/srv/digesta/preview/backups/dev-host-20261021103306`. It contains both original
+Nginx sites, the previous deployment settings, candidate files and before/after
+hashes. The dev site keeps legacy preflight behavior outside `/api`; the adapter
+owns CORS for `/api`. Existing security response headers are retained.
+
+To roll back the hostname move to the previous web-host API:
 
 ```bash
-set -e
-sha256sum /etc/nginx/sites-available/web.dev.abako.xyz
-# Expected: 79a547d2789ac04f4fa528bb0e1e8f38f2174f45851566564f0d8d12ffa9a401
-test "$(sha256sum /etc/nginx/sites-available/web.dev.abako.xyz | cut -d ' ' -f 1)" \
-  = 79a547d2789ac04f4fa528bb0e1e8f38f2174f45851566564f0d8d12ffa9a401
-cp -p /srv/digesta/preview/backups/nginx/web.dev.abako.xyz-1792060243.conf \
-  /etc/nginx/sites-available/web.dev.abako.xyz
-nginx -t
-systemctl reload nginx
+python3 /opt/digesta/preview/move-host.py \
+  --rollback /srv/digesta/preview/backups/dev-host-20261021103306
+```
+
+This verifies that all three active files still match their recorded deployed
+hashes, restores the previous settings and sites, recreates only the adapter,
+and validates/reloads Nginx. It refuses to overwrite later configuration edits.
+No data or secret restoration is performed. After rollback, clients must use
+`https://web.dev.abako.xyz/api/` and log in there again.
+
+To stop the preview independently, run:
+
+```bash
 docker compose --env-file /opt/digesta/preview/deployment.env \
   -f /opt/digesta/preview/compose.yaml stop
 ```
 
-If validation fails, retain the running configuration and correct the candidate
-before reloading. Rollback leaves data, secrets and volumes intact. The original
-frontend, exact RPC location and other virtual hosts remain present.
+Stopping it leaves its public proxy route in place and returns upstream errors;
+remove the added dev-site API block with a validated configuration change when
+withdrawing the preview. Preserve all data, secrets and legacy services.

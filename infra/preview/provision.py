@@ -25,7 +25,7 @@ def private_write(path, value, uid=0, gid=0):
 
 
 def provision(host):
-    if os.geteuid() != 0 or host != "web.dev.abako.xyz":
+    if os.geteuid() != 0 or host != "dev.abako.xyz":
         raise ValueError("run as root on the approved host for the selected preview origin")
     root = Path("/opt/digesta/preview")
     state = Path("/srv/digesta/preview")
@@ -46,7 +46,7 @@ def provision(host):
         os.chown(directory, uid, gid)
     settings = (f"DIGESTA_PROJECT_NAME=digesta-preview\nDIGESTA_UID={uid}\nDIGESTA_GID={gid}\n"
                 f"DIGESTA_STATE_DIR={state}\nPREVIEW_HOST={host}\n"
-                f"ALLOWED_ORIGINS=https://{host}\nADAPTER_HOST_PORT=4080\n")
+                f"ALLOWED_ORIGINS=https://{host},https://web.dev.abako.xyz\nADAPTER_HOST_PORT=4080\n")
     env_file = root / "deployment.env"
     if env_file.exists():
         if env_file.read_text() != settings:

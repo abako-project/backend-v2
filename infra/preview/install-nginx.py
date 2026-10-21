@@ -11,7 +11,8 @@ import time
 
 
 ROOT = Path("/opt/digesta/preview")
-SITE = Path("/etc/nginx/sites-enabled/web.dev.abako.xyz")
+HOST = "dev.abako.xyz"
+SITE = Path("/etc/nginx/sites-enabled/abako-backend")
 MARKER = "# DEPLOY-001 Digesta API"
 
 
@@ -48,11 +49,8 @@ def block_end(text, opening):
     raise ValueError("unbalanced Nginx configuration")
 
 
-def install():
-    target = SITE.resolve(strict=True)
-    if target.parent != Path("/etc/nginx/sites-available"):
-        raise ValueError("unexpected existing site location")
-    original = target.read_text()
+def build_site(original, host, snippet):
+    """Add the API to exactly one selected TLS server, preserving other routes."""
     if MARKER in original:
         raise ValueError("Digesta route already installed; use its recorded rollback/verification")
     candidates = []
@@ -60,29 +58,47 @@ def install():
         opening = original.index("{", match.start())
         closing = block_end(original, opening)
         body = original[opening + 1:closing]
-        if re.search(r"\blisten\s+[^;]*\b443\b[^;]*;", body) and re.search(r"\bserver_name\s+web\.dev\.abako\.xyz\s*;", body):
+        if re.search(r"\blisten\s+[^;]*\b443\b[^;]*;", body) and re.search(
+                r"\bserver_name\s+" + re.escape(host) + r"\s*;", body):
             candidates.append((opening, closing, body))
     if len(candidates) != 1:
         raise ValueError("cannot identify exactly one approved HTTPS server")
     opening, closing, body = candidates[0]
-    if re.search(r"\blocation\s+(?:\^~\s+)?/api/\s*\{", body):
-        raise ValueError("existing API prefix would conflict")
-    rpc = re.search(r"\blocation\s*=\s*/api/kreivo-rpc\s*\{", body)
-    if not rpc:
-        raise ValueError("expected existing RPC route missing")
-    rpc_open = body.index("{", rpc.start())
-    rpc_close = block_end(body, rpc_open)
-    rpc_body = body[rpc_open + 1:rpc_close]
-    if re.search(r"\bproxy_set_header\s+Cookie\b", rpc_body):
-        if not re.search(r'\bproxy_set_header\s+Cookie\s+""\s*;', rpc_body):
-            raise ValueError("existing RPC cookie policy needs review")
-    else:
-        # This stateless third-party RPC must not receive the new application session.
-        body = body[:rpc_close] + '        proxy_set_header Cookie "";\n    ' + body[rpc_close:]
-    snippet = (ROOT / "nginx-api.conf").read_text()
+    if re.search(r"\blocation\s+(?:(?:\^~|=)\s+)?/api(?:/|\s*\{)", body):
+        raise ValueError("existing API route would conflict")
+    maps = ""
+    preflight = "if ($request_method = 'OPTIONS') {"
+    if preflight in body:
+        if body.count(preflight) != 1 or '$digesta_legacy_preflight' in original:
+            raise ValueError("legacy preflight policy needs review")
+        body = body.replace(preflight, 'if ($digesta_legacy_preflight) {', 1)
+        maps = ('map "$request_method:$uri" $digesta_legacy_preflight {\n'
+                '    default 0;\n'
+                '    "~^OPTIONS:(?!/api(?:/|$))" 1;\n'
+                '}\n')
+        # Defining these on /api/ prevents inheritance of legacy CORS add_header
+        # directives while keeping the site's existing security response headers.
+        headers = []
+        for name in ['Strict-Transport-Security', 'X-Content-Type-Options',
+                     'X-Frame-Options', 'X-XSS-Protection', 'Referrer-Policy']:
+            # Keep the whole directive line: HSTS values contain quoted semicolons.
+            matches = re.findall(r'(?m)^[ \t]*(add_header[ \t]+' + name + r'[ \t]+[^\n]+)', body)
+            if len(matches) != 1:
+                raise ValueError("legacy security header policy needs review")
+            headers.append('    ' + matches[0])
+        snippet = snippet.replace('location /api/ {\n',
+                                  'location /api/ {\n' + '\n'.join(headers) + '\n', 1)
     body += "\n    " + MARKER + "\n" + "\n".join("    " + line for line in snippet.splitlines()) + "\n"
     candidate = original[:opening + 1] + body + original[closing:]
-    candidate = "log_format digesta_api '$remote_addr $request_method $uri $status';\n" + candidate
+    return maps + "log_format digesta_api '$remote_addr $request_method $uri $status';\n" + candidate
+
+
+def install():
+    target = SITE.resolve(strict=True)
+    if target.parent != Path("/etc/nginx/sites-available"):
+        raise ValueError("unexpected existing site location")
+    original = target.read_text()
+    candidate = build_site(original, HOST, (ROOT / "nginx-api.conf").read_text())
     check = ROOT / "nginx-check"
     check.mkdir(mode=0o700, exist_ok=True)
     sites = check / "sites-enabled"
@@ -107,7 +123,7 @@ def install():
         raise ValueError("site changed during validation")
     backup = Path("/srv/digesta/preview/backups/nginx")
     backup.mkdir(parents=True, mode=0o700, exist_ok=True)
-    backup_file = backup / ("web.dev.abako.xyz-" + str(int(time.time())) + ".conf")
+    backup_file = backup / (HOST + "-" + str(int(time.time())) + ".conf")
     shutil.copy2(target, backup_file)
     os.chmod(backup_file, 0o600)
     replacement = target.with_name(target.name + ".digesta-new")
