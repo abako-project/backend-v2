@@ -1,0 +1,22 @@
+name: Change
+description: Describe a feature, fix or documentation improvement
+title: ""
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and intended outcome
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance checks
+      description: What observable result establishes that this is done?
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and compatibility
+      description: Relevant feature note, constraints, API or data impact.

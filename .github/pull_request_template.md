@@ -1,32 +1,14 @@
-## Specification and Task
-
-Specification:  
-Requirements:  
-Scenarios:  
-Issue:
-
 ## Change
 
-## Allowed Paths
+What problem does this solve, and what behavior changes? Link the issue or approved
+feature note when applicable.
 
-## Contract and Migration Impact
+## Compatibility and operations
 
-## Verification Evidence
+Describe any API, stored-data, security or deployment impact. Omit this section
+when there is none.
 
-```text
-Paste exact commands and observed results.
-```
+## Verification
 
-## Security and Operational Impact
-
-## Risks and Recovery
-
-## Checklist
-
-- [ ] Specification is approved.
-- [ ] Changes stay within assigned paths.
-- [ ] Tests map to requirements and scenarios.
-- [ ] Public contracts are versioned and compatibility-checked.
-- [ ] Migration locking, compatibility, and recovery are documented.
-- [ ] No secrets or sensitive data are included.
-- [ ] Independent verification and review are requested.
+Commands, observed results, tested revision and any checks that failed or could
+not run. Include recovery steps when the change needs them.

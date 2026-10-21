@@ -1,5 +1,8 @@
 # Agent Harness and Model Source Notes — 2026-08-10
 
+Historical research, retained as dated evidence. Agent framework and model setup
+are no longer repository prerequisites; use [CONTRIBUTING.md](../../CONTRIBUTING.md).
+
 This file records primary documentation used for the portability layer. Recheck these sources before changing tool-specific schemas.
 
 ## OpenCode

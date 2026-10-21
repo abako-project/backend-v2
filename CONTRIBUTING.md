@@ -1,29 +1,79 @@
 # Contributing
 
-## Workflow
+Start with the [README](README.md), [current status](docs/project/project-context.md)
+and [verification guide](ci/README.md). Development needs no agent tools.
 
-1. Start from an approved specification.
-2. Define one local task ID with explicit dependencies and allowed paths. Remote issues require an approved remote workflow.
-3. Create one branch and worktree for the task.
-4. Implement the smallest coherent change.
-5. Run focused checks, then all applicable quality gates.
-6. Write a reproducible handoff.
-7. Request independent local review; use a pull request only after a remote workflow is authorized.
-8. Let the integration role merge in dependency order.
+## Propose and implement a change
 
-## Branch Names
+For documentation, fixes and compatible additions, use an issue or PR description
+with the problem, intended outcome and relevant acceptance checks. Keep changes
+small enough to review independently. Describe compatibility and data impact
+when there is any.
 
-`agent/<role>/<issue>-<slug>`
+A substantial feature or changed business rule needs one approved feature note
+in `specs/`. Include scope, requirements, acceptance criteria and unresolved
+questions. Add a separate design, threat model or migration plan only when needed.
+Existing approved requirements and accepted ADRs remain authoritative; update
+requirements explicitly rather than silently changing behavior. See the
+[specification guide](specs/README.md).
 
-## Commits
+Use a normal feature branch, for example:
 
-Use small commits with an imperative Conventional Commit subject when practical. Do not mix unrelated refactors with feature behavior.
+```sh
+git switch -c fix/describe-the-change
+```
 
-## Pull Requests
+Use a separate Git worktree when concurrent tasks need isolation. Agree on write
+scope and avoid overwriting others' work. Shared contracts, manifests and CI
+changes belong in the stated scope of the change.
 
-A pull request must identify the specification, requirements, scenarios, migration or contract effects, verification commands, risks, and rollback implications. No implementation agent approves its own work.
+## Preserve the application boundaries
 
-## Human commands and agent tools
+The adapter, signing wallet and mock provider have separate ownership. Frontends
+consume the public API without depending on backend implementation crates. Read
+[data ownership](docs/architecture/data-ownership.md) and the
+[accepted architecture decision](docs/architecture/adr/0001-rest-and-independent-frontends.md)
+before changing these boundaries.
 
-Users and agents run Cargo, Docker and Python directly. Sandbox prompts identify the
-restricted resource (Docker, sockets, downloads or Git metadata).
+Keep exact integer money, atomic provider effects, idempotent operations and
+compatible wire/storage representations. Bound concurrency, retries and payloads.
+Use safe Rust, propagate errors and observe background task results. Do not block
+Tokio or access another service's tables directly. Preserve relevant tests when
+refactoring; select checks that verify behavior rather than mirror implementation.
+
+For dependencies, record purpose, alternatives, required features, current primary
+metadata, MSRV, license and unsafe/native/cryptographic implications. Keep locked
+builds and minimize features. Do not add infrastructure or abstractions without
+an actual requirement.
+
+## Review and approval
+
+Explain the change, why it is needed, its compatibility impact and observed
+verification. Link a feature note when one applies. Put commands and results in
+the PR; report checks that failed or could not run. A separate handoff is useful
+when ownership changes or a blocker needs to survive the current task.
+
+Owner approval remains required for destructive data changes, public breaking
+changes, authentication/authorization policy changes, new unsafe/native/crypto
+dependencies, release publication and production deployment. Approval of a PR
+or implementation does not by itself authorize a release or deployment.
+
+## Security and writing
+
+Never put secrets in source, issues, logs or reports. Use established cryptographic
+implementations and reviewed key handling. Keep public errors sanitized. For
+operations, follow the [secret guide](docs/security/secrets.md) and
+[recovery guidance](docs/operations/disaster-recovery.md).
+
+Write for the person using or reviewing the change. Prefer familiar words, remove
+repetition, state ownership and assumptions precisely, and explain non-obvious
+reasons. Comments should explain invariants and trade-offs. A command listing is
+an instruction, not evidence that the command passed.
+
+## Agent tools
+
+Tools may read [AGENTS.md](AGENTS.md) and this guide. Model selection, reusable
+skills and multi-agent setup belong in personal configuration or external tooling.
+The repository does not generate or synchronize tool adapters. Required GitHub
+Action updates are reviewed directly in the workflows and remain pinned to full
+commit SHAs.

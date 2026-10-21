@@ -101,6 +101,6 @@ dependency-policy checks. Historical results describe the revisions they tested.
 
 Start with [current status](docs/project/project-context.md),
 [requirements](SPECS.md), [deployment and recovery](docs/operations/cloud.md),
-and the [approved simplification plan](docs/project/repository-simplification.md).
+[contributing](CONTRIBUTING.md), and the [approved simplification plan](docs/project/repository-simplification.md).
 The server preview uses simulated assets; production custody and real-chain
 execution are not delivered. Releases and deployments require explicit approval.
