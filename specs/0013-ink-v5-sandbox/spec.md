@@ -63,6 +63,17 @@ Missing coverage is reported as incomplete, never as a successful comparison.
 by domain or automatically fall back/re-execute a failed sandbox command.
 Default remains `rust` until the explicit promotion gate passes.
 
+## Milestone review
+
+Owner instruction, 2026-10-21: each milestone ends with an independent, in-depth
+review of the exact implementation commit before it is marked complete or
+proposed for release. Review compatibility, data preservation, authorization,
+money, failure atomicity, verification evidence and unnecessary complexity as
+applicable. When a PR spans milestones, give a separate verdict for each one.
+Fix blocking findings and have the revised commit reviewed again. Record the
+verdict and unresolved acceptance gates in the PR or handoff. Review does not
+replace owner approval for releases or deployment.
+
 ## Cutover and rollback
 
 Briefly pause new business writes, drain pending work and reconcile unknown

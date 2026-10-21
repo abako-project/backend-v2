@@ -290,6 +290,8 @@ fn gas_exhaustion_invalid_input_and_unauthorized_call_do_not_mutate_contract() {
         assert!(result.result.is_err());
         let invalid = call(&owner, &calendar, "missing_selector", ());
         assert!(invalid.did_revert());
+        // ink! 5.1.1 MessageResult::Err(LangError::CouldNotReadInput).
+        assert_eq!(invalid.data, [1, 1]);
         assert!(query::<Vec<Account>>(&owner, &calendar, "get_registered_workers", ()).is_empty());
         unit(&owner, &calendar, "register_worker", stranger);
     });
@@ -305,9 +307,12 @@ fn wasm_traps_nested_rejections_and_endless_execution_roll_back_child_storage() 
         let child = instantiate("sandbox-probe", &other, ());
         let output = call(&owner, &parent, "write_then_revert", ());
         assert!(output.did_revert());
+        assert_eq!(output.data, [0, 1, 0]); // MessageResult::Ok(Err(Rejected))
         assert_eq!(query::<u32>(&owner, &parent, "value", ()), 0);
         let output = call(&owner, &parent, "nested_failure", child.clone());
         assert!(output.did_revert());
+        // Prove the child's domain error propagated through both dispatch layers.
+        assert_eq!(output.data, [0, 1, 0]);
         assert_eq!(query::<u32>(&owner, &parent, "value", ()), 0);
         assert_eq!(query::<u32>(&owner, &child, "value", ()), 0);
         let trap = Contracts::bare_call(
