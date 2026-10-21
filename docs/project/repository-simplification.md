@@ -158,3 +158,39 @@ a service dependency; that alone does not establish that it should be deleted.
 
 The plan succeeds through fewer prerequisites, consistent instructions and
 reproducible evidence. File count is an observation, not a release criterion.
+
+## Execution record — 2026-10-21
+
+| Milestone | Review | Status |
+|---|---|---|
+| 1: Product documentation | [PR 9](https://github.com/abako-project/backend-v2/pull/9), `81fbd65` | Prepared; documentation and Compose-rendering checks pass |
+| 2: Framework removal | [PR 10](https://github.com/abako-project/backend-v2/pull/10), `f92e23d` | Prepared; 154 tracked framework/template files removed; application sources and contracts preserved |
+| 3: Verification alignment | [PR 11](https://github.com/abako-project/backend-v2/pull/11), `4a5c46f` | Prepared; shared local/CI gate, both mock feature suites, WASM check and three image builds verified; all eight real-service E2E cases passed; PR CI still running |
+| 4: Reviewer walkthrough | Final documentation corrections | Partial; documentation audit complete, Docker gateway/browser acceptance pending |
+
+The reviews are stacked in milestone order and remain drafts. Nothing has been
+merged, tagged or deployed. The resulting checkout contains 325 tracked files,
+compared with 475 at the baseline; file count is not an acceptance gate.
+
+Verification of `4a5c46f`: formatting, workspace check, strict Clippy,
+104 workspace tests against disposable PostgreSQL, two doctests, memory-only and
+SQLite-only mock suites, workspace build and frontend WASM check passed. All
+three unchanged backend Dockerfile targets built with rootless Podman. Workflow
+validation with actionlint, shell/Python syntax, active Markdown file links and
+Compose isolation/external-frontend rendering also passed. The complete
+`scripts/verify.sh app` command exited successfully, including all eight real-service
+E2E cases (four on SQLite, four on memory). GitHub PR verification is still running
+at the time of this record; check PR 11 before marking ready.
+
+Persistent acceptance blocker: no Docker daemon is available here. Podman can
+build the images, but the Docker-specific Nginx smoke returns 502 with the
+configured Docker DNS resolver. The external frontend/browser walkthrough was
+not run. Complete gateway/login/SSE browser acceptance on a Docker-capable host
+using the README before closing milestone 4. No networking change or production
+operation is proposed to bypass this check.
+
+The fresh dependency-policy check fails with six vulnerability advisories in
+locked TLS dependencies, plus license-policy and maintenance findings. Bans and
+sources pass. `cargo-audit` is unavailable. Current advisory IDs and the separate
+license decision are recorded in [supply-chain status](../security/supply-chain.md).
+No dependency update, policy exception or project license choice is included.

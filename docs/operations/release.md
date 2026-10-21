@@ -38,7 +38,7 @@ Each release gets these tags. `v1.4.2` is shown as an example:
 
 A prerelease such as `v1.5.0-rc.1` gets only its exact tag. It never moves `latest` or a release line.
 
-`cargo deny check` and `cargo audit` are not release gates yet, because the dependency policy currently fails under the checked-in configuration. See [dependency evidence](../dependencies/poc-audit-2026-09-10.md). Signed images, published SBOMs, vulnerability scans and promotion/rollback automation are not implemented.
+`cargo deny check` and `cargo audit` are not release gates yet, because the dependency policy currently fails under the checked-in configuration. See [current dependency findings](../security/supply-chain.md). Signed images, published SBOMs, vulnerability scans and promotion/rollback automation are not implemented.
 
 ### GHCR access
 

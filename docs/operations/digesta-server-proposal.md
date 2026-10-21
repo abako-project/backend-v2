@@ -1,5 +1,9 @@
 # Digesta server deployment proposal
 
+Historical server proposal. For the selected hostname and current operating
+procedure, use [cloud status](cloud.md) and the
+[preview guide](digesta-backend-preview.md).
+
 Status: DRAFT
 
 Task: DEPLOY-DISCOVERY-001

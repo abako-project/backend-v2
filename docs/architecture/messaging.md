@@ -1,6 +1,7 @@
 # Messaging Architecture
 
-The POC uses private HTTP requests and durable SQLite state. There is no RabbitMQ broker, webhook receiver, exchange, consumer acknowledgement or dead-letter queue in the deployed stack.
+The backend uses private HTTP requests, adapter-owned PostgreSQL operations
+and custody/provider SQLite state (or memory for the mock). There is no RabbitMQ broker, webhook receiver, exchange, consumer acknowledgement or dead-letter queue in the deployed stack.
 
 The adapter records a domain operation, obtains its signature from custody, then submits the exact signed SCALE envelope to the mock. Operations are ordered per wallet. An ambiguous response becomes OutcomeUnknown and is reconciled against the existing receipt; it must not create a replacement business action.
 

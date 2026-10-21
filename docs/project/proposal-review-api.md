@@ -19,7 +19,10 @@ Descriptions accept at most 2,000 UTF-8 bytes; comments 10,000 bytes, nonblank a
 
 Migration `0007_proposal_reviews.sql` adds append-only presentation versions and comments, scoped to provider instance/project/proposal. The startup migration is rerunnable. Advisory transaction locks and a unique author/request key serialize writes and exact retries. Comments retain immutable historical scope snapshots; status changes alone do not invalidate a matching presentation. The adapter does not provide a cross-service transaction or rollback: confirm provider commands before dependent descriptive writes and retry only the failed write.
 
-## Validation and local deployment
+## Historical validation and local deployment (2026-10-09)
+
+This record predates the compensation amendment removing separate planning
+payments. Use [current status](project-context.md) for implemented business rules.
 
 79 workspace nextest tests passed using an isolated PostgreSQL, including permissions, CSRF, concurrent writes, stale revisions, retries, paging, restart/provider-instance isolation and unchanged provider state/payments. Two doctests, fmt, cargo check, strict Clippy, workspace build and the 79-operation OpenAPI check passed.
 

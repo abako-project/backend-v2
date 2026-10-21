@@ -1,6 +1,6 @@
 # Current implementation and limitations
 
-Reviewed against `608c70b` on 2026-10-21. This page describes implementation;
+Application baseline: `608c70b`; cleanup verification: `4a5c46f`, 2026-10-21. This page describes implementation;
 [specifications](../../SPECS.md) define approved behavior. Dated handoffs record
 verification of their own revisions, not a fresh verification of every later commit.
 
@@ -22,7 +22,7 @@ verification of their own revisions, not a fresh verification of every later com
 | Events | Durable adapter operations, receipt reconciliation, event ingestion and recipient notifications over authenticated SSE |
 | Platform | Public deployment-specific branding, currency display metadata, project types and terminology; software/Abako default, integer mock currency with decimals 0 |
 | Development | Local Compose/Nginx at localhost:8088; real-service API E2E with disposable PostgreSQL in both mock modes |
-| Delivery | Tag-triggered backend image workflow and an approved mock-backed HTTPS preview; see [cloud status](../operations/cloud.md) |
+| Delivery | PR/master application checks, tag-triggered backend images and an approved mock-backed HTTPS preview; see [cloud status](../operations/cloud.md) |
 
 Matching requires every requested skill, active worker/coordinator mode and
 capacity. Roles do not filter matching. Eligible previous-milestone workers are
@@ -74,12 +74,9 @@ is outside the intended scope.
 
 ## Evidence and next work
 
-The [platform handoff](../../progress/handoffs/PLATFORM-001.md) records 106 workspace
-tests, doctests, formatting, check, Clippy, build and eight real-service scenarios
-for the platform feature branch, with missing-tool and dependency-check limits.
-It is historical evidence, not a claim that all gates pass on the latest checkout.
-
-The [porting review](porting-coverage.md) compares the legacy implementation and
-records older verification. It is not the current product roadmap. The approved
-[repository simplification](repository-simplification.md) is the next cleanup;
-the contract-runtime proposal remains separate future work.
+The [simplification execution record](repository-simplification.md#execution-record--2026-10-21)
+records current local verification, draft review links and the pending Docker
+gateway/browser acceptance. No runtime or public contract changed during cleanup.
+The [platform handoff](../../progress/handoffs/PLATFORM-001.md) and
+[porting review](porting-coverage.md) retain historical evidence for their original
+revisions. The contract-runtime proposal remains separate future work.
