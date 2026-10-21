@@ -1,19 +1,25 @@
-# Specification Index
+# Specification index
 
-Updated 2026-09-25. Requirement approval and verification completion are separate.
+Reviewed 2026-10-21. The linked specifications define approved requirements;
+approval does not establish verification of every later commit. See
+[current implementation and limits](docs/project/project-context.md) for product
+status and each feature's recorded evidence for observed results.
 
-| Specification | Approval | Delivery |
+| Specification | Approval | Scope |
 |---|---|---|
-| [SPEC-0001: custody](specs/0001-custodial-wallet-signing/status.md) | APPROVED | Integrated; historical TASK-005 verified against disposable mock data, not real assets |
-| [SPEC-0002: REST/frontend](specs/0002-rest-frontend-isolation/status.md) | APPROVED | Integrated; backend verified against disposable mock data |
-| [SPEC-0003: marketplace](specs/0003-transactional-marketplace/status.md) | APPROVED | Integrated; historical POC-07 verified against disposable mock data |
-| [SPEC-0004: Virto compatibility](specs/0004-virto-compatibility/status.md) | APPROVED | Mock Bramp/catalog and username-first passkey login integrated |
-| [SPEC-0005: dispute opening](specs/0005-dispute-opening/status.md) | APPROVED | Implemented and verified on both mock backends: current rejection, public references, project freeze and one response. No timeout, chat or resolution |
-| [SPEC-0006: backend parity](specs/0006-backend-parity/status.md) | APPROVED / VERIFIED | Profiles and images, catalog requests, canonical task-storage routes and PostgreSQL verified in both mock modes |
+| [0001: custodial signing](specs/0001-custodial-wallet-signing/spec.md) | APPROVED | Encrypted seed storage, principal binding and durable signing jobs |
+| [0002: REST and frontend isolation](specs/0002-rest-frontend-isolation/spec.md) | APPROVED | Public REST/SSE and independently deployed browser clients |
+| [0003: transactional marketplace](specs/0003-transactional-marketplace/spec.md) | APPROVED | Matching, capacity, proposals, milestones, escrow, compensation and final evaluations, including later approved amendments |
+| [0004: Virto compatibility](specs/0004-virto-compatibility/spec.md) | APPROVED | Mock Bramp/catalog and username-first passkey login |
+| [0005: dispute opening](specs/0005-dispute-opening/spec.md) | APPROVED | Current-rejection dispute opening and project freeze; resolution excluded |
+| [0006: backend parity](specs/0006-backend-parity/spec.md) | APPROVED | Profiles/images, catalogs, task-storage routes, PostgreSQL and project briefs |
+| [0007: proposal review](specs/0007-proposal-review-presentation/spec.md) | APPROVED | Presentation metadata and immutable scope-review comments |
+| [0008: dispute conversations](specs/0008-dispute-conversations/spec.md) | APPROVED | Repeated public arguments and private case conversation |
+| [0009: Digesta rename](specs/0009-digesta-rename/spec.md) | APPROVED | Naming and existing-environment compatibility |
+| [0010: preview deployment](specs/0010-backend-preview-deployment/spec.md) | APPROVED | Separate mock-backed server preview |
+| [0011: backend dev host](specs/0011-backend-dev-host/spec.md) | APPROVED | Preview API hostname correction to dev.abako.xyz |
+| [0012: platform profile](specs/0012-platform-profile/spec.md) | APPROVED | Deployment branding, vocabulary, currency display and compatible custom project types |
 
-The initial marketplace backend was integrated into `master` at `ed6e4f8`; the legacy-scale
-E2E and quality refactors followed. Dispute opening is implemented at `a64b747`.
-The backend closeout was merged into `master` on 2026-09-25.
-No production release exists. See [port coverage](docs/project/porting-coverage.md)
-for legacy differences and test limits. `specs/_templates` contains future-work
-forms, not implemented functionality.
+The [repository simplification plan](docs/project/repository-simplification.md)
+is approved as SIMPLIFY-001. It preserves application behavior and contracts.
+Historical acceptance reports remain under `progress/handoffs/`.

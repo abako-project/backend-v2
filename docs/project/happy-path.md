@@ -56,8 +56,9 @@ Client and coordinator can save/read private comments for that delivery version;
 old versions remain readable, but new comments require the current version. The client or assigned coordinator
 may then open a public dispute against the *current* rejected submission.
 Opening freezes the entire project, including all task storages and unpaid
-escrow. The other party may publish one response. The case remains Open:
-resolution, fund disposition, chat and timeout are not implemented. This
+escrow. The parties may append public arguments and use the authorized private case
+conversation described below. The case remains Open: formal resolution, fund
+disposition and timeout are not implemented. This
 alternative path is tested separately from the successful settlement path.
 
 ## Technical flow
@@ -301,3 +302,13 @@ shares receive integer leftovers without losing units. Coordination minutes stil
 capacity and reputation, not the monetary share. A positive budget needs worker hours.
 Global policy edits apply on subsequent draft create/update; submitted/approved prices
 and already completed payments remain unchanged.
+
+## Estimated project delivery date
+
+The proposal retains one global delivery preference/date, separately from its
+ISO-week milestone windows. Submission validates an exact target against the
+Monday of the first milestone's start week plus seven days times the sum of all
+inclusive milestone week counts. Drafts may retain an earlier date while editing;
+relative preferences retain their descriptive behavior. The accepted proposal's
+date is the project target. It does not trigger penalties, state changes or
+payments. Independent milestone dates and extension requests remain future work.

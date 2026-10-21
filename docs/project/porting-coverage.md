@@ -1,8 +1,9 @@
 # Porting and E2E coverage
 
-Reviewed 2026-09-25 against the merged backend
-and legacy `main` commit `3e2b929`. Implementation claims below describe
-the local `master`, not a production release.
+Legacy comparison baseline: 2026-09-25, legacy `main` commit `3e2b929`.
+The functional summary includes later approved marketplace amendments. Dated
+verification records below apply only to their original revisions. For current
+implementation status use [project context](project-context.md).
 This is a port of the approved marketplace redesign,
 not a complete compatibility port of the legacy backend or all mock endpoints.
 
@@ -21,12 +22,12 @@ repository remains separate. Legacy `/v1` clients need adaptation to `/api`.
 | Calendars | Approved redesign: one per worker, default weekly capacity, ISO-week overrides and minute reservations |
 | Assignment | Approved redesign: all required skills, active mode and capacity; previous-milestone workers preferred when eligible, then relevant score and random exact ties; no role filter or `assignmentKey` |
 | Projects/coordinators | Client creates a project; provider selects its coordinator |
-| Planning | Added negotiated planning fee, duration, acceptance and separate delivery payment |
-| Proposals/task storage | Draft/PendingApproval/Approved/Cancelled; provider creates storage per milestone; task tracking preserved; submission requires a task in every storage; canonical direct task-storage routes coexist with nested aliases |
+| Planning | Planning preparation/acceptance has no separate price or transfer; execution funds milestones |
+| Proposals/task storage | Draft/PendingApproval/Approved/Cancelled; provider creates storage per milestone; task tracking preserved; tracking tasks are optional through submission and execution; canonical direct task-storage routes coexist with nested aliases |
 | Milestone sequence | Execution approval reserves/assigns every milestone but activates only the first; accepting one activates the next; final acceptance marks project `completed` |
 | Funds | Approved full execution escrow and per-requirement/coordinator payouts replace legacy advance-only and first-worker payouts |
-| Reputation | Approved per-milestone, committed-minute weighted scores replace standalone legacy project ratings |
-| Cancellation/dispute | Party authorization, current-submission rejection, public Open case, one response and project-wide freeze; resolution/refunds excluded |
+| Reputation | Final project evaluations are separate from milestone payment, with minute-weighted reputation |
+| Cancellation/dispute | Party authorization, current-submission rejection, public Open case and project-wide freeze, repeated public arguments and private conversation; resolution/refunds excluded |
 | Storage | Adapter PostgreSQL; custody SQLite; mock memory/SQLite features with SQLite default; missing-only mock catalog seeding. No development-data migration. |
 | Descriptive profiles/images | Adapter PostgreSQL stores separate editable client and worker sections plus one replaceable image per section. Public projection excludes email, department, session and custody data; binary PNG/JPEG/WebP reads are public. Upload is owner-only, bounded to 1 MiB and MIME/signature checked. |
 | Bramp | Mock-only deposit request with one operator credit; pending withdrawal hold and cancellation. Auxiliary E2E passes in both mock modes. No bank connection, currency conversion or generic payment API. |
@@ -46,9 +47,9 @@ This area is implemented in the Rust provider and covered by the expanded E2E:
 - Only the coordinator creates or fully edits tasks. Assigned workers may update
   status and logged minutes. Clients are read-only. Cancelled projects reject writes.
 - Tracking assignees and logged time do not alter contractual assignments,
-  reservations, budgets or payouts. There is no task-delete command.
-- A draft may have empty storages; submitting it requires at least one task in
-  each storage. An unsuccessful submission leaves the draft unchanged.
+  reservations, budgets or payouts. Draft-only task deletion checks the observed proposal revision.
+- Storages may remain empty through submission, planning acceptance and execution.
+  Tracking tasks are not a prerequisite for settlement (PLAN-007, approved 2026-10-08).
 - Canonical `/api/task-storages/{storageId}` and `/tasks/{taskId}` reads, plus
   direct POST/PUT/PATCH task writes, resolve the owning project in the adapter.
   Existing project-nested write paths remain aliases; there is one provider store.
@@ -58,11 +59,11 @@ This area is implemented in the Rust provider and covered by the expanded E2E:
 
 Legacy uses a separate in-memory storage map and header-based mock caller;
 Rust keeps storage inside the signed, atomic project aggregate. The task
-submission precondition is now specified in SPEC-0003 and implemented.
+storage behavior follows the current PLAN-007 amendment in SPEC-0003.
 
 An Open milestone dispute now freezes writes to all of the project's task
-storages, not only the disputed milestone. Public case reads and the single
-counterparty response remain available. No dispute resolution or unlock exists.
+storages, not only the disputed milestone. Public case reads, append-only public
+arguments and the authorized private conversation remain available. No dispute resolution or unlock exists.
 
 Open or deliberately changed compatibility points:
 
@@ -87,7 +88,7 @@ Open or deliberately changed compatibility points:
   resolution are excluded by approved scope. Project escrow alone pays workers
   and coordinators; an Open dispute freezes pending funds without unlock.
 
-## Executable happy path
+## Executable happy path and historical results
 
 From the Rust repository root, with Rust 1.96.1, Python 3 and PostgreSQL
 server commands `initdb`, `pg_ctl` and `psql`:

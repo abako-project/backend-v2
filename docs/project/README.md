@@ -1,8 +1,11 @@
 # Project documentation
 
-Start with the [happy path](happy-path.md), [current context](project-context.md),
-[porting coverage](porting-coverage.md) and [specification index](../../SPECS.md).
-Deploy using [infra/README.md](../../infra/README.md).
+- [Current implementation and limitations](project-context.md)
+- [Marketplace happy path and API examples](happy-path.md)
+- [Approved requirements](../../SPECS.md)
+- [Repository simplification plan](repository-simplification.md)
+- [Legacy comparison and historical test evidence](porting-coverage.md)
 
-This repository is already configured. Do not rerun template configuration over it.
-Agent tooling is not a prerequisite for human deployment or testing.
+For setup use the [Compose guide](../../infra/README.md); for existing server
+operation and recovery use [cloud status](../operations/cloud.md).
+Agent tooling is not a prerequisite for deployment or testing.
