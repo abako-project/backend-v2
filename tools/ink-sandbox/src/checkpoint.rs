@@ -6,7 +6,10 @@ use sp_core::{
     hashing::{blake2_256, sha2_256},
     storage::{ChildInfo, well_known_keys::DEFAULT_CHILD_STORAGE_KEY_PREFIX},
 };
-use sp_runtime::StateVersion;
+use sp_runtime::{
+    StateVersion,
+    traits::{BlakeTwo256, Hash},
+};
 use sp_state_machine::{Backend, IterArgs};
 
 pub const MAX_CHECKPOINT: usize = 64 * 1024 * 1024;
@@ -76,7 +79,19 @@ impl Checkpoint {
         if self.nodes.len() > 100_000 || self.encoded_size() > MAX_CHECKPOINT - 32 {
             return Err(ProofError::Limit);
         }
+        // raw_iter treats the zero root as an empty trie. Require an actual
+        // top-level root node (except for the SDK's canonical empty root).
+        let empty = BlakeTwo256::trie_root(Vec::new(), StateVersion::V1);
+        if self.root != empty
+            && !self
+                .nodes
+                .iter()
+                .any(|(key, _)| key.as_slice() == self.root.as_bytes())
+        {
+            return Err(ProofError::InvalidTrieNode);
+        }
         let mut refs = 0_i64;
+        let mut reconstruction_bytes = 0_usize;
         let mut previous: Option<&[u8]> = None;
         for (key, (value, count)) in &self.nodes {
             if key.len() < 32
@@ -90,6 +105,17 @@ impl Checkpoint {
             }
             previous = Some(key);
             refs += i64::from(*count);
+            // SDK restore clones the value once per reference. Bound total work,
+            // not only serialized size and the number of insertion operations.
+            let copies = (value.len() + key.len())
+                .checked_mul(*count as usize)
+                .ok_or(ProofError::Limit)?;
+            reconstruction_bytes = reconstruction_bytes
+                .checked_add(copies)
+                .ok_or(ProofError::Limit)?;
+            if reconstruction_bytes > MAX_CHECKPOINT * 2 {
+                return Err(ProofError::Limit);
+            }
         }
         if refs > 200_000 {
             return Err(ProofError::Limit);
@@ -169,6 +195,18 @@ mod tests {
             Checkpoint::decode(&bad.to_bytes().unwrap()),
             Err(ProofError::CheckpointVersion(1))
         ));
+        let mut zero = checkpoint.clone();
+        zero.root = H256::zero();
+        assert!(matches!(
+            Checkpoint::decode(&zero.to_bytes().unwrap()),
+            Err(ProofError::InvalidTrieNode)
+        ));
+        assert!(
+            Checkpoint::capture(sp_io::TestExternalities::new_empty())
+                .unwrap()
+                .restore()
+                .is_ok()
+        );
         let mut bad = checkpoint.clone();
         bad.root = H256::repeat_byte(3);
         assert!(Checkpoint::decode(&bad.to_bytes().unwrap()).is_err());
@@ -184,6 +222,16 @@ mod tests {
         let mut bad = fixture();
         bad.nodes.push(bad.nodes[0].clone());
         assert!(Checkpoint::decode(&bad.to_bytes().unwrap()).is_err());
+        let mut amplified = fixture();
+        let value = vec![7; 256 * 1024];
+        amplified
+            .nodes
+            .push((blake2_256(&value).to_vec(), (value, 1024)));
+        amplified.nodes.sort_unstable_by(|a, b| a.0.cmp(&b.0));
+        assert!(matches!(
+            Checkpoint::decode(&amplified.to_bytes().unwrap()),
+            Err(ProofError::Limit)
+        ));
         let checkpoint = fixture();
         let mut malicious = checkpoint.encode();
         malicious.truncate(4 + 64 + 32);
