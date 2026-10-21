@@ -109,3 +109,7 @@ reproduction command. Later milestones depend on the compatibility proof.
 
 Implementation evidence and the current integration gate are recorded in
 [the first-slice handoff](../../progress/handoffs/SPEC-0013.md).
+
+Milestone 2's isolated worker/persistence slice and its remaining shell/policy
+gates are tracked in [the candidate handoff](../../progress/handoffs/SPEC-0013-M2.md).
+This progress record does not change the approved promotion requirements.

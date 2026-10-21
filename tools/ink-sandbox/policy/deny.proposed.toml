@@ -1,0 +1,88 @@
+# PROPOSAL ONLY. Owner approval required; never selected by normal checks.
+[advisories]
+yanked = "deny"
+unmaintained = "all"
+ignore = [
+  { id = "RUSTSEC-2025-0161", reason = "SPEC-0013 candidate only; locked graph fingerprint enforced by check_proposal.py; review by 2026-12-01 and before provider integration" },
+  { id = "RUSTSEC-2022-0061", reason = "SPEC-0013 candidate only; locked graph fingerprint enforced by check_proposal.py; review by 2026-12-01 and before provider integration" },
+  { id = "RUSTSEC-2024-0436", reason = "SPEC-0013 candidate only; locked graph fingerprint enforced by check_proposal.py; review by 2026-12-01 and before provider integration" },
+  { id = "RUSTSEC-2024-0370", reason = "SPEC-0013 candidate only; locked graph fingerprint enforced by check_proposal.py; review by 2026-12-01 and before provider integration" },
+]
+
+[licenses]
+confidence-threshold = 0.93
+allow = ["Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CDLA-Permissive-2.0", "ISC", "MIT", "MPL-2.0", "Unicode-3.0", "Zlib"]
+unused-license-exception = "deny"
+
+[[licenses.exceptions]]
+name = "bitcoin_hashes"
+version = "=0.13.1"
+allow = ["CC0-1.0"]
+
+[[licenses.exceptions]]
+name = "hex-conservative"
+version = "=0.1.2"
+allow = ["CC0-1.0"]
+
+[[licenses.exceptions]]
+name = "parity-bip39"
+version = "=2.0.1"
+allow = ["CC0-1.0"]
+
+[[licenses.exceptions]]
+name = "secp256k1"
+version = "=0.28.2"
+allow = ["CC0-1.0"]
+
+[[licenses.exceptions]]
+name = "secp256k1-sys"
+version = "=0.9.2"
+allow = ["CC0-1.0"]
+
+[[licenses.exceptions]]
+name = "tiny-keccak"
+version = "=2.0.2"
+allow = ["CC0-1.0"]
+
+[[licenses.exceptions]]
+name = "polkadot-core-primitives"
+version = "=20.0.0"
+allow = ["GPL-3.0-only"]
+
+[[licenses.exceptions]]
+name = "polkadot-parachain-primitives"
+version = "=19.0.0"
+allow = ["GPL-3.0-only"]
+
+[[licenses.exceptions]]
+name = "staging-xcm"
+version = "=19.0.0"
+allow = ["GPL-3.0-only"]
+
+[[licenses.exceptions]]
+name = "staging-xcm-builder"
+version = "=23.0.0"
+allow = ["GPL-3.0-only"]
+
+[[licenses.exceptions]]
+name = "staging-xcm-executor"
+version = "=22.0.0"
+allow = ["GPL-3.0-only"]
+
+[[licenses.exceptions]]
+name = "xcm-procedural"
+version = "=11.0.2"
+allow = ["GPL-3.0-only"]
+
+[[licenses.exceptions]]
+name = "wasmparser-nostd"
+version = "=0.100.2"
+allow = ["Apache-2.0 WITH LLVM-exception"]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

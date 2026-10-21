@@ -49,13 +49,41 @@ application permits spending the full visible balance. Candidate contracts and
 the bridge must solve this through the approved separate technical-reserve
 policy before money parity can pass; silently reducing user payouts is forbidden.
 
-Checkpoint format here is proof-only. Provider integration still requires a
-bundle/runtime identity, bounded decoding, validated roots, single-writer worker,
-SQLite atomicity, migration and fault injection. `NoRandomness` is a placeholder
-for unused v5 host functionality, not a source for contract matching entropy.
-Host-call weights are finite conservative proof limits, not measured production
-weights. No performance target or live-chain compatibility is established by a
-successful unit suite.
+The candidate now has a dedicated worker and a separate SQLite store. Typed
+call/instantiate requests have an eight-item queue, 64 KiB inputs/outputs,
+1 MiB shell-envelope limits, bounded gas and bounded checkpoint reconstruction.
+No unmetered callback or caller-supplied WASM is accepted. The worker verifies
+compiled-in bundles and their build locks before opening candidate state.
+Queries run on discarded state. An expected revision and `BEGIN IMMEDIATE`
+serialize competing workers; the full runtime, opaque shell envelope and exact
+execution outcome commit in one SQLite transaction. The worker closes admission
+at shutdown, finishes any executing transaction and rejects queued work. Call
+`shutdown().await` to observe its join; dropping the owner signals cancellation
+and the worker observes/logs its result without blocking a Tokio core thread.
+A lost response never proves non-execution.
+
+Checkpoint version 2 includes sorted raw trie nodes (with child tries), root,
+runtime/configuration/lock identity, bundle-manifest identity and a corruption
+digest. Decoding bounds bytes, allocation, nodes and reference counts; restore
+checks node hashes and traverses every top-level and child key. Corrupt,
+unsupported or incompatible state rejects startup without resetting genesis.
+The old version-1 proof format was never a provider format and is not migrated.
+The existing Rust provider's JSON/SQLite format is unchanged.
+
+This is milestone 2's **isolated candidate infrastructure**, not a complete
+provider integration. `ShellChanges` carries fixture envelopes; the actual
+provider shell's nonce/receipt/event codec and operation ABI bridge have not
+been connected. There is no public raw-contract endpoint, shadow comparison or
+authority switch. Private diagnostics expose only revision, identity, trie root
+and checkpoint size through the Rust library. They are not an HTTP route.
+
+Dependency-policy adoption remains a gate. The owner requested a concrete
+[exception proposal](policy/README.md), which is inactive pending review.
+`NoRandomness` is still unused v5 host scaffolding, not matching entropy.
+Host-call weights are conservative finite proof limits, not production
+benchmarks. Passing tests establishes neither application parity nor the
+specified latency budgets. Full import/rollback, shell integration and domain
+contracts remain later work.
 
 See [dependency review](dependencies.md) and the recorded implementation evidence
 in [the handoff](../../progress/handoffs/SPEC-0013.md) before promoting this runtime into

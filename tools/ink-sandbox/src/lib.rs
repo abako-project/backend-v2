@@ -9,7 +9,9 @@ use frame_support::{
 use sp_runtime::{AccountId32, BuildStorage, traits::IdentityLookup};
 
 pub mod assets;
+pub mod bundle;
 pub mod checkpoint;
+pub mod worker;
 
 #[derive(Debug)]
 pub enum ProofError {
@@ -18,6 +20,9 @@ pub enum ProofError {
     Decode(parity_scale_codec::Error),
     CheckpointVersion(u32),
     InvalidTrieNode,
+    Limit,
+    Identity,
+    Bundle,
 }
 impl std::fmt::Display for ProofError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -29,6 +34,9 @@ impl std::fmt::Display for ProofError {
                 write!(f, "unsupported proof checkpoint: {version}")
             }
             Self::InvalidTrieNode => f.write_str("invalid checkpoint trie node"),
+            Self::Limit => f.write_str("sandbox resource limit"),
+            Self::Identity => f.write_str("incompatible runtime or bundle"),
+            Self::Bundle => f.write_str("invalid pinned contract bundle"),
         }
     }
 }

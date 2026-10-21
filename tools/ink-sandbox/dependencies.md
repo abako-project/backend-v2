@@ -68,3 +68,33 @@ review acceptable upstream patches/replacements and obtain any required policy
 approval. Do not change the SDK family just to silence the scan, relax the
 allowlist implicitly, or ship the proof as an authoritative engine. The current
 application dependency graph remains unchanged.
+
+## Milestone 2 additions
+
+Reviewed 2026-10-22 against the published registry manifests and primary source:
+
+| Package | Purpose and features | MSRV / license |
+|---|---|---|
+| sp-state-machine =0.48.0 | Exhaustive fallible top/child trie iteration; std, already in this SDK lock | Not declared; Apache-2.0 |
+| tokio =1.53.1 | Async replies and the worker's SQLite I/O runtime; rt, sync, time | 1.71; MIT |
+| sqlx =0.9.0 | Atomic SQLite checkpoint plus opaque shell envelope; defaults off, runtime-tokio, sqlite-bundled | 1.94; MIT OR Apache-2.0 |
+
+Tokio and SQLx use the same exact versions and SQLite feature family already
+approved in the application; no new runtime family is introduced. SQLx's bundled
+SQLite uses native C/FFI and a connection worker thread. Tokio uses upstream
+unsafe/platform code. These implications already exist in the app, but remain
+visible in the isolated workspace review. No new cryptographic algorithm or
+unsafe Rust is written here. The standalone SDK graph is still not linked into
+application services or images.
+
+A std-only persistence file would avoid SQLx but could not prove the required
+SQLite atomic commit with shell bytes. A second SQLite library would duplicate
+native dependencies. A generic asynchronous executor would allow unmetered
+closures; the worker instead accepts bounded typed call/instantiate requests.
+
+Primary sources: [SQLx 0.9.0](https://crates.io/crates/sqlx/0.9.0),
+[Tokio 1.53.1](https://docs.rs/tokio/1.53.1/tokio/sync/oneshot/index.html),
+[sp-state-machine 0.48.0](https://crates.io/crates/sp-state-machine/0.48.0).
+
+The owner requested **proposed** scoped exceptions on 2026-10-22. They are
+[inactive review material](policy/README.md); this is not approval to adopt them.

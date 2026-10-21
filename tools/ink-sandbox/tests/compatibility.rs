@@ -200,10 +200,11 @@ fn production_wasm_cross_calls_assets_reverts_and_full_restart() {
     ));
     fs::create_dir(&directory).unwrap();
     let path = directory.join("runtime.scale");
-    fs::write(&path, Checkpoint::capture(ext).unwrap().encode()).unwrap();
+    fs::write(&path, Checkpoint::capture(ext).unwrap().to_bytes().unwrap()).unwrap();
     let mut restored = Checkpoint::decode(&fs::read(&path).unwrap())
         .unwrap()
-        .restore();
+        .restore()
+        .unwrap();
     fs::remove_dir_all(directory).unwrap();
     restored.execute_with(|| {
         // Contract Mapping data lives in child tries: top-level-only persistence fails here.
