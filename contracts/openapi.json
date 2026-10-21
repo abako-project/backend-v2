@@ -5754,6 +5754,42 @@
           }
         }
       }
+    },
+    "/api/platform": {
+      "get": {
+        "operationId": "getPlatformProfile",
+        "tags": [
+          "Contract"
+        ],
+        "summary": "Read public DAO branding and domain vocabulary",
+        "description": "Available before login. Serves validated startup configuration without querying the provider or database. Existing Origin restrictions apply. An unset PLATFORM_CONFIG_PATH uses the bundled software/Abako profile.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Public platform profile.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformProfile"
+                }
+              }
+            }
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "description": "Request admission capacity exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9158,13 +9194,13 @@
       },
       "ProjectType": {
         "type": "string",
-        "enum": [
-          "Other",
+        "minLength": 1,
+        "maxLength": 4000,
+        "description": "Exact value from GET /api/platform projectTypes, or one of the always-supported legacy values Other, SmartContract, Frontend, MVP, Audit, MobileApp. At most 4000 UTF-8 bytes, nonblank, no NUL. Unconfigured values fail writes with 400 invalid_request. Stored historical values remain readable after configuration changes.",
+        "examples": [
           "SmartContract",
-          "Frontend",
-          "MVP",
-          "Audit",
-          "MobileApp"
+          "Full Stack",
+          "DevOps & Infrastructure"
         ]
       },
       "IndicativeBudget": {
@@ -10571,6 +10607,271 @@
         "examples": [
           {
             "coordinatorPercent": 10
+          }
+        ]
+      },
+      "PlatformCurrency": {
+        "type": "object",
+        "properties": {
+          "symbol": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "decimals": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 255
+          }
+        },
+        "required": [
+          "symbol",
+          "name",
+          "decimals"
+        ],
+        "additionalProperties": false,
+        "description": "Deployment asset display metadata. Default mock decimals is 0. Does not convert or migrate existing amounts; no chain metadata is queried."
+      },
+      "ExternalProfileHints": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "placeholder": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "icon": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "helpText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          }
+        },
+        "required": [
+          "id",
+          "label",
+          "placeholder",
+          "icon",
+          "helpText"
+        ],
+        "additionalProperties": false,
+        "description": "Public external-profile presentation hints. Render plain text and treat icon as an icon-library identifier. This does not add generic external-profile persistence."
+      },
+      "PlatformTerminology": {
+        "type": "object",
+        "properties": {
+          "workerRole": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "workerRolePlural": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "clientRole": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "coordinatorRole": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "workerPitch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "clientPitch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "externalProfile": {
+            "$ref": "#/components/schemas/ExternalProfileHints"
+          },
+          "skillsHelperText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "backgroundHelperText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "emptyStateWorkerText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "emptyStateClientText": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          }
+        },
+        "required": [
+          "workerRole",
+          "workerRolePlural",
+          "clientRole",
+          "coordinatorRole",
+          "workerPitch",
+          "clientPitch",
+          "externalProfile",
+          "skillsHelperText",
+          "backgroundHelperText",
+          "emptyStateWorkerText",
+          "emptyStateClientText"
+        ],
+        "additionalProperties": false,
+        "description": "Deployment-specific plain-text role labels and form hints."
+      },
+      "PlatformProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "tagline": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "sector": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+          },
+          "currency": {
+            "$ref": "#/components/schemas/PlatformCurrency"
+          },
+          "projectTypes": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4000,
+              "description": "Nonblank plain text, at most 4000 UTF-8 bytes, without NUL."
+            },
+            "description": "Ordered labels accepted exactly as project-brief projectType values. The six legacy values are also always accepted."
+          },
+          "terminology": {
+            "$ref": "#/components/schemas/PlatformTerminology"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "tagline",
+          "description",
+          "sector",
+          "currency",
+          "projectTypes",
+          "terminology"
+        ],
+        "additionalProperties": false,
+        "description": "One public DAO/domain presentation profile for this deployment. No tenant selection, chain connection or provider-side business changes.",
+        "examples": [
+          {
+            "id": "software",
+            "name": "Abako",
+            "tagline": "Decentralized Marketplace for Freelancers",
+            "description": "Marketplace built around accountability for Web3 and software engineering teams.",
+            "sector": "software",
+            "currency": {
+              "symbol": "KVN",
+              "name": "Kreivo Native",
+              "decimals": 0
+            },
+            "projectTypes": [
+              "Smart Contract",
+              "Frontend",
+              "Full Stack",
+              "Mobile App",
+              "MVP",
+              "Audit",
+              "DevOps & Infrastructure",
+              "Other"
+            ],
+            "terminology": {
+              "workerRole": "Developer",
+              "workerRolePlural": "Developers",
+              "clientRole": "Client",
+              "coordinatorRole": "Coordinator",
+              "workerPitch": "I'm looking to work in Web3 & software projects",
+              "clientPitch": "I'm looking for specialized talent. I need consultants, project leaders, and developers.",
+              "externalProfile": {
+                "id": "github",
+                "label": "GitHub username (optional)",
+                "placeholder": "yourusername",
+                "icon": "ri-github-line",
+                "helpText": "Public GitHub profile to showcase your code and contributions."
+              },
+              "skillsHelperText": "Include programming languages, frameworks, libraries, tools, or soft skills relevant to software engineering.",
+              "backgroundHelperText": "Tell us about your experience, engineering journey, education, and notable software projects.",
+              "emptyStateWorkerText": "Projects will appear here once you are assigned as a consultant or developer.",
+              "emptyStateClientText": "Create your first project proposal to get started with Abako."
+            }
           }
         ]
       }

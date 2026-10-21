@@ -6,6 +6,7 @@ mod disputes;
 mod http;
 mod notifications;
 mod operations;
+mod platform;
 mod profiles;
 mod project_briefs;
 mod project_participants;

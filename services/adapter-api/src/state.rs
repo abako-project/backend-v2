@@ -92,6 +92,7 @@ pub(crate) struct Config {
     pub(crate) admin_username: String,
     pub(crate) admin_password: Zeroizing<String>,
     pub(crate) openapi: String,
+    pub(crate) platform: generated_contracts::PlatformProfile,
 }
 impl Config {
     pub(crate) fn from_env() -> Result<Self, Error> {
@@ -172,6 +173,11 @@ impl Config {
             admin_username: env::var("BOOTSTRAP_ADMIN_USERNAME").unwrap_or_else(|_| "admin".into()),
             admin_password: required_secret("BOOTSTRAP_ADMIN_PASSWORD_FILE")?,
             openapi,
+            platform: crate::platform::load(
+                env::var_os("PLATFORM_CONFIG_PATH")
+                    .as_deref()
+                    .map(std::path::Path::new),
+            )?,
         })
     }
 }

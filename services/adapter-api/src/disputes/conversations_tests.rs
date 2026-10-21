@@ -354,7 +354,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
     assert_eq!(activity[0]["eventData"]["argumentId"], json!(entry_id));
     assert!(!history.to_string().contains("PRIVATE DISPUTE CONVERSATION"));
     assert!(!history.to_string().contains("PRIVATE CLIENT REPLY"));
-    let mut expanded_config = test_config(app.config.database_url.clone(), &internal);
+    let mut expanded_config = test_config(app.config.database_url.clone(), &internal)?;
     expanded_config.dispute_channel_allow_participants = true;
     let expanded = Arc::new(App::new(expanded_config).await?);
     let expanded_server = Server::start(http::router(expanded.clone())).await?;
@@ -469,7 +469,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
     assert_eq!(fake.lock().await.submissions, 0);
     server.finish().await?;
     let restarted =
-        Arc::new(App::new(test_config(app.config.database_url.clone(), &internal)).await?);
+        Arc::new(App::new(test_config(app.config.database_url.clone(), &internal)?).await?);
     let server = Server::start(http::router(restarted.clone())).await?;
     assert_eq!(
         client

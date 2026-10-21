@@ -6,6 +6,32 @@ in the signed provider. Frontends use the same
 REST routes and authenticated SSE; no frontend assets or arbitrary signing API are
 served here. See `crates/generated-contracts/API.md` and `contracts/openapi.json`.
 
+## Public platform profile
+
+`GET /api/platform` returns DAO branding, currency display metadata, project
+types and terminology before login. It uses the same Origin/CORS rules as
+other public routes. The bundled profile is software/Abako; its `decimals: 0`
+matches current integer mock amounts. No balance, price or asset is converted.
+
+Set optional `PLATFORM_CONFIG_PATH` to a readable JSON file with the response
+shape to serve another profile. Use the bundled
+[example](src/platform/default.json) as a starting point. Mount the file
+read-only in the adapter container and set the variable to its container path.
+No rebuild is needed. Restart to apply changes; all replicas must use the same
+file. Invalid explicit configuration prevents startup instead of serving the
+default. The file is limited to 64 KiB, each string to 4,000 UTF-8 bytes and
+project types to 1–100 unique nonblank strings. All fields are public; do not
+include secrets. Currency decimals is an unsigned integer from 0 through 255.
+
+Brief `projectType` accepts each exact configured label, including spaces,
+and the legacy values Other, SmartContract, Frontend, MVP, Audit and MobileApp.
+Unknown values return 400. Saved types remain readable after configuration
+changes; edits must use a currently allowed value. No migration is needed,
+but rolling back to an older enum-only adapter after saving custom values
+requires compatibility handling. This config represents one profile per
+deployment; it does not create multi-tenant isolation or generic external
+identity storage. Render terminology as text and icons as library identifiers.
+
 ## Runtime
 
 Set these environment variables; only `ADAPTER_DATABASE_URL` is optional:

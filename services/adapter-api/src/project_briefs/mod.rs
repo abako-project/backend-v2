@@ -52,6 +52,12 @@ pub(crate) async fn put(
     Json(request): Json<PutProjectBriefRequest>,
 ) -> Result<(StatusCode, Json<ProjectBriefView>), Error> {
     let (instance, project) = context(&app, &session, &id, true).await?;
+    if !crate::platform::allows_project_type(
+        &app.config.platform,
+        request.brief.project_type.as_str(),
+    ) {
+        return Err(Error::Invalid);
+    }
     let (created, brief) = store::write(&app.db, instance, project, &request).await?;
     Ok((
         if created {

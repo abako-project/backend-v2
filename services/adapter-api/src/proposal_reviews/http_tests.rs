@@ -285,7 +285,7 @@ async fn proposal_reviews_persist_versions_comments_and_permissions_without_prov
             .await?
             .matches_current_definition
     );
-    let config = test_config(app.config.database_url.clone(), &internal);
+    let config = test_config(app.config.database_url.clone(), &internal)?;
     server.finish().await?;
     app.db.close().await;
     let restarted = Arc::new(App::new(config).await?);

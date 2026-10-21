@@ -30,6 +30,7 @@ pub(crate) fn router(app: Arc<App>) -> Router {
         .route("/health", get(|| async { StatusCode::OK }))
         .route("/ready", get(ready))
         .route("/api/openapi.json", get(openapi))
+        .route("/api/platform", get(crate::platform::get))
         .route("/api/auth/register", post(register))
         .route("/api/auth/login", post(login))
         .route("/api/auth/session", get(session))
@@ -262,7 +263,8 @@ fn is_public_case(request: &Request) -> bool {
             .is_some_and(|path| {
                 matches!(
                     path.as_str(),
-                    "/api/disputes/{disputeId}"
+                    "/api/platform"
+                        | "/api/disputes/{disputeId}"
                         | "/api/disputes/{disputeId}/presentation"
                         | "/api/disputes/{disputeId}/arguments"
                         | "/api/disputes/{disputeId}/history"

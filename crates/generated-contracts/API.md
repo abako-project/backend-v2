@@ -7,6 +7,24 @@ fields are rejected. Provider commands are internal only, never a public generic
 signing endpoint. Consumers must validate commands before signing and again after
 decoding at the provider. State authorization runs in the provider transaction.
 
+## Public platform profile
+
+`GET /api/platform` is available before login and returns the configured
+`PlatformProfile`: id, name, tagline, description, sector, currency,
+projectTypes and terminology. The nested shape and complete software/Abako
+example are in OpenAPI. Existing Origin restrictions apply.
+
+The default currency decimals is 0, matching current integer mock amounts.
+Profile metadata does not convert amounts or connect to a chain. Project-type
+labels are valid exact `projectType` values for project briefs. The legacy
+values Other, SmartContract, Frontend, MVP, Audit and MobileApp remain valid.
+Unconfigured values return 400; saved historical values remain readable.
+
+Operators may replace the bundled profile with `PLATFORM_CONFIG_PATH` and
+restart the adapter. The endpoint reads validated in-memory configuration,
+without custody, database or provider calls. Role terminology does not change
+authorization or matching. External-profile hints do not add new profile fields.
+
 ## Internal endpoints
 
 All require `Authorization: Bearer <INTERNAL_SERVICE_TOKEN>` and stay outside the

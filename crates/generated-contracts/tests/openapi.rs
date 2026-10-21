@@ -58,7 +58,8 @@ fn all_public_operations_have_valid_references_and_security()
                     | "/api/openapi.json"
             ) || (matches!(
                 path.as_str(),
-                "/api/catalog"
+                "/api/platform"
+                    | "/api/catalog"
                     | "/api/disputes/{disputeId}"
                     | "/api/disputes/{disputeId}/presentation"
                     | "/api/disputes/{disputeId}/arguments"
@@ -120,7 +121,7 @@ fn all_public_operations_have_valid_references_and_security()
             }
         }
     }
-    assert_eq!(operation_ids.len(), 95);
+    assert_eq!(operation_ids.len(), 96);
     assert_eq!(
         doc["components"]["securitySchemes"]["sessionCookie"]["name"],
         "digesta_session"

@@ -15,14 +15,33 @@ pub(crate) struct ProjectBrief {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) enum ProjectType {
-    Other,
-    SmartContract,
-    Frontend,
-    #[serde(rename = "MVP")]
-    Mvp,
-    Audit,
-    MobileApp,
+#[serde(try_from = "String", into = "String")]
+pub(crate) struct ProjectType(String);
+
+impl ProjectType {
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl TryFrom<String> for ProjectType {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        if value.trim().is_empty()
+            || value.len() > generated_contracts::MAX_PLATFORM_TEXT_BYTES
+            || value.contains('\0')
+        {
+            return Err(Error::Invalid);
+        }
+        Ok(Self(value))
+    }
+}
+
+impl From<ProjectType> for String {
+    fn from(value: ProjectType) -> Self {
+        value.0
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

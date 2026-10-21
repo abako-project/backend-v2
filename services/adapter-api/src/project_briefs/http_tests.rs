@@ -211,7 +211,7 @@ async fn project_briefs_are_private_persistent_and_do_not_change_provider_state(
         assert!(provider.snapshot.balances.is_empty());
     }
     // Restart the adapter and reapply migrations; stored rows and sessions survive.
-    let config = test_config(app.config.database_url.clone(), &internal);
+    let config = test_config(app.config.database_url.clone(), &internal)?;
     server.finish().await?;
     app.db.close().await;
     let restarted = Arc::new(App::new(config).await?);
@@ -261,7 +261,7 @@ async fn project_briefs_serialize_concurrent_writes_and_retries() -> TestResult 
     let id = EntityId::from_bytes([42; 16]);
     let instance = info().provider_instance_id;
     let request = brief_request(0, "First")?;
-    let second_app = App::new(test_config(app.config.database_url.clone(), &internal)).await?;
+    let second_app = App::new(test_config(app.config.database_url.clone(), &internal)?).await?;
     let (a, b) = tokio::join!(
         crate::project_briefs::store::write(&app.db, instance, id, &request),
         crate::project_briefs::store::write(&second_app.db, instance, id, &request)

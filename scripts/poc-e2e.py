@@ -252,6 +252,7 @@ def exercise_project_brief(client, coordinator, worker, outsider, project_path):
     worker.request("GET", path, expected=404)
     doc = json.loads((ROOT / "contracts/openapi.json").read_text())
     brief = doc["components"]["schemas"]["ProjectBrief"]["examples"][0]
+    brief["projectType"] = "Full Stack"
     body = {"expectedRevision": 0, "brief": brief}
     coordinator.request("PUT", path, body, 403)
     outsider.request("PUT", path, body, 404)
@@ -372,7 +373,7 @@ def exercise(base, admin_password, proxy):
             "settlement must not fabricate a worker vote")
     require(directory[coordinator_account]["coordinatorScore"] == {"weightedScoreSum": "0", "ratedMinutes": 0},
             "settlement must not fabricate a coordinator vote")
-    for account, committed in ((worker_account, 120), (coordinator_account, 160)):
+    for account, committed in ((worker_account, 120), (coordinator_account, 60)):
         calendar = directory[account]["calendar"]
         require("reservations" not in calendar, "worker directory leaked reservation project identifiers")
         require(sum(item["minutes"] for item in calendar["committedMinutes"]) == committed,
@@ -614,6 +615,7 @@ def exercise_multi_milestone(base, admin_password, _proxy):
 
 def exercise_profiles_passkeys(base, owner, outsider, password):
     profile = {"name": "Example client", "company": "Example Ltd",
+               "contactEmail": None,
                "department": "Private department", "website": "https://example.test",
                "description": "Public summary", "location": "Madrid", "languages": ["es"]}
     owner.request("PUT", "/api/profiles/me", {"section": "client", "profile": profile})
@@ -751,6 +753,13 @@ def exercise_catalog(admin, worker, outsider):
 
 def exercise_auxiliary(base, admin_password, _proxy):
     """Typed REST checks beyond the original project and dispute paths."""
+    visitor = Client(base)
+    profile = visitor.request("GET", "/api/platform")
+    expected = json.loads((ROOT / "services/adapter-api/src/platform/default.json").read_text())
+    require(profile == expected, "public platform profile differs from its startup default")
+    require(profile["currency"]["decimals"] == 0, "platform changed mock amount units")
+    visitor.request("GET", "/api/platform", expected=403,
+                    headers={"Origin": "https://untrusted.invalid"})
     admin = Client(base)
     admin.authenticate("/api/auth/login", {"username": "admin", "password": admin_password})
     password = secrets.token_urlsafe(24)

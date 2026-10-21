@@ -14,7 +14,9 @@ mod disputes;
 pub use disputes::*;
 mod bramp;
 pub use bramp::*;
+mod platform;
 use parity_scale_codec::{Decode, Encode};
+pub use platform::*;
 use serde::{Deserialize, Serialize};
 
 /// Signing domain prevents interpreting this format as another protocol.

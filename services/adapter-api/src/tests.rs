@@ -259,12 +259,12 @@ async fn app(internal: &Server) -> Result<Arc<App>, Error> {
     admin.close().await;
     let separator = if base.contains('?') { '&' } else { '?' };
     let database_url = format!("{base}{separator}options=-csearch_path%3D{schema}");
-    let app = Arc::new(App::new(test_config(database_url, internal)).await?);
+    let app = Arc::new(App::new(test_config(database_url, internal)?).await?);
     auth::bootstrap(&app).await?;
     Ok(app)
 }
-fn test_config(database_url: String, internal: &Server) -> Config {
-    Config {
+fn test_config(database_url: String, internal: &Server) -> Result<Config, Error> {
+    Ok(Config {
         bind_addr: "127.0.0.1:0".into(),
         database_url,
         custody_url: internal.url.clone(),
@@ -280,7 +280,8 @@ fn test_config(database_url: String, internal: &Server) -> Config {
         admin_username: "admin".into(),
         admin_password: Zeroizing::new(PASSWORD.into()),
         openapi: "{}".into(),
-    }
+        platform: crate::platform::load(None)?,
+    })
 }
 async fn register(app: &App, name: &str) -> Result<(Session, String), Box<dyn std::error::Error>> {
     let response = auth::register(
@@ -1069,7 +1070,7 @@ async fn postgres_restart_preserves_queue_and_unread_notifications() -> TestResu
         .await?;
     let url = app.config.database_url.clone();
     drop(app);
-    let reopened = App::new(test_config(url, &internal)).await?;
+    let reopened = App::new(test_config(url, &internal)?).await?;
     let job = operations::claim(&reopened)
         .await?
         .ok_or("lease not recovered")?;
@@ -1381,3 +1382,6 @@ mod submission_comments;
 
 #[path = "disputes/conversations_tests.rs"]
 mod dispute_conversations;
+
+#[path = "platform/http_tests.rs"]
+mod platform;

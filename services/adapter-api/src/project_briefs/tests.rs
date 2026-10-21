@@ -77,7 +77,7 @@ fn rejects_invalid_dates_enums_unknown_fields_and_revisions()
         assert!(brief.validate().is_err(), "accepted {date}");
     }
     for (field, value) in [
-        ("projectType", json!("Unknown")),
+        ("projectType", json!(" ")),
         ("principalId", json!("spoofed")),
         (
             "indicativeBudget",

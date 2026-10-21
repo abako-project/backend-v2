@@ -135,7 +135,7 @@ async fn submission_links_are_private_immutable_retryable_and_persistent() -> Te
     assert_eq!(fake.lock().await.submissions, 0);
     server.finish().await?;
     let restarted =
-        Arc::new(App::new(test_config(app.config.database_url.clone(), &internal)).await?);
+        Arc::new(App::new(test_config(app.config.database_url.clone(), &internal)?).await?);
     let server = Server::start(http::router(restarted.clone())).await?;
     let url = format!(
         "{}/api/completion-submissions/{submission_id}/presentation",
