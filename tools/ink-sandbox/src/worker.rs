@@ -22,7 +22,7 @@ use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
-        mpsc::{self, SyncSender, TrySendError},
+        mpsc::{self, Receiver, SyncSender, TrySendError},
     },
     thread,
     time::Duration,
@@ -133,6 +133,7 @@ impl<T> Ticket<T> {
     }
 }
 enum Job {
+    Stop,
     Execute {
         expected: i64,
         invocation: Invocation,
@@ -151,6 +152,14 @@ pub struct Client {
     stopping: Arc<AtomicBool>,
 }
 impl Client {
+    fn request_stop(&self) {
+        self.stopping.store(true, Ordering::Release);
+        // A full queue already wakes the receiver. Disconnection means it has
+        // stopped. Otherwise an explicit control message wakes an idle worker.
+        match self.sender.try_send(Job::Stop) {
+            Ok(()) | Err(TrySendError::Full(_) | TrySendError::Disconnected(_)) => {}
+        }
+    }
     fn send(&self, job: Job) -> Result<(), Error> {
         if self.stopping.load(Ordering::Acquire) {
             return Err(Error::Stopped);
@@ -232,12 +241,12 @@ impl Worker {
                             return Ok(());
                         }
                         while !stop.load(Ordering::Acquire) {
-                            let job = match receiver.recv_timeout(Duration::from_millis(50)) {
-                                Ok(job) => job,
-                                Err(mpsc::RecvTimeoutError::Timeout) => continue,
-                                Err(mpsc::RecvTimeoutError::Disconnected) => break,
+                            let job = match receive_job(&receiver, &stop) {
+                                Ok(Some(job)) => job,
+                                Ok(None) | Err(_) => break,
                             };
                             match job {
+                                Job::Stop => break,
                                 Job::Execute {
                                     expected,
                                     invocation,
@@ -305,7 +314,7 @@ impl Worker {
         self.finish().await
     }
     async fn finish(&mut self) -> Result<(), Error> {
-        self.client.stopping.store(true, Ordering::Release);
+        self.client.request_stop();
         let outcome = match self.done.take() {
             Some(done) => done.await.map_err(|_| Error::Thread)?,
             None => Ok(()),
@@ -322,8 +331,17 @@ impl Drop for Worker {
     fn drop(&mut self) {
         // Explicit async shutdown observes the join. Dropping still stops admission
         // and signals the dedicated thread, which observes/logs its final result.
-        self.client.stopping.store(true, Ordering::Release);
+        self.client.request_stop();
     }
+}
+fn receive_job(
+    receiver: &Receiver<Job>,
+    stopping: &AtomicBool,
+) -> Result<Option<Job>, mpsc::RecvError> {
+    let job = receiver.recv()?;
+    // This is the request-start boundary. Shutdown may have begun while recv
+    // waited, after the loop's earlier check. Queued work must remain unstarted.
+    Ok((!stopping.load(Ordering::Acquire)).then_some(job))
 }
 fn respond<T>(reply: oneshot::Sender<Result<T, Error>>, result: Result<T, Error>) {
     if reply.send(result).is_err() {
@@ -516,6 +534,31 @@ async fn inspect(pool: &SqlitePool, identity: Identity) -> Result<Diagnostics, E
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn stop_while_receiving_drops_queued_work() {
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let stop = AtomicBool::new(false);
+        let reached = std::sync::Barrier::new(2);
+        let (reply, mut result) = oneshot::channel();
+        thread::scope(|scope| {
+            let stopper = &stop;
+            let gate = &reached;
+            let join = scope.spawn(move || {
+                // Reproduce the old loop's pre-receive check before shutdown.
+                assert!(!stopper.load(Ordering::Acquire));
+                gate.wait();
+                receive_job(&receiver, stopper)
+            });
+            reached.wait();
+            stop.store(true, Ordering::Release);
+            assert!(sender.send(Job::Inspect(reply)).is_ok());
+            assert!(matches!(join.join().unwrap(), Ok(None)));
+        });
+        assert!(matches!(
+            result.try_recv(),
+            Err(oneshot::error::TryRecvError::Closed)
+        ));
+    }
     #[test]
     fn full_queue_and_shutdown_reject_admission() {
         let (sender, _receiver) = mpsc::sync_channel(QUEUE_CAPACITY);
