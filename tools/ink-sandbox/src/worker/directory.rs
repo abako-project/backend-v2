@@ -361,6 +361,7 @@ fn domain_error(code: &str) -> Result<&'static str, Error> {
         "no_available_candidate" => Ok("no_available_candidate"),
         "invalid_project_state" => Err(Error::Invariant("invalid_project_state")),
         "duplicate_entity" => Err(Error::Invariant("duplicate_entity")),
+        "invalid_storage_state" => Err(Error::Invariant("invalid_storage_state")),
         "project_instantiation_failed" => Err(Error::Invariant("project_instantiation_failed")),
         "project_code_missing" => Err(Error::Invariant("project_code_missing")),
         "registered_project_required" => Err(Error::Invariant("registered_project_required")),

@@ -288,11 +288,10 @@ fn direct_permissions_and_query_isolation_preserve_project_registry_and_global_i
             (2, input("next_task_key", ())),
             (
                 2,
-                input("claim_project_ids", vec![EntityId::from_bytes([42; 16])]),
-            ),
-            (
-                2,
-                input("release_project_ids", vec![EntityId::from_bytes([42; 16])]),
+                input(
+                    "set_project_identities",
+                    Vec::<(EntityId, Vec<(EntityId, EntityId)>)>::new(),
+                ),
             ),
             (2, input("configure_project_code", H256::zero())),
             // Even root cannot change the installed immutable code hash.

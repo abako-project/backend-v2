@@ -261,6 +261,33 @@ fn export_project_trace() -> TestResult {
         },
         20,
     )?;
+    // Global collision errors follow native traversal: calendars, sorted Projects,
+    // proposal order, then milestone/storage order. The later entity sets the code.
+    fixture.step(
+        5,
+        ProviderCommand::RegisterWorker(RegisterWorkerRequest {
+            display_name: "Collision".into(),
+            qualifications: Qualifications {
+                role_ids: vec![3],
+                skill_ids: vec![1],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        }),
+        20,
+    )?;
+    fixture.step(1, create(), 20)?;
+    fixture.step(
+        2,
+        ProviderCommand::UpdateProposal {
+            project_id: project_a,
+            proposal_id: proposal_a,
+            proposal: proposal(&[10, 20, 30])?,
+        },
+        20,
+    )?;
     let storage = fixture.proposal(project_a)?.milestones[0]
         .task_storage
         .task_storage_id;

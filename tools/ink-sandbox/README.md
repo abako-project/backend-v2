@@ -242,7 +242,7 @@ Directory owns the public registry, global IDs/task counter and catalog referenc
 endpoint. Money/execution commands return `IncompleteCoverage` without a write.
 Legacy planning escrow cannot be cleared until money coverage exists.
 
-The frozen 71-call native/VM trace compares complete catalog, worker, request,
+The frozen 74-call native/VM trace compares complete catalog, worker, request,
 Project and reason projections plus the shared shell after every call. It covers
 retained task storage, failed counter allocation, policy capture, exact rounding,
 dates, optional tasks, permissions, revisions, reference cleanup and restart.

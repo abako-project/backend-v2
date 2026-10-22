@@ -62,6 +62,8 @@ def main():
                 if built[key] != pinned[key]:
                     raise SystemExit(f"{name}: {key} metadata differs")
             print(f"{name}: pinned WASM and ABI reproduced", flush=True)
+            # Each contract has its own target; retain only the current build.
+            shutil.rmtree(contract / "target")
 
 
 if __name__ == "__main__":
