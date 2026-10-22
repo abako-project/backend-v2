@@ -359,10 +359,22 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
         let state: serde_json::Value = serde_json::from_slice(&before.2).unwrap();
         let directory: Account = serde_json::from_value(state["directory"].clone()).unwrap();
         for origin in [configuration.root, AccountId32::from_bytes([8; 32])] {
-            for (name, args) in [
-                ("begin_import", Vec::new()),
-                ("seal_import", Vec::new()),
-                ("import_record_page", (0u32, vec![5u8, 1], true).encode()),
+            for (name, args, expected) in [
+                (
+                    "begin_import",
+                    Vec::new(),
+                    if origin == configuration.root {
+                        "invalid_archive"
+                    } else {
+                        "system_origin_required"
+                    },
+                ),
+                ("seal_import", Vec::new(), "record_in_progress"),
+                (
+                    "import_record_page",
+                    (0u32, vec![5u8, 1], true).encode(),
+                    "import_closed",
+                ),
             ] {
                 let mut input = sp_core::hashing::blake2_256(name.as_bytes())[..4].to_vec();
                 input.extend(args);
@@ -386,14 +398,7 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
                     .unwrap()
                     .unwrap()
                     .unwrap_err();
-                assert_eq!(
-                    rejected,
-                    if origin == configuration.root {
-                        "invalid_archive"
-                    } else {
-                        "system_origin_required"
-                    }
-                );
+                assert_eq!(rejected, expected);
             }
         }
         worker.shutdown().await.unwrap();
