@@ -127,3 +127,40 @@ signature semantics. Wallet key handling and signing remain unchanged.
 Primary references: [schnorrkel 0.11.5](https://crates.io/crates/schnorrkel/0.11.5),
 [subxt sr25519 source](https://docs.rs/subxt-signer/0.50.3/src/subxt_signer/sr25519.rs.html).
 The published Cargo.toml/source were also inspected locally before this change.
+
+
+## Directory captured IDs (2026-10-22)
+
+The signed bridge must reproduce version-1 IDs from the native provider's locked
+`StdRng`, rather than substitute the SDK's rand 0.8 stream. Add **rand =0.10.2**
+with defaults disabled and only `std_rng`; no thread RNG or system-entropy feature
+is enabled. The shared shell already captures entropy once per operation.
+An independent ID algorithm would diverge from accepted operations; supplying IDs
+from a caller would fail to exercise the ordinary signed path.
+
+The SDK lock adds exactly these four registry packages, with identical versions,
+sources and checksums to the existing application lock; no existing package is
+upgraded or removed:
+
+| Package | Purpose / implications |
+|---|---|
+| rand 0.10.2 | Native version-1 `StdRng` stream; upstream safe API over ChaCha12 |
+| rand_core 0.10.1 | RNG/seed traits; defaults disabled |
+| chacha20 0.10.2 | Existing app's pure-Rust ChaCha12 implementation, RNG feature only; upstream architecture-specific unsafe/SIMD remains |
+| cpufeatures 0.3.1 | Existing app's runtime CPU detection, with upstream platform/unsafe code and libc bindings |
+
+All four declare MSRV 1.85 and MIT OR Apache-2.0. Published manifests/source and
+current crates.io API metadata were checked on 2026-10-22: none is yanked. This
+reuses the approved app dependency family; it adds no handwritten crypto/unsafe,
+new native library or policy exception. `StdRng` is not a portable long-term
+protocol; the exact lock and input version remain essential. A portable entropy
+stream needs a separately reviewed version and later matching integration.
+
+Primary metadata: [rand 0.10.2](https://crates.io/api/v1/crates/rand/0.10.2),
+[rand_core 0.10.1](https://crates.io/api/v1/crates/rand_core/0.10.1),
+[chacha20 0.10.2](https://crates.io/api/v1/crates/chacha20/0.10.2),
+[cpufeatures 0.3.1](https://crates.io/api/v1/crates/cpufeatures/0.3.1).
+The published `rand/src/rngs/std.rs` documents ChaCha12 and non-portability.
+The SDK lock fingerprint is renewed for independent M3 review, under the same
+four advisory IDs, thirteen versioned license exceptions and December 1 expiry.
+The application lock and all contract build locks remain unchanged.

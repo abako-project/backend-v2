@@ -70,3 +70,16 @@ explain why package-level permissions are narrower than a global allowlist.
 bans, licenses and sources under these exact exceptions. Multiple-version and
 deprecated-SPDX warnings remain. The unchanged root policy still rejects its
 recorded findings; those findings remain unwaived.
+
+
+## M3 exact-lock renewal
+
+The signed Directory bridge reuses rand 0.10.2, rand_core 0.10.1, chacha20 0.10.2
+and cpufeatures 0.3.1 from the already reviewed application graph. Versions,
+registry sources and checksums match the app lock exactly. No existing SDK
+package is upgraded/removed, SDK cohort is unchanged, and the four advisory IDs,
+thirteen license exceptions and December 1 expiry are unchanged. The renewed
+fingerprint is the SHA256 in `check.py`; the [dependency review](../dependencies.md)
+records features, metadata, alternatives and upstream unsafe/crypto implications.
+Independent M3 review must cover this exact delta before milestone acceptance.
+The policy gate passes all four checks with the unchanged exceptions.

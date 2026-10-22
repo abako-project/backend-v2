@@ -30,8 +30,8 @@ The cases compare allocations, availability, capacity changes, domain errors
 and retained project/milestone/requirement references. Additional WASM tests
 exercise caller restrictions, query isolation, malformed weeks, metering,
 competing SQLite workers and restart. The old four compatibility artifacts stay
-unchanged. Directory is covered below; signed candidate routing is still pending. The
-existing signed Calendar fixture still tests the legacy contract.
+unchanged. Directory and signed candidate routing are covered below. The older signed
+Calendar fixture continues testing the explicitly limited legacy contract.
 
 Directory will create one Calendar instance per worker. Only the worker or its
 creating Directory can change capacity; only an immutable reservation controller
@@ -42,7 +42,7 @@ No calendar release operation is added: the approved rules retain consumed hours
 Adding the bundle changes the pinned candidate cohort identity. Existing private
 candidate databases fail closed; use a new disposable fixture database. Ordinary
 mock-provider SQLite data and its Rust authority remain unchanged. Large-state
-import, performance budgets and complete M3 parity remain open. See the
+import and performance budgets remain open. See the
 [slice handoff](../../progress/handoffs/SPEC-0013-M3-CALENDAR.md).
 
 ## M3 Directory slice
@@ -67,12 +67,41 @@ The v5 compiler uses Unicode 16 while the app uses Unicode 17. The candidate
 includes a reproducible, dependency-free compatibility layer for changed
 lowercase mappings and final-sigma properties, with the Unicode license notice.
 The canonical source documents generation and exhaustive cross-toolchain checks.
-No app/SDK dependency lock or policy exception changes.
+The raw Directory slice did not change dependencies; the signed bridge below
+reuses the application RNG in the SDK lock without adding policy exceptions.
 
-The signed Directory fixture bridge is the remaining M3 slice. Existing signed
-tests still target the explicitly limited legacy Calendar fixture. Scores/matching,
-Project authorization, large-state import, performance and whole-provider promotion
-remain later gates. See the [Directory handoff](../../progress/handoffs/SPEC-0013-M3-DIRECTORY.md).
+See the [Directory slice handoff](../../progress/handoffs/SPEC-0013-M3-DIRECTORY.md)
+for canonical source, Unicode and artifact reproduction evidence.
+
+## M3 signed Directory bridge
+
+`Worker::start_directory_fixture` deploys the pinned Directory and Calendar code
+from explicit catalog/controller inputs. It uses the same `provider-execution`
+shell as Rust for all nine Directory/Calendar commands. The verified user calls
+Directory directly; contracts check domain permissions. The bridge decodes effects
+and errors and supplies the first ID from the version-1 locked native RNG stream.
+Ordinary execution captures inputs internally. `execute_directory_with_inputs`
+exists only for trusted comparisons in this standalone workspace, with no HTTP route.
+
+The [signed trace](../../services/mock-provider/src/domain/fixtures/directory-signed.json)
+contains 49 real signed calls, using disposable fixture keys. Both engines read
+it independently. Every step compares the complete M3 projection and actual shell
+history, including receipts, retained inputs, nonces, timestamps and event cursors.
+Additional tests cover signature/envelope rejection, request visibility, replay,
+query isolation, child rollback on SQLite failure, metering, restart and competing
+writers. Ordinary domain rejection commits only a failed receipt and nonce;
+unknown ABI/invariant/child-deployment failures abort without a shell write.
+
+The runtime, actual shell and outcome commit together. Raw mutation requests cannot
+write signed stores. Startup checks the fixture configuration, root, generation
+history, runtime identity and pinned Directory code. The added RNG packages match
+exact versions and checksums already in the app; see the [review](dependencies.md)
+and renewed exact-lock [policy record](policy/README.md). No exception was broadened.
+
+The working application still selects Rust. Other domains return `IncompleteCoverage`;
+no browser contract, provider selector or hybrid fallback is added. Scores/matching,
+Project/reference-controller integration, import capacity, performance and whole-provider
+promotion remain later gates. See the [M3 signed handoff](../../progress/handoffs/SPEC-0013-M3-SHELL.md).
 
 The committed `fixtures/manifest.json` pins canonical source commit, toolchain,
 artifact hashes and per-contract dependency locks. Tests verify artifact and
@@ -135,7 +164,7 @@ The fixture bridge supports only `SetCalendar` whole-hour weekly capacity with
 no overrides, against pre-registered fixture accounts and explicit calendar IDs.
 Other commands or unsupported shapes return `IncompleteCoverage` with no nonce,
 receipt or business write. This demonstrates shell/ABI integration; it does not
-claim Directory/Calendar parity, which remains M3. There is no public raw-contract
+replace the M3 Directory bridge above. There is no public raw-contract
 endpoint, sandbox authority selector, shadow success claim or frontend change.
 Private library diagnostics expose revision, identity, root and size only.
 
@@ -151,7 +180,7 @@ packages. Its existing advisory/license findings are not waived. The full signer
 remains in wallet/app tests; the shared verification shell uses the exact same
 Schnorrkel primitive and context without importing key derivation into the SDK.
 
-The candidate SQLite schema now distinguishes raw and signed fixture modes.
+The candidate SQLite schema distinguishes raw, legacy Calendar and Directory signed fixture modes.
 Earlier proof/candidate SQLite files without the mode column reject startup;
 these were never application provider data. Runtime/lock identity changes also
 reject old candidate checkpoints. Existing app SQLite/JSON opens unchanged.

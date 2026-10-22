@@ -1,5 +1,5 @@
 //! Frozen domain traces are independently replayed by the real WASM suite.
-//! Signed admission and generated-ID bridging remain a separate M3 slice.
+//! Domain and signed-operation fixtures also replay through the isolated VM.
 use super::super::*;
 use generated_contracts::*;
 use serde_json::{Value, json};
@@ -260,4 +260,112 @@ fn scenario() -> TestResult<Vec<(u8, ProviderCommand, u8)>> {
         (1, upsert(Skill, 84, "\u{16ebb}"), 24),
         (1, upsert(Role, 91, "coordinator"), 24),
     ])
+}
+
+fn signed_account(seed: u8) -> TestResult<AccountId32> {
+    Ok(AccountId32::from_bytes(
+        subxt_signer::sr25519::Keypair::from_secret_key([seed; 32])?
+            .public_key()
+            .0,
+    ))
+}
+fn shell_digest(shell: &execution::Shell) -> TestResult<String> {
+    Ok(format!("{:x}", Sha256::digest(serde_json::to_vec(shell)?)))
+}
+fn signed_apply(
+    state: &mut State,
+    signed: SignedContractCallV1,
+    inputs: execution::ExecutionInputs,
+) -> Value {
+    match execution::VerifiedCall::verify(signed)
+        .map_err(Error::from)
+        .and_then(|verified| state.clone().execute_with_inputs(verified, inputs))
+    {
+        Ok((after, receipt)) => {
+            *state = after;
+            json!({"receipt":receipt})
+        }
+        Err(error) => json!({"error":error.code()}),
+    }
+}
+#[test]
+fn canonical_signed_directory_trace() -> TestResult {
+    let fixture: Value = serde_json::from_str(include_str!("fixtures/directory-signed.json"))?;
+    let root = serde_json::from_value(fixture["root"].clone())?;
+    let mut state = State::new(root)?;
+    state.shell.info.provider_instance_id = serde_json::from_value(fixture["generation"].clone())?;
+    assert_eq!(json!(projection(&state.engine)), fixture["initial"]);
+    for (index, step) in fixture["steps"]
+        .as_array()
+        .ok_or("steps")?
+        .iter()
+        .enumerate()
+    {
+        let call = serde_json::from_value(step["signed"].clone())?;
+        let inputs = serde_json::from_value(step["inputs"].clone())?;
+        assert_eq!(
+            signed_apply(&mut state, call, inputs),
+            step["outcome"],
+            "step {index}"
+        );
+        assert_eq!(digest(&state.engine), step["stateDigest"], "step {index}");
+        assert_eq!(
+            shell_digest(&state.shell)?,
+            step["shellDigest"],
+            "step {index}"
+        );
+    }
+    assert_eq!(json!(projection(&state.engine)), fixture["final"]);
+    Ok(())
+}
+/// Freeze public calls signed by deterministic disposable keys. No private keys
+/// or application data are exported; ordinary tests only replay the trace.
+#[test]
+#[ignore = "explicit signed trace authoring only"]
+fn export_signed_directory_trace() -> TestResult {
+    let root = signed_account(1)?;
+    let generation = ProviderInstanceId::from_bytes([97; 16]);
+    let mut state = State::new(root)?;
+    state.shell.info.provider_instance_id = generation;
+    let initial = json!(projection(&state.engine));
+    let mut steps = Vec::new();
+    let mut commands = scenario()?;
+    // Force a calendar-ID collision after registration: native invariant failure
+    // must abort without consuming a nonce or recording an accepted rejection.
+    commands.push((4, commands[1].1.clone(), 10));
+    for (index, (origin, mut command, seed)) in commands.into_iter().enumerate() {
+        if let ProviderCommand::PromoteCoordinator(request) = &mut command {
+            request.account = signed_account(2)?;
+        }
+        let origin_account = signed_account(origin)?;
+        let call = UnsignedContractCallV1::new(
+            generation,
+            OperationId::from_bytes([u8::try_from(index + 1)?; 16]),
+            origin_account,
+            state.shell.nonce(origin_account),
+            UnixSeconds::new(200),
+            command,
+        )?;
+        let key = subxt_signer::sr25519::Keypair::from_secret_key([origin; 32])?;
+        let signature = Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0);
+        let signed = SignedContractCallV1 { call, signature };
+        let inputs = execution::ExecutionInputs {
+            version: 1,
+            now: UnixSeconds::new(100),
+            seed: [seed; 32],
+        };
+        let outcome = signed_apply(&mut state, signed.clone(), inputs.clone());
+        steps.push(json!({"signed":signed,"inputs":inputs,"outcome":outcome,
+            "stateDigest":digest(&state.engine),"shellDigest":shell_digest(&state.shell)?}));
+    }
+    let accounts = (1..=4)
+        .map(signed_account)
+        .collect::<TestResult<Vec<_>>>()?;
+    let fixture = json!({"schemaVersion":1,"root":root,"generation":generation,"accounts":accounts,
+        "initial":initial,"steps":steps,"final":projection(&state.engine)});
+    std::fs::write(
+        std::env::var("DIRECTORY_SIGNED_TRACE_OUTPUT")?,
+        serde_json::to_vec_pretty(&fixture)?,
+    )?;
+    Ok(())
 }

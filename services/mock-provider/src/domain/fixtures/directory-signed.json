@@ -1,0 +1,5842 @@
+{
+  "accounts": [
+    "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+    "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+    "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+    "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e"
+  ],
+  "final": [
+    [
+      {
+        "fixed": true,
+        "id": 1,
+        "name": "coordinator"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "frontend"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "backend"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "fullstack"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "designer"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "qa"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "architect"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "embedded"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "devops"
+      },
+      {
+        "fixed": false,
+        "id": 91,
+        "name": "coordinator"
+      }
+    ],
+    [
+      {
+        "fixed": false,
+        "id": 1,
+        "name": "rust"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "solidity"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "ink"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "substrate"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "typescript"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "javascript"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "node.js"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "react"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "next.js"
+      },
+      {
+        "fixed": false,
+        "id": 10,
+        "name": "vue"
+      },
+      {
+        "fixed": false,
+        "id": 11,
+        "name": "postgresql"
+      },
+      {
+        "fixed": false,
+        "id": 12,
+        "name": "sqlite"
+      },
+      {
+        "fixed": false,
+        "id": 13,
+        "name": "docker"
+      },
+      {
+        "fixed": false,
+        "id": 14,
+        "name": "kubernetes"
+      },
+      {
+        "fixed": false,
+        "id": 15,
+        "name": "aws"
+      },
+      {
+        "fixed": false,
+        "id": 16,
+        "name": "graphql"
+      },
+      {
+        "fixed": false,
+        "id": 17,
+        "name": "rest api"
+      },
+      {
+        "fixed": false,
+        "id": 18,
+        "name": "web3"
+      },
+      {
+        "fixed": false,
+        "id": 19,
+        "name": "smart contract auditing"
+      },
+      {
+        "fixed": false,
+        "id": 20,
+        "name": "automated testing"
+      },
+      {
+        "fixed": false,
+        "id": 21,
+        "name": "ui/ux"
+      },
+      {
+        "fixed": false,
+        "id": 22,
+        "name": "figma"
+      },
+      {
+        "fixed": false,
+        "id": 23,
+        "name": "react native"
+      },
+      {
+        "fixed": false,
+        "id": 24,
+        "name": "communication"
+      },
+      {
+        "fixed": false,
+        "id": 25,
+        "name": "leadership"
+      },
+      {
+        "fixed": false,
+        "id": 26,
+        "name": "mentoring"
+      },
+      {
+        "fixed": false,
+        "id": 27,
+        "name": "problem solving"
+      },
+      {
+        "fixed": false,
+        "id": 28,
+        "name": "stakeholder management"
+      },
+      {
+        "fixed": false,
+        "id": 29,
+        "name": "facilitation"
+      },
+      {
+        "fixed": false,
+        "id": 30,
+        "name": "technical writing"
+      },
+      {
+        "fixed": false,
+        "id": 31,
+        "name": "teamwork"
+      },
+      {
+        "fixed": false,
+        "id": 32,
+        "name": "adaptability"
+      },
+      {
+        "fixed": false,
+        "id": 33,
+        "name": "time management"
+      },
+      {
+        "fixed": false,
+        "id": 80,
+        "name": "Renamed Skill"
+      },
+      {
+        "fixed": false,
+        "id": 82,
+        "name": "AΣ꟎"
+      },
+      {
+        "fixed": false,
+        "id": 83,
+        "name": "𖺠"
+      }
+    ],
+    [
+      {
+        "roleIds": [
+          3,
+          7,
+          8
+        ],
+        "skillId": 1
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 2
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 3
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 4
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 5
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 6
+      },
+      {
+        "roleIds": [
+          3,
+          4
+        ],
+        "skillId": 7
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 8
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 9
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 10
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          7,
+          9
+        ],
+        "skillId": 11
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          8
+        ],
+        "skillId": 12
+      },
+      {
+        "roleIds": [
+          3,
+          7,
+          9
+        ],
+        "skillId": 13
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 14
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 15
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 16
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 17
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 18
+      },
+      {
+        "roleIds": [
+          3,
+          6,
+          7
+        ],
+        "skillId": 19
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          6,
+          8,
+          9
+        ],
+        "skillId": 20
+      },
+      {
+        "roleIds": [
+          2,
+          4,
+          5
+        ],
+        "skillId": 21
+      },
+      {
+        "roleIds": [
+          2,
+          5
+        ],
+        "skillId": 22
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 23
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 24
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 25
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 26
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 27
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 28
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 29
+      },
+      {
+        "roleIds": [
+          1,
+          3,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 30
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 31
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 32
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 33
+      },
+      {
+        "roleIds": [],
+        "skillId": 80
+      },
+      {
+        "roleIds": [],
+        "skillId": 82
+      },
+      {
+        "roleIds": [],
+        "skillId": 83
+      }
+    ],
+    [
+      {
+        "account": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+        "calendar": {
+          "calendarId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "definition": {
+            "defaultWeeklyMinutes": 37,
+            "overrides": [
+              {
+                "capacity": 0,
+                "week": {
+                  "isoYear": 2026,
+                  "week": 53
+                }
+              }
+            ]
+          },
+          "owner": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "reservations": []
+        },
+        "coordinatorEligible": true,
+        "coordinatorScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        },
+        "displayName": "Candidate",
+        "mode": "Worker",
+        "qualifications": {
+          "roleIds": [
+            3
+          ],
+          "skillIds": [
+            2
+          ]
+        },
+        "workerScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        }
+      },
+      {
+        "account": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+        "calendar": {
+          "calendarId": "0xca4bce725a44e2822994d952e077596c",
+          "definition": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "owner": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "reservations": []
+        },
+        "coordinatorEligible": false,
+        "coordinatorScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        },
+        "displayName": "Candidate",
+        "mode": "Worker",
+        "qualifications": {
+          "roleIds": [
+            3
+          ],
+          "skillIds": [
+            3
+          ]
+        },
+        "workerScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        }
+      }
+    ],
+    [
+      {
+        "name": "Overflow Approval",
+        "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+        "requester": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+        "roleIds": [
+          3
+        ],
+        "skillId": null,
+        "status": "Rejected"
+      },
+      {
+        "name": "DéCentral\tSpace",
+        "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+        "requester": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+        "roleIds": [
+          3
+        ],
+        "skillId": 81,
+        "status": "Approved"
+      },
+      {
+        "name": "Pending Role",
+        "requestId": "0x8d42c935e9444730088459a2a5342119",
+        "requester": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+        "roleIds": [
+          90
+        ],
+        "skillId": null,
+        "status": "Rejected"
+      },
+      {
+        "name": "décentral space",
+        "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+        "requester": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+        "roleIds": [
+          3
+        ],
+        "skillId": null,
+        "status": "Rejected"
+      }
+    ]
+  ],
+  "generation": "0x61616161616161616161616161616161",
+  "initial": [
+    [
+      {
+        "fixed": true,
+        "id": 1,
+        "name": "coordinator"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "frontend"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "backend"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "fullstack"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "designer"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "qa"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "architect"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "embedded"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "devops"
+      }
+    ],
+    [
+      {
+        "fixed": false,
+        "id": 1,
+        "name": "rust"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "solidity"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "ink"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "substrate"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "typescript"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "javascript"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "node.js"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "react"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "next.js"
+      },
+      {
+        "fixed": false,
+        "id": 10,
+        "name": "vue"
+      },
+      {
+        "fixed": false,
+        "id": 11,
+        "name": "postgresql"
+      },
+      {
+        "fixed": false,
+        "id": 12,
+        "name": "sqlite"
+      },
+      {
+        "fixed": false,
+        "id": 13,
+        "name": "docker"
+      },
+      {
+        "fixed": false,
+        "id": 14,
+        "name": "kubernetes"
+      },
+      {
+        "fixed": false,
+        "id": 15,
+        "name": "aws"
+      },
+      {
+        "fixed": false,
+        "id": 16,
+        "name": "graphql"
+      },
+      {
+        "fixed": false,
+        "id": 17,
+        "name": "rest api"
+      },
+      {
+        "fixed": false,
+        "id": 18,
+        "name": "web3"
+      },
+      {
+        "fixed": false,
+        "id": 19,
+        "name": "smart contract auditing"
+      },
+      {
+        "fixed": false,
+        "id": 20,
+        "name": "automated testing"
+      },
+      {
+        "fixed": false,
+        "id": 21,
+        "name": "ui/ux"
+      },
+      {
+        "fixed": false,
+        "id": 22,
+        "name": "figma"
+      },
+      {
+        "fixed": false,
+        "id": 23,
+        "name": "react native"
+      },
+      {
+        "fixed": false,
+        "id": 24,
+        "name": "communication"
+      },
+      {
+        "fixed": false,
+        "id": 25,
+        "name": "leadership"
+      },
+      {
+        "fixed": false,
+        "id": 26,
+        "name": "mentoring"
+      },
+      {
+        "fixed": false,
+        "id": 27,
+        "name": "problem solving"
+      },
+      {
+        "fixed": false,
+        "id": 28,
+        "name": "stakeholder management"
+      },
+      {
+        "fixed": false,
+        "id": 29,
+        "name": "facilitation"
+      },
+      {
+        "fixed": false,
+        "id": 30,
+        "name": "technical writing"
+      },
+      {
+        "fixed": false,
+        "id": 31,
+        "name": "teamwork"
+      },
+      {
+        "fixed": false,
+        "id": 32,
+        "name": "adaptability"
+      },
+      {
+        "fixed": false,
+        "id": 33,
+        "name": "time management"
+      }
+    ],
+    [
+      {
+        "roleIds": [
+          3,
+          7,
+          8
+        ],
+        "skillId": 1
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 2
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 3
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 4
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 5
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 6
+      },
+      {
+        "roleIds": [
+          3,
+          4
+        ],
+        "skillId": 7
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 8
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 9
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 10
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          7,
+          9
+        ],
+        "skillId": 11
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          8
+        ],
+        "skillId": 12
+      },
+      {
+        "roleIds": [
+          3,
+          7,
+          9
+        ],
+        "skillId": 13
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 14
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 15
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 16
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 17
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 18
+      },
+      {
+        "roleIds": [
+          3,
+          6,
+          7
+        ],
+        "skillId": 19
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          6,
+          8,
+          9
+        ],
+        "skillId": 20
+      },
+      {
+        "roleIds": [
+          2,
+          4,
+          5
+        ],
+        "skillId": 21
+      },
+      {
+        "roleIds": [
+          2,
+          5
+        ],
+        "skillId": 22
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 23
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 24
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 25
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 26
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 27
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 28
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 29
+      },
+      {
+        "roleIds": [
+          1,
+          3,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 30
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 31
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 32
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 33
+      }
+    ],
+    [],
+    []
+  ],
+  "root": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 0,
+          "operationId": "0x01010101010101010101010101010101",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "code": "unknown_qualification",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "9707f6da9aae06910c6925e84b57acedac40a5583c95ef1802640f47b09927b1",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "calendar": {
+                "defaultWeeklyMinutes": 600,
+                "overrides": []
+              },
+              "displayName": "Candidate",
+              "qualifications": {
+                "roleIds": [
+                  2
+                ],
+                "skillIds": [
+                  999
+                ]
+              }
+            },
+            "type": "RegisterWorker"
+          },
+          "expiresAt": 200,
+          "nonce": 0,
+          "operationId": "0x01010101010101010101010101010101",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x0c727e33dddf4c970c172d7e08ba998bd16136c3a55222a20469a6dfddd2bf27f5e25e72686a8023fb6717ae7fc68adf5faac07dac8047b368df4353a7417185"
+      },
+      "stateDigest": "baa3203343394d0501bc68bfb0764dfbf66cf7e3f93bd5884f247d4ac252358b"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "finalizedAt": 100,
+          "firstEventCursor": 1,
+          "lastEventCursor": 1,
+          "nonce": 1,
+          "operationId": "0x02020202020202020202020202020202",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "c593e22c1f3ea9770d8b586ba1220d0d4ddffae572371807fc5f2658907c9782",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "calendar": {
+                "defaultWeeklyMinutes": 600,
+                "overrides": []
+              },
+              "displayName": "Candidate",
+              "qualifications": {
+                "roleIds": [
+                  2
+                ],
+                "skillIds": [
+                  1
+                ]
+              }
+            },
+            "type": "RegisterWorker"
+          },
+          "expiresAt": 200,
+          "nonce": 1,
+          "operationId": "0x02020202020202020202020202020202",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x424c48cc62d477c444995a3cb083bc69c20640771d2073d8fa9903cdf13395126f1c4d74356cf1c73de17aef5d29a40b1cc70c8f0b910d56f313cd93ec807283"
+      },
+      "stateDigest": "d9bebb057319b4d19299c8dd212ec6f7d2da1a9da1fffe2887418e38388810b3"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 2,
+          "operationId": "0x03030303030303030303030303030303",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "code": "worker_exists",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "424bc8e106e9b2ee8afd673d04ed35fb911b2f713f1348e70111f39d057ced6a",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "calendar": {
+                "defaultWeeklyMinutes": 600,
+                "overrides": []
+              },
+              "displayName": "Candidate",
+              "qualifications": {
+                "roleIds": [
+                  2
+                ],
+                "skillIds": [
+                  999
+                ]
+              }
+            },
+            "type": "RegisterWorker"
+          },
+          "expiresAt": 200,
+          "nonce": 2,
+          "operationId": "0x03030303030303030303030303030303",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x5cc915c051172e200e763e95b14ee34108676d7b5d82b8c3fe627c14ff08c11a3ecf5cd5c3e5232d1f93e3d670f80acb8667929ad5dfa9caf8736e43b7ace28a"
+      },
+      "stateDigest": "d9bebb057319b4d19299c8dd212ec6f7d2da1a9da1fffe2887418e38388810b3"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12,
+          12
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 0,
+          "operationId": "0x04040404040404040404040404040404",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "outcome": {
+            "code": "unknown_qualification",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "cfcc6e952e75d38aa7f7185e5832625996d5381cf38ab6c8fcf5ef8b0808f458",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "qualifications": {
+                "roleIds": [
+                  2
+                ],
+                "skillIds": [
+                  999
+                ]
+              }
+            },
+            "type": "UpdateQualifications"
+          },
+          "expiresAt": 200,
+          "nonce": 0,
+          "operationId": "0x04040404040404040404040404040404",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xc870405fe88c3b89ac9c8817c21461f7178205607ea81ee7ecfc5387b5b55c5481a1e23a5b38591c73c4b01678eda2ee5ed3db8546a68a3ecd247e822e3e928a"
+      },
+      "stateDigest": "d9bebb057319b4d19299c8dd212ec6f7d2da1a9da1fffe2887418e38388810b3"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13,
+          13
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 1,
+          "operationId": "0x05050505050505050505050505050505",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "outcome": {
+            "code": "worker_not_found",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "07178d251db0ea3efddad67b51fbb1b5fa89b6a12f0cb39d5910f14016fb5b29",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "qualifications": {
+                "roleIds": [
+                  2
+                ],
+                "skillIds": [
+                  1
+                ]
+              }
+            },
+            "type": "UpdateQualifications"
+          },
+          "expiresAt": 200,
+          "nonce": 1,
+          "operationId": "0x05050505050505050505050505050505",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xd889094b3b1600a249ad3d1896f10aaf0fa921a3deb6fcd59a3d35b416ae7849877c555563c70fdeab14838f671eb8e2e1df63a2b5d6aab5aacafe4df6e58d8a"
+      },
+      "stateDigest": "d9bebb057319b4d19299c8dd212ec6f7d2da1a9da1fffe2887418e38388810b3"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14,
+          14
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 3,
+          "operationId": "0x06060606060606060606060606060606",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "code": "coordinator_not_eligible",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "03c4e3474cc3bba8d0610fe11f8d4b8f164b093b4b069c2580319c2a30481644",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "mode": "Coordinator"
+            },
+            "type": "SetWorkerMode"
+          },
+          "expiresAt": 200,
+          "nonce": 3,
+          "operationId": "0x06060606060606060606060606060606",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x18a31ae3b92df7b9b0c1aa82843b8221e379dce781fd41c224ea3f16c5045b4a7aa51c5f033755a63cce0717642ae294e6c45da1e9a24b2566194b2ddb18cb8c"
+      },
+      "stateDigest": "d9bebb057319b4d19299c8dd212ec6f7d2da1a9da1fffe2887418e38388810b3"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15,
+          15
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 0,
+          "operationId": "0x07070707070707070707070707070707",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "outcome": {
+            "code": "system_origin_required",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "5c4799598318cebc6ce570f0671016d386f2b484855be9c47578bb433021814e",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "account": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c"
+            },
+            "type": "PromoteCoordinator"
+          },
+          "expiresAt": 200,
+          "nonce": 0,
+          "operationId": "0x07070707070707070707070707070707",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xfed8eae4ccc40f8fdca81ffca1f12dac548062daee863e795f96201cc3d7294f8cf2337edad2c114cbb993a57eb9552f9dcb169ffd0730587168a5b8d38e6b8c"
+      },
+      "stateDigest": "d9bebb057319b4d19299c8dd212ec6f7d2da1a9da1fffe2887418e38388810b3"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16,
+          16
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 2,
+          "lastEventCursor": 2,
+          "nonce": 0,
+          "operationId": "0x08080808080808080808080808080808",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "a38a8dbe180331232da50dc3244223cf227aa149aaf19cfae96ca381ca4b66d7",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "account": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c"
+            },
+            "type": "PromoteCoordinator"
+          },
+          "expiresAt": 200,
+          "nonce": 0,
+          "operationId": "0x08080808080808080808080808080808",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xa49803b97e074146c2ef86170846e18945ad579f9f129e9d42aa0ffa2b8e3c68be2e62293dda2484e1e1345db3e9a64638271edc308c63104f7864d14d175f8b"
+      },
+      "stateDigest": "83db450670e736fa15f75f24317a47d0b404cd7acfceb483f17a82beb0342d27"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17,
+          17
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 3,
+          "lastEventCursor": 3,
+          "nonce": 4,
+          "operationId": "0x09090909090909090909090909090909",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "a7dcd7d94db0dfb5bab4775d3c493ba711df42c3af7bc6182cfc68150dbe015d",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "mode": "Coordinator"
+            },
+            "type": "SetWorkerMode"
+          },
+          "expiresAt": 200,
+          "nonce": 4,
+          "operationId": "0x09090909090909090909090909090909",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x2c8b422f3fe804423100113a9ce6fcfaf951c3860d46a17292ade446f7db677763ad334ed83305f17d544e93c15e3b229de0c0d16d1eed9a94fe5093b3c52980"
+      },
+      "stateDigest": "a9d867e8803ce92d82d799cbaed5403112ad77fa3c0bb2f189bc32c81e7cfb73"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18,
+          18
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0xca4bce725a44e2822994d952e077596c",
+          "finalizedAt": 100,
+          "firstEventCursor": 4,
+          "lastEventCursor": 4,
+          "nonce": 1,
+          "operationId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "ee821e0d82cd24174d6c948342c70263737e85f30504a34974b78b150c498045",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "calendar": {
+                "defaultWeeklyMinutes": 600,
+                "overrides": []
+              },
+              "displayName": "Candidate",
+              "qualifications": {
+                "roleIds": [
+                  3
+                ],
+                "skillIds": [
+                  3
+                ]
+              }
+            },
+            "type": "RegisterWorker"
+          },
+          "expiresAt": 200,
+          "nonce": 1,
+          "operationId": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x8e2b24ff1dd8718af6713e4d8b1d4bac944985388be090125956db0e0679363aaba2258ac4c4fd25b203e4c8ec5e634417d347dbcc07071e07b76bf12b5aa283"
+      },
+      "stateDigest": "98501308f630c710ca79a9ff0bd531472cebf68fde6571d1a1e82ab3c111ada2"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19,
+          19
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 5,
+          "operationId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "code": "system_origin_required",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "993719eb0edaa3f787b72c239e448be0b54f0b58736be4286a0f84e6cdf53c18",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 80,
+              "kind": "Skill",
+              "name": "denied"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 5,
+          "operationId": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x42dc10acc6942e03334c97a56949a83dacccdf5160346a1e43d2c2d3b99cce36a61b803dc3ea7f3949a01977ed2a873ef4dacf0186392058ea1fddcd7242dc8e"
+      },
+      "stateDigest": "98501308f630c710ca79a9ff0bd531472cebf68fde6571d1a1e82ab3c111ada2"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 1,
+          "operationId": "0x0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "fixed_coordinator_role",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "0292b5b1b15ad018dfd19e634d6f7b8bedbf5d76ede0d8640f3084a59bb13a81",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 1,
+              "kind": "Role",
+              "name": "renamed"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 1,
+          "operationId": "0x0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xe41c2845a5310ae277eca44a32b9f30917405879d5c2dfe8ef85bc745badce59e6824aef5ea3cf0389ef609f23a105968a16fab5cec821d440083abbb4561e86"
+      },
+      "stateDigest": "98501308f630c710ca79a9ff0bd531472cebf68fde6571d1a1e82ab3c111ada2"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 2,
+          "operationId": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "fixed_coordinator_role",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "b59c287cae0448fb5e3b1ab4b30156365d04f4cfef8ce271c3e5333207db103a",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 1,
+              "kind": "Role"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 2,
+          "operationId": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xd2cdcddccaf91406279a3724111892d7935a40c8e199a64f66299e3630ae8300eaabaa7b24cc85a49404dc8d01167de3f5b5562873c7b7b905217fda234cea8b"
+      },
+      "stateDigest": "98501308f630c710ca79a9ff0bd531472cebf68fde6571d1a1e82ab3c111ada2"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 3,
+          "operationId": "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "catalog_entry_in_use",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "26b7e91de36c9abc29c14fa1f7197ff920d5e36ee9f5b94be845d4be5d70660f",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 2,
+              "kind": "Role"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 3,
+          "operationId": "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x7e51a5593898e7363cdcee57900f7077502e5d6f9968e48d093372b904f240697641356ebd3c67407dfed9ec819026e7933170867a7fae56a82bd85cd6546c81"
+      },
+      "stateDigest": "98501308f630c710ca79a9ff0bd531472cebf68fde6571d1a1e82ab3c111ada2"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 4,
+          "operationId": "0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "catalog_entry_in_use",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "eec3f4427dafc652fb605321039a5e4f2ac2130105572c02899fa01856bb652a",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 1,
+              "kind": "Skill"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 4,
+          "operationId": "0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x309f6f52d5c42ad0e2a811bf04d186a09a2faf28995fcefaa4d57c43f4e6db547c839600d12d45913d5d4a20eb066ee9ae25ce9af71c38e883f2b3cf70753c89"
+      },
+      "stateDigest": "98501308f630c710ca79a9ff0bd531472cebf68fde6571d1a1e82ab3c111ada2"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 5,
+          "lastEventCursor": 5,
+          "nonce": 5,
+          "operationId": "0x10101010101010101010101010101010",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "b7bd1dcbc79161d8e1103091ad64e94b7f80fe243cd71357e47989b5d7e6dabd",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 80,
+              "kind": "Skill",
+              "name": " New\tSkill "
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 5,
+          "operationId": "0x10101010101010101010101010101010",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xa89079b671f913a52f49cbcf516115e89b297a7fb821571673ed74af1e41172599f4ad19bc8f500f687e7594a7fa8be464948972045d06efb1353c73afd80388"
+      },
+      "stateDigest": "c4b9cc1a2c80356eff76bb67fce870d309d395bf112869b4aeccdbf1258a598f"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20,
+          20
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 6,
+          "operationId": "0x11111111111111111111111111111111",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "code": "skill_name_exists",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "95a81554535ec9d8f8f31d4f53bd5a8df530caeb92d8279c5c3cba5783e958b0",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "name": "new  SKILL",
+              "roleIds": [
+                3
+              ]
+            },
+            "type": "CreateSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 6,
+          "operationId": "0x11111111111111111111111111111111",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x948cb76fd1628bce56a2d19f0380550b89d695603c2dc5113ea9d5b4160c2e3853ddc796a2fa6029e0f97599844ed7ee106ed0b1e04153a2071f14f48f7cf88e"
+      },
+      "stateDigest": "c4b9cc1a2c80356eff76bb67fce870d309d395bf112869b4aeccdbf1258a598f"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+          "finalizedAt": 100,
+          "firstEventCursor": 6,
+          "lastEventCursor": 6,
+          "nonce": 7,
+          "operationId": "0x12121212121212121212121212121212",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "4feb0bf67c0da462b2563129bb78f67f61d78a9e6c9d0e2716b20ec420369d05",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "name": "  DéCentral\tSpace  ",
+              "roleIds": [
+                3
+              ]
+            },
+            "type": "CreateSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 7,
+          "operationId": "0x12121212121212121212121212121212",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xb08be78a1dc381a23ac9d5149778ec2997a749f2ad0ac23ef561b24cd06a961f153e2e52ab2efa7637a4dd4d4beb3cc2afb6be9ba6efed0dc640107254212389"
+      },
+      "stateDigest": "fa5f543249a6cefbbaa49d62d79bbe7763e1902dbedfa2de473d7ff276953918"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+          "finalizedAt": 100,
+          "firstEventCursor": 7,
+          "lastEventCursor": 7,
+          "nonce": 2,
+          "operationId": "0x13131313131313131313131313131313",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "9b1049b8bb9b7252977c414bc729d1c64e5852b992d343bf028e757c04f3cd89",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "name": "décentral space",
+              "roleIds": [
+                3
+              ]
+            },
+            "type": "CreateSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 2,
+          "operationId": "0x13131313131313131313131313131313",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x3297f0e04fb7f0abf7014fe21e55c21f0cb604caa202e3774898e75c18656622e1bc373c18d92825f99f88f5a7eacf70dadc434810c7dbd2fe2ddbb33287a28e"
+      },
+      "stateDigest": "8ac701f4187846a2d7e564bb0d7fdf12a135136783768f82d2d90c9e1255ab14"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21,
+          21
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 8,
+          "operationId": "0x14141414141414141414141414141414",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "code": "request_id_collision",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "24e8a413e64bb1276591150ecc0046fd291afa2323571ca435f4659bed8cf126",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "name": "RequestCollision",
+              "roleIds": [
+                3
+              ]
+            },
+            "type": "CreateSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 8,
+          "operationId": "0x14141414141414141414141414141414",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x4a3ca90a0c54a4f027b99daa14d13357e0e49e16b701cdd3de74446a9602db6e1fb0d20e2b95ba8797f74b79ca383597dbcb0e77fa1529ff80b3fe4794227d8f"
+      },
+      "stateDigest": "8ac701f4187846a2d7e564bb0d7fdf12a135136783768f82d2d90c9e1255ab14"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 3,
+          "operationId": "0x15151515151515151515151515151515",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "outcome": {
+            "code": "system_origin_required",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "daa210f2daeb4c708b0788b635cdf3fe4b40ea255898ad1ae81a9586bfe768fe",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Approve",
+              "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 3,
+          "operationId": "0x15151515151515151515151515151515",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x5eebad3723d0ac5edef494ae5e7c7640d9ffa1ce08c4131ce7453ab532a989631452aea7a7324c0a061d34f96210307b61fa2d92375952b4f014dab380effc84"
+      },
+      "stateDigest": "8ac701f4187846a2d7e564bb0d7fdf12a135136783768f82d2d90c9e1255ab14"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+          "finalizedAt": 100,
+          "firstEventCursor": 8,
+          "lastEventCursor": 8,
+          "nonce": 6,
+          "operationId": "0x16161616161616161616161616161616",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "f2702293fae2e35a93bf54ba416de7268e3edaef2103fcd7da110fb4fab57329",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Approve",
+              "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 6,
+          "operationId": "0x16161616161616161616161616161616",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x200a347075cfb1c7f16317f0b8185ea45201e3d9a3a4b33458aad7201dbd826aee7ffb10bcd5c97ad4501465b1a20b003c9f344a50aa0aed0b914da2efaab484"
+      },
+      "stateDigest": "275c422ee5a8667061ddb2a908e4e280d44e0612d8df7158b425ce792c6ba3d9"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 7,
+          "operationId": "0x17171717171717171717171717171717",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "skill_name_exists",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "5f3f510da0f7bc690309561323267b13194abac230bc1360cb6dfcca8fbb15c4",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Approve",
+              "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 7,
+          "operationId": "0x17171717171717171717171717171717",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x5a0ed88d09bbe167cdb8e38c070e1f56d100e3188064494677f500126cf32230e7c28a12f7c4c6312ec8545ed05777900bc8eaf416f19ab61252bb66ee508c8e"
+      },
+      "stateDigest": "275c422ee5a8667061ddb2a908e4e280d44e0612d8df7158b425ce792c6ba3d9"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+          "finalizedAt": 100,
+          "firstEventCursor": 9,
+          "lastEventCursor": 9,
+          "nonce": 8,
+          "operationId": "0x18181818181818181818181818181818",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "7a37a1e4541fad396ce0f03871677113e5031c0143948e953b4a060e3e7fba20",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Reject",
+              "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 8,
+          "operationId": "0x18181818181818181818181818181818",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x7225c1e52ddcda945aa0ab4f55f2c0997e692115462ef6c6559f901364449e077a62ada88004295ce1881ee5bc31a5d34f435f32053f0b57097c7e0a3662f78b"
+      },
+      "stateDigest": "06407671cf035d2b7f80612aa62ee6997ce781c59b14ecf1ca1f05c20174c4b7"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 9,
+          "operationId": "0x19191919191919191919191919191919",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "skill_request_decided",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "d0e0b598847ad3c0fc74950bab57842a72af83cd9a829784c0562099e6ad337f",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Reject",
+              "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 9,
+          "operationId": "0x19191919191919191919191919191919",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xe8e6c35382d53a63a57a8716970c04b81dd5374fc479c8812636efacc18b454b1c816b68045e99ea80b23b0419b0845de065c66baa5da97deeafcacdcfd7dc88"
+      },
+      "stateDigest": "06407671cf035d2b7f80612aa62ee6997ce781c59b14ecf1ca1f05c20174c4b7"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 10,
+          "lastEventCursor": 10,
+          "nonce": 10,
+          "operationId": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "3c2fba16fae8a75ff6f76d9abfc16c6e1560c018c7c87a652a336f1c4093afbf",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 81,
+              "kind": "Skill",
+              "name": "Renamed Approved Skill"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 10,
+          "operationId": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x5c6c2976ce31c54dc3aa104425fc0cd05d0154e7e2db303133a79563e324983d5af5e505db34cadefc38995e06ec48d5a01a363314b88f94c3db79eabd99e48a"
+      },
+      "stateDigest": "00aeeb269c08c95dabfe6bf9231d855e9f72f9d7977f32acc03c2d8deb4a0b59"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 11,
+          "lastEventCursor": 11,
+          "nonce": 11,
+          "operationId": "0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "a93488311ff9ffa510860dad1f3d8539bd292945d01fb58d7f82d234e630c7b5",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 81,
+              "kind": "Skill"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 11,
+          "operationId": "0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xd4dde48050fc86a7727dd243a7b677024f9f1d4dec8f773ecc552437b92bf83ad029708487949665407fda25f11de3756e7efe2cd8059a2a79ee98ffafc0fe86"
+      },
+      "stateDigest": "cdb02df3703ac85d16dae0d724ab6fc91d24c3703def726746b8026930b62e65"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22,
+          22
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 12,
+          "lastEventCursor": 12,
+          "nonce": 12,
+          "operationId": "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "e3a4bb08900bd27775bdc2aef3067ff5d2b266920ba5f6bdaef8ea8d9576d41e",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 90,
+              "kind": "Role",
+              "name": "temporary"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 12,
+          "operationId": "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xe649c5b04738c7eb033dbc820754bcb4325ac99e07a100a7bba93b42d955a57a19a39498ad79d6e6668fae5e738d52a24f0036985718b9d249d5ca85592bba83"
+      },
+      "stateDigest": "8ed8e0d248d22d3dc49893f36dc49664d4cac2857154da9a47b06a43121deb49"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0x8d42c935e9444730088459a2a5342119",
+          "finalizedAt": 100,
+          "firstEventCursor": 13,
+          "lastEventCursor": 13,
+          "nonce": 9,
+          "operationId": "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "4a104eb7730c535bfb278278493c8068ba519fcd75f5f96a4d9b0dcd6c4f0fa5",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "name": "Pending Role",
+              "roleIds": [
+                90
+              ]
+            },
+            "type": "CreateSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 9,
+          "operationId": "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x42c45ea466b57f906d7e4a956655c16ea97661178967d4a452a0b0ae1c73cf44aee68a94152db23a5816761d7e8368c92bbab09fe2feac96f4472998f688f189"
+      },
+      "stateDigest": "5213e4bc1792024a49497aabca1b51fadfbd9f5e33e2bf490af80fcad78dcb77"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 14,
+          "lastEventCursor": 14,
+          "nonce": 13,
+          "operationId": "0x1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "2e3a751a035caee6ef4745330efa4b63b56825cfbea94723d297614db24c2661",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 90,
+              "kind": "Role"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 13,
+          "operationId": "0x1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x929e3014cb65c9fef1ce7d18da7f6a7903fa3df801326bfad5d053637640ed78541ad512f5b77123cb0cd277f9c568681c1e283f016db70d65ab477718b53383"
+      },
+      "stateDigest": "618875aa61dffb466f64a480292e03f6ce69b92256920a4e467333b868bad0cd"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 14,
+          "operationId": "0x1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "unknown_role",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "a19e75f4683d0536cff839e13f5294e1b659b97acdf603dbff9885b4df5f7b0a",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Approve",
+              "requestId": "0x8d42c935e9444730088459a2a5342119"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 14,
+          "operationId": "0x1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xf236449fc487945cc89c4e2e2c14983e2d2bb3e2968301f205496ebd59404003c4fbffaf9b2a18f7668a99de6fe9fbc722fd4332b91f9ce49dca6cda3e502c80"
+      },
+      "stateDigest": "618875aa61dffb466f64a480292e03f6ce69b92256920a4e467333b868bad0cd"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0x8d42c935e9444730088459a2a5342119",
+          "finalizedAt": 100,
+          "firstEventCursor": 15,
+          "lastEventCursor": 15,
+          "nonce": 15,
+          "operationId": "0x20202020202020202020202020202020",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "ce5c6eab824bf283f0e4a2e478d7bba4d2ff89505c8bc0e22cc15a4d30feba65",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Reject",
+              "requestId": "0x8d42c935e9444730088459a2a5342119"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 15,
+          "operationId": "0x20202020202020202020202020202020",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x7a20bf0d0c1044d491c175b92abd402d85e0b499440aff2dc814514be9b3c2448831e44fa7746f16f9b9c66b3e3dafbaef339820b2e5aceb22269f89888cc68a"
+      },
+      "stateDigest": "f8c0120c24cec6239711004150e980ab87a1755c1c542b042c84f50fdebe7f3a"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 16,
+          "lastEventCursor": 16,
+          "nonce": 10,
+          "operationId": "0x21212121212121212121212121212121",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "34b143014098b974b4c6d2d7de76691b0d19280b3f6da2589779f79f942c8df6",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "qualifications": {
+                "roleIds": [
+                  3
+                ],
+                "skillIds": [
+                  2
+                ]
+              }
+            },
+            "type": "UpdateQualifications"
+          },
+          "expiresAt": 200,
+          "nonce": 10,
+          "operationId": "0x21212121212121212121212121212121",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xd8d379dbf5dcc5d20f84ab749541b3320a3d8f0e2f7a006afa2133dd5edbce58b3f16bcf6420a2b352eaad7b9e0fdcd551438c5e8042102bb6cae670f91cd685"
+      },
+      "stateDigest": "972507e902ffe569494f3d1211339c33f6e0187693abee83470ced0b02135c96"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 16,
+          "operationId": "0x22222222222222222222222222222222",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "catalog_entry_in_use",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "d8b83dbc149a825f46db2bba41aa04a249a3ebeb9527461af34305974544568a",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 2,
+              "kind": "Skill"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 16,
+          "operationId": "0x22222222222222222222222222222222",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xc0dc0f085f8744731c086f28ea11ca4c574113098cb9e8a4a072a62d3f922e15e6e9a76040d3149411f4391a2a5ed3c361afa454e350aa3d495f92fe50767b89"
+      },
+      "stateDigest": "972507e902ffe569494f3d1211339c33f6e0187693abee83470ced0b02135c96"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 17,
+          "operationId": "0x23232323232323232323232323232323",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "catalog_entry_not_found",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "bc51b74b1587843b456f38753da90d88d6bc394197d75a47fc625f2377324fa4",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 999,
+              "kind": "Skill"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 17,
+          "operationId": "0x23232323232323232323232323232323",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x1aa502d2aca04dbba74432a81ea9fc20e230a4277c5898e914da0681a26844440e08151158eff054efa77536a5c2324ed54dcf63d388f395ebd35c0aed90e982"
+      },
+      "stateDigest": "972507e902ffe569494f3d1211339c33f6e0187693abee83470ced0b02135c96"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23,
+          23
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 17,
+          "lastEventCursor": 17,
+          "nonce": 18,
+          "operationId": "0x24242424242424242424242424242424",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "bd0e1ebf07e3accacaa11ffe4c7ef14fd2a264bb256c38f2ac8abcc075ff5313",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 4294967295,
+              "kind": "Skill",
+              "name": "maximum catalog id"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 18,
+          "operationId": "0x24242424242424242424242424242424",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xa47ed53df498ce7e44007a6e42226c4e57a58d13397bf000aa00111d85befd73737c3f0a2ebf6b5a2410f32bf921b29ea1f23d0d763f8d0457c8157746c40d86"
+      },
+      "stateDigest": "cc3fb7ce47b61c2b92217746976d9bb44bbac4ddb6759480f3db409a38dcd4a7"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+          "finalizedAt": 100,
+          "firstEventCursor": 18,
+          "lastEventCursor": 18,
+          "nonce": 11,
+          "operationId": "0x25252525252525252525252525252525",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "31f73769da6558b2862e47bb4d2791a240754c31f7f45dd36a4503278abbf9a4",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "name": "Overflow Approval",
+              "roleIds": [
+                3
+              ]
+            },
+            "type": "CreateSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 11,
+          "operationId": "0x25252525252525252525252525252525",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xbc1a0b85b953f3490e6640a7d179e26bcd43bf50c3de33b4e612e331dedcf82cc84a04825f3d826d2ec3ba090f4780bf424320170abc1d0ff0632c7861954e82"
+      },
+      "stateDigest": "fc7d17f74398c18c0dc58268d40eb053c0e7307a26565a43766d0e3770651621"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 19,
+          "operationId": "0x26262626262626262626262626262626",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "catalog_id_exhausted",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "289d0b687529a900974a2a74c3d192c4155e3e33e39737168b669355acf9cacc",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Approve",
+              "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 19,
+          "operationId": "0x26262626262626262626262626262626",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x50bda7ca41c52539658dfb105f31d391f8186b7a7006a105f9aeebe58c4fb84acc84170012cf24b17dbbed50663f25f693bf3640af73f06bf41a6de9144a158a"
+      },
+      "stateDigest": "fc7d17f74398c18c0dc58268d40eb053c0e7307a26565a43766d0e3770651621"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+          "finalizedAt": 100,
+          "firstEventCursor": 19,
+          "lastEventCursor": 19,
+          "nonce": 20,
+          "operationId": "0x27272727272727272727272727272727",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "0b041ee858bd846be215c699fea6c6fd35c52e36af3a5dae79b6a50376e96b58",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "decision": "Reject",
+              "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a"
+            },
+            "type": "DecideSkillRequest"
+          },
+          "expiresAt": 200,
+          "nonce": 20,
+          "operationId": "0x27272727272727272727272727272727",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x685338b45e9ac4166c6f9b335321c28a9b6e76697653f618325307ba6cb78f4aa5bf69618aa9d611e5abf3d573c8c6d6fdb7a211f120005155cf22644cfe988f"
+      },
+      "stateDigest": "1bc8ac73195d93a0ba8474468803fd523e2181156631bf83711d378b9e04aaf4"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 20,
+          "lastEventCursor": 20,
+          "nonce": 21,
+          "operationId": "0x28282828282828282828282828282828",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "2f0b155c681a053b6f518fb93181fe602cee5f8ace14cd1b0e4c678472eec3ec",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 4294967295,
+              "kind": "Skill"
+            },
+            "type": "DeleteCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 21,
+          "operationId": "0x28282828282828282828282828282828",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xbc85c1945e13ecd5a838fbe7aab65e0abbf0ad63f4ad4c39145ef215ee2fa8183dd1f36a4be753d87155b1979c7a84ee3eb9ddf0efb9b6e2e5a3e66b1386df80"
+      },
+      "stateDigest": "025731c0335718a4e057c20a974b922a1125895b8d8f16463f4486ceb2eba5b3"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "finalizedAt": 100,
+          "firstEventCursor": 21,
+          "lastEventCursor": 21,
+          "nonce": 12,
+          "operationId": "0x29292929292929292929292929292929",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "fe4fa83296555545ecc32415abd1f19f3954003ce42407303298b029aca082ff",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "defaultWeeklyMinutes": 37,
+              "overrides": [
+                {
+                  "capacity": 0,
+                  "week": {
+                    "isoYear": 2026,
+                    "week": 53
+                  }
+                }
+              ]
+            },
+            "type": "SetCalendar"
+          },
+          "expiresAt": 200,
+          "nonce": 12,
+          "operationId": "0x29292929292929292929292929292929",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xe245d6b0f6c693f3eb66160327ac9baeee93965510390cd7999ebef721f10a14c7b23fe63d8c69d894b3857412d43e6fdfa4217e8affb47483ab88ceb038e281"
+      },
+      "stateDigest": "62f390812bff7c5d9b63fb0bc1a3d06b0acbdb8a47963edc9386c887d1648066"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 22,
+          "lastEventCursor": 22,
+          "nonce": 13,
+          "operationId": "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "cd22ddae4172a0eb8e1f308a269ab50e999b419bb164d0276ac1cbefcb935edb",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "mode": "Worker"
+            },
+            "type": "SetWorkerMode"
+          },
+          "expiresAt": 200,
+          "nonce": 13,
+          "operationId": "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xf64fe8cf5004bbe395376360c192e350a923b59dd5cfa4ce2ea7a98aa403ec326ef822c0fb893c0ca350ac2d782266ddcfad906f243e2aade4bc7f6e010b8a81"
+      },
+      "stateDigest": "acb2c74b2231e9cc8c93a5b439089ff8562b91a858566ace56f3666b51de5661"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 23,
+          "lastEventCursor": 23,
+          "nonce": 22,
+          "operationId": "0x2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "5000f66eefedfa656036d61e3114b5c1df99b4a3397b1e775918d1c3b4010c93",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 80,
+              "kind": "Skill",
+              "name": "Renamed Skill"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 22,
+          "operationId": "0x2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x0c6e8155ec6cd2c626a99805da573e7a373aa9f84b7731a820e5d0f33c7cf0726ef92320a27f6b17d8e15ddb6081dd137fb8acb1eb94f52cf2b03bbc966a5781"
+      },
+      "stateDigest": "7cd20d5fd4066abc96c13dfbc54ee1e5f812361b10f4d81b9fb08ed0fe3b72b9"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 24,
+          "lastEventCursor": 24,
+          "nonce": 23,
+          "operationId": "0x2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "babf98951917c69a5d309a7c19810ce8f4a58105640cbdb9cf241a4671bf7fd3",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 82,
+              "kind": "Skill",
+              "name": "AΣ꟎"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 23,
+          "operationId": "0x2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x8cefd7491cd15c0a516b704c4a8519bcef8f3c44a3be70d63bb150b264f4eb4e0cdd75a66aa0957afe65090b6291e30175b900648f5c1bf3398fc0c1a0e6fa8d"
+      },
+      "stateDigest": "13196fa2bea8aff452b24a77c4bb08c2eb80c046fb4878c21b17c93790951895"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 24,
+          "operationId": "0x2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "skill_name_exists",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "25917b3d2cdc09407f332b79219d36cbc7c4d66c0ecff6a3a6faddd4f60701ba",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 83,
+              "kind": "Skill",
+              "name": "aσ꟏"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 24,
+          "operationId": "0x2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x3410c3ca11c422ea934dccd9149ed2819833bc3f5beed33b4956879c7c211958a18d5238491664dab0080a2a7e24e8ffcbabccbacf1c722ee7da76dd92eb5c84"
+      },
+      "stateDigest": "13196fa2bea8aff452b24a77c4bb08c2eb80c046fb4878c21b17c93790951895"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 25,
+          "lastEventCursor": 25,
+          "nonce": 25,
+          "operationId": "0x2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "dcc126e4c2287620b78d80e059fe5f3716f3075eaf41ea5cf0f4b37dbbe64e9b",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 83,
+              "kind": "Skill",
+              "name": "𖺠"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 25,
+          "operationId": "0x2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x38fc6e29c62397ef142b17dd61bc13e7439156846fc97c4a41549a76fb784920116c1a7aa2611e30484ff2296a05129bbf99fbd129c3d57dc8c018126001e38b"
+      },
+      "stateDigest": "ec240573f22dff23bdae4ef763f585fe48b10da77c8d223783a4a94b83ac0da6"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": null,
+          "lastEventCursor": null,
+          "nonce": 26,
+          "operationId": "0x2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "code": "skill_name_exists",
+            "type": "Failed"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "9290c1675296c5fa025d846a1710dabfb9ff9fba2f70b0ef28201964c491bea1",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 84,
+              "kind": "Skill",
+              "name": "𖺻"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 26,
+          "operationId": "0x2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x38fc75e4a2c1fcde2352e2284f8112a0733e150f5a8dd9d346593640cb5537396a033530cfa7d6de23b89f4deb26ba4df39b0d6c79f8cf5a9b93cf1d6849698f"
+      },
+      "stateDigest": "ec240573f22dff23bdae4ef763f585fe48b10da77c8d223783a4a94b83ac0da6"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24,
+          24
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "receipt": {
+          "createdEntityId": null,
+          "finalizedAt": 100,
+          "firstEventCursor": 26,
+          "lastEventCursor": 26,
+          "nonce": 27,
+          "operationId": "0x30303030303030303030303030303030",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "outcome": {
+            "type": "Success"
+          },
+          "providerInstanceId": "0x61616161616161616161616161616161"
+        }
+      },
+      "shellDigest": "c3d005f4b613553b43b35c254368c9797ff4413a257596cd9142577059b5524d",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "id": 91,
+              "kind": "Role",
+              "name": "coordinator"
+            },
+            "type": "UpsertCatalogEntry"
+          },
+          "expiresAt": 200,
+          "nonce": 27,
+          "operationId": "0x30303030303030303030303030303030",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x5c8b6267313756b7e98c4f2855ec18de20b5b3779ac0d51fe43195dfaac71e596111fcb07a2858cc0ffaef58cfe29347a9f70986331d216aecbbf17980451181"
+      },
+      "stateDigest": "01fcf1f618be8f30c1992de804ebb88661077f065682a193150e8d11a1986121"
+    },
+    {
+      "inputs": {
+        "now": 100,
+        "seed": [
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10,
+          10
+        ],
+        "version": 1
+      },
+      "outcome": {
+        "error": "invalid_worker_state"
+      },
+      "shellDigest": "c3d005f4b613553b43b35c254368c9797ff4413a257596cd9142577059b5524d",
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "calendar": {
+                "defaultWeeklyMinutes": 600,
+                "overrides": []
+              },
+              "displayName": "Candidate",
+              "qualifications": {
+                "roleIds": [
+                  2
+                ],
+                "skillIds": [
+                  1
+                ]
+              }
+            },
+            "type": "RegisterWorker"
+          },
+          "expiresAt": 200,
+          "nonce": 2,
+          "operationId": "0x31313131313131313131313131313131",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x61616161616161616161616161616161",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x0616de87b054e7a83b6097c5f746559d17475824203291e7f6e1301d4615734c26f8a429f0a8c1f2d84ddaa61db8e1ff04146d9122388e25889f67e98c3cef8f"
+      },
+      "stateDigest": "01fcf1f618be8f30c1992de804ebb88661077f065682a193150e8d11a1986121"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 //! Private candidate execution. This module is not linked into the provider.
 //!
-//! The future shell bridge supplies its complete success/rejection envelopes.
+//! Raw fixtures supply opaque envelopes; signed fixtures use the real shell.
 //! Neither this module nor callers may infer non-execution from a lost response.
 use crate::{
     Account, Contracts, GAS, ProofError, Timestamp,
@@ -30,19 +30,30 @@ use std::{
     time::Duration,
 };
 use tokio::sync::oneshot;
+mod directory;
 mod signed;
+pub use directory::{DirectoryFixture, DirectoryProjection};
 pub use signed::{CalendarFixture, FixtureWorker};
 
 #[derive(Clone, Copy)]
 enum Mode {
     Raw,
-    Calendar { root: AccountId32, gas: Weight },
+    Calendar {
+        root: AccountId32,
+        gas: Weight,
+    },
+    Directory {
+        root: AccountId32,
+        gas: Weight,
+        configuration: H256,
+    },
 }
 impl Mode {
     fn key(self) -> &'static str {
         match self {
             Self::Raw => "raw-fixture-v1",
             Self::Calendar { .. } => "signed-calendar-v1",
+            Self::Directory { .. } => "signed-directory-v1",
         }
     }
 }
@@ -52,6 +63,7 @@ enum InitialState {
         shell: Vec<u8>,
     },
     Calendar(CalendarFixture),
+    Directory(DirectoryFixture),
 }
 impl InitialState {
     fn mode(&self) -> Mode {
@@ -61,6 +73,7 @@ impl InitialState {
                 root: fixture.root,
                 gas: fixture.gas_limit,
             },
+            Self::Directory(fixture) => fixture.mode(),
         }
     }
 }
@@ -79,6 +92,7 @@ pub enum Error {
     StaleRevision,
     Limit,
     InvalidState,
+    Invariant(&'static str),
     Shell(provider_execution::Error),
     IncompleteCoverage,
 }
@@ -96,6 +110,7 @@ impl std::fmt::Display for Error {
                 Self::StaleRevision => "stale revision",
                 Self::Limit => "resource limit",
                 Self::InvalidState => "invalid stored state",
+                Self::Invariant(code) => code,
                 Self::Shell(error) => error.code(),
                 Self::IncompleteCoverage => "incomplete contract coverage",
             }
@@ -182,9 +197,14 @@ enum Job {
     Signed {
         call: SignedContractCallV1,
         now: UnixSeconds,
+        inputs: Option<provider_execution::ExecutionInputs>,
         reply: oneshot::Sender<Result<OperationReceipt, Error>>,
     },
     Shell(oneshot::Sender<Result<Shell, Error>>),
+    DirectoryProjection {
+        origin: AccountId32,
+        reply: oneshot::Sender<Result<DirectoryProjection, Error>>,
+    },
     Execute {
         expected: i64,
         invocation: Invocation,
@@ -256,19 +276,58 @@ impl Client {
         call: SignedContractCallV1,
         now: UnixSeconds,
     ) -> Result<Ticket<OperationReceipt>, Error> {
-        if !matches!(self.mode, Mode::Calendar { .. }) {
+        if matches!(self.mode, Mode::Raw) {
             return Err(Error::InvalidState);
         }
         if call.encoded_size() > MAX_INPUT {
             return Err(Error::Limit);
         }
         let (reply, result) = oneshot::channel();
-        self.send(Job::Signed { call, now, reply })?;
+        self.send(Job::Signed {
+            call,
+            now,
+            inputs: None,
+            reply,
+        })?;
+        Ok(Ticket(result))
+    }
+    /// Trusted comparison harness only: reuse the reference engine's captured
+    /// inputs. This standalone crate is never exposed through HTTP.
+    pub fn execute_directory_with_inputs(
+        &self,
+        call: SignedContractCallV1,
+        inputs: provider_execution::ExecutionInputs,
+    ) -> Result<Ticket<OperationReceipt>, Error> {
+        if !matches!(self.mode, Mode::Directory { .. }) {
+            return Err(Error::InvalidState);
+        }
+        if call.encoded_size() > MAX_INPUT {
+            return Err(Error::Limit);
+        }
+        let (reply, result) = oneshot::channel();
+        self.send(Job::Signed {
+            call,
+            now: inputs.now,
+            inputs: Some(inputs),
+            reply,
+        })?;
+        Ok(Ticket(result))
+    }
+    /// Read-only M3 projection, including request visibility for this fixture caller.
+    pub fn directory_projection(
+        &self,
+        origin: AccountId32,
+    ) -> Result<Ticket<DirectoryProjection>, Error> {
+        if !matches!(self.mode, Mode::Directory { .. }) {
+            return Err(Error::InvalidState);
+        }
+        let (reply, result) = oneshot::channel();
+        self.send(Job::DirectoryProjection { origin, reply })?;
         Ok(Ticket(result))
     }
     /// Private fixture inspection, not a public provider or HTTP snapshot.
     pub fn shell(&self) -> Result<Ticket<Shell>, Error> {
-        if !matches!(self.mode, Mode::Calendar { .. }) {
+        if matches!(self.mode, Mode::Raw) {
             return Err(Error::InvalidState);
         }
         let (reply, result) = oneshot::channel();
@@ -309,6 +368,14 @@ impl Worker {
         fixture.validate()?;
         Self::start_with(path, InitialState::Calendar(fixture)).await
     }
+    /// Explicit fresh Directory/Calendar fixture. Other domains remain incomplete.
+    pub async fn start_directory_fixture(
+        path: PathBuf,
+        fixture: DirectoryFixture,
+    ) -> Result<Self, Error> {
+        fixture.validate()?;
+        Self::start_with(path, InitialState::Directory(fixture)).await
+    }
     async fn start_with(path: PathBuf, initial: InitialState) -> Result<Self, Error> {
         let mode = initial.mode();
         let (sender, receiver) = mpsc::sync_channel(QUEUE_CAPACITY);
@@ -340,13 +407,32 @@ impl Worker {
                             };
                             match job {
                                 Job::Stop => break,
-                                Job::Signed { call, now, reply } => {
+                                Job::Signed {
+                                    call,
+                                    now,
+                                    inputs,
+                                    reply,
+                                } => {
                                     if !reply.is_closed() {
                                         respond(
                                             reply,
-                                            runtime.block_on(signed::execute(
-                                                &pool, &bundles, mode, call, now,
-                                            )),
+                                            runtime.block_on(async {
+                                                match mode {
+                                                    Mode::Directory { .. } => {
+                                                        directory::execute(
+                                                            &pool, &bundles, mode, call, now,
+                                                            inputs,
+                                                        )
+                                                        .await
+                                                    }
+                                                    _ => {
+                                                        signed::execute(
+                                                            &pool, &bundles, mode, call, now,
+                                                        )
+                                                        .await
+                                                    }
+                                                }
+                                            }),
                                         );
                                     }
                                 }
@@ -354,8 +440,27 @@ impl Worker {
                                     if !reply.is_closed() {
                                         respond(
                                             reply,
-                                            runtime.block_on(signed::read_shell(
-                                                &pool, &bundles, mode,
+                                            runtime.block_on(async {
+                                                match mode {
+                                                    Mode::Directory { .. } => {
+                                                        directory::read_shell(&pool, &bundles, mode)
+                                                            .await
+                                                    }
+                                                    _ => {
+                                                        signed::read_shell(&pool, &bundles, mode)
+                                                            .await
+                                                    }
+                                                }
+                                            }),
+                                        );
+                                    }
+                                }
+                                Job::DirectoryProjection { origin, reply } => {
+                                    if !reply.is_closed() {
+                                        respond(
+                                            reply,
+                                            runtime.block_on(directory::projection(
+                                                &pool, &bundles, mode, origin,
                                             )),
                                         );
                                     }
@@ -489,7 +594,7 @@ async fn open(
         .acquire_timeout(Duration::from_secs(6))
         .connect_with(options)
         .await?;
-    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-calendar-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 1048576), outcome BLOB NOT NULL CHECK(length(outcome) <= 131072))").execute(&pool).await?;
+    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-calendar-v1','signed-directory-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 1048576), outcome BLOB NOT NULL CHECK(length(outcome) <= 131072))").execute(&pool).await?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let exists: i64 = sqlx::query_scalar("SELECT count(*) FROM candidate_state")
         .fetch_one(&mut *tx)
@@ -498,6 +603,7 @@ async fn open(
         let (ext, shell) = match initial {
             InitialState::Raw { accounts, shell } => (new_externalities(accounts)?, shell),
             InitialState::Calendar(fixture) => signed::initialize(bundles, fixture)?,
+            InitialState::Directory(fixture) => directory::initialize(bundles, fixture)?,
         };
         let checkpoint = Checkpoint::capture(ext)?.to_bytes()?;
         sqlx::query("INSERT INTO candidate_state (singleton, revision, mode, runtime, shell, outcome) VALUES (1, 0, ?, ?, ?, ?)")
@@ -511,6 +617,9 @@ async fn open(
     let stored = load(&mut tx, bundles.identity(), mode).await?;
     if let Mode::Calendar { root, .. } = mode {
         signed::validate(&stored, bundles, root)?;
+    }
+    if matches!(mode, Mode::Directory { .. }) {
+        directory::validate(&stored, bundles, mode)?;
     }
     tx.commit().await?;
     Ok(pool)
