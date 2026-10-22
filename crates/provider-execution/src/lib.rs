@@ -2,6 +2,8 @@
 //! the returned shell and tentative engine state in the same transaction.
 #![allow(clippy::missing_errors_doc)]
 
+pub mod migration;
+
 use generated_contracts::{
     AccountId32, DomainEvent, DomainEventKind, EntityId, ExecutionOutcome, OperationId,
     OperationReceipt, PAYLOAD_VERSION, ProviderCommand, ProviderInfo, ProviderInstanceId,

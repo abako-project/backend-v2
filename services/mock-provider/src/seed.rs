@@ -98,3 +98,12 @@ pub(crate) fn seed(
         }
     }
 }
+
+impl From<provider_execution::migration::SkillMetadata> for SkillMetadata {
+    fn from(saved: provider_execution::migration::SkillMetadata) -> Self {
+        Self {
+            category: saved.category,
+            role_ids: saved.role_ids,
+        }
+    }
+}

@@ -7,7 +7,7 @@ use generated_contracts::{
     AccountId32, AccountNonce, BalanceView, CatalogEntry, CatalogView, DomainEventKind, EntityId,
     Minutes, Money, OperationId, OperationReceipt, Percentage, ProjectView, ProviderEvents,
     ProviderInfo, ProviderSnapshot, ReputationView, ScorePolicy, SkillRequestView,
-    SkillRoleAssociation, UnixSeconds, WorkerView,
+    SkillRoleAssociation, WorkerView,
 };
 use serde::{Deserialize, Serialize};
 
@@ -28,17 +28,9 @@ mod submissions;
 mod tests;
 mod validation;
 
-use provider_execution::{Effect, RecordedCall};
+use provider_execution::Effect;
 
-#[derive(Clone, Serialize, Deserialize)]
-struct RecordedReason {
-    project_id: EntityId,
-    milestone_id: Option<EntityId>,
-    origin: AccountId32,
-    reason: String,
-    occurred_at: UnixSeconds,
-    kind: DomainEventKind,
-}
+use provider_execution::migration::{ArchiveV1, ReasonRecord as RecordedReason};
 
 /// Private aggregate: only authenticated calls can obtain a transition and only
 /// storage can commit it. HTTP snapshots are copies, never mutable handles.
@@ -179,8 +171,25 @@ impl State {
 
     #[cfg(feature = "storage-sqlite")]
     pub(crate) fn restore(bytes: &[u8], root_account: AccountId32) -> Result<Self> {
-        let mut state: Self = serde_json::from_slice(bytes)
+        let state: Self = serde_json::from_slice(bytes)
             .map_err(|_| Error::domain("state_configuration_mismatch"))?;
+        state.validate_restored(root_account)
+    }
+
+    pub(crate) fn archive(&self) -> Result<ArchiveV1> {
+        Ok(ArchiveV1 {
+            version: 1,
+            checkpoint: serde_json::from_slice(&self.encode()?).map_err(|_| Error::internal())?,
+        })
+    }
+
+    pub(crate) fn from_archive(archive: ArchiveV1, root_account: AccountId32) -> Result<Self> {
+        require(archive.version == 1, "state_configuration_mismatch")?;
+        Self::from(archive.checkpoint).validate_restored(root_account)
+    }
+
+    fn validate_restored(mut self, root_account: AccountId32) -> Result<Self> {
+        let state = &mut self;
         require(
             state.engine_version == rust_engine_version()
                 && state.shell.info.root_account == root_account
@@ -202,9 +211,8 @@ impl State {
         state.engine.validate()?;
         state.validate_history()?;
         state.engine.rebuild_index();
-        Ok(state)
+        Ok(self)
     }
-    #[cfg(feature = "storage-sqlite")]
     pub(crate) fn encode(&self) -> Result<Vec<u8>> {
         serde_json::to_vec(self).map_err(|_| Error::internal())
     }

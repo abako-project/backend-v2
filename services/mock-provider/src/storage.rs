@@ -70,6 +70,26 @@ impl Provider {
     /// Startup never silently changes its configured root or overwrites seed edits.
     #[cfg(feature = "storage-sqlite")]
     pub async fn sqlite(url: &str, root: AccountId32) -> Result<Self> {
+        Self::open_sqlite(url, root, None).await
+    }
+
+    /// Import into a fresh `SQLite` provider only. Existing state is never replaced.
+    /// The caller must pause/drain the source before exporting the cutover archive.
+    #[cfg(feature = "storage-sqlite")]
+    pub async fn sqlite_from_archive(
+        url: &str,
+        root: AccountId32,
+        archive: provider_execution::migration::ArchiveV1,
+    ) -> Result<Self> {
+        Self::open_sqlite(url, root, Some(archive)).await
+    }
+
+    #[cfg(feature = "storage-sqlite")]
+    async fn open_sqlite(
+        url: &str,
+        root: AccountId32,
+        archive: Option<provider_execution::migration::ArchiveV1>,
+    ) -> Result<Self> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::{str::FromStr, time::Duration};
         let options = SqliteConnectOptions::from_str(url)
@@ -85,6 +105,8 @@ impl Provider {
             .map_err(|_| Error::internal())?;
         sqlx::query("CREATE TABLE IF NOT EXISTS provider_state (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), format_version INTEGER NOT NULL CHECK (format_version = 1), state BLOB NOT NULL)")
             .execute(&pool).await.map_err(|_| Error::internal())?;
+        sqlx::query("CREATE TABLE IF NOT EXISTS provider_migration (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), imported INTEGER NOT NULL CHECK(imported = 1))")
+            .execute(&pool).await.map_err(|_| Error::internal())?;
         let mut tx = pool
             .begin_with("BEGIN IMMEDIATE")
             .await
@@ -95,21 +117,63 @@ impl Provider {
         .fetch_optional(&mut *tx)
         .await
         .map_err(|_| Error::internal())?;
+        let importing = archive.is_some();
+        let previously_imported: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM provider_migration WHERE singleton = 1)",
+        )
+        .fetch_one(&mut *tx)
+        .await
+        .map_err(|_| Error::internal())?;
+        if previously_imported && row.is_none() {
+            return Err(Error::domain("state_configuration_mismatch"));
+        }
         let bytes = tokio::task::spawn_blocking(move || {
-            let mut state = match row {
-                Some(bytes) => State::restore(&bytes, root)?,
-                None => State::new(root)?,
+            let imported = archive.is_some() || previously_imported;
+            let mut state = match (archive, row) {
+                (Some(_), Some(_)) => return Err(Error::domain("migration_destination_not_empty")),
+                (Some(archive), None) => State::from_archive(archive, root)?,
+                (None, Some(bytes)) => State::restore(&bytes, root)?,
+                (None, None) => State::new(root)?,
             };
-            state.seed();
+            if !imported {
+                state.seed();
+            }
             state.encode()
         })
         .await
         .map_err(|_| Error::internal())??;
         sqlx::query("INSERT INTO provider_state (singleton, format_version, state) VALUES (1, 1, ?) ON CONFLICT(singleton) DO UPDATE SET state = excluded.state")
             .bind(bytes).execute(&mut *tx).await.map_err(|_| Error::internal())?;
+        if importing {
+            sqlx::query("INSERT INTO provider_migration (singleton, imported) VALUES (1, 1)")
+                .execute(&mut *tx)
+                .await
+                .map_err(|_| Error::internal())?;
+        }
         tx.commit().await.map_err(|_| Error::internal())?;
         Ok(Self {
             backend: Arc::new(Backend::Sqlite(pool)),
+            root,
+        })
+    }
+
+    /// Complete private archive for a paused migration; no HTTP route exposes it.
+    /// The caller must drain writes before taking the cutover archive.
+    pub async fn archive(&self) -> Result<provider_execution::migration::ArchiveV1> {
+        self.read().await?.archive()
+    }
+
+    /// Restore current exported state into a fresh memory provider generation.
+    /// Generation, replay history and nonces are retained, never regenerated.
+    #[cfg(feature = "storage-memory")]
+    pub fn memory_from_archive(
+        root: AccountId32,
+        archive: provider_execution::migration::ArchiveV1,
+    ) -> Result<Self> {
+        let state = State::from_archive(archive, root)?;
+        Ok(Self {
+            backend: Arc::new(Backend::Memory(Box::new(tokio::sync::Mutex::new(state)))),
+            #[cfg(feature = "storage-sqlite")]
             root,
         })
     }

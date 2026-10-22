@@ -93,7 +93,6 @@ impl State {
         }
         Ok((self, receipt))
     }
-    #[cfg(feature = "storage-sqlite")]
     pub(super) fn validate_history(&self) -> Result<()> {
         self.shell.validate(self.shell.info.root_account)?;
         Ok(())

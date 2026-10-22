@@ -258,3 +258,12 @@ impl BrampState {
 
 #[cfg(test)]
 mod tests;
+
+impl From<provider_execution::migration::BrampArchive> for BrampState {
+    fn from(saved: provider_execution::migration::BrampArchive) -> Self {
+        Self {
+            deposits: saved.deposits,
+            withdrawals: saved.withdrawals,
+        }
+    }
+}

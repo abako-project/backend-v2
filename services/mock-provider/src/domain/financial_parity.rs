@@ -1125,3 +1125,68 @@ fn execution_scenario(fixture: &mut Fixture) -> TestResult {
     assert_eq!(fixture.state.engine.disputes.len(), 2);
     Ok(())
 }
+
+#[test]
+fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResult {
+    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    let root = serde_json::from_value(trace["root"].clone())?;
+    let mut state = State::new(root)?;
+    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    for (index, step) in trace["steps"].as_array().ok_or("steps")?.iter().enumerate() {
+        let before = state.encode()?;
+        // Typed decoding is essential: retained reputation can exceed JSON's u64 range.
+        let archive = serde_json::from_slice(&serde_json::to_vec(&state.archive()?)?)?;
+        state = State::from_archive(archive, root)?;
+        assert_eq!(state.encode()?, before, "archive before step {index}");
+        assert_eq!(
+            signed_apply(
+                &mut state,
+                serde_json::from_value(step["signed"].clone())?,
+                serde_json::from_value(step["inputs"].clone())?
+            ),
+            step["outcome"],
+            "step {index}"
+        );
+        assert_eq!(digest(&state)?, step["stateDigest"], "step {index}");
+        assert_eq!(
+            shell_digest(&state.shell)?,
+            step["shellDigest"],
+            "step {index}"
+        );
+    }
+    let worker = state.engine.workers.values_mut().next().ok_or("worker")?;
+    worker.worker_score.rated_minutes = u64::MAX;
+    worker.worker_score.weighted_score_sum = u128::from(u64::MAX) * 500;
+    // Deleted tasks leave a counter that cannot be reconstructed from present tasks.
+    state.engine.next_task_id = 1_000_000;
+    let before = state.encode()?;
+    let archive = serde_json::from_slice(&serde_json::to_vec(&state.archive()?)?)?;
+    let restored = State::from_archive(archive, root)?;
+    assert_eq!(restored.encode()?, before);
+    let mut invalid = restored.archive()?;
+    invalid.version = 2;
+    assert_eq!(
+        State::from_archive(invalid, root)
+            .err()
+            .ok_or("version accepted")?
+            .code(),
+        "state_configuration_mismatch"
+    );
+    let mut invalid = restored.archive()?;
+    invalid.checkpoint.minted_units = Money::ZERO;
+    assert_eq!(
+        State::from_archive(invalid, root)
+            .err()
+            .ok_or("supply accepted")?
+            .code(),
+        "supply_mismatch"
+    );
+    assert_eq!(
+        State::from_archive(restored.archive()?, AccountId32::from_bytes([0; 32]))
+            .err()
+            .ok_or("root accepted")?
+            .code(),
+        "state_configuration_mismatch"
+    );
+    Ok(())
+}
