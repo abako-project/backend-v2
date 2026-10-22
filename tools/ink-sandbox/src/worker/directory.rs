@@ -195,6 +195,7 @@ fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<
         ProviderCommand::RegisterWorker(request) => input("register_worker", (request, id())),
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
+        ProviderCommand::SetScorePolicy(policy) => input("set_score_policy", policy),
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
         ProviderCommand::PromoteCoordinator(request) => input("promote_coordinator", request),
         ProviderCommand::UpsertCatalogEntry(request) => input("upsert_catalog_entry", request),

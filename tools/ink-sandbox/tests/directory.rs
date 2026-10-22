@@ -385,12 +385,24 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
             week,
             minutes: Minutes::ZERO,
         };
+        reject::<()>(
+            &calendar,
+            4,
+            "reserve",
+            (
+                WeekWindow::new(week, week).unwrap(),
+                Minutes::new(60),
+                reference.clone(),
+            ),
+            "reservation_controller_required",
+        );
         let value = call(
             &account(4),
-            &calendar,
+            &directory,
             input(
-                "reserve",
+                "reserve_calendar",
                 (
+                    account(2),
                     WeekWindow::new(week, week).unwrap(),
                     Minutes::new(60),
                     reference,

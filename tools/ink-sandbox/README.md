@@ -103,6 +103,40 @@ no browser contract, provider selector or hybrid fallback is added. Scores/match
 Project/reference-controller integration, import capacity, performance and whole-provider
 promotion remain later gates. See the [M3 signed handoff](../../progress/handoffs/SPEC-0013-M3-SHELL.md).
 
+## M4 reputation and matching
+
+Directory now stores the separate exact worker/coordinator accumulators and the
+same validated score policy. Its signed bridge adds `SetScorePolicy`; root authority,
+receipt/nonces, replay and event kind match Rust. No reputation is fabricated on
+registration or settlement. Internal Project-controller contributions use committed
+minutes and current relative vote weights; replay does not add them again and
+policy edits leave past accumulators unchanged. Actual completed-project evaluation
+participants and authorization remain M6.
+
+The [M4 trace](../../services/mock-provider/src/domain/fixtures/matching-parity.json)
+contains 172 component actions replayed independently by native Rust and real WASM.
+It compares outcomes, exact policies and complete M3 projections including scores
+and reservations after each action. It exercises skill intersections, descriptive
+roles, relevant-mode scores, earlier-team preference, distinct slots, capacity,
+zero weights, qualifications/index edits and failure across multiple milestones.
+Sixty-four tied coordinator seeds also compare the following project ID. Seventy-nine
+workers exercise candidates beyond a short list. Dense skill entries avoid a
+packed-vector storage ceiling or a fixed search/truncation limit.
+
+Directory is the immutable reservation controller of its Calendar children. Only
+its fixed Project-controller capability can request matching/reservation. The worker
+can still change its own capacity. Direct external reserve calls are rejected;
+M3 fixture tests now use the same Directory controller path. Matching reserves
+all milestones in one nested transaction; competing SQLite workers observe committed
+capacity, and restart retains it. M5/M6 must connect real Project calls to these
+hooks before whole-provider parity can be claimed.
+
+The canonical build reuses the four exact RNG versions already reviewed in the app
+and SDK. The SDK/app locks and exceptions are unchanged. Updated immutable artifacts
+change candidate identity and require fresh private fixture databases. The fresh
+source archive reproduces both Directory and Calendar WASM/ABI. See the
+[M4 evidence](../../progress/handoffs/SPEC-0013-M4.md). Rust remains authoritative.
+
 The committed `fixtures/manifest.json` pins canonical source commit, toolchain,
 artifact hashes and per-contract dependency locks. Tests verify artifact and
 lock hashes before instantiation. With cargo-contract 5.0.3, Rust 1.88.0 and its

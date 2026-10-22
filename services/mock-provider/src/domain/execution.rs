@@ -104,6 +104,10 @@ impl State {
 #[path = "directory_parity.rs"]
 mod directory_parity;
 
+#[cfg(all(test, feature = "mock-seed"))]
+#[path = "matching_parity.rs"]
+mod matching_parity;
+
 #[cfg(test)]
 mod tests {
     use super::*;

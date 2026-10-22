@@ -22,7 +22,7 @@ fn captured_id(seed: u8) -> EntityId {
     StdRng::from_seed([seed; 32]).fill_bytes(&mut bytes);
     EntityId::from_bytes(bytes)
 }
-fn projection(engine: &RustEngine) -> Projection {
+pub(super) fn projection(engine: &RustEngine) -> Projection {
     (
         engine.roles.values().cloned().collect(),
         engine.skills.values().cloned().collect(),
@@ -38,7 +38,7 @@ fn projection(engine: &RustEngine) -> Projection {
         engine.skill_requests.values().cloned().collect(),
     )
 }
-fn digest(engine: &RustEngine) -> String {
+pub(super) fn digest(engine: &RustEngine) -> String {
     use parity_scale_codec::Encode;
     format!("{:x}", Sha256::digest(projection(engine).encode()))
 }

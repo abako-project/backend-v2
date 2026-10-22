@@ -5,7 +5,7 @@ use ink_v5_compatibility::{
     Account, GAS,
     worker::{Client, DirectoryFixture, DirectoryProjection, Error, Worker},
 };
-use parity_scale_codec::Encode;
+use parity_scale_codec::{DecodeAll, Encode};
 use provider_execution::{ExecutionInputs, Shell};
 use serde_json::{Value, json};
 use sp_core::{
@@ -601,6 +601,79 @@ fn metered_failure_commits_failed_receipt_without_business_changes() {
         assert_eq!(db.stored().await.1, before.1);
         assert_eq!(shell(&worker.client()).await.nonce(account(2)), 1);
         assert!(shell(&worker.client()).await.events.is_empty());
+        worker.shutdown().await.unwrap();
+    });
+}
+
+#[test]
+fn signed_score_policy_uses_root_authority_shared_receipts_and_exact_policy_bytes() {
+    test(async {
+        let db = Database::new();
+        let worker = db.start().await;
+        let client = worker.client();
+        let policy = ScorePolicy::new(Percentage::new(50).unwrap(), Percentage::new(50).unwrap())
+            .unwrap()
+            .with_coordinator_vote_weights(7, 3)
+            .unwrap();
+        let denied = client
+            .execute_signed(
+                signed(2, 0, 1, ProviderCommand::SetScorePolicy(policy)),
+                NOW,
+            )
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(
+            denied.outcome,
+            ExecutionOutcome::Failed("system_origin_required".into())
+        );
+        assert!(shell(&client).await.events.is_empty());
+        let call = signed(1, 0, 2, ProviderCommand::SetScorePolicy(policy));
+        let receipt = client
+            .execute_signed(call.clone(), NOW)
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+        let state = shell(&client).await;
+        assert_eq!(state.events.len(), 1);
+        assert_eq!(state.events[0].kind, DomainEventKind::ScorePolicyUpdated);
+        assert_eq!(state.events[0].origin, Some(account(1)));
+        assert_eq!(state.nonce(account(2)), 1);
+        assert_eq!(state.nonce(account(1)), 1);
+        let before = db.stored().await;
+        let persisted: Value = serde_json::from_slice(&before.2).unwrap();
+        let address: Account = serde_json::from_value(persisted["directory"].clone()).unwrap();
+        let query = client
+            .query(ink_v5_compatibility::worker::Invocation {
+                caller: Account::new(account(1).into_bytes()),
+                action: ink_v5_compatibility::worker::Action::Call { address },
+                input: blake2_256(b"score_policy")[..4].to_vec(),
+                gas: GAS,
+                timestamp_ms: 100_000,
+            })
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(
+            Result::<ScorePolicy, u8>::decode_all(&mut &query.data[..])
+                .unwrap()
+                .unwrap(),
+            policy
+        );
+        assert_eq!(
+            client
+                .execute_signed(call, UnixSeconds::new(999))
+                .unwrap()
+                .result()
+                .await
+                .unwrap(),
+            receipt
+        );
+        assert_eq!(db.stored().await, before);
         worker.shutdown().await.unwrap();
     });
 }
