@@ -872,7 +872,7 @@ async fn open(
         .acquire_timeout(Duration::from_secs(6))
         .connect_with(options)
         .await?;
-    let foreign_tables: i64 = sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name NOT IN ('candidate_state','candidate_reference') AND name NOT LIKE 'sqlite_%'")
+    let foreign_tables: i64 = sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name NOT IN ('candidate_state','candidate_reference') AND name NOT GLOB 'sqlite_*'")
         .fetch_one(&pool).await?;
     if foreign_tables != 0 {
         return Err(Error::InvalidState);

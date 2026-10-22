@@ -967,6 +967,32 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
             .unwrap();
         assert_eq!(bytes, [1, 2, 3]);
         pool.close().await;
+        let unrelated = Database::new();
+        let pool =
+            sqlx::SqlitePool::connect(&format!("sqlite://{}?mode=rwc", unrelated.0.display()))
+                .await
+                .unwrap();
+        sqlx::query("CREATE TABLE sqliteXforeign (retained BLOB)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert!(
+            Worker::import_whole(
+                unrelated.0.clone(),
+                initial.clone(),
+                configuration.clone(),
+                Authority::Rust
+            )
+            .await
+            .is_err()
+        );
+        let tables: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(tables, 1);
+        pool.close().await;
         let trace: serde_json::Value = serde_json::from_str(include_str!(
             "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
         ))

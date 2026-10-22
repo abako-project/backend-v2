@@ -827,6 +827,10 @@ if __name__ == "__main__":
     parser.add_argument("--provider-binary", type=Path, help="explicit whole-provider candidate executable")
     parser.add_argument("--provider-authority", choices=("rust", "shadow", "sandbox"), default="rust")
     arguments = parser.parse_args()
+    if arguments.provider_binary and arguments.storage != "sqlite":
+        parser.error("the whole-provider candidate uses SQLite; set --storage sqlite")
+    if not arguments.provider_binary and arguments.provider_authority != "rust":
+        parser.error("--provider-authority requires --provider-binary")
     for selected in (("sqlite", "memory") if arguments.storage == "both" else (arguments.storage,)):
         run(selected, arguments.binaries.resolve(), provider_binary=arguments.provider_binary, authority=arguments.provider_authority)
         run(selected, arguments.binaries.resolve(), exercise_multi_milestone, arguments.provider_binary, arguments.provider_authority)
