@@ -155,3 +155,12 @@ including 129 signed operations and 14 backward-clock abort probes; unchanged
 SDK policy, fresh WASM/ABI reproduction and full application verification pass.
 [M6 evidence](../../progress/handoffs/SPEC-0013-M6.md) records the review fixes,
 retained-state priority gate and remaining import, capacity and promotion work.
+
+
+M7 private import/comparison/rollback infrastructure is independently approved at
+backend `b3db5b0` and canonical `b2a7cfa`. All66 SDK tests, final source reproduction,
+canonical Clippy, full application verification and all3 current-WASM rollback
+replays pass. [M7 evidence](../../progress/handoffs/SPEC-0013-M7.md) records the
+closed import-capacity findings and the remaining ordinary512-skill command
+capacity check. Full operational parity, M0 performance, M8 HTTP/gateway promotion
+and two observed stable release cycles remain open; Rust stays authoritative.
