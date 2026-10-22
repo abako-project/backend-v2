@@ -262,17 +262,17 @@ fn scenario() -> TestResult<Vec<(u8, ProviderCommand, u8)>> {
     ])
 }
 
-fn signed_account(seed: u8) -> TestResult<AccountId32> {
+pub(super) fn signed_account(seed: u8) -> TestResult<AccountId32> {
     Ok(AccountId32::from_bytes(
         subxt_signer::sr25519::Keypair::from_secret_key([seed; 32])?
             .public_key()
             .0,
     ))
 }
-fn shell_digest(shell: &execution::Shell) -> TestResult<String> {
+pub(super) fn shell_digest(shell: &execution::Shell) -> TestResult<String> {
     Ok(format!("{:x}", Sha256::digest(serde_json::to_vec(shell)?)))
 }
-fn signed_apply(
+pub(super) fn signed_apply(
     state: &mut State,
     signed: SignedContractCallV1,
     inputs: execution::ExecutionInputs,

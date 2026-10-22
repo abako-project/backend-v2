@@ -40,6 +40,7 @@ fn fixture(gas: Weight) -> DirectoryFixture {
         reference_controller: account(4),
         generation: Some(ProviderInstanceId::from_bytes([97; 16])),
         gas_limit: gas,
+        projects: false,
     }
 }
 fn signed(seed: u8, nonce: u64, op: u8, command: ProviderCommand) -> SignedContractCallV1 {

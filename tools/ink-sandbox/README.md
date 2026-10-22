@@ -231,3 +231,21 @@ specified latency budgets. Full import/rollback and domain contracts remain late
 See [dependency review](dependencies.md) and the recorded implementation evidence
 in [the handoff](../../progress/handoffs/SPEC-0013.md) before promoting this runtime into
 the provider.
+
+M5's explicit `DirectoryFixture { projects: true, .. }` adds the pinned v5
+Project factory and instances. Signed calls route to Directory for creation and
+policy changes, then directly to Project as the verified user. Address lookup
+and execution share one gas budget. Contracts own unpaid planning, proposals,
+revision checks, optional tracking tasks, estimates, cancellation and reasons.
+Directory owns the public registry, global IDs/task counter and catalog references.
+`marketplace_projection` is a private fixture diagnostic; it does not add an HTTP
+endpoint. Money/execution commands return `IncompleteCoverage` without a write.
+Legacy planning escrow cannot be cleared until money coverage exists.
+
+The frozen 71-call native/VM trace compares complete catalog, worker, request,
+Project and reason projections plus the shared shell after every call. It covers
+retained task storage, failed counter allocation, policy capture, exact rounding,
+dates, optional tasks, permissions, revisions, reference cleanup and restart.
+Factory SQL-failure injection verifies that child creation, registration and the
+shell all roll back; competing workers replay a single successful commit. Direct
+contract calls check factory/ID capabilities and discarded query writes.

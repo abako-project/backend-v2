@@ -108,6 +108,10 @@ mod directory_parity;
 #[path = "matching_parity.rs"]
 mod matching_parity;
 
+#[cfg(all(test, feature = "mock-seed"))]
+#[path = "project_parity.rs"]
+mod project_parity;
+
 #[cfg(test)]
 mod tests {
     use super::*;

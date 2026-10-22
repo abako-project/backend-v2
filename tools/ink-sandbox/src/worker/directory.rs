@@ -1,8 +1,9 @@
 //! M3 ABI bridge. Domain permissions and rules run only in the pinned contracts.
 use super::*;
 use generated_contracts::{
-    CatalogEntry, DomainEventKind, EntityId, ProviderCommand, ProviderInstanceId, SkillRequestView,
-    SkillRoleAssociation, WorkerView,
+    CatalogEntry, CatalogView, CompensationPolicy, DomainEventKind, EntityId, ProjectView,
+    ProviderCommand, ProviderInstanceId, ScorePolicy, SkillRequestView, SkillRoleAssociation,
+    WorkerView,
 };
 use parity_scale_codec::DecodeAll;
 use provider_execution::{Admission, Effect, ExecutionInputs, VerifiedCall};
@@ -23,6 +24,21 @@ pub type DirectoryProjection = (
     Vec<SkillRequestView>,
 );
 
+pub type MarketplaceProjection = (
+    CatalogView,
+    Vec<WorkerView>,
+    Vec<SkillRequestView>,
+    Vec<ProjectView>,
+    Vec<(
+        EntityId,
+        Option<EntityId>,
+        AccountId32,
+        String,
+        generated_contracts::UnixSeconds,
+        DomainEventKind,
+    )>,
+);
+
 /// Explicit genesis inputs, never inferred from a partial application snapshot.
 pub struct DirectoryFixture {
     pub root: AccountId32,
@@ -33,6 +49,8 @@ pub struct DirectoryFixture {
     /// A trusted parity fixture may reuse the reference generation.
     pub generation: Option<ProviderInstanceId>,
     pub gas_limit: Weight,
+    /// Enable the explicit M5 Project fixture; money/execution remain incomplete.
+    pub projects: bool,
 }
 impl DirectoryFixture {
     pub(super) fn validate(&self) -> Result<(), Error> {
@@ -54,6 +72,7 @@ impl DirectoryFixture {
                 self.reservation_controller,
                 self.reference_controller,
                 self.generation,
+                self.projects,
                 self.gas_limit.ref_time(),
                 self.gas_limit.proof_size(),
             )
@@ -63,6 +82,7 @@ impl DirectoryFixture {
             root: self.root,
             gas: self.gas_limit,
             configuration: H256::from(configuration),
+            projects: self.projects,
         }
     }
 }
@@ -158,6 +178,34 @@ pub(super) fn initialize(
     if created.status != Status::Success || created.data != [0, 0] {
         return Err(Error::InvalidState);
     }
+    if fixture.projects {
+        let code = ext.execute_with(|| {
+            Contracts::bare_upload_code(
+                account(fixture.root),
+                bundles.code("projects-v5")?.to_vec(),
+                None,
+                Determinism::Enforced,
+            )
+            .map(|upload| upload.code_hash)
+            .map_err(|_| Error::InvalidState)
+        })?;
+        let configured = run(
+            &mut ext,
+            bundles,
+            Invocation {
+                caller: account(fixture.root),
+                action: Action::Call {
+                    address: created.address.clone().ok_or(Error::InvalidState)?,
+                },
+                input: input("configure_project_code", code),
+                gas: GAS,
+                timestamp_ms: 1_700_000_000_000,
+            },
+        )?;
+        if configured.status != Status::Success || configured.data != [0, 0] {
+            return Err(Error::InvalidState);
+        }
+    }
     let mut shell = Shell::new(fixture.root)?;
     if let Some(generation) = fixture.generation {
         shell.info.provider_instance_id = generation;
@@ -180,6 +228,21 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
         )))
     {
         return Err(Error::InvalidState);
+    }
+    if let Mode::Directory {
+        projects: true,
+        root,
+        ..
+    } = mode
+    {
+        let addresses: Vec<(EntityId, Account)> =
+            read(&mut ext, bundles, &state.directory, root, "projects", ())?;
+        let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("projects-v5")?));
+        for (_, address) in addresses {
+            if ext.execute_with(|| Contracts::code_hash(&address)) != Some(expected) {
+                return Err(Error::InvalidState);
+            }
+        }
     }
     Ok(())
 }
@@ -268,6 +331,40 @@ fn domain_error(code: &str) -> Result<&'static str, Error> {
         "catalog_id_exhausted" => Ok("catalog_id_exhausted"),
         "calendar_overcommitted" => Ok("calendar_overcommitted"),
         "arithmetic_or_calendar_error" => Ok("arithmetic_or_calendar_error"),
+        "project_not_found" => Ok("project_not_found"),
+        "invalid_time" => Ok("invalid_time"),
+        "coordinator_required" => Ok("coordinator_required"),
+        "client_required" => Ok("client_required"),
+        "planning_not_accepted" => Ok("planning_not_accepted"),
+        "proposal_not_found" => Ok("proposal_not_found"),
+        "proposal_not_draft" => Ok("proposal_not_draft"),
+        "proposal_not_pending" => Ok("proposal_not_pending"),
+        "revision_conflict" => Ok("revision_conflict"),
+        "revision_exhausted" => Ok("revision_exhausted"),
+        "execution_already_approved" => Ok("execution_already_approved"),
+        "invalid_planning_state" => Ok("invalid_planning_state"),
+        "separate_planning_price_removed" => Ok("separate_planning_price_removed"),
+        "task_storage_not_found" => Ok("task_storage_not_found"),
+        "task_not_found" => Ok("task_not_found"),
+        "unknown_task_assignee" => Ok("unknown_task_assignee"),
+        "task_keys_exhausted" => Ok("task_keys_exhausted"),
+        "task_assignee_required" => Ok("task_assignee_required"),
+        "client_read_only" => Ok("client_read_only"),
+        "project_party_required" => Ok("project_party_required"),
+        "project_completed" => Ok("project_completed"),
+        "project_cancelled" => Ok("project_cancelled"),
+        "project_disputed" => Ok("project_disputed"),
+        "delivery_date_before_milestones" => Ok("delivery_date_before_milestones"),
+        "invalid_delivery_date" => Ok("invalid_delivery_date"),
+        "invalid_delivery_schedule" => Ok("invalid_delivery_schedule"),
+        "empty_milestones" => Ok("empty_milestones"),
+        "no_available_candidate" => Ok("no_available_candidate"),
+        "invalid_project_state" => Err(Error::Invariant("invalid_project_state")),
+        "duplicate_entity" => Err(Error::Invariant("duplicate_entity")),
+        "project_instantiation_failed" => Err(Error::Invariant("project_instantiation_failed")),
+        "project_code_missing" => Err(Error::Invariant("project_code_missing")),
+        "registered_project_required" => Err(Error::Invariant("registered_project_required")),
+        "incomplete_money_coverage" => Err(Error::IncompleteCoverage),
         "invalid_worker_state" => Err(Error::Invariant("invalid_worker_state")),
         "invalid_catalog_state" => Err(Error::Invariant("invalid_catalog_state")),
         "calendar_instantiation_failed" => Err(Error::Invariant("calendar_instantiation_failed")),
@@ -300,23 +397,34 @@ pub(super) async fn execute(
         }
         Admission::Execute(pending) => *pending,
     };
-    let invocation = Invocation {
-        caller: account(pending.call().origin),
-        action: Action::Call {
-            address: state.directory.clone(),
-        },
-        input: command_input(&pending.call().command, pending.inputs())?,
-        gas,
-        timestamp_ms: pending
-            .inputs()
-            .now
-            .get()
-            .checked_mul(1000)
-            .ok_or(Error::Limit)?,
-    };
-    invocation.validate()?;
+    let time = pending
+        .inputs()
+        .now
+        .get()
+        .checked_mul(1000)
+        .ok_or(Error::Limit)?;
     let mut ext = stored.checkpoint.clone().restore()?;
-    let outcome = run(&mut ext, bundles, invocation)?;
+    let outcome = match command_input(&pending.call().command, pending.inputs()) {
+        Ok(data) => {
+            let invocation = Invocation {
+                caller: account(pending.call().origin),
+                action: Action::Call {
+                    address: state.directory.clone(),
+                },
+                input: data,
+                gas,
+                timestamp_ms: time,
+            };
+            invocation.validate()?;
+            run(&mut ext, bundles, invocation)?
+        }
+        Err(Error::IncompleteCoverage)
+            if matches!(mode, Mode::Directory { projects: true, .. }) =>
+        {
+            super::projects::execute(&mut ext, bundles, &state.directory, &pending, gas, time)?
+        }
+        Err(error) => return Err(error),
+    };
     let transition = transition(&outcome)?;
     let success = transition.is_ok();
     let receipt = state.shell.complete(pending, transition)?;
@@ -351,6 +459,7 @@ fn read<T: Decode>(
     directory: &Account,
     origin: AccountId32,
     name: &str,
+    args: impl Encode,
 ) -> Result<T, Error> {
     let outcome = run(
         ext,
@@ -360,7 +469,7 @@ fn read<T: Decode>(
             action: Action::Call {
                 address: directory.clone(),
             },
-            input: input(name, ()),
+            input: input(name, args),
             gas: GAS,
             timestamp_ms: 1_700_000_000_000,
         },
@@ -382,17 +491,103 @@ pub(super) async fn projection(
     let stored = load(&mut tx, bundles.identity(), mode).await?;
     let state = decode(&stored, mode)?;
     let mut ext = stored.checkpoint.restore()?;
-    let catalog: DirectoryCatalog = read(&mut ext, bundles, &state.directory, origin, "catalog")?;
-    let workers = read(&mut ext, bundles, &state.directory, origin, "workers")?;
+    let catalog: DirectoryCatalog =
+        read(&mut ext, bundles, &state.directory, origin, "catalog", ())?;
+    let workers = read(&mut ext, bundles, &state.directory, origin, "workers", ())?;
     let requests = read(
         &mut ext,
         bundles,
         &state.directory,
         origin,
         "skill_requests",
+        (),
     )?;
     tx.rollback().await?;
     Ok((catalog.0, catalog.1, catalog.2, workers, requests))
+}
+
+pub(super) async fn marketplace_projection(
+    pool: &SqlitePool,
+    bundles: &Bundles,
+    mode: Mode,
+    origin: AccountId32,
+) -> Result<MarketplaceProjection, Error> {
+    if !matches!(mode, Mode::Directory { projects: true, .. }) {
+        return Err(Error::IncompleteCoverage);
+    }
+    let mut tx = pool.begin().await?;
+    let stored = load(&mut tx, bundles.identity(), mode).await?;
+    let state = decode(&stored, mode)?;
+    let mut ext = stored.checkpoint.restore()?;
+    let (roles, skills, skill_roles): DirectoryCatalog =
+        read(&mut ext, bundles, &state.directory, origin, "catalog", ())?;
+    let score_policy: ScorePolicy = read(
+        &mut ext,
+        bundles,
+        &state.directory,
+        origin,
+        "score_policy",
+        (),
+    )?;
+    let compensation_policy: CompensationPolicy = read(
+        &mut ext,
+        bundles,
+        &state.directory,
+        origin,
+        "compensation_policy",
+        (),
+    )?;
+    let workers = read(&mut ext, bundles, &state.directory, origin, "workers", ())?;
+    let requests = read(
+        &mut ext,
+        bundles,
+        &state.directory,
+        origin,
+        "skill_requests",
+        (),
+    )?;
+    let addresses: Vec<(EntityId, Account)> =
+        read(&mut ext, bundles, &state.directory, origin, "projects", ())?;
+    let mut projects = Vec::new();
+    let mut reasons: Vec<(
+        EntityId,
+        Option<EntityId>,
+        AccountId32,
+        String,
+        generated_contracts::UnixSeconds,
+        DomainEventKind,
+    )> = Vec::new();
+    for (id, address) in addresses {
+        let project: ProjectView = read(&mut ext, bundles, &address, origin, "view", ())?;
+        if project.project_id != id {
+            return Err(Error::InvalidState);
+        }
+        let entries: Vec<(
+            EntityId,
+            Option<EntityId>,
+            AccountId32,
+            String,
+            generated_contracts::UnixSeconds,
+            DomainEventKind,
+        )> = read(&mut ext, bundles, &address, origin, "reasons", ())?;
+        reasons.extend(entries);
+        projects.push(project);
+    }
+    reasons.sort_by_key(Encode::encode);
+    tx.rollback().await?;
+    Ok((
+        CatalogView {
+            roles,
+            skills,
+            skill_roles,
+            score_policy,
+            compensation_policy,
+        },
+        workers,
+        requests,
+        projects,
+        reasons,
+    ))
 }
 
 #[cfg(test)]

@@ -248,6 +248,14 @@ impl RustEngine {
         }
         let coordinator = self.select(&candidates, WorkerMode::Coordinator)?;
         let project_id = self.context.random_id();
+        // A generated-ID collision is infrastructure failure, never permission
+        // to replace an existing project or consume this operation's nonce.
+        if self.projects.contains_key(&project_id) {
+            return Err(Error {
+                code: "invalid_project_state",
+                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            });
+        }
         self.projects.insert(
             project_id,
             ProjectView {

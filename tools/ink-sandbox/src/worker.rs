@@ -31,8 +31,9 @@ use std::{
 };
 use tokio::sync::oneshot;
 mod directory;
+mod projects;
 mod signed;
-pub use directory::{DirectoryFixture, DirectoryProjection};
+pub use directory::{DirectoryFixture, DirectoryProjection, MarketplaceProjection};
 pub use signed::{CalendarFixture, FixtureWorker};
 
 #[derive(Clone, Copy)]
@@ -46,6 +47,7 @@ enum Mode {
         root: AccountId32,
         gas: Weight,
         configuration: H256,
+        projects: bool,
     },
 }
 impl Mode {
@@ -201,6 +203,10 @@ enum Job {
         reply: oneshot::Sender<Result<OperationReceipt, Error>>,
     },
     Shell(oneshot::Sender<Result<Shell, Error>>),
+    MarketplaceProjection {
+        origin: AccountId32,
+        reply: oneshot::Sender<Result<MarketplaceProjection, Error>>,
+    },
     DirectoryProjection {
         origin: AccountId32,
         reply: oneshot::Sender<Result<DirectoryProjection, Error>>,
@@ -334,6 +340,18 @@ impl Client {
         self.send(Job::Shell(reply))?;
         Ok(Ticket(result))
     }
+    /// Read-only M5 component projection. It does not claim money coverage.
+    pub fn marketplace_projection(
+        &self,
+        origin: AccountId32,
+    ) -> Result<Ticket<MarketplaceProjection>, Error> {
+        if !matches!(self.mode, Mode::Directory { projects: true, .. }) {
+            return Err(Error::IncompleteCoverage);
+        }
+        let (reply, result) = oneshot::channel();
+        self.send(Job::MarketplaceProjection { origin, reply })?;
+        Ok(Ticket(result))
+    }
     pub fn diagnostics(&self) -> Result<Ticket<Diagnostics>, Error> {
         let (reply, result) = oneshot::channel();
         self.send(Job::Inspect(reply))?;
@@ -452,6 +470,16 @@ impl Worker {
                                                     }
                                                 }
                                             }),
+                                        );
+                                    }
+                                }
+                                Job::MarketplaceProjection { origin, reply } => {
+                                    if !reply.is_closed() {
+                                        respond(
+                                            reply,
+                                            runtime.block_on(directory::marketplace_projection(
+                                                &pool, &bundles, mode, origin,
+                                            )),
                                         );
                                     }
                                 }
