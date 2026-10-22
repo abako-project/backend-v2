@@ -131,6 +131,10 @@ all milestones in one nested transaction; competing SQLite workers observe commi
 capacity, and restart retains it. M5/M6 must connect real Project calls to these
 hooks before whole-provider parity can be claimed.
 
+The locked version-1 tie sampler preserves native behavior, including rand's documented
+minute default single-sample bias. This is parity evidence, not strict mathematical
+unbiasedness; changing it requires coordinated/versioned input semantics.
+
 The canonical build reuses the four exact RNG versions already reviewed in the app
 and SDK. The SDK/app locks and exceptions are unchanged. Updated immutable artifacts
 change candidate identity and require fresh private fixture databases. The fresh

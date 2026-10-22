@@ -131,3 +131,12 @@ SDK dependency checks and full application gate (112 tests, 2 doctests, 8 E2E fl
 pass. See [M3 evidence](../../progress/handoffs/SPEC-0013-M3-SHELL.md). This closes
 M3 within its explicit fixture scope; it does not complete M4 matching, actual
 Project hooks, import/rollback, performance acceptance or authority promotion.
+
+
+M4 exact reputation/indexed matching parity is independently approved at backend
+`0ca0cf1` and canonical `192279d`, within explicit fixtures. All 44 SDK tests,
+SDK policy checks, fresh-source WASM/ABI reproduction and the full app gate
+(113 tests, 2 doctests, 8 E2E flows) pass. [M4 evidence](../../progress/handoffs/SPEC-0013-M4.md)
+records the inherited version-1 sampler's minute documented bias; this preserves
+native behavior and does not claim strict mathematical unbiasedness. No retained
+input semantics are silently changed. Actual Project composition is M5/M6.
