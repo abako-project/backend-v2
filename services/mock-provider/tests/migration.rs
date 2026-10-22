@@ -121,3 +121,72 @@ async fn unsupported_destination_format_is_never_overwritten() -> TestResult {
     std::fs::remove_file(destination.0)?;
     Ok(())
 }
+
+/// Run after the SDK trace writes `SANDBOX_ROLLBACK_OUTPUT`. This deliberately
+/// consumes an observed sandbox export, never the pre-cutover native checkpoint.
+#[tokio::test]
+#[ignore = "Requires an observed current sandbox archive; see the migration verification gate"]
+async fn rollback_current_wasm_state_accepts_new_native_work() -> TestResult {
+    use generated_contracts::*;
+    let bytes = tokio::fs::read(std::env::var("SANDBOX_ROLLBACK_ARCHIVE")?).await?;
+    let archive: provider_execution::migration::ArchiveV1 = serde_json::from_slice(&bytes)?;
+    let root = archive.checkpoint.info.root_account;
+    let source_events = archive.checkpoint.events.len();
+    let source_nonce = archive
+        .checkpoint
+        .nonces
+        .get(&root)
+        .copied()
+        .unwrap_or_default();
+    let memory = Provider::memory_from_archive(root, archive.clone()).await?;
+    assert_eq!(serde_json::to_vec(&memory.archive().await?)?, bytes);
+    let destination = Database::new();
+    let restored = Provider::sqlite_from_archive(&destination.url(), root, archive.clone()).await?;
+    assert_eq!(serde_json::to_vec(&restored.archive().await?)?, bytes);
+    let call = UnsignedContractCallV1::new(
+        archive.checkpoint.info.provider_instance_id,
+        OperationId::from_bytes([240; 16]),
+        root,
+        source_nonce,
+        UnixSeconds::new(10_000),
+        ProviderCommand::SetCompensationPolicy(CompensationPolicy {
+            coordinator_percent: Percentage::new(20)?,
+        }),
+    )?;
+    let key = subxt_signer::sr25519::Keypair::from_secret_key([1; 32])?;
+    assert_eq!(root, AccountId32::from_bytes(key.public_key().0));
+    let signed = SignedContractCallV1 {
+        signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0),
+        call,
+    };
+    let receipt = restored.execute(signed, UnixSeconds::new(1_000)).await?;
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+    let current = restored.archive().await?;
+    assert_eq!(
+        current.checkpoint.events.len(),
+        source_events.checked_add(1).ok_or("event count")?
+    );
+    assert_eq!(
+        current.checkpoint.nonces.get(&root),
+        source_nonce.checked_add(1).as_ref()
+    );
+    assert_eq!(
+        serde_json::to_vec(&current.checkpoint.projects)?,
+        serde_json::to_vec(&archive.checkpoint.projects)?
+    );
+    assert_eq!(
+        serde_json::to_vec(&current.checkpoint.bramp)?,
+        serde_json::to_vec(&archive.checkpoint.bramp)?
+    );
+    assert_eq!(
+        current.checkpoint.compensation_policy.coordinator_percent,
+        Percentage::new(20)?
+    );
+    let reopened = Provider::sqlite(&destination.url(), root).await?;
+    assert_eq!(
+        serde_json::to_vec(&reopened.archive().await?)?,
+        serde_json::to_vec(&current)?
+    );
+    std::fs::remove_file(destination.0)?;
+    Ok(())
+}

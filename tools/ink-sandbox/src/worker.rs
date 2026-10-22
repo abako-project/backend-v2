@@ -30,7 +30,11 @@ use std::{
     time::Duration,
 };
 use tokio::sync::oneshot;
+mod archive;
+pub mod comparison;
 mod directory;
+mod migration;
+pub use migration::WholeConfiguration;
 mod projects;
 mod signed;
 pub use directory::{
@@ -52,6 +56,7 @@ enum Mode {
         configuration: H256,
         projects: bool,
         money: bool,
+        whole: bool,
     },
 }
 impl Mode {
@@ -70,6 +75,11 @@ enum InitialState {
     },
     Calendar(CalendarFixture),
     Directory(DirectoryFixture),
+    Import {
+        archive: Box<provider_execution::migration::ArchiveV1>,
+        configuration: WholeConfiguration,
+    },
+    Reopen(WholeConfiguration),
 }
 impl InitialState {
     fn mode(&self) -> Mode {
@@ -80,6 +90,9 @@ impl InitialState {
                 gas: fixture.gas_limit,
             },
             Self::Directory(fixture) => fixture.mode(),
+            Self::Import { configuration, .. } | Self::Reopen(configuration) => {
+                configuration.mode()
+            }
         }
     }
 }
@@ -208,6 +221,7 @@ enum Job {
         reply: oneshot::Sender<Result<OperationReceipt, Error>>,
     },
     Shell(oneshot::Sender<Result<Shell, Error>>),
+    Archive(oneshot::Sender<Result<provider_execution::migration::ArchiveV1, Error>>),
     FinancialProjection {
         origin: AccountId32,
         reply: oneshot::Sender<Result<FinancialProjection, Error>>,
@@ -333,6 +347,16 @@ impl Client {
         Ok(Ticket(result))
     }
     /// Read-only M3 projection, including request visibility for this fixture caller.
+    pub fn export_archive(
+        &self,
+    ) -> Result<Ticket<provider_execution::migration::ArchiveV1>, Error> {
+        if !matches!(self.mode, Mode::Directory { whole: true, .. }) {
+            return Err(Error::IncompleteCoverage);
+        }
+        let (reply, receiver) = oneshot::channel();
+        self.send(Job::Archive(reply))?;
+        Ok(Ticket(receiver))
+    }
     pub fn directory_projection(
         &self,
         origin: AccountId32,
@@ -427,6 +451,28 @@ impl Worker {
         fixture.validate()?;
         Self::start_with(path, InitialState::Directory(fixture)).await
     }
+    /// Import an already validated, drained private archive into a fresh store.
+    /// The bridge compares every field; it does not replace native admission validation.
+    pub async fn import_archive(
+        path: PathBuf,
+        archive: provider_execution::migration::ArchiveV1,
+        configuration: WholeConfiguration,
+    ) -> Result<Self, Error> {
+        configuration.validate()?;
+        Self::start_with(
+            path,
+            InitialState::Import {
+                archive: Box::new(archive),
+                configuration,
+            },
+        )
+        .await
+    }
+    /// Existing sealed stores only. Missing or incompatible state never regenerates.
+    pub async fn reopen(path: PathBuf, configuration: WholeConfiguration) -> Result<Self, Error> {
+        configuration.validate()?;
+        Self::start_with(path, InitialState::Reopen(configuration)).await
+    }
     async fn start_with(path: PathBuf, initial: InitialState) -> Result<Self, Error> {
         let mode = initial.mode();
         let (sender, receiver) = mpsc::sync_channel(QUEUE_CAPACITY);
@@ -484,6 +530,15 @@ impl Worker {
                                                     }
                                                 }
                                             }),
+                                        );
+                                    }
+                                }
+                                Job::Archive(reply) => {
+                                    if !reply.is_closed() {
+                                        respond(
+                                            reply,
+                                            runtime
+                                                .block_on(migration::export(&pool, &bundles, mode)),
                                         );
                                     }
                                 }
@@ -680,11 +735,21 @@ async fn open(
     let exists: i64 = sqlx::query_scalar("SELECT count(*) FROM candidate_state")
         .fetch_one(&mut *tx)
         .await?;
+    if (matches!(&initial, InitialState::Import { .. }) && exists != 0)
+        || (matches!(&initial, InitialState::Reopen(_)) && exists == 0)
+    {
+        return Err(Error::InvalidState);
+    }
     if exists == 0 {
         let (ext, shell) = match initial {
             InitialState::Raw { accounts, shell } => (new_externalities(accounts)?, shell),
             InitialState::Calendar(fixture) => signed::initialize(bundles, fixture)?,
             InitialState::Directory(fixture) => directory::initialize(bundles, fixture)?,
+            InitialState::Import {
+                archive,
+                configuration,
+            } => migration::initialize(bundles, *archive, configuration)?,
+            InitialState::Reopen(_) => return Err(Error::InvalidState),
         };
         let checkpoint = Checkpoint::capture(ext)?.to_bytes()?;
         sqlx::query("INSERT INTO candidate_state (singleton, revision, mode, runtime, shell, outcome) VALUES (1, 0, ?, ?, ?, ?)")

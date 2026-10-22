@@ -87,13 +87,17 @@ fn valid_large_worker_profile_matches_native_success() {
                     .unwrap()
                     .result()
                     .await;
-                if matches!(&result, Ok(receipt) if matches!(receipt.outcome, ExecutionOutcome::Success)) {
-                    let projected = worker.client().directory_projection(account(1)).unwrap().result().await.unwrap();
-                    assert_eq!(projected.3.len(),1);
-                    assert_eq!(projected.3[0].display_name.len(),length);
-                }
+                let projection = worker
+                    .client()
+                    .directory_projection(account(1))
+                    .unwrap()
+                    .result()
+                    .await;
                 worker.shutdown().await.unwrap();
                 std::fs::remove_file(path).unwrap();
+                let projected = projection.unwrap();
+                assert_eq!(projected.3.len(), 1);
+                assert_eq!(projected.3[0].display_name.len(), length);
                 let result = result.unwrap();
                 assert!(
                     matches!(result.outcome, ExecutionOutcome::Success),

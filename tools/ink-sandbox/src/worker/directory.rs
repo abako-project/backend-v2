@@ -102,16 +102,17 @@ impl DirectoryFixture {
             configuration: H256::from(configuration),
             projects: self.projects,
             money: self.money.is_some(),
+            whole: false,
         }
     }
 }
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-struct State {
-    version: u32,
-    configuration: H256,
-    shell: Shell,
-    directory: Account,
+pub(super) struct State {
+    pub(super) version: u32,
+    pub(super) configuration: H256,
+    pub(super) shell: Shell,
+    pub(super) directory: Account,
 }
 #[derive(Decode)]
 struct ContractEffect {
@@ -122,19 +123,19 @@ struct ContractEffect {
 fn account(value: AccountId32) -> Account {
     Account::new(value.into_bytes())
 }
-fn input(name: &str, args: impl Encode) -> Vec<u8> {
+pub(super) fn input(name: &str, args: impl Encode) -> Vec<u8> {
     let mut bytes = sp_core::hashing::blake2_256(name.as_bytes())[..4].to_vec();
     bytes.extend(args.encode());
     bytes
 }
-fn encode(state: &State) -> Result<Vec<u8>, Error> {
+pub(super) fn encode(state: &State) -> Result<Vec<u8>, Error> {
     let bytes = serde_json::to_vec(state).map_err(|_| Error::InvalidState)?;
     if bytes.len() > MAX_SHELL {
         return Err(Error::Limit);
     }
     Ok(bytes)
 }
-fn decode(stored: &Stored, mode: Mode) -> Result<State, Error> {
+pub(super) fn decode(stored: &Stored, mode: Mode) -> Result<State, Error> {
     let Mode::Directory {
         root,
         configuration,
@@ -355,6 +356,9 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
                 return Err(Error::InvalidState);
             }
         }
+    }
+    if matches!(mode, Mode::Directory { whole: true, .. }) {
+        super::migration::read_archive(&mut ext, bundles, &state, true)?;
     }
     Ok(())
 }
@@ -586,6 +590,20 @@ pub(super) async fn execute(
         .checked_mul(1000)
         .ok_or(Error::Limit)?;
     let mut ext = stored.checkpoint.clone().restore()?;
+    if matches!(mode, Mode::Directory { whole: true, .. }) {
+        ext.execute_with(|| {
+            let origin = account(pending.call().origin);
+            if crate::Balances::free_balance(&origin) == 0 {
+                crate::Balances::force_set_balance(
+                    crate::RuntimeOrigin::root(),
+                    origin,
+                    crate::TECHNICAL_BALANCE,
+                )
+                .map_err(|_| Error::InvalidState)?;
+            }
+            Ok::<(), Error>(())
+        })?;
+    }
     let outcome = match command_input(&pending.call().command, pending.inputs()) {
         Ok(data) => {
             let invocation = Invocation {
@@ -619,7 +637,17 @@ pub(super) async fn execute(
     let success = transition.is_ok();
     let receipt = state.shell.complete(pending, transition)?;
     let checkpoint = if success {
-        Checkpoint::capture(ext)?
+        let checkpoint = Checkpoint::capture(ext)?;
+        if matches!(mode, Mode::Directory { whole: true, .. }) {
+            // Inspection executes on a disposable copy, including timestamp writes.
+            super::migration::read_archive(
+                &mut checkpoint.clone().restore()?,
+                bundles,
+                &state,
+                true,
+            )?;
+        }
+        checkpoint
     } else {
         stored.checkpoint
     };
@@ -643,7 +671,7 @@ pub(super) async fn read_shell(
     tx.rollback().await?;
     Ok(state.shell)
 }
-fn read<T: Decode>(
+pub(super) fn read<T: Decode>(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,
     directory: &Account,
@@ -671,6 +699,16 @@ fn read<T: Decode>(
         .map_err(|_| Error::InvalidState)?
         .map_err(|_| Error::InvalidState)
 }
+// Read large labels independently so a valid signed profile remains exportable.
+pub(super) fn read_workers(
+    ext: &mut sp_io::TestExternalities,
+    bundles: &Bundles,
+    state: &State,
+    origin: AccountId32,
+) -> Result<Vec<WorkerView>, Error> {
+    let _ = (bundles, origin);
+    super::archive::workers(ext, state)
+}
 pub(super) async fn projection(
     pool: &SqlitePool,
     bundles: &Bundles,
@@ -683,7 +721,7 @@ pub(super) async fn projection(
     let mut ext = stored.checkpoint.restore()?;
     let catalog: DirectoryCatalog =
         read(&mut ext, bundles, &state.directory, origin, "catalog", ())?;
-    let workers = read(&mut ext, bundles, &state.directory, origin, "workers", ())?;
+    let workers = read_workers(&mut ext, bundles, &state, origin)?;
     let requests = read(
         &mut ext,
         bundles,
@@ -731,7 +769,7 @@ fn read_marketplace(
         "compensation_policy",
         (),
     )?;
-    let workers = read(ext, bundles, &state.directory, origin, "workers", ())?;
+    let workers = read_workers(ext, bundles, state, origin)?;
     let requests = read(ext, bundles, &state.directory, origin, "skill_requests", ())?;
     let addresses: Vec<(EntityId, Account)> =
         read(ext, bundles, &state.directory, origin, "projects", ())?;

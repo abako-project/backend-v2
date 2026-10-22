@@ -1254,3 +1254,171 @@ fn native_accepts_large_worker_profile_payload() -> TestResult {
     }
     Ok(())
 }
+
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct MigrationReference {
+    archives: Vec<RetainedArchive>,
+    digests: Vec<String>,
+    priority_cases: Vec<serde_json::Value>,
+}
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct RetainedArchive {
+    before_step: usize,
+    archive: String,
+}
+fn retained_priority_cases(
+    state: &State,
+    submitted: &SignedContractCallV1,
+) -> TestResult<Vec<Value>> {
+    let mut cases = Vec::new();
+    let ProviderCommand::SubmitMilestoneDelivery {
+        project_id,
+        milestone_id,
+        ..
+    } = submitted.call.command
+    else {
+        return Err("modern submission fixture".into());
+    };
+    let project = state.engine.projects.get(&project_id).ok_or("project")?;
+    let coordinator = project.coordinator;
+    let client = project.client;
+    let submission = project
+        .proposals
+        .iter()
+        .flat_map(|p| &p.milestones)
+        .find(|m| m.milestone_id == milestone_id)
+        .and_then(|m| m.submissions.last())
+        .ok_or("submission")?
+        .submission_id;
+    let client_seed = (1..=5)
+        .find(|seed| signed_account(*seed).ok() == Some(client))
+        .ok_or("client key")?;
+    for overflow in [false, true] {
+        let mut archived = state.archive()?;
+        archived.checkpoint.next_task_id = 1_000_000;
+        if overflow {
+            let worker = archived
+                .checkpoint
+                .workers
+                .get_mut(&coordinator)
+                .ok_or("coordinator")?;
+            worker.coordinator_score = ReputationView {
+                rated_minutes: u64::MAX,
+                weighted_score_sum: u128::from(u64::MAX) * 500,
+            };
+        }
+        let archive = serde_json::to_string(&archived)?;
+        let mut restored = State::from_archive(archived, state.shell.info.root_account)?;
+        let call = UnsignedContractCallV1::new(
+            restored.shell.info.provider_instance_id,
+            OperationId::from_bytes([230; 16]),
+            client,
+            restored.shell.nonce(client),
+            UnixSeconds::new(10_000),
+            ProviderCommand::AcceptMilestoneCompletion {
+                project_id,
+                milestone_id,
+                request: AcceptMilestoneCompletionRequest {
+                    coordinator_score: Score::new(5)?,
+                    team_rating: TeamRating::DelegateToCoordinator,
+                    submission_id: submission,
+                },
+            },
+        )?;
+        let key = subxt_signer::sr25519::Keypair::from_secret_key([client_seed; 32])?;
+        let signed = SignedContractCallV1 {
+            signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0),
+            call,
+        };
+        let inputs = execution::ExecutionInputs {
+            version: 1,
+            now: UnixSeconds::new(200),
+            seed: [230; 32],
+        };
+        let outcome = signed_apply(&mut restored, signed.clone(), inputs.clone());
+        if overflow {
+            assert_eq!(outcome["receipt"]["outcome"]["code"], "score_overflow");
+        } else {
+            assert_eq!(outcome["error"], "provider_unavailable");
+        }
+        cases.push(json!({"archive":archive,"signed":signed,"inputs":inputs,"outcome":outcome,"afterDigest":format!("{:x}",Sha256::digest(serde_json::to_vec(&restored.archive()?)?))}));
+    }
+    Ok(cases)
+}
+fn migration_reference() -> TestResult<MigrationReference> {
+    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
+    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    let mut reference = MigrationReference {
+        archives: Vec::new(),
+        digests: Vec::new(),
+        priority_cases: Vec::new(),
+    };
+    let steps = trace["steps"].as_array().ok_or("steps")?;
+    for before_step in 0..=steps.len() {
+        if before_step == 53 {
+            reference.priority_cases = retained_priority_cases(
+                &state,
+                &serde_json::from_value(steps[52]["signed"].clone())?,
+            )?;
+        }
+        if [0, 35, 70, 90, 113, 129].contains(&before_step) {
+            reference.archives.push(RetainedArchive {
+                before_step,
+                archive: serde_json::to_string(&state.archive()?)?,
+            });
+        }
+        if let Some(step) = steps.get(before_step) {
+            assert_eq!(
+                signed_apply(
+                    &mut state,
+                    serde_json::from_value(step["signed"].clone())?,
+                    serde_json::from_value(step["inputs"].clone())?
+                ),
+                step["outcome"]
+            );
+            reference.digests.push(format!(
+                "{:x}",
+                Sha256::digest(serde_json::to_vec(&state.archive()?)?)
+            ));
+        }
+    }
+    Ok(reference)
+}
+#[test]
+#[ignore = "Archive trace authoring requires an explicit output path"]
+fn export_migration_reference() -> TestResult {
+    std::fs::write(
+        std::env::var("MIGRATION_REFERENCE_OUTPUT")?,
+        serde_json::to_string_pretty(&migration_reference()?)?,
+    )?;
+    Ok(())
+}
+#[test]
+fn complete_retained_migration_reference() -> TestResult {
+    let expected: MigrationReference =
+        serde_json::from_str(include_str!("fixtures/migration-signed.json"))?;
+    assert_eq!(migration_reference()?, expected);
+    Ok(())
+}
+
+#[test]
+fn retained_large_profile_archive_is_valid_native_state() -> TestResult {
+    let reference: MigrationReference =
+        serde_json::from_str(include_str!("fixtures/migration-signed.json"))?;
+    let mut archive: provider_execution::migration::ArchiveV1 =
+        serde_json::from_str(&reference.archives[1].archive)?;
+    archive
+        .checkpoint
+        .workers
+        .values_mut()
+        .next()
+        .ok_or("worker")?
+        .display_name = "n".repeat(MAX_SIGNABLE_BYTES.checked_sub(200).ok_or("payload limit")?);
+    let bytes = serde_json::to_vec(&archive)?;
+    let restored = State::from_archive(archive.clone(), archive.checkpoint.info.root_account)?;
+    assert_eq!(serde_json::to_vec(&restored.archive()?)?, bytes);
+    Ok(())
+}

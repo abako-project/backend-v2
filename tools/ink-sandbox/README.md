@@ -292,3 +292,51 @@ large-state/input acceptance and current-state rollback, performance budgets and
 M8 whole-provider integration/promotion remain separate gates. Rust stays the
 application authority. No public protocol, frontend flow or application storage
 format changes in M6. See [M6 evidence](../../progress/handoffs/SPEC-0013-M6.md).
+
+## Complete retained-state migration candidate (M7)
+
+`Worker::import_archive` creates a fresh candidate store from the private typed
+`ArchiveV1`. Its caller must first validate the archive with the native bridge,
+pause writes, drain pending operations and reconcile uncertain outcomes. There is
+no HTTP import endpoint. `Worker::reopen` requires an existing sealed store;
+imports reject populated destinations and never regenerate incompatible state.
+The default application remains Rust.
+
+Directory alone creates dormant Calendar/Project instances. It imports balances,
+escrow, holds, histories, exact score accumulators, categories and task counters
+without replaying old operations, payments, events or evaluations. Historical
+evaluation markers explicitly prevent a second contribution; no old-policy vote
+hash is invented. Directory seals its import capability permanently and activates
+its children only after the complete archive matches. SQLite then commits the
+runtime and retained shell together.
+
+`worker::archive` decodes the pinned storage-v5 cells using pallet-contracts'
+read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
+8 KiB pages and streaming contract storage admit near-256 KiB signed profiles
+without relaxing Kreivo's 16 memory pages or 192 KiB code limit. Complete reads
+have a cumulative 64 MiB cell budget and a 64 MiB archive limit. The existing
+runtime checkpoint and shell have separate 64 MiB caps. Admission/serialization
+failure commits no candidate state; it never truncates data or claims agreement.
+Successful whole-candidate writes must remain completely exportable before they
+commit. The `comparison` diagnostic compares complete archives and exact outcome
+classes; missing coverage or either missing export is `Incomplete`.
+
+The signed migration trace imports six historical snapshots, compares all fields
+after another 59 sandbox operations, preserves the near-limit legacy error
+priority and exports the **current** state for rollback. Rehearse the cross-engine
+rollback with ordinary commands (use fresh paths; the archive contains private
+provider data):
+
+```sh
+sandbox_archive=$(mktemp)
+SANDBOX_ROLLBACK_OUTPUT="$sandbox_archive" cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked --test migration complete_shadow_trace_preserves_current_sandbox_writes_for_rollback
+SANDBOX_ROLLBACK_ARCHIVE="$sandbox_archive" cargo test -p mock-provider --all-features --locked --test migration rollback_current_wasm_state_accepts_new_native_work -- --ignored
+rm "$sandbox_archive"
+```
+
+The second test imports the observed WASM export into fresh native memory/SQLite,
+checks exact retained state, accepts a new native operation and reopens it. An old
+pre-cutover checkpoint is never a rollback source. Whole-provider HTTP composition,
+performance promotion, the gateway smoke flow and two observed stable release
+cycles remain separate M8 gates. These fixtures do not authorize promotion or a
+release.
