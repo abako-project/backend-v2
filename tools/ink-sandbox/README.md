@@ -358,7 +358,7 @@ candidate with ordinary Cargo; no node, block production or startup build is
 required:
 
 ```bash
-cargo build --manifest-path tools/ink-sandbox/Cargo.toml --locked --bin whole-provider
+cargo build --release --manifest-path tools/ink-sandbox/Cargo.toml --locked --bin whole-provider
 ```
 
 `whole-provider` uses the existing private provider HTTP contract. Configure
@@ -388,7 +388,7 @@ For gateway compatibility, build the normal wallet/adapter binaries and run:
 
 ```bash
 python3 scripts/poc-e2e.py --storage sqlite \
-  --provider-binary tools/ink-sandbox/target/debug/whole-provider \
+  --provider-binary tools/ink-sandbox/target/release/whole-provider \
   --provider-authority shadow
 ```
 
@@ -428,10 +428,11 @@ is `2e12` reference time / `128 MiB` proof size; earlier explicit fixtures retai
 their original allowance. Kreivo value, memory and code caps remain unchanged.
 
 Opt-in engine timings use a fixed current-app four-milestone workload and omit
-transport polling:
+transport polling. Ordinary samples alternate eligible worker/coordinator mode;
+the approval reserves workers and escrow for four milestones:
 
 ```bash
-cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked \
+cargo test --release --manifest-path tools/ink-sandbox/Cargo.toml --locked \
   --test performance whole_provider_engine_timings -- --ignored --nocapture
 ```
 

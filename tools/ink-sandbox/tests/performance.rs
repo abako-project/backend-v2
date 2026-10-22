@@ -184,7 +184,7 @@ fn whole_provider_engine_timings() {
             let mut state = ReferenceState::from_archive(root,initial.clone()).unwrap();
             let mut ordinary = Vec::new();
             for index in 0..32u8 {
-                let call = signed(&state,1,1000+u32::from(index),ProviderCommand::FundAccount(FundAccountRequest { account: approval.call.origin, amount: Money::new(0) }));
+                let call = signed(&state,2,1000+u32::from(index),ProviderCommand::SetWorkerMode(SetWorkerModeRequest { mode: if index % 2 == 0 { WorkerMode::Worker } else { WorkerMode::Coordinator } }));
                 let captured = inputs(index);
                 let (next, expected) = state.execute(VerifiedCall::verify(call.clone()).unwrap(),captured.clone()).unwrap(); state = next;
                 let start = Instant::now();

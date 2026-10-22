@@ -240,7 +240,8 @@ impl<T> Ticket<T> {
         self.0.await.map_err(|_| Error::Stopped)?
     }
 }
-type ReadReference = Box<dyn FnOnce(Result<mock_provider::ReferenceState, Error>) + Send>;
+type ReferenceLoader<'a> = &'a mut dyn FnMut() -> Result<mock_provider::ReferenceState, Error>;
+type ReadReference = Box<dyn FnOnce(ReferenceLoader<'_>) + Send>;
 enum Job {
     ReadReference(ReadReference),
     WholeDiagnostics(oneshot::Sender<Result<WholeDiagnostics, Error>>),
@@ -295,11 +296,10 @@ impl Client {
     ) -> Result<Ticket<T>, Error> {
         whole::authority(self.mode)?;
         let (reply, receiver) = oneshot::channel();
-        self.send(Job::ReadReference(Box::new(move |state| {
-            respond(
-                reply,
-                state.and_then(|state| read(state).map_err(Error::Reference)),
-            )
+        self.send(Job::ReadReference(Box::new(move |load| {
+            respond_lazy(reply, || {
+                load().and_then(|state| read(state).map_err(Error::Reference))
+            })
         })))?;
         Ok(Ticket(receiver))
     }
@@ -613,15 +613,15 @@ impl Worker {
                             };
                             match job {
                                 Job::ReadReference(read) => {
-                                    let state = runtime
-                                        .block_on(whole::export(&pool, &bundles, mode))
-                                        .and_then(|archive| whole::reference(mode, archive));
-                                    read(state);
+                                    read(&mut || {
+                                        runtime
+                                            .block_on(whole::export(&pool, &bundles, mode))
+                                            .and_then(|archive| whole::reference(mode, archive))
+                                    });
                                 }
-                                Job::WholeDiagnostics(reply) => respond(
-                                    reply,
-                                    runtime.block_on(whole::diagnostics(&pool, mode)),
-                                ),
+                                Job::WholeDiagnostics(reply) => respond_lazy(reply, || {
+                                    runtime.block_on(whole::diagnostics(&pool, mode))
+                                }),
                                 Job::Stop => break,
                                 Job::Signed {
                                     call,
@@ -844,6 +844,14 @@ fn receive_job(
     // This is the request-start boundary. Shutdown may have begun while recv
     // waited, after the loop's earlier check. Queued work must remain unstarted.
     Ok((!stopping.load(Ordering::Acquire)).then_some(job))
+}
+fn respond_lazy<T>(
+    reply: oneshot::Sender<Result<T, Error>>,
+    work: impl FnOnce() -> Result<T, Error>,
+) {
+    if !reply.is_closed() {
+        respond(reply, work());
+    }
 }
 fn respond<T>(reply: oneshot::Sender<Result<T, Error>>, result: Result<T, Error>) {
     if reply.send(result).is_err() {
@@ -1121,6 +1129,54 @@ mod tests {
             result.try_recv(),
             Err(oneshot::error::TryRecvError::Closed)
         ));
+    }
+    #[test]
+    fn canceled_queued_reads_skip_archive_loading_and_diagnostics() {
+        let (sender, receiver) = mpsc::sync_channel(QUEUE_CAPACITY);
+        let client = Client {
+            mode: whole::mode(
+                &WholeConfiguration {
+                    root: AccountId32::from_bytes([1; 32]),
+                    generation: generated_contracts::ProviderInstanceId::from_bytes([2; 16]),
+                    mock_funding: true,
+                    gas_limit: crate::WHOLE_GAS,
+                },
+                Authority::Sandbox,
+            ),
+            sender,
+            stopping: Arc::new(AtomicBool::new(false)),
+        };
+        let reached = std::sync::Barrier::new(2);
+        let release = std::sync::Barrier::new(2);
+        thread::scope(|scope| {
+            let gate = &reached;
+            let proceed = &release;
+            let join = scope.spawn(move || {
+                gate.wait();
+                proceed.wait();
+                match receiver.recv().unwrap() {
+                    Job::ReadReference(read) => {
+                        read(&mut || panic!("canceled read must not export an archive"))
+                    }
+                    _ => panic!("expected queued read"),
+                }
+                match receiver.recv().unwrap() {
+                    Job::WholeDiagnostics(reply) => respond_lazy(reply, || {
+                        panic!("canceled diagnostics must not read storage")
+                    }),
+                    _ => panic!("expected queued diagnostics"),
+                }
+            });
+            reached.wait();
+            let read = client
+                .read_reference::<()>(|_| panic!("canceled read model must not run"))
+                .unwrap();
+            let diagnostics = client.whole_diagnostics().unwrap();
+            drop(read);
+            drop(diagnostics);
+            release.wait();
+            join.join().unwrap();
+        });
     }
     #[test]
     fn full_queue_and_shutdown_reject_admission() {
