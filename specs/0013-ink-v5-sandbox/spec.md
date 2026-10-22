@@ -148,3 +148,10 @@ policy, fresh three-artifact reproduction and the full app gate (114 tests,
 2 doctests, 8 E2E flows) pass. [M5 evidence](../../progress/handoffs/SPEC-0013-M5.md)
 records the reviewed correction. Money/execution remain explicitly incomplete;
 M6 continues without changing the Rust application's authority.
+
+M6 execution, money, cases and evaluations are independently approved at backend
+`50993b4` and canonical `1ac6c2d`, within fresh fixtures. All 53 SDK tests pass,
+including 129 signed operations and 14 backward-clock abort probes; unchanged
+SDK policy, fresh WASM/ABI reproduction and full application verification pass.
+[M6 evidence](../../progress/handoffs/SPEC-0013-M6.md) records the review fixes,
+retained-state priority gate and remaining import, capacity and promotion work.
