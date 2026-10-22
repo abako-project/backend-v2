@@ -16,7 +16,8 @@ is nested under execution so its production RNG API remains private and unchange
 
 ## Implemented
 
-Canonical implementation `0c35671` adds:
+Canonical implementation `0c35671`, with dependency identity corrected in
+`25cb005`, adds:
 
 - Immutable root authority; explicit catalog seed (9 roles/33 skills in fixtures),
   fixed coordinator role 1, descriptive associations and exact skill normalization.
@@ -65,14 +66,40 @@ and Rust 1.96 reference streams have identical SHA256
 The additional native semantic unit test passes against the app's Unicode 17.
 The 48-step WASM trace includes Unicode 17-only case pairs and sigma context.
 
+## Artifact source identity
+
+Initial fresh-source reproduction failed even though the pinned bundle passed
+domain tests. Cargo fingerprint evidence showed Calendar's local path dependency
+had a different identity in another checkout; disassembly showed function/data
+ordering differences, without embedded source paths. `25cb005` pins the same
+Calendar code to public Git revision `4687748658763a1e9fdc8e5198f6df71709fe8c4`.
+There is no contract business-rule or registry-version change. Offline source
+rebuilds require that immutable source to be fetched once, like registry packages;
+normal backend tests/runtime neither fetch nor compile it. Corrected artifact
+reproduction and the affected SDK checks must pass before acceptance.
+
 ## Verification and review
 
-Canonical source build, formatting and strict Clippy pass. Full SDK gate passes
-(31 tests: prior 27 plus four Directory tests). Native frozen-trace replay passes;
-exhaustive Unicode tests/comparison pass. Full application gate, fresh-source
-artifact reproduction, unchanged exact-lock SDK policy, actionlint and the
-independent high-reasoning review are being collected. Record final revision,
-results and verdict here before handoff. Local logs use `/tmp/ink-directory-*.log`.
+Backend implementation reviewed initially: `9ea9a0b`; corrected artifact pin pending.
+
+| Command / check | Result |
+|---|---|
+| `bash scripts/verify.sh app` at `9ea9a0b` | PASS: formatting/check/strict Clippy, 111 workspace tests plus one explicitly ignored fixture-authoring test, 2 doctests, isolated memory/SQLite checks, all-target build, frontend WASM and all 8 real-service E2E flows |
+| `bash scripts/verify.sh ink-sandbox` | Initial PASS: 31 tests; rerunning with corrected artifact |
+| `bash scripts/verify.sh ink-sandbox-dependencies` | PASS: all four checks; SDK graph/lock and approved exceptions unchanged |
+| Fresh Git-archive Directory WASM/ABI rebuild | Corrected-source run pending; initial mismatch documented above |
+| Canonical formatting and strict all-target/all-feature Clippy (1.88), semantic tests (1.96) at `25cb005` | PASS |
+| Actual 1.88 compatibility / 1.96 reference Unicode comparison | PASS, identical digest recorded above |
+| actionlint and Git whitespace | PASS |
+
+Local logs use `/tmp/ink-directory-*.log`. Full app verification used disposable
+PostgreSQL, temporary service databases and local sockets with cached tools; no
+live data. App and SDK dependency locks remain unchanged.
+
+Independent xhigh reviewer found no actionable source/domain defect at `9ea9a0b`
+and `0c35671` and independently reran all four cached Directory tests successfully.
+It correctly withheld acceptance on the reproduction mismatch. The dependency /
+artifact correction requires review and passing fresh reproduction before handoff.
 
 ## Remaining gates
 

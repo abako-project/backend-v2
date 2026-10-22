@@ -124,6 +124,7 @@ checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 [[package]]
 name = "calendar-v5"
 version = "0.1.0"
+source = "git+https://github.com/abako-dev/contracts.git?rev=4687748658763a1e9fdc8e5198f6df71709fe8c4#4687748658763a1e9fdc8e5198f6df71709fe8c4"
 dependencies = [
  "chrono",
  "ink",
