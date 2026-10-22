@@ -119,3 +119,13 @@ bash scripts/verify.sh ink-sandbox-dependencies
 The SDK policy expires on 2026-12-01 and accepts only its recorded package/version
 licenses and advisory IDs. A changed SDK lock requires a new review. The root
 application policy and its existing findings remain unchanged.
+
+The SDK workflow runs for changes anywhere in `services/mock-provider/`, because
+its manifest, HTTP boundary, reference and storage/read models are linked by the
+candidate. It installs the already reviewed cargo-deny 0.20.2 with its locked
+tool dependencies and runs the policy wrapper before compatibility tests. This
+checks the exact SDK lock, review expiry, current advisories, licenses and sources;
+it does not grant exceptions to the root application policy. The tool's published
+metadata declares Rust 1.88.0 and MIT OR Apache-2.0; it is a CI checker and adds no
+application or SDK dependency. Direct cargo-deny without the wrapper would skip
+the approved fingerprint and expiry checks.

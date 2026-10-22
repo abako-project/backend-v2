@@ -7,8 +7,7 @@ on:
       - 'crates/provider-execution/**'
       - 'crates/generated-contracts/**'
       - 'crates/domain-primitives/**'
-      - 'services/mock-provider/src/calendar/**'
-      - 'services/mock-provider/src/domain/**'
+      - 'services/mock-provider/**'
       - 'Cargo.toml'
       - 'scripts/verify.sh'
       - '.github/workflows/ink-sandbox.yml'
@@ -19,8 +18,7 @@ on:
       - 'crates/provider-execution/**'
       - 'crates/generated-contracts/**'
       - 'crates/domain-primitives/**'
-      - 'services/mock-provider/src/calendar/**'
-      - 'services/mock-provider/src/domain/**'
+      - 'services/mock-provider/**'
       - 'Cargo.toml'
       - 'scripts/verify.sh'
       - '.github/workflows/ink-sandbox.yml'
@@ -43,5 +41,9 @@ jobs:
         with:
           toolchain: 1.96.1
           components: rustfmt, clippy
+      - name: Install the reviewed dependency-policy checker
+        run: cargo install cargo-deny --version 0.20.2 --locked
+      - name: Enforce the exact-lock SDK dependency policy
+        run: bash scripts/verify.sh ink-sandbox-dependencies
       - name: Verify pinned WASM against the native runtime
         run: bash scripts/verify.sh ink-sandbox
