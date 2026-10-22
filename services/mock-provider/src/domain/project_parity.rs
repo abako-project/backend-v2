@@ -14,14 +14,14 @@ type Reason = (
     UnixSeconds,
     DomainEventKind,
 );
-type Projection = (
+pub(super) type Projection = (
     CatalogView,
     Vec<WorkerView>,
     Vec<SkillRequestView>,
     Vec<ProjectView>,
     Vec<Reason>,
 );
-fn projection(state: &State) -> Projection {
+pub(super) fn projection(state: &State) -> Projection {
     let snapshot = state.snapshot();
     let mut reasons = state
         .engine

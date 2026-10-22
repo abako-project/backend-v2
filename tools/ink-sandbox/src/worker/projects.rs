@@ -8,8 +8,116 @@ fn input(name: &str, args: impl Encode) -> Vec<u8> {
     data.extend(args.encode());
     data
 }
-fn command_input(call: &UnsignedContractCallV1, seed: [u8; 32]) -> Result<Vec<u8>, Error> {
+fn command_input(
+    call: &UnsignedContractCallV1,
+    seed: [u8; 32],
+    event_cursor: u64,
+) -> Result<Vec<u8>, Error> {
     Ok(match &call.command {
+        ProviderCommand::ApproveExecution {
+            proposal_id,
+            expected_revision,
+            ..
+        } => input("approve_execution", (proposal_id, expected_revision, seed)),
+        ProviderCommand::SubmitMilestoneDelivery {
+            milestone_id,
+            request,
+            ..
+        } => input(
+            "submit_milestone",
+            (milestone_id, &request.deliverable, seed),
+        ),
+        ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
+            milestone_id,
+            worker_ratings,
+            ..
+        } => input(
+            "submit_legacy_milestone",
+            (
+                milestone_id,
+                Option::<generated_contracts::EvidenceReference>::None,
+                worker_ratings,
+                seed,
+            ),
+        ),
+        ProviderCommand::RequestMilestoneCompletion {
+            milestone_id,
+            request,
+            ..
+        } => input(
+            "submit_legacy_milestone",
+            (
+                milestone_id,
+                Some(&request.deliverable),
+                &request.worker_ratings,
+                seed,
+            ),
+        ),
+        ProviderCommand::AcceptMilestoneDelivery {
+            milestone_id,
+            submission_id,
+            ..
+        } => input("accept_milestone", (milestone_id, submission_id)),
+        ProviderCommand::AcceptMilestoneCompletion {
+            milestone_id,
+            request,
+            ..
+        } => input(
+            "accept_legacy_milestone",
+            (
+                milestone_id,
+                request.submission_id,
+                request.coordinator_score,
+                &request.team_rating,
+            ),
+        ),
+        ProviderCommand::RejectMilestoneDelivery {
+            milestone_id,
+            submission_id,
+            comment_id,
+            ..
+        } => input(
+            "reject_milestone_comment",
+            (milestone_id, submission_id, comment_id),
+        ),
+        ProviderCommand::RejectMilestoneCompletion {
+            milestone_id,
+            submission_id,
+            request,
+            ..
+        } => input(
+            "reject_milestone",
+            (milestone_id, submission_id, &request.evidence),
+        ),
+        ProviderCommand::EvaluateProject { request, .. } => {
+            input("evaluate_project", &request.ratings)
+        }
+        ProviderCommand::OpenDispute(request) => input(
+            "open_dispute",
+            (
+                request.milestone_id,
+                request.rejected_submission_id,
+                &request.evidence,
+                seed,
+                event_cursor,
+            ),
+        ),
+        ProviderCommand::OpenDisputeWithComment(request) => input(
+            "open_dispute_comment",
+            (
+                request.milestone_id,
+                request.rejected_submission_id,
+                request.comment_id,
+                seed,
+                event_cursor,
+            ),
+        ),
+        ProviderCommand::RespondDispute {
+            dispute_id,
+            request,
+            ..
+        } => input("respond_dispute", (dispute_id, &request.evidence)),
+
         ProviderCommand::CreateProject(request) => input(
             "create_project",
             (&request.title, &request.description, seed),
@@ -78,6 +186,23 @@ fn command_input(call: &UnsignedContractCallV1, seed: [u8; 32]) -> Result<Vec<u8
         _ => return Err(Error::IncompleteCoverage),
     })
 }
+pub(super) fn requires_money(command: &ProviderCommand) -> bool {
+    matches!(
+        command,
+        ProviderCommand::ApproveExecution { .. }
+            | ProviderCommand::SubmitMilestoneDelivery { .. }
+            | ProviderCommand::RequestMilestoneCompletionWithoutDeliverable { .. }
+            | ProviderCommand::RequestMilestoneCompletion { .. }
+            | ProviderCommand::AcceptMilestoneDelivery { .. }
+            | ProviderCommand::AcceptMilestoneCompletion { .. }
+            | ProviderCommand::RejectMilestoneDelivery { .. }
+            | ProviderCommand::RejectMilestoneCompletion { .. }
+            | ProviderCommand::EvaluateProject { .. }
+            | ProviderCommand::OpenDispute(_)
+            | ProviderCommand::OpenDisputeWithComment(_)
+            | ProviderCommand::RespondDispute { .. }
+    )
+}
 pub(super) fn execute(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,
@@ -85,9 +210,10 @@ pub(super) fn execute(
     pending: &PreparedExecution,
     gas: Weight,
     time: u64,
+    event_cursor: u64,
 ) -> Result<Outcome, Error> {
     let call = pending.call();
-    let data = command_input(call, pending.inputs().seed)?;
+    let data = command_input(call, pending.inputs().seed, event_cursor)?;
     let mut invocation = Invocation {
         caller: Account::new(call.origin.into_bytes()),
         action: Action::Call {

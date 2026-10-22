@@ -1,6 +1,6 @@
 # ink! v5 compatibility proof
 
-This is milestone 0 of [SPEC-0013](../../specs/0013-ink-v5-sandbox/spec.md).
+This candidate follows [SPEC-0013](../../specs/0013-ink-v5-sandbox/spec.md).
 It runs production WASM in a native FRAME runtime without starting a node. It
 is deliberately a separate Cargo workspace and lockfile: the application keeps
 its current dependencies, authoritative Rust engine and startup behavior.
@@ -9,7 +9,7 @@ its current dependencies, authoritative Rust engine and startup behavior.
 bash scripts/verify.sh ink-sandbox
 ```
 
-The proof executes Calendar → Ratings and Project → Calendar calls, direct
+The original M0 proof executes Calendar → Ratings and Project → Calendar calls, direct
 caller asset deposits, contract balance queries and payouts using real
 `pallet-assets`. It checks a failed deposit after tentative task mutations,
 revert flags, finite gas, denied origins, malformed selectors and restoration
@@ -52,7 +52,7 @@ registration/qualifications, mode/eligibility, and skill requests/moderation.
 Registration creates an actual `calendar-v5` child in the same transaction.
 Worker views read that Calendar rather than duplicating capacity/reservations.
 Fixed constructor capabilities control reservation and retained proposal references;
-Project integration remains M5, with no browser permission or endpoint added.
+Real Project integration is covered by M5/M6 below; no browser endpoint is added.
 
 The shared [Directory trace](../../services/mock-provider/src/domain/fixtures/directory-parity.json)
 has 48 transitions replayed independently by Rust and real WASM. It compares error
@@ -166,9 +166,9 @@ upload permissions, XCM, block consensus or production transaction fees.
 Native execution/storage balances are technical fixture funds. Asset 1 balances
 are separate. In particular, `Preserve` requires a minimum asset balance; the
 legacy Project deliberately leaves one asset unit after payout. The current
-application permits spending the full visible balance. Candidate contracts and
-the bridge must solve this through the approved separate technical-reserve
-policy before money parity can pass; silently reducing user payouts is forbidden.
+application permits spending the full visible balance. The M6 candidate implements the approved separate technical-reserve policy and
+checks full visible spending/payouts against actual asset balances. Legacy fixtures
+retain their original behavior; no user payout is reduced.
 
 The candidate now has a dedicated worker and a separate SQLite store. Typed
 call/instantiate requests have an eight-item queue, 64 KiB inputs/outputs,
@@ -249,3 +249,46 @@ dates, optional tasks, permissions, revisions, reference cleanup and restart.
 Factory SQL-failure injection verifies that child creation, registration and the
 shell all roll back; competing workers replay a single successful commit. Direct
 contract calls check factory/ID capabilities and discarded query writes.
+
+
+## M6 execution and money fixtures
+
+`DirectoryFixture { projects: true, money: Some(mock_funding), .. }` enables
+explicit financial coverage. Directory owns visible integer KVN accounting and
+simulated Bramp requests. Genesis prefunds an invisible physical inventory;
+contracts separately provision each account/Project's technical minimum. The
+same Kreivo extension moves actual assets. Verified clients call Project directly
+for deposits, so the factory never pays on their behalf. Free balances, escrow,
+holds and visible minted supply conserve exactly, without a payout haircut.
+`Some(false)` disables the test-only funding command while keeping normal Bramp.
+
+Projects implement captured execution funding, full-team reservations, sequential
+milestones, delivery/rejection/resubmission, current and retained legacy settlement,
+final evaluations, formal disputes and frozen cancellation. Cases cannot resolve
+or unlock funds. The 129-call signed native/WASM trace compares the complete
+marketplace, balances/issuance/requests, cases and shared shell after every call
+and across restart. Financial diagnostics read one SQL snapshot. Actual tests
+check physical balances/minima and supply, SQL rollback during multi-recipient
+settlement, competing full withdrawals, metered approval failure and private reads.
+A nested exhausted ink call may surface as an outer contract trap; either known
+metered failure commits only its failed receipt/nonce, with no business effects.
+
+An immutable stateless `references-v5` contract shares the backend's exact URL
+parser, including Unicode hosts and retained digest slots in surrounding DTOs.
+Embedding it in Project exceeded Kreivo's pinned 192 KiB code cap. Splitting the
+parser keeps Project (~145 KiB), Directory (~126 KiB) and validator (~155 KiB)
+inside that unchanged cap, with no extra process or node. Directory pins its code
+once; direct query tests compare native URL acceptance and reject replacement.
+All eight artifacts remain immutable; the new parser uses the already reviewed
+SDK registry cohort and changes no app/SDK lock or dependency-policy exception.
+
+Configuring Project code permanently disables the early fixtures' fixed external
+controllers. Real hooks accept registered Projects; finance cannot be enabled
+before Project/reference code configuration. Older isolated fixtures retain their
+explicit test capability. Unsupported component coverage still commits nothing.
+
+This remains private fixture coverage. M7 complete import, sealed migration,
+large-state/input acceptance and current-state rollback, performance budgets and
+M8 whole-provider integration/promotion remain separate gates. Rust stays the
+application authority. No public protocol, frontend flow or application storage
+format changes in M6. See [M6 evidence](../../progress/handoffs/SPEC-0013-M6.md).

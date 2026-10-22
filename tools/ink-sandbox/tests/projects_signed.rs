@@ -42,6 +42,7 @@ fn fixture(gas: Weight) -> DirectoryFixture {
         generation: Some(ProviderInstanceId::from_bytes([107; 16])),
         gas_limit: gas,
         projects: true,
+        money: None,
     }
 }
 fn signed(seed: u8, nonce: u64, op: u8, command: ProviderCommand) -> SignedContractCallV1 {
@@ -284,7 +285,35 @@ fn direct_permissions_and_query_isolation_preserve_project_registry_and_global_i
         let before = db.stored().await;
         let persisted: Value = serde_json::from_slice(&before.2).unwrap();
         let directory: Account = serde_json::from_value(persisted["directory"].clone()).unwrap();
+        let project_id = projection(&client).await.3[0].project_id;
         for (caller, data) in [
+            // Fixed legacy fixture accounts lose controller access once actual
+            // Project code is configured. Registered Projects retain the hooks.
+            (4, input("next_task_key", ())),
+            (
+                4,
+                input("set_proposal_references", (project_id, Option::<u8>::None)),
+            ),
+            (
+                4,
+                input(
+                    "apply_reputation",
+                    (project_id, account(4), vec![(account(2), 1u8, 5u8, 30u32)]),
+                ),
+            ),
+            (
+                4,
+                input(
+                    "assign_team",
+                    (
+                        project_id,
+                        account(4),
+                        account(2),
+                        Vec::<u8>::new(),
+                        [0u8; 32],
+                    ),
+                ),
+            ),
             (2, input("next_task_key", ())),
             (
                 2,
@@ -371,7 +400,6 @@ fn direct_permissions_and_query_isolation_preserve_project_registry_and_global_i
             Percentage::new(10).unwrap()
         );
         // Unsupported execution cannot consume an operation, even with a valid signature.
-        let project_id = projection(&client).await.3[0].project_id;
         let call = signed(
             4,
             0,

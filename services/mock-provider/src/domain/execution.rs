@@ -112,6 +112,10 @@ mod matching_parity;
 #[path = "project_parity.rs"]
 mod project_parity;
 
+#[cfg(all(test, feature = "mock-seed"))]
+#[path = "financial_parity.rs"]
+mod financial_parity;
+
 #[cfg(test)]
 mod tests {
     use super::*;

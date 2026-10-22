@@ -165,3 +165,13 @@ Independent xhigh M3 review accepted this exact delta and renewed fingerprint
 at `9dccb98`, under the same four advisory IDs, thirteen versioned license
 exceptions and December 1 expiry.
 The application lock and all contract build locks remain unchanged.
+
+
+M6 adds an immutable `references-v5` WASM artifact to share the backend's exact
+HTTPS parser without exceeding Kreivo's pinned code-size cap. Its direct url
+2.5.8 pin and IDNA/ICU/support versions/checksums reuse the already reviewed SDK
+cohort; all other entries reuse the canonical v5 build cohort. This adds no app
+or SDK dependency, lock change or exception. The canonical reference README
+records primary registry/doc checks, features, MSRV 1.88 for the complete parser
+stack, license and upstream unsafe implications. Artifact source/build locks and
+fresh-source WASM/ABI reproduction remain independently checked.

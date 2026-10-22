@@ -39,6 +39,20 @@ pub type MarketplaceProjection = (
     )>,
 );
 
+pub type FinancialProjection = (
+    MarketplaceProjection,
+    MoneyProjection,
+    Vec<(
+        generated_contracts::Dispute,
+        generated_contracts::MilestoneView,
+    )>,
+);
+pub type MoneyProjection = (
+    Vec<(AccountId32, generated_contracts::Money)>,
+    generated_contracts::Money,
+    Vec<generated_contracts::DepositView>,
+    Vec<generated_contracts::WithdrawalView>,
+);
 /// Explicit genesis inputs, never inferred from a partial application snapshot.
 pub struct DirectoryFixture {
     pub root: AccountId32,
@@ -51,11 +65,14 @@ pub struct DirectoryFixture {
     pub gas_limit: Weight,
     /// Enable the explicit M5 Project fixture; money/execution remain incomplete.
     pub projects: bool,
+    /// Explicit M6 coverage; Some controls test-only funding, None disables money.
+    pub money: Option<bool>,
 }
 impl DirectoryFixture {
     pub(super) fn validate(&self) -> Result<(), Error> {
         if self.funded_accounts.len() > 127
             || self.catalog.encoded_size() > MAX_INPUT
+            || (self.money.is_some() && !self.projects)
             || !self.gas_limit.all_lte(GAS)
         {
             return Err(Error::Limit);
@@ -73,6 +90,7 @@ impl DirectoryFixture {
                 self.reference_controller,
                 self.generation,
                 self.projects,
+                self.money,
                 self.gas_limit.ref_time(),
                 self.gas_limit.proof_size(),
             )
@@ -83,6 +101,7 @@ impl DirectoryFixture {
             gas: self.gas_limit,
             configuration: H256::from(configuration),
             projects: self.projects,
+            money: self.money.is_some(),
         }
     }
 }
@@ -206,6 +225,71 @@ pub(super) fn initialize(
             return Err(Error::InvalidState);
         }
     }
+    if fixture.projects {
+        let code = ext.execute_with(|| {
+            Contracts::bare_upload_code(
+                account(fixture.root),
+                bundles.code("references-v5")?.to_vec(),
+                None,
+                Determinism::Enforced,
+            )
+            .map(|upload| upload.code_hash)
+            .map_err(|_| Error::InvalidState)
+        })?;
+        let configured = run(
+            &mut ext,
+            bundles,
+            Invocation {
+                caller: account(fixture.root),
+                action: Action::Call {
+                    address: created.address.clone().ok_or(Error::InvalidState)?,
+                },
+                input: input("configure_reference_code", code),
+                gas: GAS,
+                timestamp_ms: 1_700_000_000_000,
+            },
+        )?;
+        if configured.status != Status::Success || configured.data != [0, 0] {
+            return Err(Error::InvalidState);
+        }
+    }
+    if let Some(mock_funding) = fixture.money {
+        let address = created.address.clone().ok_or(Error::InvalidState)?;
+        ext.execute_with(|| -> Result<(), Error> {
+            crate::Assets::force_create(
+                crate::RuntimeOrigin::root(),
+                1,
+                account(fixture.root),
+                true,
+                1,
+            )
+            .map_err(|_| Error::InvalidState)?;
+            // Inventory is local setup, never visible issued/free KVN. It covers
+            // u64::MAX visible units and separate bounded technical minima.
+            crate::Assets::mint(
+                crate::RuntimeOrigin::signed(account(fixture.root)),
+                1,
+                address.clone(),
+                u128::from(u64::MAX) * 2,
+            )
+            .map_err(|_| Error::InvalidState)?;
+            Ok(())
+        })?;
+        let configured = run(
+            &mut ext,
+            bundles,
+            Invocation {
+                caller: account(fixture.root),
+                action: Action::Call { address },
+                input: input("configure_money", mock_funding),
+                gas: GAS,
+                timestamp_ms: 1_700_000_000_000,
+            },
+        )?;
+        if configured.status != Status::Success || configured.data != [0, 0] {
+            return Err(Error::InvalidState);
+        }
+    }
     let mut shell = Shell::new(fixture.root)?;
     if let Some(generation) = fixture.generation {
         shell.info.provider_instance_id = generation;
@@ -229,12 +313,40 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     {
         return Err(Error::InvalidState);
     }
+    let enabled: bool = read(
+        &mut ext,
+        bundles,
+        &state.directory,
+        state.shell.info.root_account,
+        "money_enabled",
+        (),
+    )?;
+    if enabled != matches!(mode, Mode::Directory { money: true, .. }) {
+        return Err(Error::InvalidState);
+    }
     if let Mode::Directory {
         projects: true,
         root,
         ..
     } = mode
     {
+        let reference: Option<Account> = read(
+            &mut ext,
+            bundles,
+            &state.directory,
+            state.shell.info.root_account,
+            "reference_address",
+            (),
+        )?;
+        let reference = reference.ok_or(Error::InvalidState)?;
+        if ext.execute_with(|| Contracts::code_hash(&reference))
+            != Some(H256::from(sp_core::hashing::blake2_256(
+                bundles.code("references-v5")?,
+            )))
+        {
+            return Err(Error::InvalidState);
+        }
+
         let addresses: Vec<(EntityId, Account)> =
             read(&mut ext, bundles, &state.directory, root, "projects", ())?;
         let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("projects-v5")?));
@@ -246,6 +358,16 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     }
     Ok(())
 }
+fn money_command(command: &ProviderCommand) -> bool {
+    matches!(
+        command,
+        ProviderCommand::FundAccount(_)
+            | ProviderCommand::CreateDeposit(_)
+            | ProviderCommand::ConfirmDeposit { .. }
+            | ProviderCommand::CreateWithdrawal(_)
+            | ProviderCommand::CancelWithdrawal { .. }
+    )
+}
 fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<Vec<u8>, Error> {
     // M3 commands allocate at most one ID, before any random selection. This is
     // the same first 16 bytes of the version-1 locked native StdRng stream.
@@ -255,6 +377,20 @@ fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<
         EntityId::from_bytes(bytes)
     };
     Ok(match command {
+        ProviderCommand::FundAccount(request) => {
+            input("fund_account", (request.account, request.amount))
+        }
+        ProviderCommand::CreateDeposit(request) => {
+            input("create_deposit", (request.amount, inputs.seed))
+        }
+        ProviderCommand::ConfirmDeposit { deposit_id } => input("confirm_deposit", deposit_id),
+        ProviderCommand::CreateWithdrawal(request) => {
+            input("create_withdrawal", (request.amount, inputs.seed))
+        }
+        ProviderCommand::CancelWithdrawal { withdrawal_id } => {
+            input("cancel_withdrawal", withdrawal_id)
+        }
+
         ProviderCommand::RegisterWorker(request) => input("register_worker", (request, id())),
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
@@ -361,6 +497,43 @@ fn domain_error(code: &str) -> Result<&'static str, Error> {
         "no_available_candidate" => Ok("no_available_candidate"),
         "invalid_project_state" => Err(Error::Invariant("invalid_project_state")),
         "duplicate_entity" => Err(Error::Invariant("duplicate_entity")),
+        "bramp_id_collision" => Ok("duplicate_entity"),
+        "insufficient_balance" => Ok("insufficient_balance"),
+        "mock_funding_disabled" => Ok("mock_funding_disabled"),
+        "deposit_not_found" => Ok("deposit_not_found"),
+        "deposit_already_confirmed" => Ok("deposit_already_confirmed"),
+        "withdrawal_not_found" => Ok("withdrawal_not_found"),
+        "withdrawal_owner_or_system_required" => Ok("withdrawal_owner_or_system_required"),
+        "withdrawal_already_cancelled" => Ok("withdrawal_already_cancelled"),
+        "invalid_deposit_state" => Err(Error::Invariant("invalid_deposit_state")),
+        "invalid_withdrawal_state" => Err(Error::Invariant("invalid_withdrawal_state")),
+        "asset_transfer_failed" => Err(Error::Invariant("asset_transfer_failed")),
+        "invalid_asset_state" => Err(Error::Invariant("invalid_asset_state")),
+        "active_dispute_exists" => Ok("active_dispute_exists"),
+        "milestone_not_changes_requested" => Ok("milestone_not_changes_requested"),
+        "submission_not_current" => Ok("submission_not_current"),
+        "submission_not_pending" => Ok("submission_not_pending"),
+        "submission_not_rejected" => Ok("submission_not_rejected"),
+        "milestone_not_found" => Ok("milestone_not_found"),
+        "invalid_milestone_state" => Ok("invalid_milestone_state"),
+        "worker_ratings_mismatch" => Ok("worker_ratings_mismatch"),
+        "project_not_completed" => Ok("project_not_completed"),
+        "project_already_evaluated" => Ok("project_already_evaluated"),
+        "project_participant_required" => Ok("project_participant_required"),
+        "evaluation_participants_mismatch" => Ok("evaluation_participants_mismatch"),
+        "dispute_not_found" => Ok("dispute_not_found"),
+        "invalid_dispute_target" => Ok("invalid_dispute_target"),
+        "dispute_response_forbidden" => Ok("dispute_response_forbidden"),
+        "dispute_already_answered" => Ok("dispute_already_answered"),
+        "score_overflow" => Ok("arithmetic_or_calendar_error"),
+        "invalid_submission_state" => Err(Error::Invariant("invalid_submission_state")),
+        "invalid_dispute_state" => Err(Error::Invariant("invalid_dispute_state")),
+        "invalid_dispute_id" => Err(Error::Invariant("invalid_dispute_id")),
+        "invalid_assignment_state" => Err(Error::Invariant("invalid_assignment_state")),
+        "provider_unavailable" => Err(Error::Invariant("provider_unavailable")),
+        "reference_call_failed" => Err(Error::Invariant("reference_call_failed")),
+        "reference_instantiation_failed" => Err(Error::Invariant("reference_instantiation_failed")),
+        "incomplete_reference_coverage" => Err(Error::IncompleteCoverage),
         "invalid_storage_state" => Err(Error::Invariant("invalid_storage_state")),
         "project_instantiation_failed" => Err(Error::Invariant("project_instantiation_failed")),
         "project_code_missing" => Err(Error::Invariant("project_code_missing")),
@@ -398,6 +571,12 @@ pub(super) async fn execute(
         }
         Admission::Execute(pending) => *pending,
     };
+    if (money_command(&pending.call().command)
+        || super::projects::requires_money(&pending.call().command))
+        && !matches!(mode, Mode::Directory { money: true, .. })
+    {
+        return Err(Error::IncompleteCoverage);
+    }
     let time = pending
         .inputs()
         .now
@@ -422,7 +601,15 @@ pub(super) async fn execute(
         Err(Error::IncompleteCoverage)
             if matches!(mode, Mode::Directory { projects: true, .. }) =>
         {
-            super::projects::execute(&mut ext, bundles, &state.directory, &pending, gas, time)?
+            super::projects::execute(
+                &mut ext,
+                bundles,
+                &state.directory,
+                &pending,
+                gas,
+                time,
+                state.shell.events.last().map_or(0, |event| event.cursor),
+            )?
         }
         Err(error) => return Err(error),
     };
@@ -520,35 +707,32 @@ pub(super) async fn marketplace_projection(
     let stored = load(&mut tx, bundles.identity(), mode).await?;
     let state = decode(&stored, mode)?;
     let mut ext = stored.checkpoint.restore()?;
+    let projection = read_marketplace(&mut ext, bundles, &state, origin)?;
+    tx.rollback().await?;
+    Ok(projection)
+}
+fn read_marketplace(
+    ext: &mut sp_io::TestExternalities,
+    bundles: &Bundles,
+    state: &State,
+    origin: AccountId32,
+) -> Result<MarketplaceProjection, Error> {
     let (roles, skills, skill_roles): DirectoryCatalog =
-        read(&mut ext, bundles, &state.directory, origin, "catalog", ())?;
-    let score_policy: ScorePolicy = read(
-        &mut ext,
-        bundles,
-        &state.directory,
-        origin,
-        "score_policy",
-        (),
-    )?;
+        read(ext, bundles, &state.directory, origin, "catalog", ())?;
+    let score_policy: ScorePolicy =
+        read(ext, bundles, &state.directory, origin, "score_policy", ())?;
     let compensation_policy: CompensationPolicy = read(
-        &mut ext,
+        ext,
         bundles,
         &state.directory,
         origin,
         "compensation_policy",
         (),
     )?;
-    let workers = read(&mut ext, bundles, &state.directory, origin, "workers", ())?;
-    let requests = read(
-        &mut ext,
-        bundles,
-        &state.directory,
-        origin,
-        "skill_requests",
-        (),
-    )?;
+    let workers = read(ext, bundles, &state.directory, origin, "workers", ())?;
+    let requests = read(ext, bundles, &state.directory, origin, "skill_requests", ())?;
     let addresses: Vec<(EntityId, Account)> =
-        read(&mut ext, bundles, &state.directory, origin, "projects", ())?;
+        read(ext, bundles, &state.directory, origin, "projects", ())?;
     let mut projects = Vec::new();
     let mut reasons: Vec<(
         EntityId,
@@ -559,7 +743,7 @@ pub(super) async fn marketplace_projection(
         DomainEventKind,
     )> = Vec::new();
     for (id, address) in addresses {
-        let project: ProjectView = read(&mut ext, bundles, &address, origin, "view", ())?;
+        let project: ProjectView = read(ext, bundles, &address, origin, "view", ())?;
         if project.project_id != id {
             return Err(Error::InvalidState);
         }
@@ -570,12 +754,11 @@ pub(super) async fn marketplace_projection(
             String,
             generated_contracts::UnixSeconds,
             DomainEventKind,
-        )> = read(&mut ext, bundles, &address, origin, "reasons", ())?;
+        )> = read(ext, bundles, &address, origin, "reasons", ())?;
         reasons.extend(entries);
         projects.push(project);
     }
     reasons.sort_by_key(Encode::encode);
-    tx.rollback().await?;
     Ok((
         CatalogView {
             roles,
@@ -589,6 +772,84 @@ pub(super) async fn marketplace_projection(
         projects,
         reasons,
     ))
+}
+
+pub(super) async fn money_projection(
+    pool: &SqlitePool,
+    bundles: &Bundles,
+    mode: Mode,
+    origin: AccountId32,
+) -> Result<MoneyProjection, Error> {
+    if !matches!(mode, Mode::Directory { money: true, .. }) {
+        return Err(Error::IncompleteCoverage);
+    }
+    let mut tx = pool.begin().await?;
+    let stored = load(&mut tx, bundles.identity(), mode).await?;
+    let state = decode(&stored, mode)?;
+    let mut ext = stored.checkpoint.restore()?;
+    let result: Result<MoneyProjection, String> = read(
+        &mut ext,
+        bundles,
+        &state.directory,
+        origin,
+        "financial_projection",
+        (),
+    )?;
+    tx.rollback().await?;
+    result.map_err(|_| Error::InvalidState)
+}
+
+pub(super) async fn financial_projection(
+    pool: &SqlitePool,
+    bundles: &Bundles,
+    mode: Mode,
+    origin: AccountId32,
+) -> Result<FinancialProjection, Error> {
+    if !matches!(mode, Mode::Directory { money: true, .. }) {
+        return Err(Error::IncompleteCoverage);
+    }
+    let mut tx = pool.begin().await?;
+    let stored = load(&mut tx, bundles.identity(), mode).await?;
+    let state = decode(&stored, mode)?;
+    let mut ext = stored.checkpoint.restore()?;
+    let marketplace = read_marketplace(&mut ext, bundles, &state, origin)?;
+    let money: Result<MoneyProjection, String> = read(
+        &mut ext,
+        bundles,
+        &state.directory,
+        origin,
+        "financial_projection",
+        (),
+    )?;
+    let money = money.map_err(|_| Error::InvalidState)?;
+    let registry: Vec<(EntityId, EntityId)> =
+        read(&mut ext, bundles, &state.directory, origin, "disputes", ())?;
+    let mut cases = Vec::new();
+    for (id, project_id) in registry {
+        let address: Result<Account, String> = read(
+            &mut ext,
+            bundles,
+            &state.directory,
+            origin,
+            "resolve_project",
+            project_id,
+        )?;
+        let address = address.map_err(|_| Error::InvalidState)?;
+        let record: Result<
+            (
+                generated_contracts::Dispute,
+                generated_contracts::MilestoneView,
+            ),
+            String,
+        > = read(&mut ext, bundles, &address, origin, "dispute", id)?;
+        let record = record.map_err(|_| Error::InvalidState)?;
+        if record.0.dispute_id != id || record.0.project_id != project_id {
+            return Err(Error::InvalidState);
+        }
+        cases.push(record);
+    }
+    tx.rollback().await?;
+    Ok((marketplace, money, cases))
 }
 
 #[cfg(test)]

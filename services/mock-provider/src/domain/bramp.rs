@@ -239,6 +239,14 @@ impl RustEngine {
 }
 
 impl BrampState {
+    #[cfg(all(test, feature = "mock-seed"))]
+    pub(super) fn projection(&self) -> (Vec<DepositView>, Vec<WithdrawalView>) {
+        (
+            self.deposits.values().cloned().collect(),
+            self.withdrawals.values().cloned().collect(),
+        )
+    }
+
     fn new_id(&self, id: EntityId) -> Result<EntityId> {
         require(
             !self.deposits.contains_key(&id) && !self.withdrawals.contains_key(&id),

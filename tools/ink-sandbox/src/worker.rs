@@ -33,7 +33,10 @@ use tokio::sync::oneshot;
 mod directory;
 mod projects;
 mod signed;
-pub use directory::{DirectoryFixture, DirectoryProjection, MarketplaceProjection};
+pub use directory::{
+    DirectoryFixture, DirectoryProjection, FinancialProjection, MarketplaceProjection,
+    MoneyProjection,
+};
 pub use signed::{CalendarFixture, FixtureWorker};
 
 #[derive(Clone, Copy)]
@@ -48,6 +51,7 @@ enum Mode {
         gas: Weight,
         configuration: H256,
         projects: bool,
+        money: bool,
     },
 }
 impl Mode {
@@ -203,6 +207,14 @@ enum Job {
         reply: oneshot::Sender<Result<OperationReceipt, Error>>,
     },
     Shell(oneshot::Sender<Result<Shell, Error>>),
+    FinancialProjection {
+        origin: AccountId32,
+        reply: oneshot::Sender<Result<FinancialProjection, Error>>,
+    },
+    MoneyProjection {
+        origin: AccountId32,
+        reply: oneshot::Sender<Result<MoneyProjection, Error>>,
+    },
     MarketplaceProjection {
         origin: AccountId32,
         reply: oneshot::Sender<Result<MarketplaceProjection, Error>>,
@@ -352,6 +364,26 @@ impl Client {
         self.send(Job::MarketplaceProjection { origin, reply })?;
         Ok(Ticket(result))
     }
+    /// Private M6 fixture read, never an HTTP endpoint.
+    pub fn financial_projection(
+        &self,
+        origin: AccountId32,
+    ) -> Result<Ticket<FinancialProjection>, Error> {
+        if !matches!(self.mode, Mode::Directory { money: true, .. }) {
+            return Err(Error::IncompleteCoverage);
+        }
+        let (reply, result) = oneshot::channel();
+        self.send(Job::FinancialProjection { origin, reply })?;
+        Ok(Ticket(result))
+    }
+    pub fn money_projection(&self, origin: AccountId32) -> Result<Ticket<MoneyProjection>, Error> {
+        if !matches!(self.mode, Mode::Directory { money: true, .. }) {
+            return Err(Error::IncompleteCoverage);
+        }
+        let (reply, result) = oneshot::channel();
+        self.send(Job::MoneyProjection { origin, reply })?;
+        Ok(Ticket(result))
+    }
     pub fn diagnostics(&self) -> Result<Ticket<Diagnostics>, Error> {
         let (reply, result) = oneshot::channel();
         self.send(Job::Inspect(reply))?;
@@ -470,6 +502,26 @@ impl Worker {
                                                     }
                                                 }
                                             }),
+                                        );
+                                    }
+                                }
+                                Job::FinancialProjection { origin, reply } => {
+                                    if !reply.is_closed() {
+                                        respond(
+                                            reply,
+                                            runtime.block_on(directory::financial_projection(
+                                                &pool, &bundles, mode, origin,
+                                            )),
+                                        );
+                                    }
+                                }
+                                Job::MoneyProjection { origin, reply } => {
+                                    if !reply.is_closed() {
+                                        respond(
+                                            reply,
+                                            runtime.block_on(directory::money_projection(
+                                                &pool, &bundles, mode, origin,
+                                            )),
                                         );
                                     }
                                 }
