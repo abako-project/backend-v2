@@ -164,3 +164,16 @@ replays pass. [M7 evidence](../../progress/handoffs/SPEC-0013-M7.md) records the
 closed import-capacity findings and the remaining ordinary512-skill command
 capacity check. Full operational parity, M0 performance, M8 HTTP/gateway promotion
 and two observed stable release cycles remain open; Rust stays authoritative.
+
+
+M8's private whole-provider candidate is independently approved at backend
+`73449ab` and canonical `a3d353c`. Rust/shadow/sandbox modes preserve the existing
+HTTP contract with atomic primary/reference state, persistent comparison status,
+current-state rollback and canceled-read isolation. The full SDK/app gates,
+three-mode gateway flows, artifact reproduction and unchanged-exception SDK
+policy pass. The optimized constrained shared-host screen measures sandbox
+ordinary p95 at 11.00 ms and four-milestone approval at 27.12 ms. See
+[M8 evidence](../../progress/handoffs/SPEC-0013-M8.md) for exact revisions,
+methodology, review fixes and unavailable baseline checks. Formal performance
+acceptance, owner-approved promotion, two observed releases and native retirement
+remain open. Default application authority remains Rust.
