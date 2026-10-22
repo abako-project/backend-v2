@@ -1,9 +1,17 @@
-# ink! v5 compatibility proof
+# ink! v5 local provider candidate
 
 This candidate follows [SPEC-0013](../../specs/0013-ink-v5-sandbox/spec.md).
 It runs production WASM in a native FRAME runtime without starting a node. It
 is deliberately a separate Cargo workspace and lockfile: the application keeps
 its current dependencies, authoritative Rust engine and startup behavior.
+
+The complete candidate supports explicit Rust, Shadow and Sandbox authority,
+current-state import/rollback and the existing private HTTP API. Start with the
+[current build and operation guide](#explicit-whole-provider-candidate-m8).
+The default application still uses Rust. Formal performance acceptance, approved
+promotion and two observed release cycles remain open. Earlier milestone sections
+below describe the retained compatibility tests; historical acceptance records
+live in `progress/handoffs/SPEC-0013*.md`.
 
 ```sh
 bash scripts/verify.sh ink-sandbox
@@ -33,16 +41,18 @@ competing SQLite workers and restart. The old four compatibility artifacts stay
 unchanged. Directory and signed candidate routing are covered below. The older signed
 Calendar fixture continues testing the explicitly limited legacy contract.
 
-Directory will create one Calendar instance per worker. Only the worker or its
+Directory creates one Calendar instance per worker. Only the worker or its
 creating Directory can change capacity; only an immutable reservation controller
 can reserve. These tests pass explicit fixture accounts as those capabilities.
-They do not implement Project permissions or expose a new provider/browser API.
+The component tests isolate Calendar permissions; complete Project wiring is
+covered by the M5/M6 and whole-provider tests. They add no browser API.
 No calendar release operation is added: the approved rules retain consumed hours.
 
 Adding the bundle changes the pinned candidate cohort identity. Existing private
 candidate databases fail closed; use a new disposable fixture database. Ordinary
-mock-provider SQLite data and its Rust authority remain unchanged. Large-state
-import and performance budgets remain open. See the
+mock-provider SQLite data and its Rust authority remain unchanged. Complete
+import is covered in M7 below; formal performance acceptance and promotion
+remain open. See the
 [slice handoff](../../progress/handoffs/SPEC-0013-M3-CALENDAR.md).
 
 ## M3 Directory slice
@@ -171,9 +181,11 @@ checks full visible spending/payouts against actual asset balances. Legacy fixtu
 retain their original behavior; no user payout is reduced.
 
 The candidate now has a dedicated worker and a separate SQLite store. Typed
-call/instantiate requests have an eight-item queue, 64 KiB inputs/outputs,
-1 MiB shell-envelope limits, bounded gas and bounded checkpoint reconstruction.
-No unmetered callback or caller-supplied WASM is accepted. The worker verifies
+call/instantiate requests have an eight-item queue, inputs/outputs bounded by
+`MAX_SIGNABLE_BYTES + 1024` (currently 263,168 bytes), separate 64 MiB shell and
+checkpoint limits, finite gas and bounded checkpoint reconstruction. Whole-state
+exports also have a 64 MiB archive/cumulative-cell limit. Public callers cannot
+upload WASM or supply runtime callbacks. The worker verifies
 compiled-in bundles and their build locks before opening candidate state.
 Queries run on discarded state. An expected revision and `BEGIN IMMEDIATE`
 serialize competing workers; the full runtime, opaque shell envelope and exact
@@ -203,8 +215,8 @@ no overrides, against pre-registered fixture accounts and explicit calendar IDs.
 Other commands or unsupported shapes return `IncompleteCoverage` with no nonce,
 receipt or business write. This demonstrates shell/ABI integration; it does not
 replace the M3 Directory bridge above. There is no public raw-contract
-endpoint, sandbox authority selector, shadow success claim or frontend change.
-Private library diagnostics expose revision, identity, root and size only.
+endpoint or frontend change. This limited fixture API is distinct from the
+whole-provider authority selector and comparison diagnostics described below.
 
 The owner approved the exact [SDK exceptions](policy/README.md) for integration
 work on 2026-10-22. Check the expiring, exact-lock SDK policy separately:
@@ -226,7 +238,8 @@ reject old candidate checkpoints. Existing app SQLite/JSON opens unchanged.
 `NoRandomness` is still unused v5 host scaffolding, not matching entropy.
 Host-call weights are conservative finite proof limits, not production
 benchmarks. Passing tests establishes neither application parity nor the
-specified latency budgets. Full import/rollback and domain contracts remain later work.
+specified latency budgets. Complete domain, import/rollback and whole-provider
+candidate coverage is described below; promotion remains a separate decision.
 
 See [dependency review](dependencies.md) and the recorded implementation evidence
 in [the handoff](../../progress/handoffs/SPEC-0013.md) before promoting this runtime into
@@ -276,9 +289,9 @@ metered failure commits only its failed receipt/nonce, with no business effects.
 An immutable stateless `references-v5` contract shares the backend's exact URL
 parser, including Unicode hosts and retained digest slots in surrounding DTOs.
 Embedding it in Project exceeded Kreivo's pinned 192 KiB code cap. Splitting the
-parser keeps Project (~145 KiB), Directory (~126 KiB) and validator (~155 KiB)
-inside that unchanged cap, with no extra process or node. Directory pins its code
-once; direct query tests compare native URL acceptance and reject replacement.
+parser keeps the current Project (163,482 bytes), Directory (192,755 bytes) and
+validator (155,371 bytes) inside that unchanged cap, with no extra process or
+node. Directory pins its code once; direct query tests compare native URL acceptance and reject replacement.
 All eight artifacts remain immutable; the new parser uses the already reviewed
 SDK registry cohort and changes no app/SDK lock or dependency-policy exception.
 
@@ -287,11 +300,11 @@ controllers. Real hooks accept registered Projects; finance cannot be enabled
 before Project/reference code configuration. Older isolated fixtures retain their
 explicit test capability. Unsupported component coverage still commits nothing.
 
-This remains private fixture coverage. M7 complete import, sealed migration,
-large-state/input acceptance and current-state rollback, performance budgets and
-M8 whole-provider integration/promotion remain separate gates. Rust stays the
-application authority. No public protocol, frontend flow or application storage
-format changes in M6. See [M6 evidence](../../progress/handoffs/SPEC-0013-M6.md).
+These component tests remain private fixture coverage. Complete import, sealed
+migration, retained-state capacity, current-state rollback and whole-provider
+selection are covered below. Formal performance acceptance and promotion remain
+open. Rust stays the application authority. M6 changes no public protocol,
+frontend flow or application storage format. See [M6 evidence](../../progress/handoffs/SPEC-0013-M6.md).
 
 ## Complete retained-state migration candidate (M7)
 
@@ -314,8 +327,8 @@ Catalog entries, worker/project registry records and complete child images use
 ordered 8 KiB migration pages. Directory stages records in a separate temporary
 namespace, applies each complete decoded record atomically, then clears its pages.
 An unfinished record blocks sealing. Derived worker skill indexes rebuild in fixed
-batches of at most32 entries; sealing also requires every index complete. The native-authored capacity trace combines
-a near-limit worker name with 512 skills added by later valid calls, as well as
+batches of at most 32 entries; sealing also requires every index complete. The
+native-authored capacity trace combines a near-limit worker name with 512 skills added by later valid calls, as well as
 large accumulated catalogs, calendars and Project descriptions. Paging removes
 the single-call import ceiling; finite WASM gas/memory and archive/checkpoint
 admission still apply and fail without committing a destination.
@@ -346,10 +359,10 @@ rm "$sandbox_archive"
 
 The second test imports the observed WASM export into fresh native memory/SQLite,
 checks exact retained state, accepts a new native operation and reopens it. An old
-pre-cutover checkpoint is never a rollback source. Whole-provider HTTP composition,
-performance promotion, the gateway smoke flow and two observed stable release
-cycles remain separate M8 gates. These fixtures do not authorize promotion or a
-release.
+pre-cutover checkpoint is never a rollback source. Whole-provider HTTP composition
+and the gateway smoke flow are covered in M8 below. Formal performance acceptance,
+promotion and two observed stable release cycles remain open. These fixtures do
+not authorize promotion or a release.
 
 ## Explicit whole-provider candidate (M8)
 
