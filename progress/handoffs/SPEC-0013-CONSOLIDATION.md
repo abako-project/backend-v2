@@ -108,3 +108,15 @@ sampler retains the documented minute bias; no input semantics were changed.
 Directory WASM is 192,755 bytes, with 3,853 bytes below the current code cap.
 Rust remains default. This task merges no default branch, publishes no release,
 deploys nothing and changes no authority. No implementation blocker remains.
+
+## Evidence follow-up
+
+SPEC-0014 supersedes the URL-helper design described in the original milestones.
+The current candidate stores fixed evidence commitments and executes three
+contracts; References is removed. Original signed URLs and complete rollback
+remain supported through an offchain SDK compatibility map. Astra xhigh approved
+both implementation milestones, including compatibility and scope. The full app
+and SDK gates, fresh artifact reproduction and twelve authority gateway flows
+were rerun successfully. Exact revisions, commands, review findings and remaining
+limits are recorded in [SPEC-0014.md](SPEC-0014.md). The original milestone
+provenance above remains unchanged.
