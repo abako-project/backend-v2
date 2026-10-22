@@ -176,8 +176,34 @@ fn native_signed_trace_matches_receipts_events_inputs_nonces_and_domain_after_ev
                     "temporal probe {index} committed"
                 );
             }
-            let call = serde_json::from_value(step["signed"].clone()).unwrap();
-            let inputs = serde_json::from_value(step["inputs"].clone()).unwrap();
+            let call: SignedContractCallV1 =
+                serde_json::from_value(step["signed"].clone()).unwrap();
+            let inputs: ExecutionInputs = serde_json::from_value(step["inputs"].clone()).unwrap();
+            if index == 61 {
+                // First legacy URL: a failed durable commit must retain neither
+                // the contract hash nor its tentative offchain preimage.
+                let before = db.stored().await;
+                let pool = db.pool().await;
+                sqlx::query("CREATE TRIGGER reject_evidence BEFORE UPDATE ON candidate_state BEGIN SELECT RAISE(FAIL,'injected'); END").execute(&pool).await.unwrap();
+                assert!(matches!(
+                    worker
+                        .client()
+                        .execute_directory_with_inputs(call.clone(), inputs.clone())
+                        .unwrap()
+                        .result()
+                        .await,
+                    Err(Error::Storage(_))
+                ));
+                assert_eq!(db.stored().await, before);
+                sqlx::query("DROP TRIGGER reject_evidence")
+                    .execute(&pool)
+                    .await
+                    .unwrap();
+                pool.close().await;
+                worker.shutdown().await.unwrap();
+                worker = db.start().await;
+                assert_eq!(db.stored().await, before);
+            }
             let result = worker
                 .client()
                 .execute_directory_with_inputs(call, inputs)
@@ -704,100 +730,6 @@ fn metered_failure_during_execution_approval_discards_funding_and_reservations()
         assert_eq!(projection(&client).await.encode(), projected.encode());
         assert_assets(&db.stored().await, &projected);
         assert!(receipt.first_event_cursor.is_none());
-        worker.shutdown().await.unwrap();
-    });
-}
-
-#[test]
-fn immutable_reference_contract_matches_native_url_validation_without_fetching_or_writing() {
-    use ink_v5_compatibility::worker::{Action, Invocation, Status};
-    test(async {
-        let db = Database::new();
-        let worker = db.start().await;
-        let client = worker.client();
-        let before = db.stored().await;
-        let persisted: Value = serde_json::from_slice(&before.2).unwrap();
-        let directory: Account = serde_json::from_value(persisted["directory"].clone()).unwrap();
-        let mut urls = [
-            "https://example.org",
-            "https://例え.テスト/delivery",
-            "https://💩.la/",
-            "https://[::1]/x",
-            "https://example.org:65535/x",
-            "https://example.org:65536/x",
-            "https://user@example.org/x",
-            "https://:pass@example.org/",
-            "https://@example.org/",
-            "https://./",
-            "HTTPS://example.org/",
-            "https:example.org",
-            "http://example.org",
-            "https://",
-            "https://example.org\\path",
-            "https://example.org/\u{00a0}",
-            "https://exa\0mple.org/",
-            "https://example.org/#fragment",
-            "https://example.org/?x=1",
-        ]
-        .map(String::from)
-        .to_vec();
-        let prefix = "https://example.org/";
-        urls.push(format!("{prefix}{}", "a".repeat(2048 - prefix.len())));
-        urls.push(format!("{prefix}{}", "a".repeat(2049 - prefix.len())));
-        for url in urls {
-            let expected = EvidenceReference::new(url.clone()).is_ok();
-            let observed = client
-                .query(Invocation {
-                    caller: Account::new(account(3).into_bytes()),
-                    action: Action::Call {
-                        address: directory.clone(),
-                    },
-                    input: input("validate_reference", &url),
-                    gas: GAS,
-                    timestamp_ms: 100_000,
-                })
-                .unwrap()
-                .result()
-                .await
-                .unwrap();
-            let result = Result::<Result<(), String>, u8>::decode_all(&mut &observed.data[..])
-                .unwrap()
-                .unwrap();
-            assert_eq!(
-                observed.status,
-                if expected {
-                    Status::Success
-                } else {
-                    Status::Reverted
-                },
-                "{url:?}"
-            );
-            assert_eq!(result.is_ok(), expected, "{url:?}");
-        }
-        for (caller, expected) in [(2, "system_origin_required"), (1, "reference_code_fixed")] {
-            let observed = client
-                .query(Invocation {
-                    caller: Account::new(account(caller).into_bytes()),
-                    action: Action::Call {
-                        address: directory.clone(),
-                    },
-                    input: input("configure_reference_code", H256::zero()),
-                    gas: GAS,
-                    timestamp_ms: 100_000,
-                })
-                .unwrap()
-                .result()
-                .await
-                .unwrap();
-            assert_eq!(observed.status, Status::Reverted);
-            assert_eq!(
-                Result::<Result<(), String>, u8>::decode_all(&mut &observed.data[..])
-                    .unwrap()
-                    .unwrap(),
-                Err(expected.to_string())
-            );
-        }
-        assert_eq!(db.stored().await, before);
         worker.shutdown().await.unwrap();
     });
 }

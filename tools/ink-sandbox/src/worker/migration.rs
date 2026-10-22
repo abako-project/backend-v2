@@ -366,7 +366,20 @@ pub(super) fn initialize(
             .values()
             .filter(|d| d.project_id == project.project_id)
             .collect();
-        let image = (&state.directory, project, reasons, disputes, false).encode();
+        let project = super::evidence_wire::Project::from_domain(
+            project.clone(),
+            &mut state.legacy_references,
+        )?;
+        let disputes = disputes
+            .into_iter()
+            .map(|case| {
+                super::evidence_wire::Dispute::from_domain(
+                    case.clone(),
+                    &mut state.legacy_references,
+                )
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let image = (&state.directory, &project, reasons, disputes, false).encode();
         upload(
             &mut ext,
             bundles,

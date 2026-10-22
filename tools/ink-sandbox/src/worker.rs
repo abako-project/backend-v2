@@ -33,6 +33,7 @@ use tokio::sync::oneshot;
 mod archive;
 pub mod comparison;
 mod directory;
+mod evidence_wire;
 mod migration;
 mod whole;
 pub use migration::WholeConfiguration;

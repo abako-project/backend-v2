@@ -1,4 +1,5 @@
 //! M5 ABI routing only. Project contracts own authorization and transitions.
+use super::evidence_wire::{LegacyReferences, Reference};
 use super::*;
 use generated_contracts::{ProviderCommand, UnsignedContractCallV1};
 use parity_scale_codec::DecodeAll;
@@ -12,6 +13,7 @@ fn command_input(
     call: &UnsignedContractCallV1,
     seed: [u8; 32],
     event_cursor: u64,
+    refs: &mut LegacyReferences,
 ) -> Result<Vec<u8>, Error> {
     Ok(match &call.command {
         ProviderCommand::ApproveExecution {
@@ -25,7 +27,15 @@ fn command_input(
             ..
         } => input(
             "submit_milestone",
-            (milestone_id, &request.deliverable, seed),
+            (
+                milestone_id,
+                request
+                    .deliverable
+                    .clone()
+                    .map(|value| Reference::legacy(value, refs))
+                    .transpose()?,
+                seed,
+            ),
         ),
         ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
             milestone_id,
@@ -35,7 +45,7 @@ fn command_input(
             "submit_legacy_milestone",
             (
                 milestone_id,
-                Option::<generated_contracts::EvidenceReference>::None,
+                Option::<Reference>::None,
                 worker_ratings,
                 seed,
             ),
@@ -48,7 +58,7 @@ fn command_input(
             "submit_legacy_milestone",
             (
                 milestone_id,
-                Some(&request.deliverable),
+                Some(Reference::legacy(request.deliverable.clone(), refs)?),
                 &request.worker_ratings,
                 seed,
             ),
@@ -87,7 +97,11 @@ fn command_input(
             ..
         } => input(
             "reject_milestone",
-            (milestone_id, submission_id, &request.evidence),
+            (
+                milestone_id,
+                submission_id,
+                Reference::legacy(request.evidence.clone(), refs)?,
+            ),
         ),
         ProviderCommand::EvaluateProject { request, .. } => {
             input("evaluate_project", &request.ratings)
@@ -97,7 +111,7 @@ fn command_input(
             (
                 request.milestone_id,
                 request.rejected_submission_id,
-                &request.evidence,
+                Reference::legacy(request.evidence.clone(), refs)?,
                 seed,
                 event_cursor,
             ),
@@ -116,7 +130,65 @@ fn command_input(
             dispute_id,
             request,
             ..
-        } => input("respond_dispute", (dispute_id, &request.evidence)),
+        } => input(
+            "respond_dispute",
+            (
+                dispute_id,
+                Reference::legacy(request.evidence.clone(), refs)?,
+            ),
+        ),
+
+        ProviderCommand::SubmitMilestoneCommitted {
+            milestone_id,
+            evidence,
+            worker_ratings,
+            ..
+        } => {
+            let reference = Some(Reference::Committed(evidence.clone()));
+            match worker_ratings {
+                Some(ratings) => input(
+                    "submit_legacy_milestone",
+                    (milestone_id, reference, ratings, seed),
+                ),
+                None => input("submit_milestone", (milestone_id, reference, seed)),
+            }
+        }
+        ProviderCommand::RejectMilestoneCommitted {
+            milestone_id,
+            submission_id,
+            evidence,
+            ..
+        } => input(
+            "reject_milestone",
+            (
+                milestone_id,
+                submission_id,
+                Reference::Committed(evidence.clone()),
+            ),
+        ),
+        ProviderCommand::OpenDisputeCommitted {
+            milestone_id,
+            rejected_submission_id,
+            evidence,
+            ..
+        } => input(
+            "open_dispute",
+            (
+                milestone_id,
+                rejected_submission_id,
+                Reference::Committed(evidence.clone()),
+                seed,
+                event_cursor,
+            ),
+        ),
+        ProviderCommand::RespondDisputeCommitted {
+            dispute_id,
+            evidence,
+            ..
+        } => input(
+            "respond_dispute",
+            (dispute_id, Reference::Committed(evidence.clone())),
+        ),
 
         ProviderCommand::CreateProject(request) => input(
             "create_project",
@@ -201,19 +273,25 @@ pub(super) fn requires_money(command: &ProviderCommand) -> bool {
             | ProviderCommand::OpenDispute(_)
             | ProviderCommand::OpenDisputeWithComment(_)
             | ProviderCommand::RespondDispute { .. }
+            | ProviderCommand::SubmitMilestoneCommitted { .. }
+            | ProviderCommand::RejectMilestoneCommitted { .. }
+            | ProviderCommand::OpenDisputeCommitted { .. }
+            | ProviderCommand::RespondDisputeCommitted { .. }
     )
 }
 pub(super) fn execute(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,
-    directory: &Account,
+    state: &mut super::directory::State,
     pending: &PreparedExecution,
     gas: Weight,
     time: u64,
     event_cursor: u64,
 ) -> Result<Outcome, Error> {
+    let directory = &state.directory;
+    let refs = &mut state.legacy_references;
     let call = pending.call();
-    let data = command_input(call, pending.inputs().seed, event_cursor)?;
+    let data = command_input(call, pending.inputs().seed, event_cursor, refs)?;
     let mut invocation = Invocation {
         caller: Account::new(call.origin.into_bytes()),
         action: Action::Call {

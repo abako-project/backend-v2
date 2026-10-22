@@ -167,14 +167,12 @@ exceptions and December 1 expiry.
 The application lock and all contract build locks remain unchanged.
 
 
-M6 adds an immutable `references-v5` WASM artifact to share the backend's exact
-HTTPS parser without exceeding Kreivo's pinned code-size cap. Its direct url
-2.5.8 pin and IDNA/ICU/support versions/checksums reuse the already reviewed SDK
-cohort; all other entries reuse the canonical v5 build cohort. This adds no app
-or SDK dependency, lock change or exception. The canonical reference README
-records primary registry/doc checks, features, MSRV 1.88 for the complete parser
-stack, license and upstream unsafe implications. Artifact source/build locks and
-fresh-source WASM/ABI reproduction remain independently checked.
+M6 originally added a URL-validation helper. SPEC-0014 removes that contract,
+its artifact and build lock. URL validation now remains in the adapter; contracts
+store fixed hashes. No app/SDK dependency, lock or policy exception changes.
+The SDK still uses its existing reviewed SHA-256 implementation for the narrow
+legacy-reference conversion. Rebuilt canonical artifacts retain the same build
+cohort and toolchain.
 
 
 ## M8 native-reference and HTTP link (exact-lock review approved)

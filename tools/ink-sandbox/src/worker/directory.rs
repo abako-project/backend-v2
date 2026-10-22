@@ -114,6 +114,7 @@ pub(super) struct State {
     pub(super) configuration: H256,
     pub(super) shell: Shell,
     pub(super) directory: Account,
+    pub(super) legacy_references: super::evidence_wire::LegacyReferences,
 }
 #[derive(Decode)]
 struct ContractEffect {
@@ -149,6 +150,7 @@ pub(super) fn decode(stored: &Stored, mode: Mode) -> Result<State, Error> {
     if state.version != 1 || state.configuration != configuration {
         return Err(Error::InvalidState);
     }
+    super::evidence_wire::validate(&state.legacy_references)?;
     state.shell.validate(root)?;
     Ok(state)
 }
@@ -227,34 +229,6 @@ pub(super) fn initialize(
             return Err(Error::InvalidState);
         }
     }
-    if fixture.projects {
-        let code = ext.execute_with(|| {
-            Contracts::bare_upload_code(
-                account(fixture.root),
-                bundles.code("references-v5")?.to_vec(),
-                None,
-                Determinism::Enforced,
-            )
-            .map(|upload| upload.code_hash)
-            .map_err(|_| Error::InvalidState)
-        })?;
-        let configured = run(
-            &mut ext,
-            bundles,
-            Invocation {
-                caller: account(fixture.root),
-                action: Action::Call {
-                    address: created.address.clone().ok_or(Error::InvalidState)?,
-                },
-                input: input("configure_reference_code", code),
-                gas: GAS,
-                timestamp_ms: 1_700_000_000_000,
-            },
-        )?;
-        if configured.status != Status::Success || configured.data != [0, 0] {
-            return Err(Error::InvalidState);
-        }
-    }
     if let Some(mock_funding) = fixture.money {
         let address = created.address.clone().ok_or(Error::InvalidState)?;
         ext.execute_with(|| -> Result<(), Error> {
@@ -301,6 +275,7 @@ pub(super) fn initialize(
         configuration,
         shell,
         directory: created.address.ok_or(Error::InvalidState)?,
+        legacy_references: Default::default(),
     };
     Ok((ext, encode(&state)?))
 }
@@ -332,23 +307,6 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
         ..
     } = mode
     {
-        let reference: Option<Account> = read(
-            &mut ext,
-            bundles,
-            &state.directory,
-            state.shell.info.root_account,
-            "reference_address",
-            (),
-        )?;
-        let reference = reference.ok_or(Error::InvalidState)?;
-        if ext.execute_with(|| Contracts::code_hash(&reference))
-            != Some(H256::from(sp_core::hashing::blake2_256(
-                bundles.code("references-v5")?,
-            )))
-        {
-            return Err(Error::InvalidState);
-        }
-
         let addresses: Vec<(EntityId, Account)> =
             read(&mut ext, bundles, &state.directory, root, "projects", ())?;
         let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("projects-v5")?));
@@ -538,9 +496,6 @@ fn domain_error(code: &str) -> Result<&'static str, Error> {
         "invalid_dispute_id" => Err(Error::Invariant("invalid_dispute_id")),
         "invalid_assignment_state" => Err(Error::Invariant("invalid_assignment_state")),
         "provider_unavailable" => Err(Error::Invariant("provider_unavailable")),
-        "reference_call_failed" => Err(Error::Invariant("reference_call_failed")),
-        "reference_instantiation_failed" => Err(Error::Invariant("reference_instantiation_failed")),
-        "incomplete_reference_coverage" => Err(Error::IncompleteCoverage),
         "invalid_storage_state" => Err(Error::Invariant("invalid_storage_state")),
         "project_instantiation_failed" => Err(Error::Invariant("project_instantiation_failed")),
         "project_code_missing" => Err(Error::Invariant("project_code_missing")),
@@ -613,6 +568,8 @@ pub(super) fn evaluate(
             Ok::<(), Error>(())
         })?;
     }
+    let prior_references = state.legacy_references.clone();
+    let event_cursor = state.shell.events.last().map_or(0, |event| event.cursor);
     let outcome = match command_input(&pending.call().command, pending.inputs()) {
         Ok(data) => {
             let invocation = Invocation {
@@ -639,11 +596,11 @@ pub(super) fn evaluate(
             super::projects::execute(
                 &mut ext,
                 bundles,
-                &state.directory,
+                &mut state,
                 &pending,
                 gas,
                 time,
-                state.shell.events.last().map_or(0, |event| event.cursor),
+                event_cursor,
             )?
         }
         Err(error) => return Err(error),
@@ -661,6 +618,9 @@ pub(super) fn evaluate(
         }
     }
     let success = transition.is_ok();
+    if !success {
+        state.legacy_references = prior_references;
+    }
     let receipt = state.shell.complete(pending, transition)?;
     let checkpoint = if success {
         Checkpoint::capture(ext)?
@@ -846,7 +806,9 @@ fn read_marketplace(
         DomainEventKind,
     )> = Vec::new();
     for (id, address) in addresses {
-        let project: ProjectView = read(ext, bundles, &address, origin, "view", ())?;
+        let project: super::evidence_wire::Project =
+            read(ext, bundles, &address, origin, "view", ())?;
+        let project = project.into_domain(&state.legacy_references)?;
         if project.project_id != id {
             return Err(Error::InvalidState);
         }
@@ -940,12 +902,16 @@ pub(super) async fn financial_projection(
         let address = address.map_err(|_| Error::InvalidState)?;
         let record: Result<
             (
-                generated_contracts::Dispute,
-                generated_contracts::MilestoneView,
+                super::evidence_wire::Dispute,
+                super::evidence_wire::Milestone,
             ),
             String,
         > = read(&mut ext, bundles, &address, origin, "dispute", id)?;
-        let record = record.map_err(|_| Error::InvalidState)?;
+        let (case, milestone) = record.map_err(|_| Error::InvalidState)?;
+        let record = (
+            case.into_domain(&state.legacy_references)?,
+            milestone.into_domain(&state.legacy_references)?,
+        );
         if record.0.dispute_id != id || record.0.project_id != project_id {
             return Err(Error::InvalidState);
         }

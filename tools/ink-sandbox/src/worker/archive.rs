@@ -41,7 +41,6 @@ struct Directory {
     score_policy: ScorePolicy,
     compensation_policy: CompensationPolicy,
     _project_code: Option<H256>,
-    _references: Option<(H256, Account)>,
     projects: Vec<EntityId>,
     next_task_id: u32,
     bank: Bank,
@@ -239,11 +238,12 @@ pub(super) fn read(
         let address: Account = reader.value(&state.directory, 8, *id)?;
         let (parent, project, reasons, cases, live): (
             Account,
-            ProjectView,
+            super::evidence_wire::Project,
             Vec<Reason>,
-            Vec<Dispute>,
+            Vec<super::evidence_wire::Dispute>,
             bool,
         ) = reader.child(&address)?;
+        let project = project.into_domain(&state.legacy_references)?;
         if parent != state.directory
             || project.project_id != *id
             || live != sealed
@@ -252,6 +252,7 @@ pub(super) fn read(
             return Err(Error::InvalidState);
         }
         for case in cases {
+            let case = case.into_domain(&state.legacy_references)?;
             let owner: EntityId = reader.value(&state.directory, 12, case.dispute_id)?;
             if case.project_id != *id
                 || owner != *id

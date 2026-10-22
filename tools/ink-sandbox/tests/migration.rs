@@ -1187,3 +1187,172 @@ fn whole_differences_persist_without_substituting_either_primary() {
         }
     });
 }
+
+#[test]
+fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback() {
+    run(async {
+        use ink_v5_compatibility::worker::Authority;
+        let initial: ArchiveV1 = serde_json::from_str(
+            &reference()
+                .archives
+                .into_iter()
+                .find(|a| a.before_step == 70)
+                .unwrap()
+                .archive,
+        )
+        .unwrap();
+        let configuration = config(&initial);
+        let trace: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+        ))
+        .unwrap();
+        let overlay: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/evidence-signed.json"
+        ))
+        .unwrap();
+        let db = Database::new();
+        let mut worker = Worker::import_whole(
+            db.0.clone(),
+            initial.clone(),
+            configuration.clone(),
+            Authority::Sandbox,
+        )
+        .await
+        .unwrap();
+        let mut expected = initial;
+        for (index, step) in trace["steps"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .enumerate()
+            .skip(70)
+        {
+            let replacement = overlay["replacements"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|value| value["step"] == index);
+            let call: SignedContractCallV1 = serde_json::from_value(
+                replacement.map_or_else(|| step["signed"].clone(), |value| value["signed"].clone()),
+            )
+            .unwrap();
+            let inputs: provider_execution::ExecutionInputs =
+                serde_json::from_value(step["inputs"].clone()).unwrap();
+            let native = provider_execution::VerifiedCall::verify(call.clone()).map(|verified| {
+                mock_provider::ReferenceState::from_archive(configuration.root, expected.clone())
+                    .unwrap()
+                    .execute(verified, inputs.clone())
+            });
+            let before = db.stored().await;
+            let result = worker
+                .client()
+                .execute_directory_with_inputs(call.clone(), inputs.clone())
+                .unwrap()
+                .result()
+                .await;
+            match native {
+                Ok(Ok((state, receipt))) => {
+                    assert_eq!(result.unwrap(), receipt, "receipt {index}");
+                    expected = state.archive().unwrap();
+                    let current = db.stored().await;
+                    assert_eq!(
+                        worker
+                            .client()
+                            .execute_directory_with_inputs(call, inputs)
+                            .unwrap()
+                            .result()
+                            .await
+                            .unwrap(),
+                        receipt
+                    );
+                    assert_eq!(db.stored().await, current, "replay {index}");
+                }
+                _ => {
+                    assert!(result.is_err(), "infrastructure {index}");
+                    assert_eq!(db.stored().await, before, "failure {index}");
+                }
+            }
+            let archive = worker
+                .client()
+                .export_archive()
+                .unwrap()
+                .result()
+                .await
+                .unwrap();
+            assert_eq!(
+                serde_json::to_vec(&archive).unwrap(),
+                serde_json::to_vec(&expected).unwrap(),
+                "complete archive {index}"
+            );
+            assert_eq!(
+                worker
+                    .client()
+                    .whole_diagnostics()
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap()
+                    .comparison,
+                "matched"
+            );
+            if index == 104 {
+                worker.shutdown().await.unwrap();
+                worker =
+                    Worker::reopen_whole(db.0.clone(), configuration.clone(), Authority::Sandbox)
+                        .await
+                        .unwrap();
+                let fresh = Database::new();
+                let imported =
+                    Worker::import_archive(fresh.0.clone(), archive.clone(), configuration.clone())
+                        .await
+                        .unwrap();
+                assert_eq!(
+                    serde_json::to_vec(
+                        &imported
+                            .client()
+                            .export_archive()
+                            .unwrap()
+                            .result()
+                            .await
+                            .unwrap()
+                    )
+                    .unwrap(),
+                    serde_json::to_vec(&archive).unwrap()
+                );
+                // A native rollback can immediately consume this complete export.
+                assert_eq!(
+                    serde_json::to_vec(
+                        &mock_provider::ReferenceState::from_archive(configuration.root, archive)
+                            .unwrap()
+                            .archive()
+                            .unwrap()
+                    )
+                    .unwrap(),
+                    serde_json::to_vec(&expected).unwrap()
+                );
+                imported.shutdown().await.unwrap();
+            }
+        }
+        let before = db.stored().await;
+        worker.shutdown().await.unwrap();
+        // Full old preimages live only in the SDK checkpoint. Losing one makes
+        // startup fail instead of silently losing historical evidence.
+        let mut shell: serde_json::Value = serde_json::from_slice(&before.2).unwrap();
+        assert!(!shell["legacy_references"].as_object().unwrap().is_empty());
+        shell["legacy_references"] = serde_json::json!({});
+        let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", db.0.display()))
+            .await
+            .unwrap();
+        sqlx::query("UPDATE candidate_state SET shell=$1")
+            .bind(serde_json::to_vec(&shell).unwrap())
+            .execute(&pool)
+            .await
+            .unwrap();
+        pool.close().await;
+        assert!(
+            Worker::reopen_whole(db.0.clone(), configuration, Authority::Sandbox)
+                .await
+                .is_err()
+        );
+    });
+}

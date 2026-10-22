@@ -286,18 +286,24 @@ settlement, competing full withdrawals, metered approval failure and private rea
 A nested exhausted ink call may surface as an outer contract trap; either known
 metered failure commits only its failed receipt/nonce, with no business effects.
 
-An immutable stateless `references-v5` contract shares the backend's exact URL
-parser, including Unicode hosts and retained digest slots in surrounding DTOs.
-Embedding it in Project exceeded Kreivo's pinned 192 KiB code cap. Splitting the
-parser keeps the current Project (163,482 bytes), Directory (192,755 bytes) and
-validator (155,371 bytes) inside that unchanged cap, with no extra process or
-node. Directory pins its code once; direct query tests compare native URL acceptance and reject replacement.
-All eight artifacts remain immutable; the new parser uses the already reviewed
-SDK registry cohort and changes no app/SDK lock or dependency-policy exception.
+SPEC-0014 removes the URL validator from current execution. The three operational
+contracts are Directory (189,487 bytes), Calendar and Project (163,416 bytes).
+The adapter validates URLs and retains complete evidence; Project stores fixed
+hashes, plus record IDs for new commitments. Contracts never fetch references.
+Seven pinned artifacts remain: these three plus four earlier test fixtures.
+Broader fixture packaging cleanup is separate.
+
+The private SDK codec converts old signed URL references to tagged legacy hashes.
+An offchain checkpoint map retains at most 16,384 distinct legacy references,
+within the existing 64 MiB state budget. It preserves exact original bytes, including
+opaque digest fields. Missing or changed preimages fail explicitly. Import/export
+and rollback restore complete old references; old comment-only history remains
+unanchored. New commands retain their context-bound commitment fields directly.
+These changes add no dependency, service or policy exception.
 
 Configuring Project code permanently disables the early fixtures' fixed external
 controllers. Real hooks accept registered Projects; finance cannot be enabled
-before Project/reference code configuration. Older isolated fixtures retain their
+before Project code configuration. Older isolated fixtures retain their
 explicit test capability. Unsupported component coverage still commits nothing.
 
 These component tests remain private fixture coverage. Complete import, sealed
