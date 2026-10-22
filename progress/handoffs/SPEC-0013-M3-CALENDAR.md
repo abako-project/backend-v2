@@ -1,5 +1,9 @@
 # SPEC-0013 M3: Calendar slice
 
+Follow-up: the signed bridge is now independently approved and closes M3 within
+explicit-fixture scope. See [the final M3 evidence](SPEC-0013-M3-SHELL.md). This
+slice record retains its original scope and verification below.
+
 Task: implement and review the Calendar part of approved SPEC-0013 M3.
 M3 remains in progress until Directory/catalog/registration/mode parity and its
 signed fixture bridge are complete. Rust remains the sole application authority.

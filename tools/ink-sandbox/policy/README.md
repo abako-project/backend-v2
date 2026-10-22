@@ -81,5 +81,7 @@ package is upgraded/removed, SDK cohort is unchanged, and the four advisory IDs,
 thirteen license exceptions and December 1 expiry are unchanged. The renewed
 fingerprint is the SHA256 in `check.py`; the [dependency review](../dependencies.md)
 records features, metadata, alternatives and upstream unsafe/crypto implications.
-Independent M3 review must cover this exact delta before milestone acceptance.
+Independent xhigh M3 review accepted this exact delta at `9dccb98`; see the
+[M3 evidence](../../../progress/handoffs/SPEC-0013-M3-SHELL.md). The renewed lock
+SHA256 is `0868a865d1445ca6b43f194af80b6920741a22748f80fd1e7db54aa409bebbaf`.
 The policy gate passes all four checks with the unchanged exceptions.

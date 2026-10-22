@@ -123,3 +123,11 @@ M2 infrastructure and real-shell fixture integration are complete at reviewed
 implementation `65b9531`, with full application verification passing. See
 [the integration evidence](../../progress/handoffs/SPEC-0013-M2-SHELL.md). This
 does not complete domain parity, M0 performance acceptance or authority promotion.
+
+
+M3 Calendar/Directory and signed fixture integration are complete at independently
+reviewed implementation `9dccb98`. The real-WASM suite (40 tests), unchanged-policy
+SDK dependency checks and full application gate (112 tests, 2 doctests, 8 E2E flows)
+pass. See [M3 evidence](../../progress/handoffs/SPEC-0013-M3-SHELL.md). This closes
+M3 within its explicit fixture scope; it does not complete M4 matching, actual
+Project hooks, import/rollback, performance acceptance or authority promotion.

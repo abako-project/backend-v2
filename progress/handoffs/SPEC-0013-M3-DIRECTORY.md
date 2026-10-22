@@ -1,5 +1,9 @@
 # SPEC-0013 M3: Directory slice
 
+Follow-up: the signed bridge is now independently approved and closes M3 within
+explicit-fixture scope. See [the final M3 evidence](SPEC-0013-M3-SHELL.md). This
+slice record retains its original scope and verification below.
+
 Task: port Directory business rules under approved SPEC-0013, SPEC-0003 and
 SPEC-0006. M3 remains in progress until the real signed Directory/Calendar fixture
 bridge is complete. Rust remains the sole application authority.

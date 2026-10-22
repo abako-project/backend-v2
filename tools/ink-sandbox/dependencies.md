@@ -161,6 +161,7 @@ Primary metadata: [rand 0.10.2](https://crates.io/api/v1/crates/rand/0.10.2),
 [chacha20 0.10.2](https://crates.io/api/v1/crates/chacha20/0.10.2),
 [cpufeatures 0.3.1](https://crates.io/api/v1/crates/cpufeatures/0.3.1).
 The published `rand/src/rngs/std.rs` documents ChaCha12 and non-portability.
-The SDK lock fingerprint is renewed for independent M3 review, under the same
-four advisory IDs, thirteen versioned license exceptions and December 1 expiry.
+Independent xhigh M3 review accepted this exact delta and renewed fingerprint
+at `9dccb98`, under the same four advisory IDs, thirteen versioned license
+exceptions and December 1 expiry.
 The application lock and all contract build locks remain unchanged.

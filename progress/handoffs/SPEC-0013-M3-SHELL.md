@@ -1,8 +1,8 @@
 # SPEC-0013 M3: signed Directory and Calendar
 
 Task: close M3's signed bridge under approved SPEC-0013, SPEC-0003 and SPEC-0006.
-Implementation and local SDK verification complete; full app gate and independent
-milestone review are pending. Rust remains the sole application authority.
+M3 is implemented, verified and independently approved within its explicit
+Calendar/Directory fixture scope. Rust remains the sole application authority.
 
 Branch `feat/ink-v5-directory-shell`, worktree
 `/tmp/kunveno-ink-v5-directory-shell`, base `fa33505` (reviewed Directory slice).
@@ -55,9 +55,9 @@ were checked: MIT OR Apache-2.0, MSRV 1.85, none yanked. Existing upstream crypt
 SIMD/CPU-detection unsafe and platform/libc implications remain documented in
 `tools/ink-sandbox/dependencies.md`; no new native library or handwritten crypto.
 
-The exact-lock policy fingerprint is renewed for this reviewed delta; the four
+The exact-lock policy fingerprint is renewed for this reviewed delta (`0868a865d1445ca6b43f194af80b6920741a22748f80fd1e7db54aa409bebbaf`); the four
 advisory IDs, thirteen package/version license exceptions and December 1 expiry
-are unchanged. Independent milestone review must cover this change. The app lock,
+are unchanged. Independent milestone review accepted this exact delta. The app lock,
 SDK cohort and canonical contract build locks are unchanged. SDK identity changes
 reject old private fixture databases; use fresh disposable candidate data. No
 migration or reset of ordinary provider data occurs.
@@ -68,7 +68,9 @@ migration or reset of ordinary provider data occurs.
   40 real-runtime/unit/integration tests, all-target build.
 - `bash scripts/verify.sh ink-sandbox-dependencies`: PASS, advisories/bans/licenses/
   sources under unchanged approved exceptions and renewed exact lock.
-- `bash scripts/verify.sh app`: running; full results will be recorded before handoff.
+- `bash scripts/verify.sh app`: PASS, formatting/check/strict Clippy, 112 workspace
+  tests plus 2 explicitly ignored authoring tests, 2 doctests, isolated memory/SQLite
+  checks, all-target build, frontend WASM and all 8 real-service E2E flows.
 - `git diff --check`: PASS.
 
 Logs: `/tmp/ink-directory-shell-{sdk-gate,policy,app-gate}.log`. App verification
@@ -78,10 +80,14 @@ claim root policy success. No workflow change or artifact rebuild is required.
 
 ## Independent review and remaining gates
 
-Independent xhigh review of the exact implementation commit is pending. M3 is
-not marked complete until that verdict and all application checks are recorded.
-Previous canonical Calendar/Directory source, Unicode and artifact reproduction
-reviews remain in the linked M3 slice handoffs.
+Independent xhigh review approved exact implementation
+`9dccb981c414d4b06350bdca474366b965fe248b`, with no actionable findings. The reviewer
+independently reran 9 unit tests and all 8 signed Directory tests (17 passed),
+confirmed the complete SDK/application evidence and accepted the exact dependency
+delta and policy renewal. It explicitly approved closing M3 within fixture scope.
+The final evidence commit changes documentation only and needs no implementation
+re-review. Previous canonical Calendar/Directory source, Unicode and artifact
+reproduction reviews remain in the linked M3 slice handoffs.
 
 Partial coverage remains explicit fixtures only. Reputation/matching is M4;
 actual Project reference/reservation-controller wiring is M5/M6. Full import,
