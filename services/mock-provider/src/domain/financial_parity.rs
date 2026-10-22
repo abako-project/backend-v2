@@ -57,6 +57,26 @@ fn canonical_signed_financial_trace() -> TestResult {
     state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
     assert_eq!(json!(projection(&state)?), trace["initial"]);
     for (index, step) in trace["steps"].as_array().ok_or("steps")?.iter().enumerate() {
+        for probe in trace["temporalProbes"]
+            .as_array()
+            .ok_or("temporal probes")?
+            .iter()
+            .filter(|probe| probe["beforeStep"] == index)
+        {
+            let before_domain = digest(&state)?;
+            let before_shell = shell_digest(&state.shell)?;
+            assert_eq!(
+                signed_apply(
+                    &mut state,
+                    serde_json::from_value(probe["signed"].clone())?,
+                    serde_json::from_value(probe["inputs"].clone())?
+                ),
+                probe["outcome"],
+                "temporal probe {index}"
+            );
+            assert_eq!(digest(&state)?, before_domain);
+            assert_eq!(shell_digest(&state.shell)?, before_shell);
+        }
         assert_eq!(
             signed_apply(
                 &mut state,
@@ -79,6 +99,7 @@ fn canonical_signed_financial_trace() -> TestResult {
 struct Fixture {
     state: State,
     steps: Vec<Value>,
+    temporal_probes: Vec<Value>,
 }
 impl Fixture {
     fn step(
@@ -103,11 +124,36 @@ impl Fixture {
         let now = 100u64
             .checked_add(u64::try_from(self.steps.len())?)
             .ok_or("time")?;
-        let inputs = execution::ExecutionInputs {
+        let mut inputs = execution::ExecutionInputs {
             version: 1,
             now: UnixSeconds::new(now),
             seed: [seed; 32],
         };
+        let mut before = self.state.clone();
+        let backward = execution::ExecutionInputs {
+            now: UnixSeconds::new(1),
+            ..inputs.clone()
+        };
+        let probe = signed_apply(&mut before, signed.clone(), backward.clone());
+        if matches!(
+            probe["error"].as_str(),
+            Some(
+                "invalid_deposit_state"
+                    | "invalid_withdrawal_state"
+                    | "invalid_review_state"
+                    | "invalid_dispute_response"
+            )
+        ) {
+            assert_eq!(digest(&before)?, digest(&self.state)?);
+            assert_eq!(
+                shell_digest(&before.shell)?,
+                shell_digest(&self.state.shell)?
+            );
+            self.temporal_probes.push(json!({"beforeStep":self.steps.len(), "signed":signed,"inputs":backward,"outcome":probe}));
+        } else if probe["receipt"]["outcome"]["type"] == "Failed" {
+            // Backward clocks must preserve earlier business-error priority too.
+            inputs = backward;
+        }
         let outcome = signed_apply(&mut self.state, signed.clone(), inputs.clone());
         let entity = outcome
             .get("receipt")
@@ -135,6 +181,7 @@ fn export_financial_trace() -> TestResult {
     let mut fixture = Fixture {
         state,
         steps: Vec::new(),
+        temporal_probes: Vec::new(),
     };
     let amount = |units| KvnAmount::new(Money::new(units));
     let fund = |account, units| -> TestResult<_> {
@@ -269,7 +316,7 @@ fn export_financial_trace() -> TestResult {
     )?;
     assert_eq!(fixture.state.engine.minted_units, Money::new(138));
     execution_scenario(&mut fixture)?;
-    let trace = json!({"schemaVersion":1,"root":signed_account(1)?,"generation":fixture.state.shell.info.provider_instance_id,"initial":initial,"steps":fixture.steps,"final":projection(&fixture.state)?});
+    let trace = json!({"schemaVersion":1,"root":signed_account(1)?,"generation":fixture.state.shell.info.provider_instance_id,"initial":initial,"steps":fixture.steps,"temporalProbes":fixture.temporal_probes,"final":projection(&fixture.state)?});
     std::fs::write(output, serde_json::to_vec_pretty(&trace)?)?;
     Ok(())
 }

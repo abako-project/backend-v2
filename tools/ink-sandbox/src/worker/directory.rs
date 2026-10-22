@@ -525,7 +525,9 @@ fn domain_error(code: &str) -> Result<&'static str, Error> {
         "invalid_dispute_target" => Ok("invalid_dispute_target"),
         "dispute_response_forbidden" => Ok("dispute_response_forbidden"),
         "dispute_already_answered" => Ok("dispute_already_answered"),
-        "score_overflow" => Ok("arithmetic_or_calendar_error"),
+        "score_overflow" => Ok("score_overflow"),
+        "invalid_review_state" => Err(Error::Invariant("invalid_review_state")),
+        "invalid_dispute_response" => Err(Error::Invariant("invalid_dispute_response")),
         "invalid_submission_state" => Err(Error::Invariant("invalid_submission_state")),
         "invalid_dispute_state" => Err(Error::Invariant("invalid_dispute_state")),
         "invalid_dispute_id" => Err(Error::Invariant("invalid_dispute_id")),
@@ -868,6 +870,10 @@ mod tests {
     #[test]
     fn unknown_abi_errors_and_result_flags_abort_without_shell_finalization() {
         for code in [
+            "invalid_review_state",
+            "invalid_dispute_response",
+            "invalid_deposit_state",
+            "invalid_withdrawal_state",
             "invalid_worker_state",
             "invalid_catalog_state",
             "calendar_instantiation_failed",
@@ -882,6 +888,11 @@ mod tests {
         assert!(matches!(
             transition(&outcome(Status::Reverted, rejected.clone())),
             Ok(Err("worker_not_found"))
+        ));
+        let overflow = Result::<Result<(), String>, u8>::Ok(Err("score_overflow".into())).encode();
+        assert!(matches!(
+            transition(&outcome(Status::Reverted, overflow)),
+            Ok(Err("score_overflow"))
         ));
         let effect = (
             DomainEventKind::WorkerRegistered,

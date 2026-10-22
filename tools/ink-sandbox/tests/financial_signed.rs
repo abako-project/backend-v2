@@ -146,6 +146,36 @@ fn native_signed_trace_matches_receipts_events_inputs_nonces_and_domain_after_ev
         let mut worker = db.start().await;
         assert_eq!(json!(projection(&worker.client()).await), trace["initial"]);
         for (index, step) in trace["steps"].as_array().unwrap().iter().enumerate() {
+            for probe in trace["temporalProbes"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|probe| probe["beforeStep"] == index)
+            {
+                let before = db.stored().await;
+                let result = worker
+                    .client()
+                    .execute_directory_with_inputs(
+                        serde_json::from_value(probe["signed"].clone()).unwrap(),
+                        serde_json::from_value(probe["inputs"].clone()).unwrap(),
+                    )
+                    .unwrap()
+                    .result()
+                    .await;
+                let Err(Error::Invariant(code)) = result else {
+                    panic!("temporal probe {index}: {result:?}")
+                };
+                assert_eq!(
+                    json!({"error":code}),
+                    probe["outcome"],
+                    "temporal probe {index}"
+                );
+                assert_eq!(
+                    db.stored().await,
+                    before,
+                    "temporal probe {index} committed"
+                );
+            }
             let call = serde_json::from_value(step["signed"].clone()).unwrap();
             let inputs = serde_json::from_value(step["inputs"].clone()).unwrap();
             let result = worker
