@@ -1222,33 +1222,35 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
 
 #[test]
 fn native_accepts_large_worker_profile_payload() -> TestResult {
-    let mut state = State::new(signed_account(1)?)?;
-    state.shell.info.provider_instance_id = ProviderInstanceId::from_bytes([109; 16]);
-    let mut fixture = Fixture {
-        state,
-        steps: Vec::new(),
-        temporal_probes: Vec::new(),
-    };
-    fixture.step(
-        2,
-        ProviderCommand::RegisterWorker(RegisterWorkerRequest {
-            display_name: "n".repeat(17 * 1024),
-            qualifications: Qualifications {
-                role_ids: Vec::new(),
-                skill_ids: Vec::new(),
-            },
-            calendar: CalendarDefinition {
-                default_weekly_minutes: Minutes::new(600),
-                overrides: Vec::new(),
-            },
-        }),
-        1,
-    )?;
-    assert_eq!(
-        fixture.steps[0]["outcome"]["receipt"]["outcome"]["type"],
-        "Success"
-    );
-    let restored = State::from_archive(fixture.state.archive()?, signed_account(1)?)?;
-    assert_eq!(restored.encode()?, fixture.state.encode()?);
+    for length in [17 * 1024, MAX_SIGNABLE_BYTES - 200] {
+        let mut state = State::new(signed_account(1)?)?;
+        state.shell.info.provider_instance_id = ProviderInstanceId::from_bytes([109; 16]);
+        let mut fixture = Fixture {
+            state,
+            steps: Vec::new(),
+            temporal_probes: Vec::new(),
+        };
+        fixture.step(
+            2,
+            ProviderCommand::RegisterWorker(RegisterWorkerRequest {
+                display_name: "n".repeat(length),
+                qualifications: Qualifications {
+                    role_ids: Vec::new(),
+                    skill_ids: Vec::new(),
+                },
+                calendar: CalendarDefinition {
+                    default_weekly_minutes: Minutes::new(600),
+                    overrides: Vec::new(),
+                },
+            }),
+            1,
+        )?;
+        assert_eq!(
+            fixture.steps[0]["outcome"]["receipt"]["outcome"]["type"],
+            "Success"
+        );
+        let restored = State::from_archive(fixture.state.archive()?, signed_account(1)?)?;
+        assert_eq!(restored.encode()?, fixture.state.encode()?);
+    }
     Ok(())
 }

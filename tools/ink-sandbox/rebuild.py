@@ -50,6 +50,7 @@ def main():
             # Never reuse an application's target directory for the contract toolchain.
             environment = dict(os.environ)
             environment.pop("CARGO_TARGET_DIR", None)
+            environment["INK_STATIC_BUFFER_SIZE"] = str(entry.get("staticBufferBytes", 16384))
             subprocess.run(command, env=environment, check=True)
             if digest(contract / "Cargo.lock") != entry["lockSha256"]:
                 raise SystemExit(f"{name}: build changed the pinned lockfile")

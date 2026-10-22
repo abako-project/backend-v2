@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "1ac6c2dea29ddf4dea83d200075e9cf3521a2e19",
+  "sourceCommit": "7393940190a629fe7330ad1083a21a8b65d04f4a",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
@@ -30,19 +30,22 @@
       "lockSha256": "1193ede85e8cdf2564b030f3e648e6f8fbd2561e226968f39db9a3ae98ad9c42"
     },
     "calendar-v5": {
-      "artifactSha256": "c53d00e6e810212aec1d6511b6bb7d8185da34a87384a2a6f3da5056542255f8",
-      "wasmBlake2b256": "0xc6c0b5eab7ac96915f428cad3b5446490eaa7240a157110ac62788ef9464bfd4",
-      "lockSha256": "cf2238ae1ef1616889a6cadcbfd436e8d052421d47335cc4941502d16d0939b0"
+      "artifactSha256": "4d772ff18aab5944e21a5775f7864dedcc2df6d9ccb4f54058e5dfe922c4164a",
+      "wasmBlake2b256": "0xac2d9cf8bdcd0953e80a340c49d9106ee18df85ef76f47c30e9c6a9e0cc7c4c8",
+      "lockSha256": "513bbe0777d3aa663e3a374807b671b357c5eae73179197fa0b35cf106ffbdad",
+      "staticBufferBytes": 294912
     },
     "directory-v5": {
-      "artifactSha256": "f7b5e8c339ed1e2de0d6bd5af62641b7772e8f259ae3e5364abf993ed67f6090",
-      "wasmBlake2b256": "0x9446c46e00cf0f361bf995fd1d81c8fb77d842384c7e689c28f4bc0b1e245ccc",
-      "lockSha256": "3d81f60e35ee38821c35e2469b9975331729cc05846a971202929b16ab28c85e"
+      "artifactSha256": "7435e1ca8cc826c6aeefbcd72ea463c831aaa51a40824f652a47e2e5641841fe",
+      "wasmBlake2b256": "0x7b85672dcce1678d848371c3f13422d0f658ba19ca1c40616d9b0acc7ecaea43",
+      "lockSha256": "428427180b667dc073849602c430018d6b3678a8719b45695e097f6db06e129a",
+      "staticBufferBytes": 294912
     },
     "projects-v5": {
-      "artifactSha256": "fc9fe8bec5f1b074f640d33682328ff3a9d1463045fc049f288a1fc665682505",
-      "wasmBlake2b256": "0x7f1a0fe587096f408a914227d71c3984efe75cb0492f59389a18f5058738c337",
-      "lockSha256": "e3fa57592b07a7d0ed9edfdb8e1129cec8e6a2c3fac14389265983b23e89d120"
+      "artifactSha256": "a76efd1bbe4f5a458a379334376ddeaf5cbfbccf31d6a710cab933dd4eaae0ae",
+      "wasmBlake2b256": "0xc8104a2ac0c35e849e0c898b512d7a88d0ea9914a58cf43f1642711dae883140",
+      "lockSha256": "21a7df427f8c30a8469198090b279d1ccd4bad4511c96e60f0a178590bc43d51",
+      "staticBufferBytes": 294912
     },
     "references-v5": {
       "artifactSha256": "970641bf0f851ca95d4cfed76c8fa1d4bcb61d8d7be49834a16e1a6de002db5d",

@@ -85,8 +85,9 @@ impl InitialState {
 }
 
 pub const QUEUE_CAPACITY: usize = 8;
-pub const MAX_INPUT: usize = 64 * 1024;
-pub const MAX_SHELL: usize = 1024 * 1024;
+// Retain the existing unsigned limit plus signature/ABI framing overhead.
+pub const MAX_INPUT: usize = generated_contracts::MAX_SIGNABLE_BYTES + 1024;
+pub const MAX_SHELL: usize = 64 * 1024 * 1024;
 
 #[derive(Debug)]
 pub enum Error {
@@ -674,7 +675,7 @@ async fn open(
         .acquire_timeout(Duration::from_secs(6))
         .connect_with(options)
         .await?;
-    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-calendar-v1','signed-directory-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 1048576), outcome BLOB NOT NULL CHECK(length(outcome) <= 131072))").execute(&pool).await?;
+    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-calendar-v1','signed-directory-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 67108864), outcome BLOB NOT NULL CHECK(length(outcome) <= 524288))").execute(&pool).await?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let exists: i64 = sqlx::query_scalar("SELECT count(*) FROM candidate_state")
         .fetch_one(&mut *tx)
@@ -716,7 +717,7 @@ async fn load(
     mode: Mode,
 ) -> Result<Stored, Error> {
     // Check lengths in SQL before materializing potentially corrupt blobs.
-    let row = sqlx::query("SELECT revision, runtime, shell FROM candidate_state WHERE singleton = 1 AND mode = ? AND revision >= 0 AND length(runtime) <= 67108864 AND length(shell) <= 1048576 AND length(outcome) <= 131072").bind(mode.key()).fetch_optional(&mut **tx).await?.ok_or(Error::InvalidState)?;
+    let row = sqlx::query("SELECT revision, runtime, shell FROM candidate_state WHERE singleton = 1 AND mode = ? AND revision >= 0 AND length(runtime) <= 67108864 AND length(shell) <= 67108864 AND length(outcome) <= 524288").bind(mode.key()).fetch_optional(&mut **tx).await?.ok_or(Error::InvalidState)?;
     let revision: i64 = row.try_get("revision")?;
     let bytes: Vec<u8> = row.try_get("runtime")?;
     Ok(Stored {
