@@ -3,6 +3,10 @@ use super::*;
 use provider_execution::{Admission, ExecutionInputs, VerifiedCall, migration::ArchiveV1};
 use serde::{Deserialize, Serialize};
 
+#[cfg(test)]
+thread_local! {
+    static NATIVE_EXECUTIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Encode, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Authority {
@@ -166,6 +170,18 @@ fn validated_candidate(applied: &directory::Applied, mode: Mode) -> Result<&Arch
     reference(mode, archive.clone())?;
     Ok(archive)
 }
+fn evaluate_candidate(
+    bundles: &Bundles,
+    stored: &Stored,
+    mode: Mode,
+    verified: VerifiedCall,
+    inputs: ExecutionInputs,
+) -> Result<Box<directory::Applied>, Error> {
+    let evaluated = directory::evaluate(bundles, stored, mode, verified, inputs.now, Some(inputs))?;
+    let applied = applied(evaluated)?;
+    validated_candidate(&applied, mode)?;
+    Ok(applied)
+}
 pub(super) async fn execute(
     pool: &SqlitePool,
     bundles: &Bundles,
@@ -200,11 +216,24 @@ pub(super) async fn execute(
         Admission::Execute(pending) => pending.inputs().clone(),
     };
     let comparing = native.diagnostics.comparison == "matched";
-    let mut candidate_result = None;
+    // A failed metered primary must not start unmetered native comparison work.
+    let mut candidate_result = if selected == Authority::Sandbox {
+        Some(evaluate_candidate(
+            bundles,
+            &stored,
+            mode,
+            verified.clone(),
+            inputs.clone(),
+        )?)
+    } else {
+        None
+    };
     let mut native_receipt = None;
     if selected != Authority::Sandbox || comparing {
         let result = reference(mode, native.archive.clone())
             .and_then(|state| {
+                #[cfg(test)]
+                NATIVE_EXECUTIONS.with(|count| count.set(count.get() + 1));
                 state
                     .execute(verified.clone(), inputs.clone())
                     .map_err(Error::Reference)
@@ -223,16 +252,9 @@ pub(super) async fn execute(
             Err(_) => native.diagnostics.comparison = "incomplete".into(),
         }
     }
-    if selected == Authority::Sandbox || (selected == Authority::Shadow && comparing) {
-        let result = directory::evaluate(bundles, &stored, mode, verified, now, Some(inputs))
-            .and_then(applied)
-            .and_then(|applied| {
-                validated_candidate(&applied, mode)?;
-                Ok(applied)
-            });
-        match result {
+    if selected == Authority::Shadow && comparing {
+        match evaluate_candidate(bundles, &stored, mode, verified, inputs) {
             Ok(applied) => candidate_result = Some(applied),
-            Err(error) if selected == Authority::Sandbox => return Err(error),
             Err(_) => native.diagnostics.comparison = "incomplete".into(),
         }
     }
@@ -288,4 +310,72 @@ pub(super) async fn execute(
     }
     tx.commit().await?;
     Ok(receipt)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn sandbox_exhaustion_does_not_execute_native_reference() {
+        tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap()
+            .block_on(async {
+                let fixtures: serde_json::Value = serde_json::from_str(include_str!(
+                    "../../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
+                ))
+                .unwrap();
+                let source = fixtures["archives"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|item| item["beforeStep"] == 70)
+                    .unwrap()["archive"]
+                    .as_str()
+                    .unwrap();
+                let archive: ArchiveV1 = serde_json::from_str(source).unwrap();
+                let configuration = WholeConfiguration {
+                    root: archive.checkpoint.info.root_account,
+                    generation: archive.checkpoint.info.provider_instance_id,
+                    mock_funding: true,
+                    gas_limit: Weight::from_parts(1, 1),
+                };
+                let selected = mode(&configuration, Authority::Sandbox);
+                let path = std::env::temp_dir()
+                    .join(format!("ink-reference-order-{}.sqlite", std::process::id()));
+                assert!(!path.exists());
+                let bundles = Bundles::pinned().unwrap();
+                let pool = open(
+                    path.clone(),
+                    InitialState::WholeImport {
+                        archive: Box::new(archive),
+                        configuration,
+                        authority: Authority::Sandbox,
+                    },
+                    &bundles,
+                )
+                .await
+                .unwrap();
+                let trace: serde_json::Value = serde_json::from_str(include_str!(
+                    "../../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+                ))
+                .unwrap();
+                let step = &trace["steps"][70];
+                let call = serde_json::from_value(step["signed"].clone()).unwrap();
+                let inputs: ExecutionInputs =
+                    serde_json::from_value(step["inputs"].clone()).unwrap();
+                NATIVE_EXECUTIONS.with(|count| count.set(0));
+                let result =
+                    execute(&pool, &bundles, selected, call, inputs.now, Some(inputs)).await;
+                let native_executions = NATIVE_EXECUTIONS.with(std::cell::Cell::get);
+                pool.close().await;
+                std::fs::remove_file(path).unwrap();
+                assert!(matches!(result, Err(Error::ExecutionLimit(_))));
+                assert_eq!(
+                    native_executions, 0,
+                    "metered primary failure must precede native reference work"
+                );
+            });
+    }
 }
