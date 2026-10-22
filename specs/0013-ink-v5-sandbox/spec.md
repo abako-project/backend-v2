@@ -140,3 +140,11 @@ SDK policy checks, fresh-source WASM/ABI reproduction and the full app gate
 records the inherited version-1 sampler's minute documented bias; this preserves
 native behavior and does not claim strict mathematical unbiasedness. No retained
 input semantics are silently changed. Actual Project composition is M5/M6.
+
+M5 Project factory/planning/tasks are independently approved at backend `a15ed91`
+and canonical `409dee7`. The 74-call signed native/WASM trace includes exact
+collision-error parity and retained task keys/IDs. All 47 SDK tests, unchanged SDK
+policy, fresh three-artifact reproduction and the full app gate (114 tests,
+2 doctests, 8 E2E flows) pass. [M5 evidence](../../progress/handoffs/SPEC-0013-M5.md)
+records the reviewed correction. Money/execution remain explicitly incomplete;
+M6 continues without changing the Rust application's authority.
