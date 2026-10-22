@@ -21,6 +21,7 @@ status and each feature's recorded evidence for observed results.
 | [0012: platform profile](specs/0012-platform-profile/spec.md) | APPROVED | Deployment branding, vocabulary, currency display and compatible custom project types |
 
 | [0013: ink! v5 sandbox](specs/0013-ink-v5-sandbox/spec.md) | APPROVED | Staged canonical contract execution with compatibility, persistence and migration gates |
+| [0014: evidence commitments](specs/0014-evidence-commitments/spec.md) | DRAFT | Adapter-owned immutable evidence and fixed-size onchain commitments; anchoring scope pending |
 
 The [repository simplification plan](docs/project/repository-simplification.md)
 is approved as SIMPLIFY-001. It preserves application behavior and contracts.
