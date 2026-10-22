@@ -1,0 +1,62 @@
+//! Existing private HTTP provider contract over the bounded runtime worker.
+use crate::worker::{Client, Error, Ticket};
+use generated_contracts::*;
+use mock_provider::{ProviderApi, ReferenceState, Result};
+
+fn transport(error: Error) -> mock_provider::Error {
+    match error {
+        Error::Reference(error) => error,
+        Error::Shell(error) => error.into(),
+        _ => mock_provider::Error::unavailable(),
+    }
+}
+async fn result<T>(ticket: std::result::Result<Ticket<T>, Error>) -> Result<T> {
+    ticket.map_err(transport)?.result().await.map_err(transport)
+}
+impl Client {
+    async fn read<T: Send + 'static>(
+        &self,
+        read: impl FnOnce(ReferenceState) -> Result<T> + Send + 'static,
+    ) -> Result<T> {
+        result(self.read_reference(read)).await
+    }
+}
+impl ProviderApi for Client {
+    async fn info(&self) -> Result<ProviderInfo> {
+        self.read(|state| Ok(state.info())).await
+    }
+    async fn nonce(&self, account: AccountId32) -> Result<AccountNonce> {
+        self.read(move |state| Ok(state.nonce(account))).await
+    }
+    async fn snapshot(&self) -> Result<ProviderSnapshot> {
+        self.read(|state| Ok(state.snapshot())).await
+    }
+    async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
+        self.read(move |state| Ok(state.receipt(operation))).await
+    }
+    async fn events(&self, after: u64, limit: usize) -> Result<ProviderEvents> {
+        self.read(move |state| state.events(after, limit)).await
+    }
+    async fn execute(
+        &self,
+        call: SignedContractCallV1,
+        now: UnixSeconds,
+    ) -> Result<OperationReceipt> {
+        result(self.execute_signed(call, now)).await
+    }
+    async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestView>> {
+        self.read(move |state| Ok(state.skill_requests(origin)))
+            .await
+    }
+    async fn dispute(&self, id: EntityId) -> Result<DisputeView> {
+        self.read(move |state| state.dispute(id)).await
+    }
+    async fn bramp_deposit(&self, origin: AccountId32, id: EntityId) -> Result<DepositView> {
+        self.read(move |state| state.bramp_deposit(origin, id))
+            .await
+    }
+    async fn bramp_withdrawal(&self, origin: AccountId32, id: EntityId) -> Result<WithdrawalView> {
+        self.read(move |state| state.bramp_withdrawal(origin, id))
+            .await
+    }
+}

@@ -223,7 +223,7 @@ pub(super) fn execute(
         gas,
         timestamp_ms: time,
     };
-    invocation.validate()?;
+    invocation.validate_with_budget(crate::WHOLE_GAS)?;
     let mut resolution_gas = Weight::zero();
     if !matches!(
         call.command,

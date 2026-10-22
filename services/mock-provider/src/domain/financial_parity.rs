@@ -1783,6 +1783,55 @@ fn export_migration_reference() -> TestResult {
     )?;
     Ok(())
 }
+fn ordinary_qualification_capacity_reference(frozen: Option<&[Value]>) -> TestResult<Vec<Value>> {
+    let reference: MigrationReference =
+        serde_json::from_str(include_str!("fixtures/migration-signed.json"))?;
+    let source = reference.aggregate_cases.get(2).ok_or("worker case")?;
+    let archive = serde_json::from_str(source["archive"].as_str().ok_or("archive")?)?;
+    let mut state = State::from_archive(archive, signed_account(1)?)?;
+    let original: provider_execution::migration::ArchiveV1 =
+        serde_json::from_str(&reference.archives.last().ok_or("snapshot")?.archive)?;
+    let owner = signed_account(2)?;
+    let large = state.engine.workers[&owner].qualifications.clone();
+    let small = original.checkpoint.workers[&owner].qualifications.clone();
+    let mut steps = Vec::new();
+    for (index, qualifications) in [large.clone(), small, large].into_iter().enumerate() {
+        let serial = 239u8.checked_add(u8::try_from(index)?).ok_or("serial")?;
+        let signed = migration_signed(
+            &state,
+            owner,
+            ProviderCommand::UpdateQualifications(UpdateQualificationsRequest { qualifications }),
+            serial,
+            frozen.and_then(|steps| steps.get(index)),
+        )?;
+        let inputs = migration_inputs(serial);
+        let outcome = signed_apply(&mut state, signed.clone(), inputs.clone());
+        assert_eq!(outcome["receipt"]["outcome"]["type"], "Success");
+        steps.push(json!({"signed":signed, "inputs":inputs, "outcome":outcome,
+            "afterDigest":format!("{:x}", Sha256::digest(serde_json::to_vec(&state.archive()?)?))}));
+    }
+    Ok(steps)
+}
+#[test]
+#[ignore = "Capacity reference authoring requires an explicit output path"]
+fn export_ordinary_qualification_capacity() -> TestResult {
+    std::fs::write(
+        std::env::var("QUALIFICATION_CAPACITY_REFERENCE")?,
+        serde_json::to_string_pretty(&ordinary_qualification_capacity_reference(None)?)?,
+    )?;
+    Ok(())
+}
+#[test]
+fn complete_ordinary_qualification_capacity_reference() -> TestResult {
+    let expected: Vec<Value> =
+        serde_json::from_str(include_str!("fixtures/qualification-capacity-signed.json"))?;
+    let actual = ordinary_qualification_capacity_reference(Some(&expected))?;
+    assert_eq!(
+        Sha256::digest(serde_json::to_vec(&actual)?),
+        Sha256::digest(serde_json::to_vec(&expected)?)
+    );
+    Ok(())
+}
 #[test]
 fn complete_retained_migration_reference() -> TestResult {
     let expected: MigrationReference =

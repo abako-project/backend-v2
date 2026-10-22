@@ -1,4 +1,4 @@
-//! Private candidate execution. This module is not linked into the provider.
+//! Private candidate execution, isolated from the default application binary.
 //!
 //! Raw fixtures supply opaque envelopes; signed fixtures use the real shell.
 //! Neither this module nor callers may infer non-execution from a lost response.
@@ -34,7 +34,9 @@ mod archive;
 pub mod comparison;
 mod directory;
 mod migration;
+mod whole;
 pub use migration::WholeConfiguration;
+pub use whole::{Authority, WholeDiagnostics};
 mod projects;
 mod signed;
 pub use directory::{
@@ -57,6 +59,7 @@ enum Mode {
         projects: bool,
         money: bool,
         whole: bool,
+        authority: Option<Authority>,
     },
 }
 impl Mode {
@@ -80,10 +83,28 @@ enum InitialState {
         configuration: WholeConfiguration,
     },
     Reopen(WholeConfiguration),
+    WholeImport {
+        archive: Box<provider_execution::migration::ArchiveV1>,
+        configuration: WholeConfiguration,
+        authority: Authority,
+    },
+    WholeReopen {
+        configuration: WholeConfiguration,
+        authority: Authority,
+    },
 }
 impl InitialState {
     fn mode(&self) -> Mode {
         match self {
+            Self::WholeImport {
+                configuration,
+                authority,
+                ..
+            }
+            | Self::WholeReopen {
+                configuration,
+                authority,
+            } => whole::mode(configuration, *authority),
             Self::Raw { .. } => Mode::Raw,
             Self::Calendar(fixture) => Mode::Calendar {
                 root: fixture.root,
@@ -111,10 +132,12 @@ pub enum Error {
     Stopped,
     StaleRevision,
     Limit,
+    ExecutionLimit(Weight),
     InvalidState,
     Invariant(&'static str),
     Shell(provider_execution::Error),
     IncompleteCoverage,
+    Reference(mock_provider::Error),
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -129,10 +152,12 @@ impl std::fmt::Display for Error {
                 Self::Stopped => "stopped",
                 Self::StaleRevision => "stale revision",
                 Self::Limit => "resource limit",
+                Self::ExecutionLimit(_) => "execution resource limit",
                 Self::InvalidState => "invalid stored state",
                 Self::Invariant(code) => code,
                 Self::Shell(error) => error.code(),
                 Self::IncompleteCoverage => "incomplete contract coverage",
+                Self::Reference(_) => "native reference failure",
             }
         )
     }
@@ -167,7 +192,10 @@ pub struct Invocation {
 }
 impl Invocation {
     fn validate(&self) -> Result<(), Error> {
-        if self.input.len() > MAX_INPUT || !self.gas.all_lte(GAS) {
+        self.validate_with_budget(GAS)
+    }
+    fn validate_with_budget(&self, limit: Weight) -> Result<(), Error> {
+        if self.input.len() > MAX_INPUT || !self.gas.all_lte(limit) {
             return Err(Error::Limit);
         }
         if let Action::Instantiate { bundle, salt } = &self.action
@@ -212,7 +240,10 @@ impl<T> Ticket<T> {
         self.0.await.map_err(|_| Error::Stopped)?
     }
 }
+type ReadReference = Box<dyn FnOnce(Result<mock_provider::ReferenceState, Error>) + Send>;
 enum Job {
+    ReadReference(ReadReference),
+    WholeDiagnostics(oneshot::Sender<Result<WholeDiagnostics, Error>>),
     Stop,
     Signed {
         call: SignedContractCallV1,
@@ -257,6 +288,27 @@ pub struct Client {
     stopping: Arc<AtomicBool>,
 }
 impl Client {
+    /// Run an existing read model on the selected primary, serialized off Tokio cores.
+    pub fn read_reference<T: Send + 'static>(
+        &self,
+        read: impl FnOnce(mock_provider::ReferenceState) -> mock_provider::Result<T> + Send + 'static,
+    ) -> Result<Ticket<T>, Error> {
+        whole::authority(self.mode)?;
+        let (reply, receiver) = oneshot::channel();
+        self.send(Job::ReadReference(Box::new(move |state| {
+            respond(
+                reply,
+                state.and_then(|state| read(state).map_err(Error::Reference)),
+            )
+        })))?;
+        Ok(Ticket(receiver))
+    }
+    pub fn whole_diagnostics(&self) -> Result<Ticket<WholeDiagnostics>, Error> {
+        whole::authority(self.mode)?;
+        let (reply, receiver) = oneshot::channel();
+        self.send(Job::WholeDiagnostics(reply))?;
+        Ok(Ticket(receiver))
+    }
     fn request_stop(&self) {
         self.stopping.store(true, Ordering::Release);
         // A full queue already wakes the receiver. Disconnection means it has
@@ -297,12 +349,15 @@ impl Client {
         Ok(Ticket(result))
     }
     pub fn query(&self, invocation: Invocation) -> Result<Ticket<Outcome>, Error> {
+        if whole::authority(self.mode).is_ok() {
+            return Err(Error::IncompleteCoverage);
+        }
         invocation.validate()?;
         let (reply, result) = oneshot::channel();
         self.send(Job::Query { invocation, reply })?;
         Ok(Ticket(result))
     }
-    /// Fixture-only signed execution uses the real provider shell; no caller
+    /// Signed execution uses the real provider shell; no caller
     /// supplies a nonce update, receipt, outcome or event.
     pub fn execute_signed(
         &self,
@@ -346,7 +401,7 @@ impl Client {
         })?;
         Ok(Ticket(result))
     }
-    /// Read-only M3 projection, including request visibility for this fixture caller.
+    /// Complete selected-primary archive for a drained administrative cutover.
     pub fn export_archive(
         &self,
     ) -> Result<Ticket<provider_execution::migration::ArchiveV1>, Error> {
@@ -361,6 +416,9 @@ impl Client {
         &self,
         origin: AccountId32,
     ) -> Result<Ticket<DirectoryProjection>, Error> {
+        if whole::authority(self.mode).is_ok() {
+            return Err(Error::IncompleteCoverage);
+        }
         if !matches!(self.mode, Mode::Directory { .. }) {
             return Err(Error::InvalidState);
         }
@@ -382,6 +440,9 @@ impl Client {
         &self,
         origin: AccountId32,
     ) -> Result<Ticket<MarketplaceProjection>, Error> {
+        if whole::authority(self.mode).is_ok() {
+            return Err(Error::IncompleteCoverage);
+        }
         if !matches!(self.mode, Mode::Directory { projects: true, .. }) {
             return Err(Error::IncompleteCoverage);
         }
@@ -394,6 +455,9 @@ impl Client {
         &self,
         origin: AccountId32,
     ) -> Result<Ticket<FinancialProjection>, Error> {
+        if whole::authority(self.mode).is_ok() {
+            return Err(Error::IncompleteCoverage);
+        }
         if !matches!(self.mode, Mode::Directory { money: true, .. }) {
             return Err(Error::IncompleteCoverage);
         }
@@ -402,6 +466,9 @@ impl Client {
         Ok(Ticket(result))
     }
     pub fn money_projection(&self, origin: AccountId32) -> Result<Ticket<MoneyProjection>, Error> {
+        if whole::authority(self.mode).is_ok() {
+            return Err(Error::IncompleteCoverage);
+        }
         if !matches!(self.mode, Mode::Directory { money: true, .. }) {
             return Err(Error::IncompleteCoverage);
         }
@@ -422,6 +489,48 @@ pub struct Worker {
     done: Option<oneshot::Receiver<Result<(), Error>>>,
 }
 impl Worker {
+    /// Fresh whole-provider store. Authority is fixed for its lifetime.
+    pub async fn import_whole(
+        path: PathBuf,
+        archive: provider_execution::migration::ArchiveV1,
+        configuration: WholeConfiguration,
+        authority: Authority,
+    ) -> Result<Self, Error> {
+        configuration.validate()?;
+        // The retained native reference is compiled with the mock-seed policy.
+        if !configuration.mock_funding {
+            return Err(Error::InvalidState);
+        }
+        Self::start_with(
+            path,
+            InitialState::WholeImport {
+                archive: Box::new(archive),
+                configuration,
+                authority,
+            },
+        )
+        .await
+    }
+    /// Reopen only a compatible whole-provider store; never reseed missing state.
+    pub async fn reopen_whole(
+        path: PathBuf,
+        configuration: WholeConfiguration,
+        authority: Authority,
+    ) -> Result<Self, Error> {
+        configuration.validate()?;
+        // The retained native reference is compiled with the mock-seed policy.
+        if !configuration.mock_funding {
+            return Err(Error::InvalidState);
+        }
+        Self::start_with(
+            path,
+            InitialState::WholeReopen {
+                configuration,
+                authority,
+            },
+        )
+        .await
+    }
     /// Creates candidate state only when no checkpoint exists. Corrupt or
     /// incompatible checkpoints fail startup; they are never replaced by genesis.
     pub async fn start(
@@ -503,6 +612,16 @@ impl Worker {
                                 Ok(None) | Err(_) => break,
                             };
                             match job {
+                                Job::ReadReference(read) => {
+                                    let state = runtime
+                                        .block_on(whole::export(&pool, &bundles, mode))
+                                        .and_then(|archive| whole::reference(mode, archive));
+                                    read(state);
+                                }
+                                Job::WholeDiagnostics(reply) => respond(
+                                    reply,
+                                    runtime.block_on(whole::diagnostics(&pool, mode)),
+                                ),
                                 Job::Stop => break,
                                 Job::Signed {
                                     call,
@@ -515,6 +634,15 @@ impl Worker {
                                             reply,
                                             runtime.block_on(async {
                                                 match mode {
+                                                    Mode::Directory {
+                                                        authority: Some(_), ..
+                                                    } => {
+                                                        whole::execute(
+                                                            &pool, &bundles, mode, call, now,
+                                                            inputs,
+                                                        )
+                                                        .await
+                                                    }
                                                     Mode::Directory { .. } => {
                                                         directory::execute(
                                                             &pool, &bundles, mode, call, now,
@@ -537,8 +665,13 @@ impl Worker {
                                     if !reply.is_closed() {
                                         respond(
                                             reply,
-                                            runtime
-                                                .block_on(migration::export(&pool, &bundles, mode)),
+                                            runtime.block_on(async {
+                                                if whole::authority(mode).is_ok() {
+                                                    whole::export(&pool, &bundles, mode).await
+                                                } else {
+                                                    migration::export(&pool, &bundles, mode).await
+                                                }
+                                            }),
                                         );
                                     }
                                 }
@@ -548,6 +681,12 @@ impl Worker {
                                             reply,
                                             runtime.block_on(async {
                                                 match mode {
+                                                    Mode::Directory {
+                                                        authority: Some(_), ..
+                                                    } => Ok(whole::export(&pool, &bundles, mode)
+                                                        .await?
+                                                        .checkpoint
+                                                        .shell()),
                                                     Mode::Directory { .. } => {
                                                         directory::read_shell(&pool, &bundles, mode)
                                                             .await
@@ -722,7 +861,10 @@ async fn open(
     let mode = initial.mode();
     let options = SqliteConnectOptions::new()
         .filename(path)
-        .create_if_missing(true)
+        .create_if_missing(!matches!(
+            &initial,
+            InitialState::Reopen(_) | InitialState::WholeReopen { .. }
+        ))
         .busy_timeout(Duration::from_secs(5))
         .synchronous(SqliteSynchronous::Full);
     let pool = SqlitePoolOptions::new()
@@ -730,16 +872,28 @@ async fn open(
         .acquire_timeout(Duration::from_secs(6))
         .connect_with(options)
         .await?;
+    let foreign_tables: i64 = sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name NOT IN ('candidate_state','candidate_reference') AND name NOT LIKE 'sqlite_%'")
+        .fetch_one(&pool).await?;
+    if foreign_tables != 0 {
+        return Err(Error::InvalidState);
+    }
     sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-calendar-v1','signed-directory-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 67108864), outcome BLOB NOT NULL CHECK(length(outcome) <= 524288))").execute(&pool).await?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let exists: i64 = sqlx::query_scalar("SELECT count(*) FROM candidate_state")
         .fetch_one(&mut *tx)
         .await?;
-    if (matches!(&initial, InitialState::Import { .. }) && exists != 0)
-        || (matches!(&initial, InitialState::Reopen(_)) && exists == 0)
+    if (matches!(
+        &initial,
+        InitialState::Import { .. } | InitialState::WholeImport { .. }
+    ) && exists != 0)
+        || (matches!(
+            &initial,
+            InitialState::Reopen(_) | InitialState::WholeReopen { .. }
+        ) && exists == 0)
     {
         return Err(Error::InvalidState);
     }
+    let mut reference_archive = None;
     if exists == 0 {
         let (ext, shell) = match initial {
             InitialState::Raw { accounts, shell } => (new_externalities(accounts)?, shell),
@@ -749,7 +903,24 @@ async fn open(
                 archive,
                 configuration,
             } => migration::initialize(bundles, *archive, configuration)?,
-            InitialState::Reopen(_) => return Err(Error::InvalidState),
+            InitialState::WholeImport {
+                archive,
+                configuration,
+                ..
+            } => {
+                whole::reference(mode, (*archive).clone())?;
+                reference_archive = Some((*archive).clone());
+                let (ext, bytes) = migration::initialize(bundles, *archive, configuration)?;
+                let mut state: directory::State =
+                    serde_json::from_slice(&bytes).map_err(|_| Error::InvalidState)?;
+                if let Mode::Directory { configuration, .. } = mode {
+                    state.configuration = configuration;
+                }
+                (ext, directory::encode(&state)?)
+            }
+            InitialState::Reopen(_) | InitialState::WholeReopen { .. } => {
+                return Err(Error::InvalidState);
+            }
         };
         let checkpoint = Checkpoint::capture(ext)?.to_bytes()?;
         sqlx::query("INSERT INTO candidate_state (singleton, revision, mode, runtime, shell, outcome) VALUES (1, 0, ?, ?, ?, ?)")
@@ -766,6 +937,9 @@ async fn open(
     }
     if matches!(mode, Mode::Directory { .. }) {
         directory::validate(&stored, bundles, mode)?;
+    }
+    if whole::authority(mode).is_ok() {
+        whole::initialize(&mut tx, &stored, bundles, mode, reference_archive).await?;
     }
     tx.commit().await?;
     Ok(pool)

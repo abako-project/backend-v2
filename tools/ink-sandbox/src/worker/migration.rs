@@ -14,7 +14,9 @@ pub struct WholeConfiguration {
 }
 impl WholeConfiguration {
     pub(super) fn validate(&self) -> Result<(), Error> {
-        if !self.gas_limit.all_lte(GAS) || self.root == AccountId32::from_bytes([0; 32]) {
+        if !self.gas_limit.all_lte(crate::WHOLE_GAS)
+            || self.root == AccountId32::from_bytes([0; 32])
+        {
             return Err(Error::InvalidState);
         }
         Ok(())
@@ -38,6 +40,7 @@ impl WholeConfiguration {
             projects: true,
             money: true,
             whole: true,
+            authority: None,
         }
     }
 }
@@ -198,7 +201,7 @@ pub(super) fn initialize(
         reservation_controller: configuration.root,
         reference_controller: configuration.root,
         generation: Some(configuration.generation),
-        gas_limit: configuration.gas_limit,
+        gas_limit: GAS,
         projects: true,
         money: Some(configuration.mock_funding),
     };

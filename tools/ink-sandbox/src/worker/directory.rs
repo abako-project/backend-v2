@@ -103,6 +103,7 @@ impl DirectoryFixture {
             projects: self.projects,
             money: self.money.is_some(),
             whole: false,
+            authority: None,
         }
     }
 }
@@ -551,29 +552,37 @@ fn domain_error(code: &str) -> Result<&'static str, Error> {
         _ => Err(Error::InvalidState),
     }
 }
-pub(super) async fn execute(
-    pool: &SqlitePool,
+pub(super) struct Applied {
+    pub(super) checkpoint: Checkpoint,
+    pub(super) state: State,
+    pub(super) receipt: OperationReceipt,
+    pub(super) outcome: Outcome,
+    pub(super) archive: Option<provider_execution::migration::ArchiveV1>,
+}
+pub(super) enum Evaluation {
+    Replay(OperationReceipt),
+    Applied(Box<Applied>),
+}
+/// Evaluate tentatively; the caller owns the single durable commit boundary.
+pub(super) fn evaluate(
     bundles: &Bundles,
+    stored: &Stored,
     mode: Mode,
-    call: SignedContractCallV1,
+    verified: VerifiedCall,
     now: UnixSeconds,
     inputs: Option<ExecutionInputs>,
-) -> Result<OperationReceipt, Error> {
+) -> Result<Evaluation, Error> {
     let Mode::Directory { gas, .. } = mode else {
         return Err(Error::InvalidState);
     };
-    let verified = VerifiedCall::verify(call)?;
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let stored = load(&mut tx, bundles.identity(), mode).await?;
-    let mut state = decode(&stored, mode)?;
+    let mut state = decode(stored, mode)?;
     let admission = match inputs {
         Some(inputs) => state.shell.prepare_with_inputs(verified, inputs)?,
         None => state.shell.prepare(verified, now)?,
     };
     let pending = match admission {
         Admission::Replay(receipt) => {
-            tx.rollback().await?;
-            return Ok(receipt);
+            return Ok(Evaluation::Replay(receipt));
         }
         Admission::Execute(pending) => *pending,
     };
@@ -615,7 +624,13 @@ pub(super) async fn execute(
                 gas,
                 timestamp_ms: time,
             };
-            invocation.validate()?;
+            invocation.validate_with_budget(
+                if matches!(mode, Mode::Directory { whole: true, .. }) {
+                    crate::WHOLE_GAS
+                } else {
+                    GAS
+                },
+            )?;
             run(&mut ext, bundles, invocation)?
         }
         Err(Error::IncompleteCoverage)
@@ -634,31 +649,79 @@ pub(super) async fn execute(
         Err(error) => return Err(error),
     };
     let transition = transition(&outcome)?;
+    // Resource/VM failures are infrastructure, not canonical business rejections.
+    // Whole-provider retries must retain the nonce and original durable state.
+    if matches!(mode, Mode::Directory { whole: true, .. }) {
+        match transition {
+            Err("sandbox_out_of_gas") => return Err(Error::ExecutionLimit(outcome.gas_consumed)),
+            Err("sandbox_contract_trapped" | "sandbox_language_error") => {
+                return Err(Error::InvalidState);
+            }
+            _ => {}
+        }
+    }
     let success = transition.is_ok();
     let receipt = state.shell.complete(pending, transition)?;
     let checkpoint = if success {
-        let checkpoint = Checkpoint::capture(ext)?;
-        if matches!(mode, Mode::Directory { whole: true, .. }) {
-            // Inspection executes on a disposable copy, including timestamp writes.
-            super::migration::read_archive(
-                &mut checkpoint.clone().restore()?,
-                bundles,
-                &state,
-                true,
-            )?;
-        }
-        checkpoint
+        Checkpoint::capture(ext)?
     } else {
-        stored.checkpoint
+        stored.checkpoint.clone()
     };
-    let revision = stored.revision.checked_add(1).ok_or(Error::Limit)?;
+    let archive = if matches!(mode, Mode::Directory { whole: true, .. }) {
+        Some(super::migration::read_archive(
+            &mut checkpoint.clone().restore()?,
+            bundles,
+            &state,
+            true,
+        )?)
+    } else {
+        None
+    };
+    Ok(Evaluation::Applied(Box::new(Applied {
+        checkpoint,
+        state,
+        receipt,
+        outcome,
+        archive,
+    })))
+}
+pub(super) async fn persist(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    mode: Mode,
+    revision: i64,
+    applied: &Applied,
+) -> Result<(), Error> {
+    let next = revision.checked_add(1).ok_or(Error::Limit)?;
     let changed = sqlx::query("UPDATE candidate_state SET revision = ?, runtime = ?, shell = ?, outcome = ? WHERE singleton = 1 AND revision = ? AND mode = ?")
-        .bind(revision).bind(checkpoint.to_bytes()?).bind(encode(&state)?).bind(outcome.encode()).bind(stored.revision).bind(mode.key()).execute(&mut *tx).await?;
+        .bind(next).bind(applied.checkpoint.to_bytes()?).bind(encode(&applied.state)?).bind(applied.outcome.encode())
+        .bind(revision).bind(mode.key()).execute(&mut **tx).await?;
     if changed.rows_affected() != 1 {
         return Err(Error::StaleRevision);
     }
-    tx.commit().await?;
-    Ok(receipt)
+    Ok(())
+}
+pub(super) async fn execute(
+    pool: &SqlitePool,
+    bundles: &Bundles,
+    mode: Mode,
+    call: SignedContractCallV1,
+    now: UnixSeconds,
+    inputs: Option<ExecutionInputs>,
+) -> Result<OperationReceipt, Error> {
+    let verified = VerifiedCall::verify(call)?;
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let stored = load(&mut tx, bundles.identity(), mode).await?;
+    match evaluate(bundles, &stored, mode, verified, now, inputs)? {
+        Evaluation::Replay(receipt) => {
+            tx.rollback().await?;
+            Ok(receipt)
+        }
+        Evaluation::Applied(applied) => {
+            persist(&mut tx, mode, stored.revision, &applied).await?;
+            tx.commit().await?;
+            Ok(applied.receipt)
+        }
+    }
 }
 pub(super) async fn read_shell(
     pool: &SqlitePool,

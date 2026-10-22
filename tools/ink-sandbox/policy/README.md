@@ -85,3 +85,15 @@ Independent xhigh M3 review accepted this exact delta at `9dccb98`; see the
 [M3 evidence](../../../progress/handoffs/SPEC-0013-M3-SHELL.md). The renewed lock
 SHA256 is `0868a865d1445ca6b43f194af80b6920741a22748f80fd1e7db54aa409bebbaf`.
 The policy gate passes all four checks with the unchanged exceptions.
+
+## M8 exact-lock renewal
+
+Independent xhigh review approved the dependency/API foundation at `ddb4574`
+for SHA256 `6177968181449839086defd28175e02f56ee5b5c6f9c277455100b84554957ac`.
+The graph adds 15 packages already present in the app lock, upgrades/removes none,
+and retains every existing checksum. The [dependency review](../dependencies.md)
+records purpose, features, exact metadata and implications. Test-only signing/key
+derivation remains outside the linked production graph. The four advisory IDs,
+thirteen exact license exceptions and December 1 expiry remain unchanged. This
+renews only the fingerprint; the normal policy scan must still pass without extra
+waivers. No complete M8, release or authority-promotion approval is implied.

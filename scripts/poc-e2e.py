@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import secrets
 import socket
+import sqlite3
 import subprocess
 import tempfile
 import threading
@@ -763,7 +764,7 @@ def scan_secret_logs(logs):
                     f"{service} log disclosed {name}")
 
 
-def run(storage, binaries, scenario=exercise):
+def run(storage, binaries, scenario=exercise, provider_binary=None, authority="rust"):
     with ExitStack() as stack:
         directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="digesta-e2e-")))
         logs = []
@@ -784,8 +785,10 @@ def run(storage, binaries, scenario=exercise):
             "CUSTODY_MASTER_KEY_FILE": str(secret_dir / "master-key.hex"),
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
         }, logs)
-        launch(stack, binaries / "mock-provider", provider_port, {
+        launch(stack, provider_binary or binaries / "mock-provider", provider_port, {
             **common, "MOCK_DATABASE_URL": f"sqlite://{directory}/mock.sqlite?mode=rwc",
+            "WHOLE_DATABASE_PATH": str(directory / "whole.sqlite"),
+            "PROVIDER_AUTHORITY": authority,
             "MOCK_STORAGE": storage, "MOCK_ROOT_ACCOUNT_FILE": str(secret_dir / "root-account.hex"),
         }, logs)
         proxy = LossyProvider(provider_port)
@@ -808,6 +811,12 @@ def run(storage, binaries, scenario=exercise):
             "Authorization": "Bearer " + (secret_dir / "service-token").read_text().strip(),
         })
         scan_secret_logs(logs)
+        if provider_binary:
+            with sqlite3.connect(f"file:{directory}/whole.sqlite?mode=ro", uri=True) as candidate:
+                comparison, count = candidate.execute("SELECT comparison, comparisons FROM candidate_reference WHERE singleton=1").fetchone()
+                require(comparison == ("disabled" if authority == "rust" else "matched"),
+                        "candidate comparison is incomplete or different")
+                require(authority == "rust" or count > 0, "candidate executed no comparisons")
         print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle")
 
 
@@ -815,9 +824,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--storage", choices=("sqlite", "memory", "both"), default="both")
     parser.add_argument("--binaries", type=Path, default=ROOT / "target/debug")
+    parser.add_argument("--provider-binary", type=Path, help="explicit whole-provider candidate executable")
+    parser.add_argument("--provider-authority", choices=("rust", "shadow", "sandbox"), default="rust")
     arguments = parser.parse_args()
     for selected in (("sqlite", "memory") if arguments.storage == "both" else (arguments.storage,)):
-        run(selected, arguments.binaries.resolve())
-        run(selected, arguments.binaries.resolve(), exercise_multi_milestone)
-        run(selected, arguments.binaries.resolve(), exercise_dispute)
-        run(selected, arguments.binaries.resolve(), exercise_auxiliary)
+        run(selected, arguments.binaries.resolve(), provider_binary=arguments.provider_binary, authority=arguments.provider_authority)
+        run(selected, arguments.binaries.resolve(), exercise_multi_milestone, arguments.provider_binary, arguments.provider_authority)
+        run(selected, arguments.binaries.resolve(), exercise_dispute, arguments.provider_binary, arguments.provider_authority)
+        run(selected, arguments.binaries.resolve(), exercise_auxiliary, arguments.provider_binary, arguments.provider_authority)

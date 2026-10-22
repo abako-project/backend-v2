@@ -433,8 +433,16 @@ fn retained_large_profile_is_completely_importable_and_exportable() {
 }
 
 async fn retained_case(case: serde_json::Value, output: Option<&str>) {
+    retained_case_with_gas(case, output, GAS).await;
+}
+async fn retained_case_with_gas(
+    case: serde_json::Value,
+    output: Option<&str>,
+    gas: frame_support::weights::Weight,
+) {
     let archive: ArchiveV1 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
-    let configuration = config(&archive);
+    let mut configuration = config(&archive);
+    configuration.gas_limit = gas;
     let db = Database::new();
     let worker = Worker::import_archive(db.0.clone(), archive.clone(), configuration)
         .await
@@ -500,4 +508,629 @@ fn retained_positive_planning_escrow_pays_and_freezes_with_complete_backing() {
             .await;
         }
     })
+}
+
+#[test]
+fn ordinary_retained_qualification_capacity_matches_native() {
+    run(async {
+        let source = reference().aggregate_cases.remove(2);
+        let archive: ArchiveV1 = serde_json::from_str(source["archive"].as_str().unwrap()).unwrap();
+        let mut configuration = config(&archive);
+        configuration.gas_limit = ink_v5_compatibility::WHOLE_GAS;
+        let db = Database::new();
+        let worker = Worker::import_archive(db.0.clone(), archive, configuration)
+            .await
+            .unwrap();
+        let steps: Vec<serde_json::Value> = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/qualification-capacity-signed.json"
+        ))
+        .unwrap();
+        for (index, step) in steps.into_iter().enumerate() {
+            let result = worker
+                .client()
+                .execute_directory_with_inputs(
+                    serde_json::from_value(step["signed"].clone()).unwrap(),
+                    serde_json::from_value(step["inputs"].clone()).unwrap(),
+                )
+                .unwrap()
+                .result()
+                .await;
+            assert_eq!(
+                serde_json::to_value(result.unwrap()).unwrap(),
+                step["outcome"]["receipt"],
+                "step {index}"
+            );
+            let current = worker
+                .client()
+                .export_archive()
+                .unwrap()
+                .result()
+                .await
+                .unwrap();
+            assert_eq!(
+                format!(
+                    "{:x}",
+                    H256::from(sha2_256(&serde_json::to_vec(&current).unwrap()))
+                ),
+                step["afterDigest"].as_str().unwrap(),
+                "step {index}"
+            );
+            assert_assets(&db.stored().await, &current);
+        }
+        worker.shutdown().await.unwrap();
+    });
+}
+
+#[test]
+fn whole_resource_failure_preserves_runtime_shell_and_retry_after_restart() {
+    run(async {
+        let archive: ArchiveV1 = serde_json::from_str(&reference().archives[0].archive).unwrap();
+        let mut configuration = config(&archive);
+        configuration.gas_limit = frame_support::weights::Weight::from_parts(1, 1);
+        let trace: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+        ))
+        .unwrap();
+        let signed: SignedContractCallV1 =
+            serde_json::from_value(trace["steps"][0]["signed"].clone()).unwrap();
+        let inputs: provider_execution::ExecutionInputs =
+            serde_json::from_value(trace["steps"][0]["inputs"].clone()).unwrap();
+        let db = Database::new();
+        let worker = Worker::import_archive(db.0.clone(), archive.clone(), configuration.clone())
+            .await
+            .unwrap();
+        let before = db.stored().await;
+        for _ in 0..2 {
+            let result = worker
+                .client()
+                .execute_directory_with_inputs(signed.clone(), inputs.clone())
+                .unwrap()
+                .result()
+                .await;
+            assert!(
+                matches!(result, Err(Error::ExecutionLimit(_))),
+                "{result:?}"
+            );
+            assert_eq!(before, db.stored().await);
+        }
+        worker.shutdown().await.unwrap();
+        let restarted = Worker::reopen(db.0.clone(), configuration).await.unwrap();
+        let result = restarted
+            .client()
+            .execute_directory_with_inputs(signed, inputs)
+            .unwrap()
+            .result()
+            .await;
+        assert!(
+            matches!(result, Err(Error::ExecutionLimit(_))),
+            "{result:?}"
+        );
+        assert_eq!(before, db.stored().await);
+        let exported = restarted
+            .client()
+            .export_archive()
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::to_vec(&exported).unwrap(),
+            serde_json::to_vec(&archive).unwrap()
+        );
+        restarted.shutdown().await.unwrap();
+    });
+}
+
+#[test]
+fn whole_modes_serialize_primary_reference_replay_and_restart() {
+    run(async {
+        use ink_v5_compatibility::worker::Authority;
+        use mock_provider::ProviderApi;
+        let reference = reference();
+        let retained = reference
+            .archives
+            .iter()
+            .find(|a| a.before_step == 70)
+            .unwrap();
+        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let trace: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+        ))
+        .unwrap();
+        for authority in [Authority::Rust, Authority::Shadow, Authority::Sandbox] {
+            let db = Database::new();
+            let configuration = config(&initial);
+            let worker = Worker::import_whole(
+                db.0.clone(),
+                initial.clone(),
+                configuration.clone(),
+                authority,
+            )
+            .await
+            .unwrap();
+            let client = worker.client();
+            assert_eq!(client.info().await.unwrap(), initial.checkpoint.info);
+            for (index, step) in trace["steps"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .enumerate()
+                .skip(70)
+            {
+                let call: SignedContractCallV1 =
+                    serde_json::from_value(step["signed"].clone()).unwrap();
+                let inputs: provider_execution::ExecutionInputs =
+                    serde_json::from_value(step["inputs"].clone()).unwrap();
+                let result = client
+                    .execute_directory_with_inputs(call.clone(), inputs.clone())
+                    .unwrap()
+                    .result()
+                    .await;
+                if let Some(expected) = step["outcome"].get("receipt") {
+                    assert_eq!(
+                        serde_json::to_value(result.unwrap()).unwrap(),
+                        *expected,
+                        "{authority:?} receipt {index}"
+                    );
+                    let before = db.stored().await;
+                    let replay = client
+                        .execute_directory_with_inputs(call.clone(), inputs)
+                        .unwrap()
+                        .result()
+                        .await
+                        .unwrap();
+                    assert_eq!(serde_json::to_value(&replay).unwrap(), *expected);
+                    assert_eq!(
+                        before,
+                        db.stored().await,
+                        "replay must not advance revision"
+                    );
+                    assert_eq!(
+                        client.receipt(call.call.operation_id).await.unwrap(),
+                        Some(replay)
+                    );
+                } else {
+                    assert!(result.is_err(), "{authority:?} infrastructure {index}");
+                }
+                let archive = client.export_archive().unwrap().result().await.unwrap();
+                assert_eq!(
+                    format!(
+                        "{:x}",
+                        H256::from(sha2_256(&serde_json::to_vec(&archive).unwrap()))
+                    ),
+                    reference.digests[index],
+                    "{authority:?} archive {index}"
+                );
+                let diagnostics = client.whole_diagnostics().unwrap().result().await.unwrap();
+                assert_eq!(
+                    diagnostics.comparison,
+                    if authority == Authority::Rust {
+                        "disabled"
+                    } else {
+                        "matched"
+                    },
+                    "{authority:?} comparison {index}"
+                );
+            }
+            let before = client.export_archive().unwrap().result().await.unwrap();
+            let snapshot = client.snapshot().await.unwrap();
+            assert_eq!(
+                snapshot,
+                mock_provider::ReferenceState::from_archive(configuration.root, before.clone())
+                    .unwrap()
+                    .snapshot()
+            );
+            worker.shutdown().await.unwrap();
+            let worker = Worker::reopen_whole(db.0.clone(), configuration.clone(), authority)
+                .await
+                .unwrap();
+            assert_eq!(
+                serde_json::to_vec(
+                    &worker
+                        .client()
+                        .export_archive()
+                        .unwrap()
+                        .result()
+                        .await
+                        .unwrap()
+                )
+                .unwrap(),
+                serde_json::to_vec(&before).unwrap()
+            );
+            worker.shutdown().await.unwrap();
+            for wrong in [Authority::Rust, Authority::Shadow, Authority::Sandbox]
+                .into_iter()
+                .filter(|a| *a != authority)
+            {
+                assert!(
+                    Worker::reopen_whole(db.0.clone(), configuration.clone(), wrong)
+                        .await
+                        .is_err()
+                );
+            }
+        }
+    });
+}
+
+async fn whole_rows(db: &Database) -> ((i64, Vec<u8>, Vec<u8>), (Vec<u8>, String, i64)) {
+    let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", db.0.display()))
+        .await
+        .unwrap();
+    let reference =
+        sqlx::query_as("SELECT archive,comparison,comparisons FROM candidate_reference")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    pool.close().await;
+    (db.stored().await, reference)
+}
+#[test]
+fn whole_reference_storage_failure_competition_and_incomplete_shadow_are_explicit() {
+    run(async {
+        use ink_v5_compatibility::worker::Authority;
+        let retained = reference()
+            .archives
+            .into_iter()
+            .find(|a| a.before_step == 70)
+            .unwrap();
+        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let trace: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+        ))
+        .unwrap();
+        let call: SignedContractCallV1 =
+            serde_json::from_value(trace["steps"][70]["signed"].clone()).unwrap();
+        let inputs: provider_execution::ExecutionInputs =
+            serde_json::from_value(trace["steps"][70]["inputs"].clone()).unwrap();
+        for authority in [Authority::Rust, Authority::Shadow, Authority::Sandbox] {
+            let db = Database::new();
+            let configuration = config(&initial);
+            let worker = Worker::import_whole(
+                db.0.clone(),
+                initial.clone(),
+                configuration.clone(),
+                authority,
+            )
+            .await
+            .unwrap();
+            let client = worker.client();
+            let before = whole_rows(&db).await;
+            let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", db.0.display()))
+                .await
+                .unwrap();
+            sqlx::query("CREATE TRIGGER fail_reference AFTER UPDATE ON candidate_reference BEGIN SELECT RAISE(ABORT, 'injected'); END").execute(&pool).await.unwrap();
+            assert!(matches!(
+                client
+                    .execute_directory_with_inputs(call.clone(), inputs.clone())
+                    .unwrap()
+                    .result()
+                    .await,
+                Err(Error::Storage(_))
+            ));
+            assert_eq!(
+                whole_rows(&db).await,
+                before,
+                "{authority:?}: reference failure rolls back both engines"
+            );
+            sqlx::query("DROP TRIGGER fail_reference")
+                .execute(&pool)
+                .await
+                .unwrap();
+            pool.close().await;
+            let other = Worker::reopen_whole(db.0.clone(), configuration, authority)
+                .await
+                .unwrap();
+            let left = client
+                .execute_directory_with_inputs(call.clone(), inputs.clone())
+                .unwrap();
+            let right = other
+                .client()
+                .execute_directory_with_inputs(call.clone(), inputs.clone())
+                .unwrap();
+            assert_eq!(left.result().await.unwrap(), right.result().await.unwrap());
+            assert_eq!(whole_rows(&db).await.0.0, before.0.0 + 1);
+            other.shutdown().await.unwrap();
+            worker.shutdown().await.unwrap();
+        }
+        for authority in [Authority::Shadow, Authority::Sandbox] {
+            let db = Database::new();
+            let mut configuration = config(&initial);
+            configuration.gas_limit = frame_support::weights::Weight::from_parts(1, 1);
+            let worker = Worker::import_whole(
+                db.0.clone(),
+                initial.clone(),
+                configuration.clone(),
+                authority,
+            )
+            .await
+            .unwrap();
+            let before = whole_rows(&db).await;
+            let result = worker
+                .client()
+                .execute_directory_with_inputs(call.clone(), inputs.clone())
+                .unwrap()
+                .result()
+                .await;
+            if authority == Authority::Sandbox {
+                assert!(matches!(result, Err(Error::ExecutionLimit(_))));
+                assert_eq!(
+                    whole_rows(&db).await,
+                    before,
+                    "primary failure commits nothing"
+                );
+            } else {
+                assert_eq!(
+                    serde_json::to_value(result.unwrap()).unwrap(),
+                    trace["steps"][70]["outcome"]["receipt"]
+                );
+                assert_eq!(
+                    worker
+                        .client()
+                        .whole_diagnostics()
+                        .unwrap()
+                        .result()
+                        .await
+                        .unwrap()
+                        .comparison,
+                    "incomplete"
+                );
+            }
+            worker.shutdown().await.unwrap();
+            let worker = Worker::reopen_whole(db.0.clone(), configuration, authority)
+                .await
+                .unwrap();
+            if authority == Authority::Shadow {
+                let next = &trace["steps"][71];
+                worker
+                    .client()
+                    .execute_directory_with_inputs(
+                        serde_json::from_value(next["signed"].clone()).unwrap(),
+                        serde_json::from_value(next["inputs"].clone()).unwrap(),
+                    )
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap();
+                let diagnostics = worker
+                    .client()
+                    .whole_diagnostics()
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap();
+                assert_eq!(diagnostics.comparison, "incomplete");
+                assert_eq!(diagnostics.comparisons, 1);
+            } else {
+                assert_eq!(whole_rows(&db).await, before);
+            }
+            worker.shutdown().await.unwrap();
+        }
+    });
+}
+
+#[test]
+fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() {
+    run(async {
+        use ink_v5_compatibility::worker::Authority;
+        let retained = reference()
+            .archives
+            .into_iter()
+            .find(|a| a.before_step == 70)
+            .unwrap();
+        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let configuration = config(&initial);
+        let unsupported = Database::new();
+        let mut disabled = configuration.clone();
+        disabled.mock_funding = false;
+        assert!(
+            Worker::import_whole(
+                unsupported.0.clone(),
+                initial.clone(),
+                disabled,
+                Authority::Rust
+            )
+            .await
+            .is_err()
+        );
+        assert!(!unsupported.0.exists());
+        let db = Database::new();
+        let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}?mode=rwc", db.0.display()))
+            .await
+            .unwrap();
+        sqlx::query("CREATE TABLE provider_state (singleton INTEGER, state BLOB)")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO provider_state VALUES (1, X'010203')")
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert!(
+            Worker::import_whole(
+                db.0.clone(),
+                initial.clone(),
+                configuration.clone(),
+                Authority::Rust
+            )
+            .await
+            .is_err()
+        );
+        let tables: i64 =
+            sqlx::query_scalar("SELECT count(*) FROM sqlite_master WHERE type='table'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(tables, 1);
+        let bytes: Vec<u8> = sqlx::query_scalar("SELECT state FROM provider_state")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(bytes, [1, 2, 3]);
+        pool.close().await;
+        let trace: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+        ))
+        .unwrap();
+        let call: SignedContractCallV1 =
+            serde_json::from_value(trace["steps"][70]["signed"].clone()).unwrap();
+        for authority in [Authority::Rust, Authority::Shadow, Authority::Sandbox] {
+            let db = Database::new();
+            let worker = Worker::import_whole(
+                db.0.clone(),
+                initial.clone(),
+                configuration.clone(),
+                authority,
+            )
+            .await
+            .unwrap();
+            let before = whole_rows(&db).await;
+            let mut invalid = call.clone();
+            invalid.signature = Sr25519Signature::from_bytes([0; 64]);
+            assert!(
+                matches!(worker.client().execute_signed(invalid, UnixSeconds::new(1)).unwrap().result().await, Err(Error::Shell(error)) if error.code() == "invalid_signature")
+            );
+            assert!(
+                matches!(worker.client().execute_signed(call.clone(), UnixSeconds::new(20_000)).unwrap().result().await, Err(Error::Shell(error)) if error.code() == "expired_call")
+            );
+            assert_eq!(before, whole_rows(&db).await);
+            worker.shutdown().await.unwrap();
+        }
+    });
+}
+
+#[test]
+fn whole_differences_persist_without_substituting_either_primary() {
+    run(async {
+        use ink_v5_compatibility::worker::Authority;
+        let retained = reference()
+            .archives
+            .into_iter()
+            .find(|a| a.before_step == 70)
+            .unwrap();
+        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let trace: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+        ))
+        .unwrap();
+        for authority in [Authority::Shadow, Authority::Sandbox] {
+            let db = Database::new();
+            let configuration = config(&initial);
+            let worker = Worker::import_whole(
+                db.0.clone(),
+                initial.clone(),
+                configuration.clone(),
+                authority,
+            )
+            .await
+            .unwrap();
+            let mut changed = initial.clone();
+            changed
+                .checkpoint
+                .skill_metadata
+                .values_mut()
+                .next()
+                .unwrap()
+                .category
+                .push_str("different");
+            let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", db.0.display()))
+                .await
+                .unwrap();
+            sqlx::query("UPDATE candidate_reference SET archive=?")
+                .bind(serde_json::to_vec(&changed).unwrap())
+                .execute(&pool)
+                .await
+                .unwrap();
+            pool.close().await;
+            let mut expected = mock_provider::ReferenceState::from_archive(
+                configuration.root,
+                if authority == Authority::Shadow {
+                    changed
+                } else {
+                    initial.clone()
+                },
+            )
+            .unwrap();
+            let step = &trace["steps"][70];
+            let call: SignedContractCallV1 =
+                serde_json::from_value(step["signed"].clone()).unwrap();
+            let inputs: provider_execution::ExecutionInputs =
+                serde_json::from_value(step["inputs"].clone()).unwrap();
+            let (next, receipt) = expected
+                .execute(
+                    provider_execution::VerifiedCall::verify(call.clone()).unwrap(),
+                    inputs.clone(),
+                )
+                .unwrap();
+            expected = next;
+            assert_eq!(
+                worker
+                    .client()
+                    .execute_directory_with_inputs(call, inputs)
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap(),
+                receipt
+            );
+            assert_eq!(
+                worker
+                    .client()
+                    .whole_diagnostics()
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap()
+                    .comparison,
+                "different"
+            );
+            worker.shutdown().await.unwrap();
+            let worker = Worker::reopen_whole(db.0.clone(), configuration, authority)
+                .await
+                .unwrap();
+            let step = &trace["steps"][71];
+            let call: SignedContractCallV1 =
+                serde_json::from_value(step["signed"].clone()).unwrap();
+            let inputs: provider_execution::ExecutionInputs =
+                serde_json::from_value(step["inputs"].clone()).unwrap();
+            let (expected, receipt) = expected
+                .execute(
+                    provider_execution::VerifiedCall::verify(call.clone()).unwrap(),
+                    inputs.clone(),
+                )
+                .unwrap();
+            assert_eq!(
+                worker
+                    .client()
+                    .execute_directory_with_inputs(call, inputs)
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap(),
+                receipt
+            );
+            let diagnostics = worker
+                .client()
+                .whole_diagnostics()
+                .unwrap()
+                .result()
+                .await
+                .unwrap();
+            assert_eq!(diagnostics.comparison, "different");
+            assert_eq!(diagnostics.comparisons, 1);
+            assert_eq!(
+                serde_json::to_vec(
+                    &worker
+                        .client()
+                        .export_archive()
+                        .unwrap()
+                        .result()
+                        .await
+                        .unwrap()
+                )
+                .unwrap(),
+                serde_json::to_vec(&expected.archive().unwrap()).unwrap()
+            );
+            worker.shutdown().await.unwrap();
+        }
+    });
 }

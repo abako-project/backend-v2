@@ -177,7 +177,7 @@ stack, license and upstream unsafe implications. Artifact source/build locks and
 fresh-source WASM/ABI reproduction remain independently checked.
 
 
-## M8 native-reference and HTTP link (exact-lock review pending)
+## M8 native-reference and HTTP link (exact-lock review approved)
 
 The isolated candidate reuses the existing mock library through its verified-call
 reference/read-model API and the unchanged generic HTTP router. Normal application
@@ -186,7 +186,7 @@ and is now a dev dependency; no mnemonic/key-derivation package enters this link
 The dependency delta adds15 packages, removes/upgrades none, and preserves every
 existing registry checksum. Every added registry version is already in the app
 lock. The unchanged four advisory/thirteen license exceptions and December1
-expiry are not extended. The wrapper fingerprint remains pending exact review.
+expiry are not extended. Independent xhigh review at ddb4574 approved the exact fingerprint renewal.
 
 Purpose/features: local mock-provider0.1.0 with storage-memory/mock-seed; axum0.8.9
 with http1/json/query/tokio and no defaults; Tokio retains1.53.1 while adding
@@ -219,5 +219,5 @@ Added exact packages:
 
 Primary references: [axum0.8.9](https://docs.rs/axum/0.8.9/axum/),
 [Tokio](https://docs.rs/tokio/1.53.1/tokio/) and exact registry manifests/checksums
-in both lockfiles. The new fingerprint must pass independent delta review before
-the SDK policy command can pass; additional findings are not silently waived.
+in both lockfiles. The normal SDK policy scan remains required after fingerprint renewal;
+additional findings are not silently waived.

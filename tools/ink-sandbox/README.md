@@ -350,3 +350,92 @@ pre-cutover checkpoint is never a rollback source. Whole-provider HTTP compositi
 performance promotion, the gateway smoke flow and two observed stable release
 cycles remain separate M8 gates. These fixtures do not authorize promotion or a
 release.
+
+## Explicit whole-provider candidate (M8)
+
+The default application stays on its native executable. Build the isolated
+candidate with ordinary Cargo; no node, block production or startup build is
+required:
+
+```bash
+cargo build --manifest-path tools/ink-sandbox/Cargo.toml --locked --bin whole-provider
+```
+
+`whole-provider` uses the existing private provider HTTP contract. Configure
+`MOCK_ROOT_ACCOUNT_FILE`, `INTERNAL_SERVICE_TOKEN_FILE`, `BIND_ADDR`,
+`WHOLE_DATABASE_PATH` and `PROVIDER_AUTHORITY=rust|shadow|sandbox`. Authority
+is fixed in store identity and defaults to `rust`. The candidate is a local mock
+with funding enabled; it does not connect to Kreivo. Whole-provider startup
+rejects a funding-disabled configuration because its retained native reference
+is compiled with `mock-seed`; earlier explicit contract fixtures still support
+the funding-disabled proof.
+
+Rust executes only native rules. Shadow observes WASM beside native authority;
+sandbox observes native rules beside WASM authority. One captured input set and
+one SQLite transaction cover accepted primary state, reference state, receipts
+and comparison status. A primary infrastructure failure commits nothing. A
+reference failure or difference stops comparison and remains visible through
+`whole-provider diagnostics`; it never changes the primary or triggers a retry
+on another engine. Restart does not reset that status. Fresh current-state import
+is required to resume comparison.
+
+The worker queue stays bounded at eight requests. Existing read models run on the
+worker over the selected primary archive. Fixture-only projections/raw queries
+reject whole-provider access. The shared HTTP routes and authorization policies
+are unchanged; private archives have no HTTP endpoint.
+
+For gateway compatibility, build the normal wallet/adapter binaries and run:
+
+```bash
+python3 scripts/poc-e2e.py --storage sqlite \
+  --provider-binary tools/ink-sandbox/target/debug/whole-provider \
+  --provider-authority shadow
+```
+
+Repeat for `rust` and `sandbox`. The harness verifies that shadow/sandbox
+comparisons remain matched throughout the real signed REST lifecycle. These are
+explicit compatibility tests, not a promotion of application authority.
+
+### Offline cutover and current-state rollback
+
+Pause business writes, drain the adapter/provider queue and resolve unknown
+outcomes before export. Keep the source stopped until comparison and routing
+switch are complete. Use the same configured root throughout. Archives contain
+private data and replay history; keep them in a protected local directory.
+
+1. Set `WHOLE_DATABASE_PATH` to the stopped native SQLite database and run
+   `whole-provider export-native /protected/current.json`. The source opens read
+   only, validates its retained typed state and receives no seed or schema write.
+2. Set `WHOLE_DATABASE_PATH` to a new destination and choose the explicit authority.
+   Run `whole-provider import /protected/current.json`. Import validates the full
+   archive, restores/seals contracts and compares every field before readiness.
+3. Run `whole-provider diagnostics`, then start serving and check gateway behavior.
+   Keep both source data and the current archive until the change is verified.
+4. For rollback or mode changes, stop/drain the **current** provider and run
+   `whole-provider export /protected/after-writes.json`. Import that current archive
+   into a new store with `PROVIDER_AUTHORITY=rust`, or use the compatible native
+   archive bridge. Never restore the pre-cutover database after accepted writes.
+
+Both archive output and CLI import destinations require new files. Database and
+archive files created by the CLI use owner-only permissions on Unix. Existing
+legacy/unrelated databases, wrong roots/authorities, incompatible bundle/runtime
+identity and incomplete imports fail startup. No automatic fallback or overwrite
+occurs. Query exports discard all tentative runtime effects.
+
+The ordinary retained 512-skill repeat/remove/re-add workload now passes using
+fixed-width indexes and membership deltas. The finite whole-provider allowance
+is `2e12` reference time / `128 MiB` proof size; earlier explicit fixtures retain
+their original allowance. Kreivo value, memory and code caps remain unchanged.
+
+Opt-in engine timings use a fixed current-app four-milestone workload and omit
+transport polling:
+
+```bash
+cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked \
+  --test performance whole_provider_engine_timings -- --ignored --nocapture
+```
+
+Run on a controlled idle host, record CPU/memory limits and build profile, and
+compare against the approved startup/ordinary/approval budgets. A passing unit
+suite is not latency evidence. Two observed stable releases and owner-approved
+promotion remain necessary before retiring the native reference.
