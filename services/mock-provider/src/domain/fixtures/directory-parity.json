@@ -1,0 +1,2188 @@
+{
+  "final": [
+    [
+      {
+        "fixed": true,
+        "id": 1,
+        "name": "coordinator"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "frontend"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "backend"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "fullstack"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "designer"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "qa"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "architect"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "embedded"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "devops"
+      },
+      {
+        "fixed": false,
+        "id": 91,
+        "name": "coordinator"
+      }
+    ],
+    [
+      {
+        "fixed": false,
+        "id": 1,
+        "name": "rust"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "solidity"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "ink"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "substrate"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "typescript"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "javascript"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "node.js"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "react"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "next.js"
+      },
+      {
+        "fixed": false,
+        "id": 10,
+        "name": "vue"
+      },
+      {
+        "fixed": false,
+        "id": 11,
+        "name": "postgresql"
+      },
+      {
+        "fixed": false,
+        "id": 12,
+        "name": "sqlite"
+      },
+      {
+        "fixed": false,
+        "id": 13,
+        "name": "docker"
+      },
+      {
+        "fixed": false,
+        "id": 14,
+        "name": "kubernetes"
+      },
+      {
+        "fixed": false,
+        "id": 15,
+        "name": "aws"
+      },
+      {
+        "fixed": false,
+        "id": 16,
+        "name": "graphql"
+      },
+      {
+        "fixed": false,
+        "id": 17,
+        "name": "rest api"
+      },
+      {
+        "fixed": false,
+        "id": 18,
+        "name": "web3"
+      },
+      {
+        "fixed": false,
+        "id": 19,
+        "name": "smart contract auditing"
+      },
+      {
+        "fixed": false,
+        "id": 20,
+        "name": "automated testing"
+      },
+      {
+        "fixed": false,
+        "id": 21,
+        "name": "ui/ux"
+      },
+      {
+        "fixed": false,
+        "id": 22,
+        "name": "figma"
+      },
+      {
+        "fixed": false,
+        "id": 23,
+        "name": "react native"
+      },
+      {
+        "fixed": false,
+        "id": 24,
+        "name": "communication"
+      },
+      {
+        "fixed": false,
+        "id": 25,
+        "name": "leadership"
+      },
+      {
+        "fixed": false,
+        "id": 26,
+        "name": "mentoring"
+      },
+      {
+        "fixed": false,
+        "id": 27,
+        "name": "problem solving"
+      },
+      {
+        "fixed": false,
+        "id": 28,
+        "name": "stakeholder management"
+      },
+      {
+        "fixed": false,
+        "id": 29,
+        "name": "facilitation"
+      },
+      {
+        "fixed": false,
+        "id": 30,
+        "name": "technical writing"
+      },
+      {
+        "fixed": false,
+        "id": 31,
+        "name": "teamwork"
+      },
+      {
+        "fixed": false,
+        "id": 32,
+        "name": "adaptability"
+      },
+      {
+        "fixed": false,
+        "id": 33,
+        "name": "time management"
+      },
+      {
+        "fixed": false,
+        "id": 80,
+        "name": "Renamed Skill"
+      },
+      {
+        "fixed": false,
+        "id": 82,
+        "name": "AΣ꟎"
+      },
+      {
+        "fixed": false,
+        "id": 83,
+        "name": "𖺠"
+      }
+    ],
+    [
+      {
+        "roleIds": [
+          3,
+          7,
+          8
+        ],
+        "skillId": 1
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 2
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 3
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 4
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 5
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 6
+      },
+      {
+        "roleIds": [
+          3,
+          4
+        ],
+        "skillId": 7
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 8
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 9
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 10
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          7,
+          9
+        ],
+        "skillId": 11
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          8
+        ],
+        "skillId": 12
+      },
+      {
+        "roleIds": [
+          3,
+          7,
+          9
+        ],
+        "skillId": 13
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 14
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 15
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 16
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 17
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 18
+      },
+      {
+        "roleIds": [
+          3,
+          6,
+          7
+        ],
+        "skillId": 19
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          6,
+          8,
+          9
+        ],
+        "skillId": 20
+      },
+      {
+        "roleIds": [
+          2,
+          4,
+          5
+        ],
+        "skillId": 21
+      },
+      {
+        "roleIds": [
+          2,
+          5
+        ],
+        "skillId": 22
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 23
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 24
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 25
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 26
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 27
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 28
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 29
+      },
+      {
+        "roleIds": [
+          1,
+          3,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 30
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 31
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 32
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 33
+      },
+      {
+        "roleIds": [],
+        "skillId": 80
+      },
+      {
+        "roleIds": [],
+        "skillId": 82
+      },
+      {
+        "roleIds": [],
+        "skillId": 83
+      }
+    ],
+    [
+      {
+        "account": "0x0202020202020202020202020202020202020202020202020202020202020202",
+        "calendar": {
+          "calendarId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "definition": {
+            "defaultWeeklyMinutes": 37,
+            "overrides": [
+              {
+                "capacity": 0,
+                "week": {
+                  "isoYear": 2026,
+                  "week": 53
+                }
+              }
+            ]
+          },
+          "owner": "0x0202020202020202020202020202020202020202020202020202020202020202",
+          "reservations": []
+        },
+        "coordinatorEligible": true,
+        "coordinatorScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        },
+        "displayName": "Candidate",
+        "mode": "Worker",
+        "qualifications": {
+          "roleIds": [
+            3
+          ],
+          "skillIds": [
+            2
+          ]
+        },
+        "workerScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        }
+      },
+      {
+        "account": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "calendar": {
+          "calendarId": "0xca4bce725a44e2822994d952e077596c",
+          "definition": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
+          "reservations": []
+        },
+        "coordinatorEligible": false,
+        "coordinatorScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        },
+        "displayName": "Candidate",
+        "mode": "Worker",
+        "qualifications": {
+          "roleIds": [
+            3
+          ],
+          "skillIds": [
+            3
+          ]
+        },
+        "workerScore": {
+          "ratedMinutes": 0,
+          "weightedScoreSum": "0"
+        }
+      }
+    ],
+    [
+      {
+        "name": "Overflow Approval",
+        "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+        "requester": "0x0202020202020202020202020202020202020202020202020202020202020202",
+        "roleIds": [
+          3
+        ],
+        "skillId": null,
+        "status": "Rejected"
+      },
+      {
+        "name": "DéCentral\tSpace",
+        "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+        "requester": "0x0202020202020202020202020202020202020202020202020202020202020202",
+        "roleIds": [
+          3
+        ],
+        "skillId": 81,
+        "status": "Approved"
+      },
+      {
+        "name": "Pending Role",
+        "requestId": "0x8d42c935e9444730088459a2a5342119",
+        "requester": "0x0202020202020202020202020202020202020202020202020202020202020202",
+        "roleIds": [
+          90
+        ],
+        "skillId": null,
+        "status": "Rejected"
+      },
+      {
+        "name": "décentral space",
+        "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+        "requester": "0x0303030303030303030303030303030303030303030303030303030303030303",
+        "roleIds": [
+          3
+        ],
+        "skillId": null,
+        "status": "Rejected"
+      }
+    ]
+  ],
+  "initial": [
+    [
+      {
+        "fixed": true,
+        "id": 1,
+        "name": "coordinator"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "frontend"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "backend"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "fullstack"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "designer"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "qa"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "architect"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "embedded"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "devops"
+      }
+    ],
+    [
+      {
+        "fixed": false,
+        "id": 1,
+        "name": "rust"
+      },
+      {
+        "fixed": false,
+        "id": 2,
+        "name": "solidity"
+      },
+      {
+        "fixed": false,
+        "id": 3,
+        "name": "ink"
+      },
+      {
+        "fixed": false,
+        "id": 4,
+        "name": "substrate"
+      },
+      {
+        "fixed": false,
+        "id": 5,
+        "name": "typescript"
+      },
+      {
+        "fixed": false,
+        "id": 6,
+        "name": "javascript"
+      },
+      {
+        "fixed": false,
+        "id": 7,
+        "name": "node.js"
+      },
+      {
+        "fixed": false,
+        "id": 8,
+        "name": "react"
+      },
+      {
+        "fixed": false,
+        "id": 9,
+        "name": "next.js"
+      },
+      {
+        "fixed": false,
+        "id": 10,
+        "name": "vue"
+      },
+      {
+        "fixed": false,
+        "id": 11,
+        "name": "postgresql"
+      },
+      {
+        "fixed": false,
+        "id": 12,
+        "name": "sqlite"
+      },
+      {
+        "fixed": false,
+        "id": 13,
+        "name": "docker"
+      },
+      {
+        "fixed": false,
+        "id": 14,
+        "name": "kubernetes"
+      },
+      {
+        "fixed": false,
+        "id": 15,
+        "name": "aws"
+      },
+      {
+        "fixed": false,
+        "id": 16,
+        "name": "graphql"
+      },
+      {
+        "fixed": false,
+        "id": 17,
+        "name": "rest api"
+      },
+      {
+        "fixed": false,
+        "id": 18,
+        "name": "web3"
+      },
+      {
+        "fixed": false,
+        "id": 19,
+        "name": "smart contract auditing"
+      },
+      {
+        "fixed": false,
+        "id": 20,
+        "name": "automated testing"
+      },
+      {
+        "fixed": false,
+        "id": 21,
+        "name": "ui/ux"
+      },
+      {
+        "fixed": false,
+        "id": 22,
+        "name": "figma"
+      },
+      {
+        "fixed": false,
+        "id": 23,
+        "name": "react native"
+      },
+      {
+        "fixed": false,
+        "id": 24,
+        "name": "communication"
+      },
+      {
+        "fixed": false,
+        "id": 25,
+        "name": "leadership"
+      },
+      {
+        "fixed": false,
+        "id": 26,
+        "name": "mentoring"
+      },
+      {
+        "fixed": false,
+        "id": 27,
+        "name": "problem solving"
+      },
+      {
+        "fixed": false,
+        "id": 28,
+        "name": "stakeholder management"
+      },
+      {
+        "fixed": false,
+        "id": 29,
+        "name": "facilitation"
+      },
+      {
+        "fixed": false,
+        "id": 30,
+        "name": "technical writing"
+      },
+      {
+        "fixed": false,
+        "id": 31,
+        "name": "teamwork"
+      },
+      {
+        "fixed": false,
+        "id": 32,
+        "name": "adaptability"
+      },
+      {
+        "fixed": false,
+        "id": 33,
+        "name": "time management"
+      }
+    ],
+    [
+      {
+        "roleIds": [
+          3,
+          7,
+          8
+        ],
+        "skillId": 1
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 2
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 3
+      },
+      {
+        "roleIds": [
+          3,
+          7
+        ],
+        "skillId": 4
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 5
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4
+        ],
+        "skillId": 6
+      },
+      {
+        "roleIds": [
+          3,
+          4
+        ],
+        "skillId": 7
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 8
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 9
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 10
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          7,
+          9
+        ],
+        "skillId": 11
+      },
+      {
+        "roleIds": [
+          3,
+          4,
+          8
+        ],
+        "skillId": 12
+      },
+      {
+        "roleIds": [
+          3,
+          7,
+          9
+        ],
+        "skillId": 13
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 14
+      },
+      {
+        "roleIds": [
+          7,
+          9
+        ],
+        "skillId": 15
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 16
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 17
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          7
+        ],
+        "skillId": 18
+      },
+      {
+        "roleIds": [
+          3,
+          6,
+          7
+        ],
+        "skillId": 19
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          6,
+          8,
+          9
+        ],
+        "skillId": 20
+      },
+      {
+        "roleIds": [
+          2,
+          4,
+          5
+        ],
+        "skillId": 21
+      },
+      {
+        "roleIds": [
+          2,
+          5
+        ],
+        "skillId": 22
+      },
+      {
+        "roleIds": [
+          2,
+          4
+        ],
+        "skillId": 23
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 24
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 25
+      },
+      {
+        "roleIds": [
+          1,
+          7
+        ],
+        "skillId": 26
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 27
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 28
+      },
+      {
+        "roleIds": [
+          1,
+          5,
+          7
+        ],
+        "skillId": 29
+      },
+      {
+        "roleIds": [
+          1,
+          3,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 30
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 31
+      },
+      {
+        "roleIds": [
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 32
+      },
+      {
+        "roleIds": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "skillId": 33
+      }
+    ],
+    [],
+    []
+  ],
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "capturedId": "0xb0d6878faae801dd851a85fe96d3b17e",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "displayName": "Candidate",
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              999
+            ]
+          }
+        },
+        "type": "RegisterWorker"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "unknown_qualification"
+      },
+      "seed": 9,
+      "stateDigest": "baa3203343394d0501bc68bfb0764dfbf66cf7e3f93bd5884f247d4ac252358b"
+    },
+    {
+      "capturedId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "displayName": "Candidate",
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              1
+            ]
+          }
+        },
+        "type": "RegisterWorker"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "kind": "WorkerRegistered",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 10,
+      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+    },
+    {
+      "capturedId": "0x7f982207bff99f3c0196518bbded3666",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "displayName": "Candidate",
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              999
+            ]
+          }
+        },
+        "type": "RegisterWorker"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "worker_exists"
+      },
+      "seed": 11,
+      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+    },
+    {
+      "capturedId": "0x597aacfb5a1744166ff5e0a6e641206e",
+      "command": {
+        "data": {
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              999
+            ]
+          }
+        },
+        "type": "UpdateQualifications"
+      },
+      "origin": "0x0404040404040404040404040404040404040404040404040404040404040404",
+      "outcome": {
+        "error": "unknown_qualification"
+      },
+      "seed": 12,
+      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+    },
+    {
+      "capturedId": "0x2ac61ed2accce69a92acbb2b2f312d60",
+      "command": {
+        "data": {
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              1
+            ]
+          }
+        },
+        "type": "UpdateQualifications"
+      },
+      "origin": "0x0404040404040404040404040404040404040404040404040404040404040404",
+      "outcome": {
+        "error": "worker_not_found"
+      },
+      "seed": 13,
+      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+    },
+    {
+      "capturedId": "0x0da0959392a6f0f49f074c64ac9f2604",
+      "command": {
+        "data": {
+          "mode": "Coordinator"
+        },
+        "type": "SetWorkerMode"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "coordinator_not_eligible"
+      },
+      "seed": 14,
+      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+    },
+    {
+      "capturedId": "0xacaa88f9a319dedee7d729fab59da20b",
+      "command": {
+        "data": {
+          "account": "0x0202020202020202020202020202020202020202020202020202020202020202"
+        },
+        "type": "PromoteCoordinator"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "error": "system_origin_required"
+      },
+      "seed": 15,
+      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+    },
+    {
+      "capturedId": "0xcaeb5e7018fffb52e24ec79633e0fe1d",
+      "command": {
+        "data": {
+          "account": "0x0202020202020202020202020202020202020202020202020202020202020202"
+        },
+        "type": "PromoteCoordinator"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CoordinatorPromoted",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 16,
+      "stateDigest": "7132264640209cc6e9b1b2ab262845ce630fede0af014065eb206080a2e04cc8"
+    },
+    {
+      "capturedId": "0x74ed346d4cc835e1945348805e28c48b",
+      "command": {
+        "data": {
+          "mode": "Coordinator"
+        },
+        "type": "SetWorkerMode"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "WorkerUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 17,
+      "stateDigest": "41af58e2ee5a70de16048f6f1b1c29cda76f818f2b68a4eaef8f3c9fe0bfb46d"
+    },
+    {
+      "capturedId": "0xca4bce725a44e2822994d952e077596c",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "displayName": "Candidate",
+          "qualifications": {
+            "roleIds": [
+              3
+            ],
+            "skillIds": [
+              3
+            ]
+          }
+        },
+        "type": "RegisterWorker"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "effect": {
+          "entityId": "0xca4bce725a44e2822994d952e077596c",
+          "kind": "WorkerRegistered",
+          "recipients": [
+            "0x0303030303030303030303030303030303030303030303030303030303030303"
+          ]
+        }
+      },
+      "seed": 18,
+      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+    },
+    {
+      "capturedId": "0xc458f38fd60805f351861dc82258a343",
+      "command": {
+        "data": {
+          "id": 80,
+          "kind": "Skill",
+          "name": "denied"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "system_origin_required"
+      },
+      "seed": 19,
+      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 1,
+          "kind": "Role",
+          "name": "renamed"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "fixed_coordinator_role"
+      },
+      "seed": 20,
+      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 1,
+          "kind": "Role"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "fixed_coordinator_role"
+      },
+      "seed": 20,
+      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 2,
+          "kind": "Role"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_in_use"
+      },
+      "seed": 20,
+      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 1,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_in_use"
+      },
+      "seed": 20,
+      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 80,
+          "kind": "Skill",
+          "name": " New\tSkill "
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 20,
+      "stateDigest": "c4585c07aa66315eaad01ae252e2e428cc176e930d8806dfb98f75e258ab81d1"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "name": "new  SKILL",
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequest"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "skill_name_exists"
+      },
+      "seed": 20,
+      "stateDigest": "c4585c07aa66315eaad01ae252e2e428cc176e930d8806dfb98f75e258ab81d1"
+    },
+    {
+      "capturedId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+      "command": {
+        "data": {
+          "name": "  DéCentral\tSpace  ",
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequest"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 21,
+      "stateDigest": "678a0b68976c21e191107fd549bc7a080c05726bc56c4d192f972f23ad02f698"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "name": "décentral space",
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequest"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0303030303030303030303030303030303030303030303030303030303030303"
+          ]
+        }
+      },
+      "seed": 22,
+      "stateDigest": "143a47b23aba0f868376952085a1c214f94405bbd5f9df30b0b1c659c65cf4af"
+    },
+    {
+      "capturedId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+      "command": {
+        "data": {
+          "name": "RequestCollision",
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequest"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "request_id_collision"
+      },
+      "seed": 21,
+      "stateDigest": "143a47b23aba0f868376952085a1c214f94405bbd5f9df30b0b1c659c65cf4af"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "error": "system_origin_required"
+      },
+      "seed": 22,
+      "stateDigest": "143a47b23aba0f868376952085a1c214f94405bbd5f9df30b0b1c659c65cf4af"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+          "kind": "SkillRequestApproved",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 22,
+      "stateDigest": "cca0ea82afec170667a03b753b53df4e1cb6e4970b15a0ded9b2456c92d157fe"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "skill_name_exists"
+      },
+      "seed": 22,
+      "stateDigest": "cca0ea82afec170667a03b753b53df4e1cb6e4970b15a0ded9b2456c92d157fe"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+          "kind": "SkillRequestRejected",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0303030303030303030303030303030303030303030303030303030303030303"
+          ]
+        }
+      },
+      "seed": 22,
+      "stateDigest": "7b23a1a699731b473fb5049b82c6e63de72086bd9a2eed0da58acdb37faeaafe"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "skill_request_decided"
+      },
+      "seed": 22,
+      "stateDigest": "7b23a1a699731b473fb5049b82c6e63de72086bd9a2eed0da58acdb37faeaafe"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "id": 81,
+          "kind": "Skill",
+          "name": "Renamed Approved Skill"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 22,
+      "stateDigest": "863ef2855a48eb2efd1a81a09cd6fa1a484f73ed51621f098dc8831e976212d5"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "id": 81,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 22,
+      "stateDigest": "6291c33ff2612b92c6715b005b7e3bb0ee002c70ceebd83a916d5366e7ff575e"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "id": 90,
+          "kind": "Role",
+          "name": "temporary"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 22,
+      "stateDigest": "405383599a92a0157d9d2cce7a0b6eaea3c144e572e89f791f47b9006201f5a4"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "name": "Pending Role",
+          "roleIds": [
+            90
+          ]
+        },
+        "type": "CreateSkillRequest"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0x8d42c935e9444730088459a2a5342119",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 23,
+      "stateDigest": "9071df77fbbcc239848edb3ea57f26624672d5c193fe099b935a1099ea85807c"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "id": 90,
+          "kind": "Role"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 23,
+      "stateDigest": "d5cae5e8d2cc66c052935746a4afee3dbdcc881c88133a123e9473334628b524"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x8d42c935e9444730088459a2a5342119"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "unknown_role"
+      },
+      "seed": 23,
+      "stateDigest": "d5cae5e8d2cc66c052935746a4afee3dbdcc881c88133a123e9473334628b524"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0x8d42c935e9444730088459a2a5342119"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0x8d42c935e9444730088459a2a5342119",
+          "kind": "SkillRequestRejected",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 23,
+      "stateDigest": "3646254ae863d39eeb08f33c59215937bd98651b65f3a22209e928e738f254e5"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "qualifications": {
+            "roleIds": [
+              3
+            ],
+            "skillIds": [
+              2
+            ]
+          }
+        },
+        "type": "UpdateQualifications"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "WorkerUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 23,
+      "stateDigest": "b1af2c1abadebdf9f300115e50ca48574d1be14ee4fff429591d231ca3df0e2c"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "id": 2,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_in_use"
+      },
+      "seed": 23,
+      "stateDigest": "b1af2c1abadebdf9f300115e50ca48574d1be14ee4fff429591d231ca3df0e2c"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "id": 999,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_not_found"
+      },
+      "seed": 23,
+      "stateDigest": "b1af2c1abadebdf9f300115e50ca48574d1be14ee4fff429591d231ca3df0e2c"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "id": 4294967295,
+          "kind": "Skill",
+          "name": "maximum catalog id"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 23,
+      "stateDigest": "ea182e0c141d7991f6b1878398bd721cb5dfa1b3e16d97cc3b4626f0f1e18594"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "name": "Overflow Approval",
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequest"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "7c3edbd39d06f555df45e5f4bcd2344e251ab5fdf1ef4daf67aa5b6a281ff198"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_id_exhausted"
+      },
+      "seed": 24,
+      "stateDigest": "7c3edbd39d06f555df45e5f4bcd2344e251ab5fdf1ef4daf67aa5b6a281ff198"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+          "kind": "SkillRequestRejected",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "dbf369b8a768939eb37e987244a76a966a6730cf19a7c06c8ce085aec6593e00"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 4294967295,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "dbe6cc5f571604ba7fd21f87ca4c95ad5f0e603ae15271d49daf84a8849a35e4"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "defaultWeeklyMinutes": 37,
+          "overrides": [
+            {
+              "capacity": 0,
+              "week": {
+                "isoYear": 2026,
+                "week": 53
+              }
+            }
+          ]
+        },
+        "type": "SetCalendar"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "kind": "CalendarUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "3019f500ea593cfc0e083002678a35af768724ee347c3215718f71ac39809ae1"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "mode": "Worker"
+        },
+        "type": "SetWorkerMode"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "WorkerUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "9479036183b8e2af3c04cf6b8e4e6fc247eda9f1b5af97b9ca7f1ece24509f8a"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 80,
+          "kind": "Skill",
+          "name": "Renamed Skill"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "35c26a056b4d5ed005c948b40e0128292d88aa8843316d98183ec9425fb486a6"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 82,
+          "kind": "Skill",
+          "name": "AΣ꟎"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "d1fbbee72e8cb474c2d52cd6633203e6f17448943e14bd3ad976a6406f7f2b0b"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 83,
+          "kind": "Skill",
+          "name": "aσ꟏"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "skill_name_exists"
+      },
+      "seed": 24,
+      "stateDigest": "d1fbbee72e8cb474c2d52cd6633203e6f17448943e14bd3ad976a6406f7f2b0b"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 83,
+          "kind": "Skill",
+          "name": "𖺠"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "19764f120f1d2fb49719aaa68131ab025b5d0899cf10403fe83ce4995836d53d"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 84,
+          "kind": "Skill",
+          "name": "𖺻"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "skill_name_exists"
+      },
+      "seed": 24,
+      "stateDigest": "19764f120f1d2fb49719aaa68131ab025b5d0899cf10403fe83ce4995836d53d"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 91,
+          "kind": "Role",
+          "name": "coordinator"
+        },
+        "type": "UpsertCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "seed": 24,
+      "stateDigest": "385638c5b92e4466c962d99f834dae7a8c530e0e24ec99b77a3aa0f5887badf9"
+    }
+  ]
+}

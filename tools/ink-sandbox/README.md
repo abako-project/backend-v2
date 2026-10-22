@@ -30,7 +30,7 @@ The cases compare allocations, availability, capacity changes, domain errors
 and retained project/milestone/requirement references. Additional WASM tests
 exercise caller restrictions, query isolation, malformed weeks, metering,
 competing SQLite workers and restart. The old four compatibility artifacts stay
-unchanged. Directory and signed candidate routing are the next M3 slice; the
+unchanged. Directory is covered below; signed candidate routing is still pending. The
 existing signed Calendar fixture still tests the legacy contract.
 
 Directory will create one Calendar instance per worker. Only the worker or its
@@ -44,6 +44,35 @@ candidate databases fail closed; use a new disposable fixture database. Ordinary
 mock-provider SQLite data and its Rust authority remain unchanged. Large-state
 import, performance budgets and complete M3 parity remain open. See the
 [slice handoff](../../progress/handoffs/SPEC-0013-M3-CALENDAR.md).
+
+## M3 Directory slice
+
+`directory-v5` owns catalogs, descriptive skill/role associations, worker
+registration/qualifications, mode/eligibility, and skill requests/moderation.
+Registration creates an actual `calendar-v5` child in the same transaction.
+Worker views read that Calendar rather than duplicating capacity/reservations.
+Fixed constructor capabilities control reservation and retained proposal references;
+Project integration remains M5, with no browser permission or endpoint added.
+
+The shared [Directory trace](../../services/mock-provider/src/domain/fixtures/directory-parity.json)
+has 48 transitions replayed independently by Rust and real WASM. It compares error
+codes, effect IDs/kinds/recipients and SHA256 of the full SCALE catalog/worker/request
+projection after every step. IDs are captured fixture inputs; this does not claim
+signed admission, receipt/event-cursor or RNG bridge coverage. Additional WASM tests
+exercise request visibility, proposal-reference guards, immutable caller capabilities,
+nested overcommit errors and rollback of a tentative Calendar on parent failure.
+Raw-trie restart is checked during the trace.
+
+The v5 compiler uses Unicode 16 while the app uses Unicode 17. The candidate
+includes a reproducible, dependency-free compatibility layer for changed
+lowercase mappings and final-sigma properties, with the Unicode license notice.
+The canonical source documents generation and exhaustive cross-toolchain checks.
+No app/SDK dependency lock or policy exception changes.
+
+The signed Directory fixture bridge is the remaining M3 slice. Existing signed
+tests still target the explicitly limited legacy Calendar fixture. Scores/matching,
+Project authorization, large-state import, performance and whole-provider promotion
+remain later gates. See the [Directory handoff](../../progress/handoffs/SPEC-0013-M3-DIRECTORY.md).
 
 The committed `fixtures/manifest.json` pins canonical source commit, toolchain,
 artifact hashes and per-contract dependency locks. Tests verify artifact and
