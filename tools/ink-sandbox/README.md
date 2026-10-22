@@ -265,7 +265,7 @@ holds and visible minted supply conserve exactly, without a payout haircut.
 Projects implement captured execution funding, full-team reservations, sequential
 milestones, delivery/rejection/resubmission, current and retained legacy settlement,
 final evaluations, formal disputes and frozen cancellation. Cases cannot resolve
-or unlock funds. The 129-call signed native/WASM trace compares the complete
+or unlock funds. The 129-call signed native/WASM trace, with 14 backward-clock abort probes, compares the complete
 marketplace, balances/issuance/requests, cases and shared shell after every call
 and across restart. Financial diagnostics read one SQL snapshot. Actual tests
 check physical balances/minima and supply, SQL rollback during multi-recipient
