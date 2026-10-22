@@ -10,6 +10,6 @@ CREATE TABLE IF NOT EXISTS evidence_url_records (
     target_id TEXT NOT NULL,
     record_id TEXT NOT NULL,
     author_account TEXT NOT NULL,
-    url TEXT NOT NULL CHECK (octet_length(url) BETWEEN 1 AND 2048),
+    payload TEXT NOT NULL CHECK (octet_length(payload) BETWEEN 1 AND 8192),
     PRIMARY KEY (provider_instance_id, project_id, purpose, target_id, record_id)
 );

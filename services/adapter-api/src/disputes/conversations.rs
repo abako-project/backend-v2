@@ -209,8 +209,12 @@ pub(crate) async fn presentation(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Error> {
     let mut c = context(&app, parse(&id)?).await?;
-    crate::evidence::case(&app, c.instance, &mut c.case).await?;
-    let reason = opening_reason(&app, &c).await?;
+    let verified = crate::evidence::case(&app, c.instance, &mut c.case).await?;
+    let reason = if let Some(text) = verified.opening {
+        text
+    } else {
+        opening_reason(&app, &c).await?
+    };
     let mut value = serde_json::to_value(&c.case)?;
     value["presentation"] = json!({"projectTitle":c.title,"openingReason":reason,"client":c.client,"coordinator":c.coordinator});
     Ok(Json(value))
@@ -387,7 +391,7 @@ pub(crate) async fn history(
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Error> {
     let mut c = context(&app, parse(&id)?).await?;
-    crate::evidence::case(&app, c.instance, &mut c.case).await?;
+    let verified = crate::evidence::case(&app, c.instance, &mut c.case).await?;
     let mut deliverables = Vec::new();
     let mut rejections = Vec::new();
     let mut events = Vec::new();
@@ -422,8 +426,13 @@ pub(crate) async fn history(
                 reviewed_at,
                 ..
             } => {
-                let row=sqlx::query("SELECT message FROM submission_comments WHERE provider_instance_id=$1 AND submission_id=$2 AND comment_id=$3 AND author_account=$4 AND kind='Rejection'").bind(c.instance.to_string()).bind(s.submission_id.to_string()).bind(comment_id.to_string()).bind(c.client.account_id.to_string()).fetch_optional(&app.db).await?.ok_or(Error::Dependency)?;
-                Some((row.try_get::<String, _>("message")?, *reviewed_at))
+                let text = if let Some(text) = verified.rejections.get(&s.submission_id) {
+                    text.clone()
+                } else {
+                    let row=sqlx::query("SELECT message FROM submission_comments WHERE provider_instance_id=$1 AND submission_id=$2 AND comment_id=$3 AND author_account=$4 AND kind='Rejection'").bind(c.instance.to_string()).bind(s.submission_id.to_string()).bind(comment_id.to_string()).bind(c.client.account_id.to_string()).fetch_optional(&app.db).await?.ok_or(Error::Dependency)?;
+                    row.try_get::<String, _>("message")?
+                };
+                Some((text, *reviewed_at))
             }
             _ => None,
         };

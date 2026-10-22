@@ -101,6 +101,30 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
     };
     *slot.lock().await = Some(case.clone());
     fake.lock().await.snapshot.projects.push(project.clone());
+    let legacy: EvidenceRecordReferenceV1 = serde_json::from_value(
+        json!({"url":"https://example.test/historical","sha256":PayloadHash::from_bytes([8;32])}),
+    )?;
+    let mut historical = project.clone();
+    historical.proposals[0].milestones[0].submissions[0].deliverable = Some(legacy.clone());
+    historical.proposals[0].milestones[0].submissions[0].review = SubmissionReview::Rejected {
+        reason: legacy.clone(),
+        reviewed_by: project.client,
+        reviewed_at: UnixSeconds::new(101),
+    };
+    let expected = historical.clone();
+    crate::evidence::project(&app, info().provider_instance_id, &mut historical).await?;
+    assert_eq!(historical, expected);
+    let mut historical_case = case.dispute.clone();
+    historical_case.evidence = Some(legacy.clone());
+    historical_case.response = Some(DisputeResponse {
+        evidence: legacy,
+        author: project.coordinator,
+        occurred_at: UnixSeconds::new(103),
+    });
+    let expected = historical_case.clone();
+    let _verified =
+        crate::evidence::dispute(&app, info().provider_instance_id, &mut historical_case).await?;
+    assert_eq!(historical_case, expected);
     let delivery = queued(
         &app,
         &coordinator,
@@ -108,9 +132,9 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
             project_id,
             milestone_id,
             request: SubmitMilestoneCompletionRequest {
-                deliverable: Some(EvidenceReference::new(
-                    "https://example.test/delivery".into(),
-                )?),
+                deliverable: Some(serde_json::from_value(serde_json::json!({
+                    "url": "https://example.test/delivery", "sha256": PayloadHash::from_bytes([7; 32])
+                }))?),
             },
         },
         61,
@@ -219,7 +243,7 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
     let submission = &value["proposals"][0]["milestones"][0]["submissions"][0];
     assert_eq!(
         submission["deliverable"],
-        json!({"url":"https://example.test/delivery"})
+        json!({"url":"https://example.test/delivery","sha256":PayloadHash::from_bytes([7;32])})
     );
     assert_eq!(
         submission["review"]["reason"],
@@ -244,15 +268,27 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
         value["dispute"]["response"]["evidence"],
         json!({"url":"https://example.test/response"})
     );
-    sqlx::query(
-        "UPDATE evidence_url_records SET url='https://example.test/tampered' WHERE record_id=$1",
-    )
-    .bind(delivery.record_id.to_string())
-    .execute(&app.db)
-    .await?;
+    sqlx::query("UPDATE evidence_url_records SET payload=$1 WHERE record_id=$2")
+        .bind(serde_json::to_string(
+            &json!({"url":"https://example.test/tampered"}),
+        )?)
+        .bind(delivery.record_id.to_string())
+        .execute(&app.db)
+        .await?;
     assert_eq!(
         get_project().send().await?.status(),
         StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(
+        http.get(format!(
+            "{}/api/completion-submissions/{submission_id}/comments",
+            server.url
+        ))
+        .header(header::COOKIE, &client_cookie)
+        .send()
+        .await?
+        .status(),
+        StatusCode::OK
     );
     // Authorization and unrelated raw reads must not hydrate the broken record.
     assert_eq!(
@@ -368,7 +404,7 @@ async fn evidence_text_hashes_preserve_scoped_comment_ids_and_detect_changes() -
     }
     let mut first = submissions[0].clone();
     let mut second = submissions[1].clone();
-    crate::evidence::submission(
+    let first_verified = crate::evidence::submission(
         &app,
         info().provider_instance_id,
         project_id,
@@ -376,7 +412,7 @@ async fn evidence_text_hashes_preserve_scoped_comment_ids_and_detect_changes() -
         &mut first,
     )
     .await?;
-    crate::evidence::submission(
+    let _verified = crate::evidence::submission(
         &app,
         info().provider_instance_id,
         project_id,
@@ -389,6 +425,10 @@ async fn evidence_text_hashes_preserve_scoped_comment_ids_and_detect_changes() -
     );
     assert_ne!(submissions[0].review, submissions[1].review);
     sqlx::query("UPDATE submission_comments SET message='Changed reason' WHERE submission_id=$1 AND comment_id=$2").bind(submissions[0].submission_id.to_string()).bind(comment.to_string()).execute(&app.db).await?;
+    assert_eq!(
+        first_verified.as_deref(),
+        Some("First reason: ipfs://notes")
+    );
     assert!(matches!(
         crate::evidence::submission(
             &app,
@@ -400,7 +440,7 @@ async fn evidence_text_hashes_preserve_scoped_comment_ids_and_detect_changes() -
         .await,
         Err(Error::Dependency)
     ));
-    crate::evidence::submission(
+    let _verified = crate::evidence::submission(
         &app,
         info().provider_instance_id,
         project_id,
@@ -441,13 +481,18 @@ async fn evidence_text_hashes_preserve_scoped_comment_ids_and_detect_changes() -
         proposal_revision: 1,
         context_event_cursor: 0,
     };
-    crate::evidence::dispute(&app, info().provider_instance_id, &mut case).await?;
+    let opening_verified =
+        crate::evidence::dispute(&app, info().provider_instance_id, &mut case).await?;
     assert_eq!(case.opening_comment_id, Some(opening));
     assert!(case.evidence.is_none());
     sqlx::query("UPDATE dispute_opening_arguments SET reason='Modified' WHERE comment_id=$1")
         .bind(opening.to_string())
         .execute(&app.db)
         .await?;
+    assert_eq!(
+        opening_verified.as_deref(),
+        Some("Written opening: ipfs://notes")
+    );
     case.evidence = Some(EvidenceRecordReferenceV1::Committed(evidence));
     case.opening_comment_id = None;
     assert!(matches!(

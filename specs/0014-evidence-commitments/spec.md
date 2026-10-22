@@ -86,7 +86,9 @@ generation must reject before signing rather than rebind the record hash.
 Compute `SHA256(b"abako/evidence/v1\0" || SCALE(record))`. In order, `record`
 contains version `u8=1`, provider generation `[u8;16]`, project `[u8;16]`, purpose
 `u8`, target `[u8;16]`, record ID `[u8;16]`, author `[u8;32]`, then body kind `u8`
-and the exact UTF-8 payload as a SCALE string. Do not normalize URLs, whitespace
+and the exact accepted body. Text is a SCALE string. URL bodies use the
+unchanged EvidenceReference encoding (URL string plus its opaque legacy digest
+slot), preserving old public round trips without making the digest mandatory. Do not normalize URLs, whitespace
 or Unicode before hashing. The domain prefix ends with one NUL byte.
 
 Purpose tags and targets are: delivery `0`/milestone ID, rejection `1`/submission

@@ -18,7 +18,7 @@ pub(crate) async fn read(app: &App, id: EntityId) -> Result<DisputeView, Error> 
 pub(crate) async fn public_read(app: &App, id: EntityId) -> Result<DisputeView, Error> {
     let mut view = read(app, id).await?;
     let generation = app.snapshot().await?.info.provider_instance_id;
-    crate::evidence::case(app, generation, &mut view).await?;
+    let _verified_text = crate::evidence::case(app, generation, &mut view).await?;
     Ok(view)
 }
 

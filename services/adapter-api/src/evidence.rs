@@ -19,11 +19,11 @@ use sqlx::{PgConnection, Row};
 )]
 enum Body {
     #[codec(index = 0)]
-    Url(String),
+    Url(EvidenceReference),
     #[codec(index = 1)]
     Text(String),
 }
-#[derive(Encode)]
+#[derive(Clone, Encode)]
 struct Record {
     version: u8,
     generation: ProviderInstanceId,
@@ -107,7 +107,7 @@ pub(crate) async fn prepare(
                 Purpose::Delivery,
                 *milestone_id,
                 new_record_id,
-                Body::Url(reference.url().to_owned()),
+                Body::Url(reference.clone()),
             )
         }
         Command::RequestMilestoneCompletion {
@@ -118,7 +118,7 @@ pub(crate) async fn prepare(
             Purpose::Delivery,
             *milestone_id,
             new_record_id,
-            Body::Url(request.deliverable.url().to_owned()),
+            Body::Url(request.deliverable.clone()),
         ),
         Command::RejectMilestoneCompletion {
             submission_id,
@@ -128,13 +128,13 @@ pub(crate) async fn prepare(
             Purpose::Rejection,
             *submission_id,
             new_record_id,
-            Body::Url(request.evidence.url().to_owned()),
+            Body::Url(request.evidence.clone()),
         ),
         Command::OpenDispute(request) => (
             Purpose::Opening,
             request.rejected_submission_id,
             new_record_id,
-            Body::Url(request.evidence.url().to_owned()),
+            Body::Url(request.evidence.clone()),
         ),
         Command::RespondDispute {
             dispute_id,
@@ -144,7 +144,7 @@ pub(crate) async fn prepare(
             Purpose::Response,
             *dispute_id,
             new_record_id,
-            Body::Url(request.evidence.url().to_owned()),
+            Body::Url(request.evidence.clone()),
         ),
         Command::RejectMilestoneDelivery {
             submission_id,
@@ -188,17 +188,16 @@ pub(crate) async fn prepare(
         }
         _ => return Ok(command),
     };
-    if let Body::Url(url) = &body {
-        // Existing public input validation is preserved, including exact bytes.
-        EvidenceReference::new(url.clone()).map_err(|_| Error::Invalid)?;
-        sqlx::query("INSERT INTO evidence_url_records(provider_instance_id,project_id,purpose,target_id,record_id,author_account,url) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING")
+    if let Body::Url(reference) = &body {
+        sqlx::query("INSERT INTO evidence_url_records(provider_instance_id,project_id,purpose,target_id,record_id,author_account,payload) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING")
             .bind(generation.to_string()).bind(project.to_string()).bind(tag(purpose)).bind(target.to_string())
-            .bind(record_id.to_string()).bind(author.to_string()).bind(url).execute(&mut *connection).await?;
-        let row=sqlx::query("SELECT author_account,url FROM evidence_url_records WHERE provider_instance_id=$1 AND project_id=$2 AND purpose=$3 AND target_id=$4 AND record_id=$5")
+            .bind(record_id.to_string()).bind(author.to_string()).bind(serde_json::to_string(reference)?).execute(&mut *connection).await?;
+        let row=sqlx::query("SELECT author_account,payload FROM evidence_url_records WHERE provider_instance_id=$1 AND project_id=$2 AND purpose=$3 AND target_id=$4 AND record_id=$5")
             .bind(generation.to_string()).bind(project.to_string()).bind(tag(purpose)).bind(target.to_string()).bind(record_id.to_string())
             .fetch_one(&mut *connection).await?;
-        if row.try_get::<String, _>("author_account")? != author.to_string()
-            || row.try_get::<String, _>("url")? != *url
+        let saved: EvidenceReference = serde_json::from_str(row.try_get("payload")?)
+            .map_err(|_| Error::Conflict("evidence_record_conflict"))?;
+        if row.try_get::<String, _>("author_account")? != author.to_string() || saved != *reference
         {
             return Err(Error::Conflict("evidence_record_conflict"));
         }
@@ -279,19 +278,22 @@ async fn resolve(
     reference: &EvidenceRecordReferenceV1,
 ) -> Result<Body, Error> {
     let EvidenceRecordReferenceV1::Committed(commitment) = reference else {
-        return Ok(Body::Url(
-            reference.url().ok_or(Error::Dependency)?.to_owned(),
-        ));
+        let EvidenceRecordReferenceV1::Legacy(reference) = reference else {
+            return Err(Error::Dependency);
+        };
+        return Ok(Body::Url(reference.clone()));
     };
     let record_id = commitment.record_id;
-    let row=sqlx::query("SELECT author_account,url FROM evidence_url_records WHERE provider_instance_id=$1 AND project_id=$2 AND purpose=$3 AND target_id=$4 AND record_id=$5")
+    let row=sqlx::query("SELECT author_account,payload FROM evidence_url_records WHERE provider_instance_id=$1 AND project_id=$2 AND purpose=$3 AND target_id=$4 AND record_id=$5")
         .bind(generation.to_string()).bind(project.to_string()).bind(tag(purpose)).bind(target.to_string()).bind(record_id.to_string())
         .fetch_optional(&app.db).await?;
     let mut candidates = Vec::with_capacity(2);
     if let Some(row) = row
         && row.try_get::<String, _>("author_account")? == author.to_string()
     {
-        candidates.push(Body::Url(row.try_get("url")?));
+        let reference: EvidenceReference =
+            serde_json::from_str(row.try_get("payload")?).map_err(|_| Error::Dependency)?;
+        candidates.push(Body::Url(reference));
     }
     match purpose {
         EvidencePurposeV1::Rejection => {
@@ -329,9 +331,7 @@ async fn resolve(
 }
 fn url(body: Body) -> Result<EvidenceRecordReferenceV1, Error> {
     match body {
-        Body::Url(url) => Ok(EvidenceReference::new(url)
-            .map_err(|_| Error::Dependency)?
-            .into()),
+        Body::Url(reference) => Ok(reference.into()),
         Body::Text(_) => Err(Error::Dependency),
     }
 }
@@ -344,7 +344,7 @@ pub(crate) async fn project(
 ) -> Result<(), Error> {
     for milestone in project.proposals.iter_mut().flat_map(|p| &mut p.milestones) {
         for item in &mut milestone.submissions {
-            submission(
+            let _verified_reason = submission(
                 app,
                 generation,
                 project.project_id,
@@ -363,8 +363,8 @@ pub(crate) async fn submission(
     project: EntityId,
     milestone: EntityId,
     item: &mut CompletionSubmission,
-) -> Result<(), Error> {
-    if let Some(reference) = &item.deliverable {
+) -> Result<Option<String>, Error> {
+    if let Some(reference @ EvidenceRecordReferenceV1::Committed(_)) = &item.deliverable {
         item.deliverable = Some(url(resolve(
             app,
             generation,
@@ -376,8 +376,19 @@ pub(crate) async fn submission(
         )
         .await?)?);
     }
+    review(app, generation, project, item).await
+}
+
+/// A comment thread needs its confirmed rejection, never the delivery preimage.
+/// Return verified text so presentation does not refetch unchecked bytes.
+pub(crate) async fn review(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: EntityId,
+    item: &mut CompletionSubmission,
+) -> Result<Option<String>, Error> {
     if let SubmissionReview::Rejected {
-        reason,
+        reason: reason @ EvidenceRecordReferenceV1::Committed(commitment),
         reviewed_by,
         reviewed_at,
     } = &item.review
@@ -392,54 +403,72 @@ pub(crate) async fn submission(
             reason,
         )
         .await?;
-        item.review = match body {
-            Body::Url(value) => SubmissionReview::Rejected {
-                reason: url(Body::Url(value))?,
-                reviewed_by: *reviewed_by,
-                reviewed_at: *reviewed_at,
-            },
-            Body::Text(_) => {
-                let EvidenceRecordReferenceV1::Committed(reference) = reason else {
-                    return Err(Error::Dependency);
-                };
-                SubmissionReview::RejectedWithComment {
-                    comment_id: reference.record_id,
+        let (updated, text) = match body {
+            Body::Url(reference) => (
+                SubmissionReview::Rejected {
+                    reason: reference.into(),
                     reviewed_by: *reviewed_by,
                     reviewed_at: *reviewed_at,
-                }
-            }
+                },
+                None,
+            ),
+            Body::Text(text) => (
+                SubmissionReview::RejectedWithComment {
+                    comment_id: commitment.record_id,
+                    reviewed_by: *reviewed_by,
+                    reviewed_at: *reviewed_at,
+                },
+                Some(text),
+            ),
         };
+        item.review = updated;
+        return Ok(text);
     }
-    Ok(())
+    Ok(None)
+}
+
+pub(crate) struct VerifiedCaseText {
+    pub(crate) opening: Option<String>,
+    pub(crate) rejections: std::collections::BTreeMap<EntityId, String>,
 }
 
 pub(crate) async fn case(
     app: &App,
     generation: ProviderInstanceId,
     view: &mut generated_contracts::DisputeView,
-) -> Result<(), Error> {
-    dispute(app, generation, &mut view.dispute).await?;
+) -> Result<VerifiedCaseText, Error> {
+    let opening = dispute(app, generation, &mut view.dispute).await?;
+    let mut rejections = std::collections::BTreeMap::new();
     for item in &mut view.milestone.submissions {
-        submission(
+        if let Some(text) = submission(
             app,
             generation,
             view.dispute.project_id,
             view.milestone.milestone_id,
             item,
         )
-        .await?;
+        .await?
+            && rejections.insert(item.submission_id, text).is_some()
+        {
+            return Err(Error::Dependency);
+        }
     }
-    Ok(())
+    Ok(VerifiedCaseText {
+        opening,
+        rejections,
+    })
 }
 
-/// Hydrate the requested public case; authorization continues using raw snapshots.
+/// Legacy references retain every original field. New commitments resolve only
+/// for this requested case, without changing authorization or other projects.
 pub(crate) async fn dispute(
     app: &App,
     generation: ProviderInstanceId,
     case: &mut Dispute,
-) -> Result<(), Error> {
-    if let Some(reference) = &case.evidence {
-        let body = resolve(
+) -> Result<Option<String>, Error> {
+    let mut opening = None;
+    if let Some(reference @ EvidenceRecordReferenceV1::Committed(commitment)) = &case.evidence {
+        match resolve(
             app,
             generation,
             case.project_id,
@@ -448,19 +477,19 @@ pub(crate) async fn dispute(
             case.opened_by,
             reference,
         )
-        .await?;
-        match body {
-            Body::Url(value) => case.evidence = Some(url(Body::Url(value))?),
-            Body::Text(_) => {
-                let EvidenceRecordReferenceV1::Committed(reference) = reference else {
-                    return Err(Error::Dependency);
-                };
-                case.opening_comment_id = Some(reference.record_id);
+        .await?
+        {
+            Body::Url(reference) => case.evidence = Some(reference.into()),
+            Body::Text(text) => {
+                case.opening_comment_id = Some(commitment.record_id);
                 case.evidence = None;
+                opening = Some(text);
             }
         }
     }
-    if let Some(response) = &mut case.response {
+    if let Some(response) = &mut case.response
+        && matches!(&response.evidence, EvidenceRecordReferenceV1::Committed(_))
+    {
         response.evidence = url(resolve(
             app,
             generation,
@@ -472,7 +501,7 @@ pub(crate) async fn dispute(
         )
         .await?)?;
     }
-    Ok(())
+    Ok(opening)
 }
 
 #[cfg(test)]
@@ -525,11 +554,24 @@ mod tests {
             }
             assert_ne!(baseline, changed.hash());
         }
+        let reference: EvidenceReference = serde_json::from_value(
+            serde_json::json!({"url":"https://例え.テスト/delivery","sha256":PayloadHash::from_bytes([7;32])}),
+        )?;
         let as_url = Record {
-            body: Body::Url("ipfs://notes — explicación".into()),
+            body: Body::Url(reference),
+            ..record.clone()
+        };
+        assert_eq!(as_url.hash().to_string(), vector["urlRecordV1"]["hash"]);
+        bytes.clear();
+        for byte in as_url.encode() {
+            write!(&mut bytes, "{byte:02x}")?;
+        }
+        assert_eq!(bytes, vector["urlRecordV1"]["encodedHex"]);
+        let as_text = Record {
+            body: Body::Text("https://例え.テスト/delivery".into()),
             ..record
         };
-        assert_ne!(baseline, as_url.hash());
+        assert_ne!(as_text.hash(), as_url.hash());
         Ok(())
     }
 }

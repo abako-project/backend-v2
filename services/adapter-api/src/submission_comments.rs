@@ -116,25 +116,29 @@ pub(crate) async fn get(
     }
     let id = parse(&id)?;
     let mut c = context(&app, &session, id).await?;
-    crate::evidence::submission(
-        &app,
-        c.instance,
-        c.project.project_id,
-        c.milestone_id,
-        &mut c.submission,
-    )
-    .await?;
+    let verified_reason =
+        crate::evidence::review(&app, c.instance, c.project.project_id, &mut c.submission).await?;
     let visible_reason = match c.submission.review {
         SubmissionReview::RejectedWithComment { comment_id, .. } => Some(comment_id.to_string()),
         _ => None,
     };
     let rows=sqlx::query("SELECT * FROM submission_comments WHERE provider_instance_id=$1 AND submission_id=$2 AND cursor>$3 AND (kind='Comment' OR comment_id=$4) ORDER BY cursor LIMIT 21")
-        .bind(c.instance.to_string()).bind(id.to_string()).bind(cursor.after).bind(visible_reason).fetch_all(&app.db).await?;
+        .bind(c.instance.to_string()).bind(id.to_string()).bind(cursor.after).bind(visible_reason.as_deref()).fetch_all(&app.db).await?;
     let items = rows
         .iter()
         .take(20)
-        .map(comment)
-        .collect::<Result<Vec<_>, _>>()?;
+        .map(|row| {
+            let mut value = comment(row)?;
+            if visible_reason.as_deref() == Some(value.comment_id.to_string().as_str())
+                && let Some(text) = &verified_reason
+            {
+                value.message.clone_from(text);
+                value.author_account = c.project.client;
+                value.kind = Kind::Rejection;
+            }
+            Ok(value)
+        })
+        .collect::<Result<Vec<_>, Error>>()?;
     let next_after = if rows.len() > 20 {
         items.last().map(|i| i.cursor)
     } else {
