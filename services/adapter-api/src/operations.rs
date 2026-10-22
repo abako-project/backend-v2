@@ -121,7 +121,8 @@ async fn authorize_project(
         | ProviderCommand::EditTask { .. }
         | ProviderCommand::RequestMilestoneCompletionWithoutDeliverable { .. }
         | ProviderCommand::RequestMilestoneCompletion { .. }
-        | ProviderCommand::SubmitMilestoneDelivery { .. } => project.coordinator == account,
+        | ProviderCommand::SubmitMilestoneDelivery { .. }
+        | ProviderCommand::SubmitMilestoneCommitted { .. } => project.coordinator == account,
         ProviderCommand::AcceptPlanningQuote { .. }
         | ProviderCommand::AcceptPlanningDelivery { .. }
         | ProviderCommand::ApproveExecution { .. }
@@ -129,7 +130,8 @@ async fn authorize_project(
         | ProviderCommand::AcceptMilestoneCompletion { .. }
         | ProviderCommand::AcceptMilestoneDelivery { .. }
         | ProviderCommand::RejectMilestoneCompletion { .. }
-        | ProviderCommand::RejectMilestoneDelivery { .. } => project.client == account,
+        | ProviderCommand::RejectMilestoneDelivery { .. }
+        | ProviderCommand::RejectMilestoneCommitted { .. } => project.client == account,
         ProviderCommand::EvaluateProject { .. } => {
             project.client == account
                 || project.coordinator == account
@@ -158,10 +160,12 @@ async fn authorize_project(
         ProviderCommand::CancelProject { .. }
         | ProviderCommand::DisputePlanning { .. }
         | ProviderCommand::OpenDispute(_)
-        | ProviderCommand::OpenDisputeWithComment(_) => {
+        | ProviderCommand::OpenDisputeWithComment(_)
+        | ProviderCommand::OpenDisputeCommitted { .. } => {
             project.client == account || project.coordinator == account
         }
-        ProviderCommand::RespondDispute { dispute_id, .. } => {
+        ProviderCommand::RespondDispute { dispute_id, .. }
+        | ProviderCommand::RespondDisputeCommitted { dispute_id, .. } => {
             crate::disputes::read(app, *dispute_id)
                 .await?
                 .dispute
@@ -184,8 +188,8 @@ pub(crate) async fn enqueue(
     key: Option<OperationId>,
 ) -> Result<OperationRef, Error> {
     command.validate().map_err(|_| Error::Invalid)?;
-    let command_bytes = command.encode();
-    if command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
+    let request_command_bytes = command.encode();
+    if request_command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
         return Err(Error::Invalid);
     }
     let operation_id = match key {
@@ -193,13 +197,13 @@ pub(crate) async fn enqueue(
         None => OperationId::from_bytes(random()?),
     };
     if let Some(row) = sqlx::query(
-        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = $1",
+        "SELECT principal_id, command_bytes, request_command_bytes, status FROM operations WHERE operation_id = $1",
     )
     .bind(operation_id.to_string())
     .fetch_optional(&app.db)
     .await?
     {
-        return existing(&row, session, &command_bytes, operation_id);
+        return existing(&row, session, &request_command_bytes, operation_id);
     }
     if let Err(error) = authorize(app, session, &command).await {
         app.audit(
@@ -228,6 +232,11 @@ pub(crate) async fn enqueue(
     } else {
         (session.wallet, session.view.account_id)
     };
+    let generation = if crate::evidence::needs_commitment(&command) {
+        Some(app.snapshot().await?.info.provider_instance_id)
+    } else {
+        None
+    };
     let time = now()?;
     let mut tx = app.db.begin().await?;
     // One database-wide enqueue lock preserves both queue limits across replicas.
@@ -235,22 +244,31 @@ pub(crate) async fn enqueue(
         .execute(&mut *tx)
         .await?;
     if let Some(row) = sqlx::query(
-        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = $1",
+        "SELECT principal_id, command_bytes, request_command_bytes, status FROM operations WHERE operation_id = $1",
     )
     .bind(operation_id.to_string())
     .fetch_optional(&mut *tx)
     .await?
     {
-        return existing(&row, session, &command_bytes, operation_id);
+        return existing(&row, session, &request_command_bytes, operation_id);
     }
     let count = sqlx::query("SELECT count(*) AS total, count(*) FILTER (WHERE wallet_id = $1) AS wallet FROM operations WHERE status NOT IN ('Finalized', 'Rejected', 'Expired')")
         .bind(wallet.to_string()).fetch_one(&mut *tx).await?;
     if count.try_get::<i64, _>("total")? >= 10_000 || count.try_get::<i64, _>("wallet")? >= 32 {
         return Err(Error::Capacity);
     }
-    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9)")
+    let command = if let Some(generation) = generation {
+        crate::evidence::prepare(&mut tx, session, generation, operation_id, command).await?
+    } else {
+        command
+    };
+    let command_bytes = command.encode();
+    if command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
+        return Err(Error::Invalid);
+    }
+    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10)")
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
-        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).execute(&mut *tx).await?;
+        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).execute(&mut *tx).await?;
     sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, 'operation_authorized', 'ok', $3)")
         .bind(session.view.principal_id.to_string()).bind(operation_id.to_string()).bind(time).execute(&mut *tx).await?;
     tx.commit().await?;
@@ -266,7 +284,10 @@ fn existing(
     operation_id: OperationId,
 ) -> Result<OperationRef, Error> {
     if row.try_get::<&str, _>("principal_id")? != session.view.principal_id.to_string()
-        || row.try_get::<Vec<u8>, _>("command_bytes")? != command
+        || row
+            .try_get::<Option<Vec<u8>>, _>("request_command_bytes")?
+            .unwrap_or(row.try_get("command_bytes")?)
+            != command
     {
         return Err(Error::Conflict("idempotency_conflict"));
     }

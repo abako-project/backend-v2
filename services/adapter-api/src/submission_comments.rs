@@ -115,7 +115,15 @@ pub(crate) async fn get(
         return Err(Error::Invalid);
     }
     let id = parse(&id)?;
-    let c = context(&app, &session, id).await?;
+    let mut c = context(&app, &session, id).await?;
+    crate::evidence::submission(
+        &app,
+        c.instance,
+        c.project.project_id,
+        c.milestone_id,
+        &mut c.submission,
+    )
+    .await?;
     let visible_reason = match c.submission.review {
         SubmissionReview::RejectedWithComment { comment_id, .. } => Some(comment_id.to_string()),
         _ => None,

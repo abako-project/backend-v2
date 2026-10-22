@@ -480,6 +480,30 @@ pub enum ProviderCommand {
     },
     OpenDisputeWithComment(OpenDisputeWithCommentRequest),
     SetCompensationPolicy(CompensationPolicy),
+    // Append only: existing signed command discriminants remain unchanged.
+    SubmitMilestoneCommitted {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+        worker_ratings: Option<Vec<WorkerRating>>,
+    },
+    RejectMilestoneCommitted {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        submission_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+    },
+    OpenDisputeCommitted {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        rejected_submission_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+    },
+    RespondDisputeCommitted {
+        project_id: EntityId,
+        dispute_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+    },
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -701,7 +725,11 @@ impl ProviderCommand {
                 nonempty(&request.reason, "reason")
             }
             Self::CreateTask { task, .. } | Self::EditTask { task, .. } => task.validate(),
-            Self::RequestMilestoneCompletionWithoutDeliverable { worker_ratings, .. } => unique(
+            Self::SubmitMilestoneCommitted {
+                worker_ratings: Some(worker_ratings),
+                ..
+            }
+            | Self::RequestMilestoneCompletionWithoutDeliverable { worker_ratings, .. } => unique(
                 &worker_ratings
                     .iter()
                     .map(|item| item.worker)
@@ -725,7 +753,11 @@ impl ProviderCommand {
         match self {
             Self::OpenDispute(request) => Some(request.project_id),
             Self::OpenDisputeWithComment(request) => Some(request.project_id),
-            Self::QuotePlanning { project_id, .. }
+            Self::SubmitMilestoneCommitted { project_id, .. }
+            | Self::RejectMilestoneCommitted { project_id, .. }
+            | Self::OpenDisputeCommitted { project_id, .. }
+            | Self::RespondDisputeCommitted { project_id, .. }
+            | Self::QuotePlanning { project_id, .. }
             | Self::AcceptPlanningQuote { project_id, .. }
             | Self::SetProposalDelivery { project_id, .. }
             | Self::DeleteTask { project_id, .. }

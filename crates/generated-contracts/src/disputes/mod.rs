@@ -93,6 +93,112 @@ impl Decode for EvidenceReference {
     }
 }
 
+/// Fixed-width reference to an immutable adapter-owned evidence record.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct EvidenceCommitmentV1 {
+    /// Record ID within its generation, purpose and business target.
+    pub record_id: EntityId,
+    /// SHA-256 of the versioned, context-bound record encoding.
+    pub hash: PayloadHash,
+}
+
+/// Operation whose descriptive record is committed; SCALE order is versioned.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Encode, Decode,
+)]
+#[allow(clippy::cast_possible_truncation)]
+pub enum EvidencePurposeV1 {
+    /// A URL provided with a delivery operation, excluding later presentation text.
+    #[codec(index = 0)]
+    Delivery,
+    /// A reason for rejecting the current submission.
+    #[codec(index = 1)]
+    Rejection,
+    /// The initial argument opening a dispute.
+    #[codec(index = 2)]
+    Opening,
+    /// The retained legacy single-response operation.
+    #[codec(index = 3)]
+    Response,
+}
+
+/// Private provider storage/read representation. The adapter resolves commitments
+/// into the existing frontend reference/comment shapes before serialization.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum EvidenceRecordReferenceV1 {
+    /// Historical URL reference; its original signed input remains compatible.
+    Legacy(EvidenceReference),
+    /// A fixed-size commitment to an adapter-owned immutable record.
+    Committed(EvidenceCommitmentV1),
+}
+// Keep historical read/storage SCALE bytes too. A valid URL is <=2048 bytes,
+// so its compact length cannot start with the big-integer marker 0xff.
+impl Encode for EvidenceRecordReferenceV1 {
+    fn size_hint(&self) -> usize {
+        match self {
+            Self::Legacy(reference) => reference.size_hint(),
+            Self::Committed(_) => 50,
+        }
+    }
+    fn encode_to<T: parity_scale_codec::Output + ?Sized>(&self, output: &mut T) {
+        match self {
+            Self::Legacy(reference) => reference.encode_to(output),
+            Self::Committed(reference) => {
+                output.write(&[0xff, 1]);
+                reference.encode_to(output);
+            }
+        }
+    }
+}
+impl Decode for EvidenceRecordReferenceV1 {
+    fn decode<I: parity_scale_codec::Input>(
+        input: &mut I,
+    ) -> Result<Self, parity_scale_codec::Error> {
+        let first = input.read_byte()?;
+        if first == 0xff {
+            if input.read_byte()? != 1 {
+                return Err("unsupported evidence commitment".into());
+            }
+            return Ok(Self::Committed(EvidenceCommitmentV1::decode(input)?));
+        }
+        let length = match first & 3 {
+            0 => usize::from(first >> 2),
+            1 => usize::from(u16::from_le_bytes([first, input.read_byte()?]) >> 2),
+            _ => return Err("invalid evidence reference length".into()),
+        };
+        if length > 2048 || (first & 3 == 1 && length < 64) {
+            return Err("invalid evidence reference length".into());
+        }
+        input.on_before_alloc_mem(length)?;
+        let mut bytes = vec![0; length];
+        input.read(&mut bytes)?;
+        let url = String::from_utf8(bytes)
+            .map_err(|_| parity_scale_codec::Error::from("invalid evidence reference"))?;
+        let legacy_sha256 = PayloadHash::decode(input)?;
+        let mut reference = EvidenceReference::new(url)
+            .map_err(|_| parity_scale_codec::Error::from("invalid evidence reference"))?;
+        reference.legacy_sha256 = legacy_sha256;
+        Ok(Self::Legacy(reference))
+    }
+}
+impl From<EvidenceReference> for EvidenceRecordReferenceV1 {
+    fn from(value: EvidenceReference) -> Self {
+        Self::Legacy(value)
+    }
+}
+impl EvidenceRecordReferenceV1 {
+    /// An unresolved commitment has no URL; callers must resolve it explicitly.
+    #[must_use]
+    pub fn url(&self) -> Option<&str> {
+        match self {
+            Self::Legacy(reference) => Some(reference.url()),
+            Self::Committed(_) => None,
+        }
+    }
+}
+
 /// One terminal review, bound to the exact submission rather than a mutable URL.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "type", rename_all_fields = "camelCase", deny_unknown_fields)]
@@ -105,7 +211,7 @@ pub enum SubmissionReview {
     #[codec(index = 1)]
     Rejected {
         /// Reason document.
-        reason: EvidenceReference,
+        reason: EvidenceRecordReferenceV1,
         /// Verified client account.
         reviewed_by: AccountId32,
         /// Provider timestamp.
@@ -140,7 +246,7 @@ pub struct CompletionSubmission {
     /// One-based, increasing within the milestone.
     pub version: u64,
     /// Optional submitted artifact; descriptive links live in the adapter.
-    pub deliverable: Option<EvidenceReference>,
+    pub deliverable: Option<EvidenceRecordReferenceV1>,
     /// Verified coordinator.
     pub submitted_by: AccountId32,
     /// Provider timestamp.
@@ -204,7 +310,7 @@ pub enum DisputeStatus {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DisputeResponse {
     /// Public response reference.
-    pub evidence: EvidenceReference,
+    pub evidence: EvidenceRecordReferenceV1,
     /// Verified counterparty.
     pub author: AccountId32,
     /// Provider timestamp.
@@ -236,7 +342,7 @@ pub struct Dispute {
     /// Provider opening timestamp.
     pub opened_at: UnixSeconds,
     /// Earlier reference-based opening, absent for a written argument.
-    pub evidence: Option<EvidenceReference>,
+    pub evidence: Option<EvidenceRecordReferenceV1>,
     /// Immutable adapter opening argument, confirmed by this case.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub opening_comment_id: Option<EntityId>,

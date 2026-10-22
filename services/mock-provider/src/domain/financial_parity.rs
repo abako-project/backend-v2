@@ -1863,3 +1863,227 @@ fn retained_large_profile_archive_is_valid_native_state() -> TestResult {
     assert_eq!(serde_json::to_vec(&restored.archive()?)?, bytes);
     Ok(())
 }
+
+#[test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "Replay the full signed scenario and check each commitment slot, rejection, replay and archive boundary."
+)]
+fn committed_evidence_preserves_receipts_money_replay_and_current_archives() -> TestResult {
+    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    let root = serde_json::from_value(trace["root"].clone())?;
+    let mut state = State::new(root)?;
+    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    let frozen: Value = serde_json::from_str(include_str!("fixtures/evidence-signed.json"))?;
+    let authoring = std::env::var("EVIDENCE_FIXTURE_OUTPUT").ok();
+    let mut counts = [0usize; 4];
+    let mut replacements = Vec::new();
+    for (index, step) in trace["steps"].as_array().ok_or("steps")?.iter().enumerate() {
+        let mut signed: SignedContractCallV1 = serde_json::from_value(step["signed"].clone())?;
+        let original = signed.clone();
+        let inputs: execution::ExecutionInputs = serde_json::from_value(step["inputs"].clone())?;
+        let evidence = EvidenceCommitmentV1 {
+            record_id: EntityId::from_bytes(signed.call.operation_id.into_bytes()),
+            hash: PayloadHash::from_bytes([91; 32]),
+        };
+        if execution::VerifiedCall::verify(original.clone()).is_ok() {
+            signed.call.command = match signed.call.command {
+                ProviderCommand::SubmitMilestoneDelivery {
+                    project_id,
+                    milestone_id,
+                    request,
+                } if request.deliverable.is_some() => ProviderCommand::SubmitMilestoneCommitted {
+                    project_id,
+                    milestone_id,
+                    evidence,
+                    worker_ratings: None,
+                },
+                ProviderCommand::RequestMilestoneCompletion {
+                    project_id,
+                    milestone_id,
+                    request,
+                } => ProviderCommand::SubmitMilestoneCommitted {
+                    project_id,
+                    milestone_id,
+                    evidence,
+                    worker_ratings: Some(request.worker_ratings),
+                },
+                ProviderCommand::RejectMilestoneCompletion {
+                    project_id,
+                    milestone_id,
+                    submission_id,
+                    ..
+                } => ProviderCommand::RejectMilestoneCommitted {
+                    project_id,
+                    milestone_id,
+                    submission_id,
+                    evidence,
+                },
+                ProviderCommand::RejectMilestoneDelivery {
+                    project_id,
+                    milestone_id,
+                    submission_id,
+                    comment_id,
+                } => ProviderCommand::RejectMilestoneCommitted {
+                    project_id,
+                    milestone_id,
+                    submission_id,
+                    evidence: EvidenceCommitmentV1 {
+                        record_id: comment_id,
+                        ..evidence
+                    },
+                },
+                ProviderCommand::OpenDispute(request) => ProviderCommand::OpenDisputeCommitted {
+                    project_id: request.project_id,
+                    milestone_id: request.milestone_id,
+                    rejected_submission_id: request.rejected_submission_id,
+                    evidence,
+                },
+                ProviderCommand::OpenDisputeWithComment(request) => {
+                    ProviderCommand::OpenDisputeCommitted {
+                        project_id: request.project_id,
+                        milestone_id: request.milestone_id,
+                        rejected_submission_id: request.rejected_submission_id,
+                        evidence: EvidenceCommitmentV1 {
+                            record_id: request.comment_id,
+                            ..evidence
+                        },
+                    }
+                }
+                ProviderCommand::RespondDispute {
+                    project_id,
+                    dispute_id,
+                    ..
+                } => ProviderCommand::RespondDisputeCommitted {
+                    project_id,
+                    dispute_id,
+                    evidence,
+                },
+                other => other,
+            };
+        }
+        let changed = signed.call.command != original.call.command;
+        if changed {
+            if authoring.is_some() {
+                let seed = (1..=10)
+                    .find(|seed| signed_account(*seed).ok() == Some(signed.call.origin))
+                    .ok_or("fixture signing key")?;
+                let key = subxt_signer::sr25519::Keypair::from_secret_key([seed; 32])?;
+                signed.signature =
+                    Sr25519Signature::from_bytes(key.sign(&signed.call.signable_bytes()?).0);
+            } else {
+                let expected = signed.call.clone();
+                let replacement = frozen["replacements"]
+                    .as_array()
+                    .ok_or("replacements")?
+                    .iter()
+                    .find(|r| r["step"] == index)
+                    .ok_or("frozen command")?;
+                signed = serde_json::from_value(replacement["signed"].clone())?;
+                assert_eq!(signed.call, expected, "frozen command {index}");
+            }
+            replacements.push(json!({"step":index,"signed":signed}));
+        }
+        let before = serde_json::to_value(&state.engine)?;
+        let outcome = signed_apply(&mut state, signed.clone(), inputs.clone());
+        assert_eq!(outcome, step["outcome"], "committed step {index}");
+        if outcome["receipt"]["outcome"]["type"] == "Failed" || outcome.get("error").is_some() {
+            assert_eq!(
+                serde_json::to_value(&state.engine)?,
+                before,
+                "failed step {index}"
+            );
+        } else if changed {
+            let command = &signed.call.command;
+            let project = state
+                .engine
+                .projects
+                .get(&command.project_id().ok_or("project")?)
+                .ok_or("project")?;
+            match command {
+                ProviderCommand::SubmitMilestoneCommitted { evidence, .. } => {
+                    counts[0] += 1;
+                    let id: EntityId =
+                        serde_json::from_value(outcome["receipt"]["createdEntityId"].clone())?;
+                    let submission = project
+                        .proposals
+                        .iter()
+                        .flat_map(|p| &p.milestones)
+                        .flat_map(|m| &m.submissions)
+                        .find(|s| s.submission_id == id)
+                        .ok_or("submission")?;
+                    assert_eq!(
+                        submission.deliverable,
+                        Some(EvidenceRecordReferenceV1::Committed(evidence.clone()))
+                    );
+                }
+                ProviderCommand::RejectMilestoneCommitted {
+                    submission_id,
+                    evidence,
+                    ..
+                } => {
+                    counts[1] += 1;
+                    let submission = project
+                        .proposals
+                        .iter()
+                        .flat_map(|p| &p.milestones)
+                        .flat_map(|m| &m.submissions)
+                        .find(|s| s.submission_id == *submission_id)
+                        .ok_or("submission")?;
+                    assert!(
+                        matches!(&submission.review,SubmissionReview::Rejected{reason:EvidenceRecordReferenceV1::Committed(stored),..} if stored==evidence)
+                    );
+                }
+                ProviderCommand::OpenDisputeCommitted { evidence, .. } => {
+                    counts[2] += 1;
+                    let id: EntityId =
+                        serde_json::from_value(outcome["receipt"]["createdEntityId"].clone())?;
+                    assert_eq!(
+                        state.engine.disputes.get(&id).ok_or("case")?.evidence,
+                        Some(EvidenceRecordReferenceV1::Committed(evidence.clone()))
+                    );
+                }
+                ProviderCommand::RespondDisputeCommitted {
+                    dispute_id,
+                    evidence,
+                    ..
+                } => {
+                    counts[3] += 1;
+                    assert_eq!(
+                        state
+                            .engine
+                            .disputes
+                            .get(dispute_id)
+                            .and_then(|d| d.response.as_ref())
+                            .ok_or("response")?
+                            .evidence,
+                        EvidenceRecordReferenceV1::Committed(evidence.clone())
+                    );
+                }
+                _ => return Err("unexpected commitment command".into()),
+            }
+            let encoded = state.encode()?;
+            assert_eq!(
+                signed_apply(&mut state, signed, inputs),
+                outcome,
+                "replay {index}"
+            );
+            assert_eq!(state.encode()?, encoded);
+        }
+        let encoded = state.encode()?;
+        state = State::from_archive(state.archive()?, root)?;
+        assert_eq!(state.encode()?, encoded, "archive {index}");
+    }
+    assert!(
+        counts.iter().all(|count| *count > 0),
+        "all operation kinds: {counts:?}"
+    );
+    assert_eq!(json!(projection(&state)?.1), trace["final"][1]);
+    if let Some(path) = authoring {
+        std::fs::write(
+            path,
+            serde_json::to_vec_pretty(&json!({"version":1,"replacements":replacements}))?,
+        )?;
+    }
+    Ok(())
+}

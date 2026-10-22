@@ -201,14 +201,15 @@ async fn opening_reason(app: &App, c: &Context) -> Result<String, Error> {
         .dispute
         .evidence
         .as_ref()
-        .map(|e| e.url().to_owned())
+        .and_then(|e| e.url().map(str::to_owned))
         .ok_or(Error::Dependency)
 }
 pub(crate) async fn presentation(
     State(app): State<Arc<App>>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Error> {
-    let c = context(&app, parse(&id)?).await?;
+    let mut c = context(&app, parse(&id)?).await?;
+    crate::evidence::case(&app, c.instance, &mut c.case).await?;
     let reason = opening_reason(&app, &c).await?;
     let mut value = serde_json::to_value(&c.case)?;
     value["presentation"] = json!({"projectTitle":c.title,"openingReason":reason,"client":c.client,"coordinator":c.coordinator});
@@ -385,7 +386,8 @@ pub(crate) async fn history(
     State(app): State<Arc<App>>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Error> {
-    let c = context(&app, parse(&id)?).await?;
+    let mut c = context(&app, parse(&id)?).await?;
+    crate::evidence::case(&app, c.instance, &mut c.case).await?;
     let mut deliverables = Vec::new();
     let mut rejections = Vec::new();
     let mut events = Vec::new();
@@ -395,7 +397,9 @@ pub(crate) async fn history(
         let documentation = if let Some(r) = &row {
             r.try_get::<Option<String>, _>("documentation")?
         } else {
-            s.deliverable.as_ref().map(|e| e.url().to_owned())
+            s.deliverable
+                .as_ref()
+                .and_then(|e| e.url().map(str::to_owned))
         };
         let links = if let Some(r) = &row {
             r.try_get::<Option<String>, _>("links")?
@@ -409,7 +413,10 @@ pub(crate) async fn history(
                 reason,
                 reviewed_at,
                 ..
-            } => Some((reason.url().to_owned(), *reviewed_at)),
+            } => Some((
+                reason.url().ok_or(Error::Dependency)?.to_owned(),
+                *reviewed_at,
+            )),
             SubmissionReview::RejectedWithComment {
                 comment_id,
                 reviewed_at,

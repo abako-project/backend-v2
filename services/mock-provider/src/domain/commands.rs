@@ -301,8 +301,11 @@ impl RustEngine {
         require(!project.cancelled, "project_cancelled")?;
         if project.active_dispute_id.is_some() {
             match command {
-                ProviderCommand::RespondDispute { .. } => {}
-                ProviderCommand::OpenDispute(_) | ProviderCommand::OpenDisputeWithComment(_) => {
+                ProviderCommand::RespondDispute { .. }
+                | ProviderCommand::RespondDisputeCommitted { .. } => {}
+                ProviderCommand::OpenDispute(_)
+                | ProviderCommand::OpenDisputeWithComment(_)
+                | ProviderCommand::OpenDisputeCommitted { .. } => {
                     return Err(super::disputes::DisputeError::AlreadyOpen.into());
                 }
                 _ => return Err(super::disputes::DisputeError::ProjectFrozen.into()),

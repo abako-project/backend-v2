@@ -490,14 +490,17 @@ async fn projects(
     State(app): State<Arc<App>>,
     Extension(session): Extension<Session>,
 ) -> Result<Json<Vec<ProjectView>>, Error> {
-    Ok(Json(
-        app.snapshot()
-            .await?
-            .projects
-            .into_iter()
-            .filter(|p| operations::visible(p, session.view.account_id))
-            .collect(),
-    ))
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    let mut projects: Vec<_> = snapshot
+        .projects
+        .into_iter()
+        .filter(|p| operations::visible(p, session.view.account_id))
+        .collect();
+    for project in &mut projects {
+        crate::evidence::project(&app, generation, project).await?;
+    }
+    Ok(Json(projects))
 }
 async fn project(
     State(app): State<Arc<App>>,
@@ -505,14 +508,15 @@ async fn project(
     Path(id): Path<String>,
 ) -> Result<Json<ProjectView>, Error> {
     let id = parse::<EntityId>(&id)?;
-    Ok(Json(
-        app.snapshot()
-            .await?
-            .projects
-            .into_iter()
-            .find(|p| p.project_id == id && operations::visible(p, session.view.account_id))
-            .ok_or(Error::NotFound)?,
-    ))
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    let mut project = snapshot
+        .projects
+        .into_iter()
+        .find(|p| p.project_id == id && operations::visible(p, session.view.account_id))
+        .ok_or(Error::NotFound)?;
+    crate::evidence::project(&app, generation, &mut project).await?;
+    Ok(Json(project))
 }
 
 async fn visible_storage(

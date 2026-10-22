@@ -1385,3 +1385,6 @@ mod dispute_conversations;
 
 #[path = "platform/http_tests.rs"]
 mod platform;
+
+#[path = "evidence_tests.rs"]
+mod evidence_commitments;

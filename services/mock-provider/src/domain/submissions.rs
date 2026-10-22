@@ -1,8 +1,8 @@
 use std::collections::BTreeSet;
 
 use generated_contracts::{
-    AccountId32, CompletionSubmission, EntityId, EvidenceReference, EvidenceRequest,
-    MilestoneStatus, MilestoneView, ProjectView, SubmissionReview, UnixSeconds, WorkerRating,
+    AccountId32, CompletionSubmission, EntityId, EvidenceRecordReferenceV1, MilestoneStatus,
+    MilestoneView, ProjectView, SubmissionReview, UnixSeconds, WorkerRating,
 };
 
 use super::project::milestone_mut;
@@ -13,7 +13,7 @@ pub(super) fn submit(
     project: &mut ProjectView,
     origin: AccountId32,
     milestone_id: EntityId,
-    deliverable: Option<EvidenceReference>,
+    deliverable: Option<EvidenceRecordReferenceV1>,
     worker_ratings: Option<&[WorkerRating]>,
     now: UnixSeconds,
 ) -> Result<EntityId> {
@@ -77,7 +77,7 @@ pub(super) fn reject(
     origin: AccountId32,
     milestone_id: EntityId,
     submission_id: EntityId,
-    request: &EvidenceRequest,
+    evidence: EvidenceRecordReferenceV1,
     now: UnixSeconds,
 ) -> Result<()> {
     require(project.client == origin, "client_required")?;
@@ -87,7 +87,7 @@ pub(super) fn reject(
         "invalid_milestone_state",
     )?;
     pending(milestone, submission_id)?.review = SubmissionReview::Rejected {
-        reason: request.evidence.clone(),
+        reason: evidence,
         reviewed_by: origin,
         reviewed_at: now,
     };

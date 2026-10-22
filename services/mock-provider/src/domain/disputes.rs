@@ -1,6 +1,6 @@
 use generated_contracts::{
-    AccountId32, Dispute, DisputeResponse, DisputeStatus, DisputeView, EntityId, EvidenceReference,
-    EvidenceRequest, MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest,
+    AccountId32, Dispute, DisputeResponse, DisputeStatus, DisputeView, EntityId,
+    EvidenceRecordReferenceV1, MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest,
     ProjectView, SubmissionReview, UnixSeconds,
 };
 
@@ -47,7 +47,7 @@ impl RustEngine {
             origin,
             request.milestone_id,
             request.rejected_submission_id,
-            Some(request.evidence.clone()),
+            Some(request.evidence.clone().into()),
             None,
             now,
         )
@@ -72,13 +72,13 @@ impl RustEngine {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn open_case(
+    pub(super) fn open_case(
         &mut self,
         project: &mut ProjectView,
         origin: AccountId32,
         milestone_id: EntityId,
         rejected_submission_id: EntityId,
-        evidence: Option<EvidenceReference>,
+        evidence: Option<EvidenceRecordReferenceV1>,
         opening_comment_id: Option<EntityId>,
         now: UnixSeconds,
     ) -> Result<EntityId> {
@@ -148,7 +148,7 @@ impl RustEngine {
         project: &ProjectView,
         origin: AccountId32,
         id: EntityId,
-        request: &EvidenceRequest,
+        evidence: EvidenceRecordReferenceV1,
         now: UnixSeconds,
     ) -> Result<()> {
         let dispute = self
@@ -166,7 +166,7 @@ impl RustEngine {
             return Err(DisputeError::AlreadyAnswered.into());
         }
         dispute.response = Some(DisputeResponse {
-            evidence: request.evidence.clone(),
+            evidence,
             author: origin,
             occurred_at: now,
         });

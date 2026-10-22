@@ -3,6 +3,7 @@ mod auth;
 mod bramp;
 mod catalog;
 mod disputes;
+mod evidence;
 mod http;
 mod notifications;
 mod operations;

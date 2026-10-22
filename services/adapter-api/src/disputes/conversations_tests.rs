@@ -101,7 +101,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
             .try_get::<String, _>("command_json")?,
     )?;
     assert!(
-        matches!(action,ProviderCommand::OpenDisputeWithComment(ref r) if r.comment_id==opening_key)
+        matches!(action,ProviderCommand::OpenDisputeCommitted{ref evidence,..} if evidence.record_id==opening_key)
     );
     project.active_dispute_id = Some(case_id);
     project.proposals[0].milestones[0].frozen = true;

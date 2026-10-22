@@ -26,6 +26,78 @@ impl RustEngine {
         now: UnixSeconds,
     ) -> Result<Effect> {
         let transition = match command {
+            ProviderCommand::SubmitMilestoneCommitted {
+                milestone_id,
+                evidence,
+                worker_ratings,
+                ..
+            } => {
+                let id = super::submissions::submit(
+                    &self.context,
+                    project,
+                    origin,
+                    *milestone_id,
+                    Some(generated_contracts::EvidenceRecordReferenceV1::Committed(
+                        evidence.clone(),
+                    )),
+                    worker_ratings.as_deref(),
+                    now,
+                )?;
+                Ok((DomainEventKind::MilestoneCompletionRequested, Some(id)))
+            }
+            ProviderCommand::RejectMilestoneCommitted {
+                milestone_id,
+                submission_id,
+                evidence,
+                ..
+            } => {
+                super::submissions::reject(
+                    project,
+                    origin,
+                    *milestone_id,
+                    *submission_id,
+                    generated_contracts::EvidenceRecordReferenceV1::Committed(evidence.clone()),
+                    now,
+                )?;
+                Ok((
+                    DomainEventKind::MilestoneCompletionRejected,
+                    Some(*submission_id),
+                ))
+            }
+            ProviderCommand::OpenDisputeCommitted {
+                milestone_id,
+                rejected_submission_id,
+                evidence,
+                ..
+            } => {
+                let id = self.open_case(
+                    project,
+                    origin,
+                    *milestone_id,
+                    *rejected_submission_id,
+                    Some(generated_contracts::EvidenceRecordReferenceV1::Committed(
+                        evidence.clone(),
+                    )),
+                    None,
+                    now,
+                )?;
+                Ok((DomainEventKind::DisputeOpened, Some(id)))
+            }
+            ProviderCommand::RespondDisputeCommitted {
+                dispute_id,
+                evidence,
+                ..
+            } => {
+                self.respond_dispute(
+                    project,
+                    origin,
+                    *dispute_id,
+                    generated_contracts::EvidenceRecordReferenceV1::Committed(evidence.clone()),
+                    now,
+                )?;
+                Ok((DomainEventKind::DisputeResponseAdded, Some(*dispute_id)))
+            }
+
             ProviderCommand::EvaluateProject { request, .. } => {
                 self.evaluate_project(project, origin, request, now)?;
                 Ok((DomainEventKind::ProjectEvaluated, Some(project.project_id)))
@@ -66,7 +138,7 @@ impl RustEngine {
                     origin,
                     *milestone_id,
                     *submission_id,
-                    request,
+                    request.evidence.clone().into(),
                     now,
                 )?;
                 Ok((
@@ -87,7 +159,13 @@ impl RustEngine {
                 request,
                 ..
             } => {
-                self.respond_dispute(project, origin, *dispute_id, request, now)?;
+                self.respond_dispute(
+                    project,
+                    origin,
+                    *dispute_id,
+                    request.evidence.clone().into(),
+                    now,
+                )?;
                 Ok((DomainEventKind::DisputeResponseAdded, Some(*dispute_id)))
             }
             ProviderCommand::QuotePlanning { .. }
@@ -579,7 +657,7 @@ impl RustEngine {
                     project,
                     origin,
                     *milestone_id,
-                    request.deliverable.clone(),
+                    request.deliverable.clone().map(Into::into),
                     None,
                     now,
                 )?;
@@ -600,7 +678,7 @@ impl RustEngine {
                     project,
                     origin,
                     *milestone_id,
-                    Some(request.deliverable.clone()),
+                    Some(request.deliverable.clone().into()),
                     Some(&request.worker_ratings),
                     now,
                 )?;

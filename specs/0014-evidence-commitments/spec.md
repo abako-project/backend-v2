@@ -1,9 +1,8 @@
 # SPEC-0014: Keep evidence records offchain
 
-Status: DRAFT — commitment direction approved; anchoring scope pending.
-Approval source: owner accepted adapter-side validation, fixed-size onchain
-hashes of immutable evidence records, preserved signed-command compatibility
-and unchanged frontend requests/responses in the current conversation.
+Status: APPROVED.
+Approval: owner accepted the commitment direction and then the recommended
+existing-signed-operation scope in the current conversation, 2026-10-22.
 
 ## Problem and decision
 
@@ -56,22 +55,77 @@ containing a URL does not hash the remote document. Adapter retention/backups
 remain necessary. Fetching, snapshotting or content-addressed document hosting
 is outside this change.
 
-## Scope decision required before implementation
+## Anchoring scope
 
-Current rejection comments and dispute-opening arguments exist before their
-signed operation. Delivery documentation/links are saved after confirmation of
-the submission; later public arguments also have no existing signed operation.
-Their immutability and lack of provider writes are covered by current tests.
+Anchor evidence referenced by existing signed operations: optional URL delivery
+references, rejection reasons, dispute openings and the retained legacy response
+operation. Current rejection/opening texts keep their existing scoped IDs.
+Delivery descriptions, later public arguments and private case messages remain
+offchain; they acquire no additional transactions or new protocol restrictions.
 
-Choose whether this change anchors:
+Append four internal commitment commands. Existing evidence read/storage slots
+hold either a legacy reference or a commitment; no second catalog owns evidence
+state. The adapter resolves commitments after project visibility filtering or
+for the requested public case. Raw authorization snapshots never hydrate all
+records. Missing evidence cannot block unrelated projects or authorization.
+Both untagged reference shapes reject unknown fields; unresolved internal
+commitments must never reach a frontend response.
 
-1. Evidence already referenced by signed operations, including rejection and
-   dispute-opening records; or
-2. Those records plus delivery descriptions and later public arguments, requiring
-   additional anchoring operations and explicit confirmation/failure semantics.
+Text stays in the existing comment/opening tables. New URL records use an
+adapter table keyed by generation, project, purpose, business target and record
+ID. Existing scoped comment IDs do not become globally unique. URL record
+persistence and pending-operation insertion share one adapter transaction after
+queue admission. Preserve original request bytes for idempotent retries even
+after confirmation or a provider-generation change.
 
-Do not add extra transactions or claim unsigned descriptive records are anchored
-until that scope is decided. Existing private case messages remain offchain.
+## EvidenceRecordV1 encoding
+
+Compute `SHA256(b"abako/evidence/v1\0" || SCALE(record))`. In order, `record`
+contains version `u8=1`, provider generation `[u8;16]`, project `[u8;16]`, purpose
+`u8`, target `[u8;16]`, record ID `[u8;16]`, author `[u8;32]`, then body kind `u8`
+and the exact UTF-8 payload as a SCALE string. Do not normalize URLs, whitespace
+or Unicode before hashing. The domain prefix ends with one NUL byte.
+
+Purpose tags and targets are: delivery `0`/milestone ID, rejection `1`/submission
+ID, opening `2`/rejected submission ID, response `3`/dispute ID. Body tags are URL
+`0` and text `1`. Rejection/opening text retains its existing comment ID; new
+URL records use their operation ID's 16 bytes. The provider assigns any new
+submission/dispute ID within the same operation as storing the commitment.
+
+Frozen record and legacy-reference byte/hash vectors are in
+[hash-vectors.json](hash-vectors.json). The adapter uses existing SHA-256 and
+SCALE implementations; contracts accept fixed hashes without recomputing or
+validating their offchain preimages.
+
+Preserve old native read/storage SCALE encoding for legacy references. A new
+committed reference uses bytes `ff 01`, record ID `[u8;16]` and hash `[u8;32]`.
+A valid legacy URL's compact length (<=2048 bytes) cannot start with `ff`.
+This discriminator is confined to provider storage/read codecs; signed request
+reference types and every old signed-command byte remain unchanged. The new
+contract storage codec is explicit and converted by the private SDK bridge.
+
+## Legacy compatibility
+
+Retain old signed-command bytes and their native semantics. The verified SDK
+bridge replaces each legacy URL reference at the contract ABI boundary with
+`SHA256(b"abako/legacy-reference/v1\0" || SCALE(EvidenceReference))`, including
+its opaque legacy digest slot. This narrow compatibility hash commits exactly
+the old reference bytes; context remains bound by its signed operation and
+contract storage slot. It does not invent a record ID or adapter content.
+
+Retain a bounded offchain compatibility map in the candidate checkpoint for
+lossless old reads, complete export and rollback. Contracts store only the fixed
+legacy-reference hash. Import stages the same hashes and retains original bytes
+offchain; it does not replay historical operations. A missing or mismatched map
+entry is an infrastructure failure, never an empty or substituted reference.
+
+Old comment-ID-only history remains explicitly unanchored. Absence is optional
+metadata, not an all-zero hash. Never derive a historical text hash from whatever
+the adapter happens to hold now.
+
+New adapter records use the full context-bound EvidenceRecordV1 hash; the legacy
+exception does not apply to new frontend requests. Old commands accepted through
+the compatibility bridge may still be replayed unchanged.
 
 ## Delivery and checks
 

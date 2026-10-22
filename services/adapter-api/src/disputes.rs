@@ -15,11 +15,18 @@ pub(crate) async fn read(app: &App, id: EntityId) -> Result<DisputeView, Error> 
     .await
 }
 
+pub(crate) async fn public_read(app: &App, id: EntityId) -> Result<DisputeView, Error> {
+    let mut view = read(app, id).await?;
+    let generation = app.snapshot().await?.info.provider_instance_id;
+    crate::evidence::case(app, generation, &mut view).await?;
+    Ok(view)
+}
+
 pub(crate) async fn public_case(
     State(app): State<Arc<App>>,
     Path(id): Path<String>,
 ) -> Result<Json<DisputeView>, Error> {
-    Ok(Json(read(&app, parse(&id)?).await?))
+    Ok(Json(public_read(&app, parse(&id)?).await?))
 }
 
 pub(crate) async fn response(
