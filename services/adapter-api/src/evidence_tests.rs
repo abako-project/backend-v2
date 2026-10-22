@@ -458,3 +458,51 @@ async fn evidence_text_hashes_preserve_scoped_comment_ids_and_detect_changes() -
     app.db.close().await;
     Ok(())
 }
+
+#[tokio::test]
+async fn evidence_generation_is_bound_before_signing_preparation() -> TestResult {
+    let fake = fake()?;
+    let internal = Server::start(internal(fake.clone())).await?;
+    let app = app(&internal).await?;
+    let (coordinator, _) = register(&app, "evidence_generation").await?;
+    let doc: Value = serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+    let mut project: ProjectView =
+        serde_json::from_value(doc["components"]["schemas"]["ProjectView"]["examples"][0].clone())?;
+    project.coordinator = coordinator.view.account_id;
+    let id = OperationId::from_bytes([81; 16]);
+    let command = ProviderCommand::SubmitMilestoneDelivery {
+        project_id: project.project_id,
+        milestone_id: project.proposals[0].milestones[0].milestone_id,
+        request: SubmitMilestoneCompletionRequest {
+            deliverable: Some(EvidenceReference::new(
+                "https://example.test/generation".into(),
+            )?),
+        },
+    };
+    fake.lock().await.snapshot.projects.push(project);
+    operations::enqueue(&app, &coordinator, command, Some(id)).await?;
+    fake.lock().await.snapshot.info.provider_instance_id = ProviderInstanceId::from_bytes([82; 16]);
+    let job = operations::claim(&app).await?.ok_or("pending job")?;
+    operations::process(&app, job).await?;
+    let operation = operations::read(&app, &coordinator, id).await?;
+    assert_eq!(operation.status, ProviderOperationStatus::Rejected);
+    assert_eq!(
+        operation.error_code.as_deref(),
+        Some("provider_instance_changed")
+    );
+    let row=sqlx::query("SELECT provider_instance_id,signable_payload,signed_json FROM operations WHERE operation_id=$1").bind(id.to_string()).fetch_one(&app.db).await?;
+    assert_eq!(
+        row.try_get::<String, _>("provider_instance_id")?,
+        info().provider_instance_id.to_string()
+    );
+    assert!(
+        row.try_get::<Option<Vec<u8>>, _>("signable_payload")?
+            .is_none()
+    );
+    assert!(row.try_get::<Option<String>, _>("signed_json")?.is_none());
+    assert!(fake.lock().await.jobs.is_empty());
+    assert_eq!(fake.lock().await.submissions, 0);
+    internal.finish().await?;
+    app.db.close().await;
+    Ok(())
+}

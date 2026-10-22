@@ -266,9 +266,9 @@ pub(crate) async fn enqueue(
     if command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
         return Err(Error::Invalid);
     }
-    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10)")
+    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes, provider_instance_id) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10, $11)")
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
-        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).execute(&mut *tx).await?;
+        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).execute(&mut *tx).await?;
     sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, 'operation_authorized', 'ok', $3)")
         .bind(session.view.principal_id.to_string()).bind(operation_id.to_string()).bind(time).execute(&mut *tx).await?;
     tx.commit().await?;
@@ -445,6 +445,17 @@ async fn advance(app: &App, job: &mut Job, time: i64) -> Result<(), Error> {
             return Ok(());
         }
         let info: ProviderInfo = app.get(&app.config.provider_url, "/internal/info").await?;
+        if job
+            .instance
+            .as_ref()
+            .is_some_and(|bound| *bound != info.provider_instance_id.to_string())
+        {
+            job.terminal(
+                ProviderOperationStatus::Rejected,
+                "provider_instance_changed",
+            );
+            return Ok(());
+        }
         if info.payload_version != PAYLOAD_VERSION {
             job.terminal(ProviderOperationStatus::Rejected, "unsupported_provider");
             return Ok(());

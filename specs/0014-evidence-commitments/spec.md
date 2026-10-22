@@ -75,8 +75,11 @@ Text stays in the existing comment/opening tables. New URL records use an
 adapter table keyed by generation, project, purpose, business target and record
 ID. Existing scoped comment IDs do not become globally unique. URL record
 persistence and pending-operation insertion share one adapter transaction after
-queue admission. Preserve original request bytes for idempotent retries even
-after confirmation or a provider-generation change.
+queue admission. Preserve original request bytes for queue-level idempotent retries after the
+signed-command conversion. Existing endpoint target/current-state checks remain;
+this change does not broaden HTTP retry behavior after target removal or reset.
+Persist the evidence generation in its pending operation; a changed provider
+generation must reject before signing rather than rebind the record hash.
 
 ## EvidenceRecordV1 encoding
 
