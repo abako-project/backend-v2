@@ -3,6 +3,7 @@
 Task: port Directory business rules under approved SPEC-0013, SPEC-0003 and
 SPEC-0006. M3 remains in progress until the real signed Directory/Calendar fixture
 bridge is complete. Rust remains the sole application authority.
+Directory raw-fixture slice: implemented, verified and independently reviewed.
 
 Backend branch `feat/ink-v5-directory`, worktree `/tmp/kunveno-ink-v5-directory`,
 base `b375b07` (reviewed Calendar slice). Canonical branch `feat/directory-v5`,
@@ -76,18 +77,19 @@ Calendar code to public Git revision `4687748658763a1e9fdc8e5198f6df71709fe8c4`.
 There is no contract business-rule or registry-version change. Offline source
 rebuilds require that immutable source to be fetched once, like registry packages;
 normal backend tests/runtime neither fetch nor compile it. Corrected artifact
-reproduction and the affected SDK checks must pass before acceptance.
+reproduction and the affected SDK checks pass; the reproduction blocker is closed.
 
 ## Verification and review
 
-Backend implementation reviewed initially: `9ea9a0b`; corrected artifact pin pending.
+Backend implementation reviewed initially: `9ea9a0b`; corrected artifact pin and
+reviewed final implementation: `dc3b637`. Canonical final implementation: `25cb005`.
 
 | Command / check | Result |
 |---|---|
 | `bash scripts/verify.sh app` at `9ea9a0b` | PASS: formatting/check/strict Clippy, 111 workspace tests plus one explicitly ignored fixture-authoring test, 2 doctests, isolated memory/SQLite checks, all-target build, frontend WASM and all 8 real-service E2E flows |
-| `bash scripts/verify.sh ink-sandbox` | Initial PASS: 31 tests; rerunning with corrected artifact |
+| `bash scripts/verify.sh ink-sandbox` at `dc3b637` | PASS: formatting/check/strict Clippy, 31 tests, build with corrected immutable artifact |
 | `bash scripts/verify.sh ink-sandbox-dependencies` | PASS: all four checks; SDK graph/lock and approved exceptions unchanged |
-| Fresh Git-archive Directory WASM/ABI rebuild | Corrected-source run pending; initial mismatch documented above |
+| Fresh Git-archive Directory WASM/ABI rebuild at `25cb005` | PASS: corrected source reproduces pinned release WASM and ABI |
 | Canonical formatting and strict all-target/all-feature Clippy (1.88), semantic tests (1.96) at `25cb005` | PASS |
 | Actual 1.88 compatibility / 1.96 reference Unicode comparison | PASS, identical digest recorded above |
 | actionlint and Git whitespace | PASS |
@@ -98,8 +100,12 @@ live data. App and SDK dependency locks remain unchanged.
 
 Independent xhigh reviewer found no actionable source/domain defect at `9ea9a0b`
 and `0c35671` and independently reran all four cached Directory tests successfully.
-It correctly withheld acceptance on the reproduction mismatch. The dependency /
-artifact correction requires review and passing fresh reproduction before handoff.
+It withheld acceptance on the reproduction mismatch. Re-review at `dc3b637` /
+`25cb005` approved the slice with no residual actionable findings, confirmed the
+same Calendar source and unchanged Directory ABI/storage metadata, verified all
+six bundle/lock/compiler pins and independently reran the four corrected Directory
+tests successfully. Fresh reproduction closes the reported blocker. The final
+evidence update changes documentation only; reviewed code/artifacts stay fixed.
 
 ## Remaining gates
 
