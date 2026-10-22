@@ -42,7 +42,12 @@ impl ProviderApi for Client {
         call: SignedContractCallV1,
         now: UnixSeconds,
     ) -> Result<OperationReceipt> {
-        result(self.execute_signed(call, now)).await
+        // This pre-queue limit is an invalid envelope, as in native admission.
+        let ticket = match self.execute_signed(call, now) {
+            Err(Error::Limit) => return Err(ContractError::InvalidPayload.into()),
+            ticket => ticket,
+        };
+        result(ticket).await
     }
     async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestView>> {
         self.read(move |state| Ok(state.skill_requests(origin)))

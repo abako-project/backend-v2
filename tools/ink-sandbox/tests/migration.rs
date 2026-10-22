@@ -1018,6 +1018,33 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
             assert!(
                 matches!(worker.client().execute_signed(call.clone(), UnixSeconds::new(20_000)).unwrap().result().await, Err(Error::Shell(error)) if error.code() == "expired_call")
             );
+            let native =
+                mock_provider::Provider::memory_from_archive(configuration.root, initial.clone())
+                    .await
+                    .unwrap();
+            let mut oversized = call.clone();
+            oversized.call.command = ProviderCommand::CreateProject(CreateProjectRequest {
+                title: "Oversized transport call".into(),
+                description: "x".repeat(ink_v5_compatibility::worker::MAX_INPUT + 1),
+            });
+            let expected = mock_provider::ProviderApi::execute(
+                &native,
+                oversized.clone(),
+                UnixSeconds::new(1),
+            )
+            .await
+            .unwrap_err();
+            let actual = mock_provider::ProviderApi::execute(
+                &worker.client(),
+                oversized,
+                UnixSeconds::new(1),
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(
+                actual, expected,
+                "oversized envelopes preserve native HTTP status and code"
+            );
             assert_eq!(before, whole_rows(&db).await);
             worker.shutdown().await.unwrap();
         }
