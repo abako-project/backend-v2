@@ -380,7 +380,7 @@ impl Client {
         Ok(Ticket(result))
     }
     /// Trusted comparison harness only: reuse the reference engine's captured
-    /// inputs. This standalone crate is never exposed through HTTP.
+    /// inputs. HTTP execution captures its own inputs.
     pub fn execute_directory_with_inputs(
         &self,
         call: SignedContractCallV1,

@@ -26,7 +26,7 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
         after: u64,
         limit: usize,
     ) -> impl Future<Output = Result<ProviderEvents>> + Send;
-    /// Apply one verified call with captured inputs; no storage commit occurs here.
+    /// Execute a signed call through the provider's atomic command boundary.
     fn execute(
         &self,
         call: SignedContractCallV1,
