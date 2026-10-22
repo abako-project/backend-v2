@@ -177,6 +177,7 @@ impl State {
     }
 
     pub(crate) fn archive(&self) -> Result<ArchiveV1> {
+        self.engine.validate_task_keys()?;
         Ok(ArchiveV1 {
             version: 1,
             checkpoint: serde_json::from_slice(&self.encode()?).map_err(|_| Error::internal())?,
@@ -185,7 +186,9 @@ impl State {
 
     pub(crate) fn from_archive(archive: ArchiveV1, root_account: AccountId32) -> Result<Self> {
         require(archive.version == 1, "state_configuration_mismatch")?;
-        Self::from(archive.checkpoint).validate_restored(root_account)
+        let state = Self::from(archive.checkpoint).validate_restored(root_account)?;
+        state.engine.validate_task_keys()?;
+        Ok(state)
     }
 
     fn validate_restored(mut self, root_account: AccountId32) -> Result<Self> {

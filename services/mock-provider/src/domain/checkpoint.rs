@@ -40,3 +40,24 @@ impl From<CheckpointV1> for State {
         }
     }
 }
+
+impl RustEngine {
+    // Import must retain deleted-key gaps while preventing reuse of a global task key.
+    pub(super) fn validate_task_keys(&self) -> crate::Result<()> {
+        let mut keys = std::collections::BTreeSet::new();
+        crate::require(self.next_task_id > 0, "invalid_task_state")?;
+        for task in self
+            .projects
+            .values()
+            .flat_map(|project| &project.proposals)
+            .flat_map(|proposal| &proposal.milestones)
+            .flat_map(|milestone| &milestone.task_storage.tasks)
+        {
+            crate::require(
+                task.task_id > 0 && task.task_id < self.next_task_id && keys.insert(task.task_id),
+                "invalid_task_state",
+            )?;
+        }
+        Ok(())
+    }
+}

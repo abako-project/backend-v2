@@ -1163,6 +1163,35 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
     let archive = serde_json::from_slice(&serde_json::to_vec(&state.archive()?)?)?;
     let restored = State::from_archive(archive, root)?;
     assert_eq!(restored.encode()?, before);
+    for stale_counter in [0, 1] {
+        let mut invalid = restored.archive()?;
+        invalid.checkpoint.next_task_id = stale_counter;
+        assert_eq!(
+            State::from_archive(invalid, root)
+                .err()
+                .ok_or("stale counter accepted")?
+                .code(),
+            "invalid_task_state"
+        );
+    }
+    let mut invalid = restored.archive()?;
+    let storage = invalid
+        .checkpoint
+        .projects
+        .values_mut()
+        .flat_map(|project| &mut project.proposals)
+        .flat_map(|proposal| &mut proposal.milestones)
+        .map(|milestone| &mut milestone.task_storage)
+        .find(|storage| !storage.tasks.is_empty())
+        .ok_or("task storage")?;
+    storage.tasks.push(storage.tasks[0].clone());
+    assert_eq!(
+        State::from_archive(invalid, root)
+            .err()
+            .ok_or("duplicate task key accepted")?
+            .code(),
+        "invalid_task_state"
+    );
     let mut invalid = restored.archive()?;
     invalid.version = 2;
     assert_eq!(
@@ -1188,5 +1217,38 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
             .code(),
         "state_configuration_mismatch"
     );
+    Ok(())
+}
+
+#[test]
+fn native_accepts_large_worker_profile_payload() -> TestResult {
+    let mut state = State::new(signed_account(1)?)?;
+    state.shell.info.provider_instance_id = ProviderInstanceId::from_bytes([109; 16]);
+    let mut fixture = Fixture {
+        state,
+        steps: Vec::new(),
+        temporal_probes: Vec::new(),
+    };
+    fixture.step(
+        2,
+        ProviderCommand::RegisterWorker(RegisterWorkerRequest {
+            display_name: "n".repeat(17 * 1024),
+            qualifications: Qualifications {
+                role_ids: Vec::new(),
+                skill_ids: Vec::new(),
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: Vec::new(),
+            },
+        }),
+        1,
+    )?;
+    assert_eq!(
+        fixture.steps[0]["outcome"]["receipt"]["outcome"]["type"],
+        "Success"
+    );
+    let restored = State::from_archive(fixture.state.archive()?, signed_account(1)?)?;
+    assert_eq!(restored.encode()?, fixture.state.encode()?);
     Ok(())
 }
