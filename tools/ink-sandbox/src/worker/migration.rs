@@ -42,9 +42,24 @@ impl WholeConfiguration {
     }
 }
 #[derive(Encode)]
+struct WorkerImport {
+    account: AccountId32,
+    display_name: String,
+    qualifications: Qualifications,
+    mode: WorkerMode,
+    coordinator_eligible: bool,
+    calendar_id: EntityId,
+    worker_score: ReputationView,
+    coordinator_score: ReputationView,
+}
+#[derive(Clone, Copy, Encode)]
+enum ImportTarget {
+    Calendar(AccountId32),
+    Project(EntityId),
+}
+#[derive(Encode)]
 struct ProjectImport {
     id: EntityId,
-    state: Vec<u8>,
     layout: Vec<(EntityId, Vec<(EntityId, EntityId)>)>,
     proposal_references: Vec<(EntityId, Qualifications)>,
     submissions: Vec<EntityId>,
@@ -54,16 +69,16 @@ struct ProjectImport {
 }
 #[derive(Encode)]
 enum Record {
-    Worker(WorkerView),
+    Worker(WorkerImport),
     Project(ProjectImport),
     Deposit(DepositView),
     Withdrawal(WithdrawalView),
     Balance(AccountId32, Money),
     Issuance(Money),
     SkillRequest(SkillRequestView),
-    Category(u32, String),
     Policies(ScorePolicy, CompensationPolicy, u32),
     Reason(Vec<u8>),
+    Catalog(CatalogKind, CatalogEntry, Vec<u32>, String),
 }
 type Reason = (
     EntityId,
@@ -101,6 +116,28 @@ fn write(
     )?;
     result.map_err(|_| Error::InvalidState)
 }
+fn upload(
+    ext: &mut sp_io::TestExternalities,
+    bundles: &Bundles,
+    state: &State,
+    target: ImportTarget,
+    bytes: &[u8],
+) -> Result<(), Error> {
+    for (index, page) in bytes.chunks(8192).enumerate() {
+        write(
+            ext,
+            bundles,
+            state,
+            "import_child_page",
+            (
+                target,
+                u32::try_from(index).map_err(|_| Error::Limit)?,
+                page,
+            ),
+        )?;
+    }
+    write(ext, bundles, state, "finish_child_import", target)
+}
 pub(super) fn initialize(
     bundles: &Bundles,
     archive: ArchiveV1,
@@ -127,16 +164,13 @@ pub(super) fn initialize(
         root: configuration.root,
         funded_accounts: Vec::new(),
         catalog: (
-            saved.roles.values().cloned().collect(),
-            saved.skills.values().cloned().collect(),
-            saved
-                .skill_metadata
-                .iter()
-                .map(|(id, m)| SkillRoleAssociation {
-                    skill_id: *id,
-                    role_ids: m.role_ids.clone(),
-                })
-                .collect(),
+            vec![CatalogEntry {
+                id: 1,
+                name: "coordinator".into(),
+                fixed: true,
+            }],
+            Vec::new(),
+            Vec::new(),
         ),
         reservation_controller: configuration.root,
         reference_controller: configuration.root,
@@ -161,18 +195,33 @@ pub(super) fn initialize(
     ));
     records.extend(
         saved
-            .skill_metadata
-            .iter()
-            .map(|(id, m)| Record::Category(*id, m.category.clone())),
+            .roles
+            .values()
+            .cloned()
+            .map(|entry| Record::Catalog(CatalogKind::Role, entry, Vec::new(), String::new())),
     );
-    records.extend(saved.workers.values().cloned().map(Record::Worker));
+    for (id, entry) in &saved.skills {
+        let metadata = saved.skill_metadata.get(id).ok_or(Error::InvalidState)?;
+        records.push(Record::Catalog(
+            CatalogKind::Skill,
+            entry.clone(),
+            metadata.role_ids.clone(),
+            metadata.category.clone(),
+        ));
+    }
+    records.extend(saved.workers.values().map(|worker| {
+        Record::Worker(WorkerImport {
+            account: worker.account,
+            display_name: worker.display_name.clone(),
+            qualifications: worker.qualifications.clone(),
+            mode: worker.mode,
+            coordinator_eligible: worker.coordinator_eligible,
+            calendar_id: worker.calendar.calendar_id,
+            worker_score: worker.worker_score.clone(),
+            coordinator_score: worker.coordinator_score.clone(),
+        })
+    }));
     for project in saved.projects.values() {
-        let reasons: Vec<_> = saved
-            .reasons
-            .iter()
-            .filter(|r| r.project_id == project.project_id)
-            .map(reason_wire)
-            .collect();
         let disputes: Vec<_> = saved
             .disputes
             .values()
@@ -206,7 +255,6 @@ pub(super) fn initialize(
             .ok_or(Error::InvalidState)?;
         records.push(Record::Project(ProjectImport {
             id: project.project_id,
-            state: (project, &reasons, &disputes).encode(),
             layout: project
                 .proposals
                 .iter()
@@ -268,6 +316,37 @@ pub(super) fn initialize(
         }
         write(&mut ext, bundles, &state, "import_record", record)?;
     }
+    for worker in saved.workers.values() {
+        let image = (&worker.calendar, &state.directory, &state.directory, false).encode();
+        upload(
+            &mut ext,
+            bundles,
+            &state,
+            ImportTarget::Calendar(worker.account),
+            &image,
+        )?;
+    }
+    for project in saved.projects.values() {
+        let reasons: Vec<_> = saved
+            .reasons
+            .iter()
+            .filter(|r| r.project_id == project.project_id)
+            .map(reason_wire)
+            .collect();
+        let disputes: Vec<_> = saved
+            .disputes
+            .values()
+            .filter(|d| d.project_id == project.project_id)
+            .collect();
+        let image = (&state.directory, project, reasons, disputes, false).encode();
+        upload(
+            &mut ext,
+            bundles,
+            &state,
+            ImportTarget::Project(project.project_id),
+            &image,
+        )?;
+    }
     // Compare all retained fields before making the fresh contract tree live.
     let imported = read_archive(&mut ext, bundles, &state, false)?;
     if serde_json::to_vec(&imported).map_err(|_| Error::InvalidState)?
@@ -302,4 +381,159 @@ pub(super) async fn export(
     let archive = read_archive(&mut ext, bundles, &state, true)?;
     tx.rollback().await?;
     Ok(archive)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    fn preserved(
+        mut ext: sp_io::TestExternalities,
+        failed: impl FnOnce(&mut sp_io::TestExternalities),
+    ) -> sp_io::TestExternalities {
+        let before = Checkpoint::capture(ext).unwrap();
+        ext = before.clone().restore().unwrap();
+        failed(&mut ext);
+        let after = Checkpoint::capture(ext).unwrap();
+        assert_eq!(before.to_bytes().unwrap(), after.to_bytes().unwrap());
+        after.restore().unwrap()
+    }
+    #[test]
+    fn failed_staged_child_pages_and_finish_preserve_state_and_retry_then_seal() {
+        let bundles = Bundles::pinned().unwrap();
+        let root = AccountId32::from_bytes([1; 32]);
+        let owner = AccountId32::from_bytes([2; 32]);
+        let fixture = DirectoryFixture {
+            root,
+            funded_accounts: vec![owner],
+            catalog: (
+                vec![CatalogEntry {
+                    id: 1,
+                    name: "coordinator".into(),
+                    fixed: true,
+                }],
+                Vec::new(),
+                Vec::new(),
+            ),
+            reservation_controller: root,
+            reference_controller: root,
+            generation: Some(ProviderInstanceId::from_bytes([109; 16])),
+            gas_limit: GAS,
+            projects: true,
+            money: Some(true),
+        };
+        let (mut ext, bytes) = super::super::directory::initialize(&bundles, fixture).unwrap();
+        let state: State = serde_json::from_slice(&bytes).unwrap();
+        write(&mut ext, &bundles, &state, "begin_import", ()).unwrap();
+        let id = EntityId::from_bytes([51; 16]);
+        write(
+            &mut ext,
+            &bundles,
+            &state,
+            "import_record",
+            Record::Worker(WorkerImport {
+                account: owner,
+                display_name: "staged".into(),
+                qualifications: Qualifications {
+                    role_ids: Vec::new(),
+                    skill_ids: Vec::new(),
+                },
+                mode: WorkerMode::Worker,
+                coordinator_eligible: false,
+                calendar_id: id,
+                worker_score: ReputationView {
+                    weighted_score_sum: 0,
+                    rated_minutes: 0,
+                },
+                coordinator_score: ReputationView {
+                    weighted_score_sum: 0,
+                    rated_minutes: 0,
+                },
+            }),
+        )
+        .unwrap();
+        let target = ImportTarget::Calendar(owner);
+        ext = preserved(ext, |ext| {
+            assert!(
+                write(
+                    ext,
+                    &bundles,
+                    &state,
+                    "import_child_page",
+                    (target, 1u32, vec![0u8])
+                )
+                .is_err()
+            )
+        });
+        let mut overrides = Vec::new();
+        for year in 2027..2047 {
+            for week in 1..=50 {
+                overrides.push(WeekOverride {
+                    week: Week::new(year, week).unwrap(),
+                    capacity: Minutes::new(600),
+                });
+            }
+        }
+        let calendar = CalendarView {
+            calendar_id: id,
+            owner,
+            definition: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides,
+            },
+            reservations: Vec::new(),
+        };
+        let image = (&calendar, &state.directory, &state.directory, false).encode();
+        assert!(image.len() > 8192);
+        write(
+            &mut ext,
+            &bundles,
+            &state,
+            "import_child_page",
+            (target, 0u32, &image[..8192]),
+        )
+        .unwrap();
+        ext = preserved(ext, |ext| {
+            assert!(
+                write(
+                    ext,
+                    &bundles,
+                    &state,
+                    "import_child_page",
+                    (target, 0u32, &image[..8192])
+                )
+                .is_err()
+            )
+        });
+        ext = preserved(ext, |ext| {
+            assert!(write(ext, &bundles, &state, "finish_child_import", target).is_err())
+        });
+        for (index, page) in image.chunks(8192).enumerate().skip(1) {
+            write(
+                &mut ext,
+                &bundles,
+                &state,
+                "import_child_page",
+                (target, u32::try_from(index).unwrap(), page),
+            )
+            .unwrap();
+        }
+        write(&mut ext, &bundles, &state, "finish_child_import", target).unwrap();
+        let exported = read_archive(&mut ext, &bundles, &state, false).unwrap();
+        assert_eq!(exported.checkpoint.workers[&owner].calendar, calendar);
+        write(&mut ext, &bundles, &state, "seal_import", ()).unwrap();
+        let _exported = read_archive(&mut ext, &bundles, &state, true).unwrap();
+        ext = preserved(ext, |ext| {
+            assert!(
+                write(
+                    ext,
+                    &bundles,
+                    &state,
+                    "import_child_page",
+                    (target, 0u32, &image[..8192])
+                )
+                .is_err()
+            )
+        });
+        assert!(read_archive(&mut ext, &bundles, &state, true).is_ok());
+    }
 }

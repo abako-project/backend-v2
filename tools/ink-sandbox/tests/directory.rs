@@ -448,18 +448,23 @@ fn parent_storage_failure_discards_tentative_child_instance() {
     let (mut ext, directory) = setup(&(initial.0, initial.1, initial.2), true);
     ext.execute_with(|| {
         let mut request = registration();
-        // Input fits ink's buffer, while the larger persisted Worker record does
-        // not. Any child effects must be discarded with the failed parent call.
+        // Measure the successful parent/child transaction, discard it, then
+        // exhaust gas at its final boundary rather than relying on packed storage.
         request.display_name = "x".repeat(16_330);
-        let id = [8_u8;16];
-        let code_hash = H256::from(blake2_256(Bundles::pinned().unwrap().code("calendar-v5").unwrap()));
-        let child = Contracts::contract_address(&directory,&code_hash,&input("new",(account(2),account(4),id,&request.calendar)),&id);
+        let id=[8_u8;16];
+        let code_hash=H256::from(blake2_256(Bundles::pinned().unwrap().code("calendar-v5").unwrap()));
+        let child=Contracts::contract_address(&directory,&code_hash,&input("new",(account(2),directory.clone(),id,&request.calendar)),&id);
+        let data=input("register_worker",(request,id));
+        let before=digest(&projection(&directory));
+        sp_io::storage::start_transaction();
+        let completed=Contracts::bare_call(account(2),directory.clone(),0,GAS,None,data.clone(),DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced);
+        assert!(!completed.result.unwrap().did_revert());
+        assert!(Contracts::code_hash(&child).is_some());
+        sp_io::storage::rollback_transaction();
         assert_eq!(Contracts::code_hash(&child),None);
-        let data = input("register_worker",(request,id));
-        assert!(data.len() < 16*1024);
-        let before = digest(&projection(&directory));
-        let result = Contracts::bare_call(account(2),directory.clone(),0,GAS,None,data,DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced).result;
-        assert!(matches!(result,Err(error) if error == pallet_contracts::Error::<ink_v5_compatibility::Runtime>::ContractTrapped.into()));
+        let gas=frame_support::weights::Weight::from_parts(completed.gas_consumed.ref_time().checked_sub(1).unwrap(),GAS.proof_size());
+        let result=Contracts::bare_call(account(2),directory.clone(),0,gas,None,data,DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced).result;
+        assert!(matches!(result,Err(error) if error==pallet_contracts::Error::<ink_v5_compatibility::Runtime>::OutOfGas.into()));
         assert_eq!(Contracts::code_hash(&child),None);
         assert_eq!(read::<Option<Account>>(&directory,1,"calendar_address",account(2)),None);
         assert_eq!(digest(&projection(&directory)),before);

@@ -18,6 +18,8 @@ struct Reference {
     archives: Vec<Retained>,
     digests: Vec<String>,
     priority_cases: Vec<serde_json::Value>,
+    aggregate_cases: Vec<serde_json::Value>,
+    planning_cases: Vec<serde_json::Value>,
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -422,5 +424,75 @@ fn retained_large_profile_is_completely_importable_and_exportable() {
             serde_json::to_vec(&current.unwrap()).unwrap(),
             serde_json::to_vec(&archive).unwrap()
         );
+    })
+}
+
+async fn retained_case(case: serde_json::Value, output: Option<&str>) {
+    let archive: ArchiveV1 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
+    let configuration = config(&archive);
+    let db = Database::new();
+    let worker = Worker::import_archive(db.0.clone(), archive.clone(), configuration)
+        .await
+        .unwrap_or_else(|e| panic!("{}: {e}", case["label"]));
+    assert_assets(&db.stored().await, &archive);
+    let result = worker
+        .client()
+        .execute_directory_with_inputs(
+            serde_json::from_value(case["signed"].clone()).unwrap(),
+            serde_json::from_value(case["inputs"].clone()).unwrap(),
+        )
+        .unwrap()
+        .result()
+        .await;
+    assert_eq!(
+        serde_json::to_value(result.unwrap()).unwrap(),
+        case["outcome"]["receipt"],
+        "{}",
+        case["label"]
+    );
+    let current = worker
+        .client()
+        .export_archive()
+        .unwrap()
+        .result()
+        .await
+        .unwrap();
+    assert_assets(&db.stored().await, &current);
+    worker.shutdown().await.unwrap();
+    let bytes = serde_json::to_vec(&current).unwrap();
+    assert_eq!(
+        format!("{:x}", H256::from(sha2_256(&bytes))),
+        case["afterDigest"].as_str().unwrap(),
+        "{}",
+        case["label"]
+    );
+    if let Some(output) = output
+        && let Ok(path) = std::env::var(output)
+    {
+        std::fs::write(path, bytes).unwrap();
+    }
+}
+#[test]
+fn retained_aggregates_above_the_single_call_limit_keep_working() {
+    run(async {
+        for case in reference().aggregate_cases {
+            retained_case(case, None).await;
+        }
+    })
+}
+#[test]
+fn retained_positive_planning_escrow_pays_and_freezes_with_complete_backing() {
+    run(async {
+        for (index, case) in reference().planning_cases.into_iter().enumerate() {
+            retained_case(
+                case,
+                Some(if index == 0 {
+                    "SANDBOX_PLANNING_ROLLBACK_OUTPUT"
+                } else {
+                    "SANDBOX_FROZEN_PLANNING_ROLLBACK_OUTPUT"
+                }),
+            )
+            .await;
+        }
     })
 }

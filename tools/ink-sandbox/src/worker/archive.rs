@@ -110,6 +110,16 @@ impl<'a> Storage<'a> {
             reader.cell(address, (u32::MAX, index))
         })
     }
+    fn child<T: Decode>(&mut self, address: &Account) -> Result<T, Error> {
+        let (length, import): (u32, Option<(AccountId32, EntityId, u32)>) =
+            self.cell(address, 0u32)?;
+        if import.is_some() {
+            return Err(Error::InvalidState);
+        }
+        self.pages(length, |reader, index| {
+            reader.cell(address, (u32::MAX, index))
+        })
+    }
     fn value<T: Decode>(
         &mut self,
         address: &Account,
@@ -131,7 +141,7 @@ impl<'a> Storage<'a> {
         for account in &directory.workers {
             let worker: WorkerRecord = self.value(&state.directory, 4, *account)?;
             let (calendar, parent, controller, live): (CalendarView, Account, Account, bool) =
-                self.root(&worker.calendar)?;
+                self.child(&worker.calendar)?;
             if calendar.owner != *account
                 || calendar.calendar_id != worker.calendar_id
                 || parent != state.directory
@@ -224,7 +234,7 @@ pub(super) fn read(
             Vec<Reason>,
             Vec<Dispute>,
             bool,
-        ) = reader.root(&address)?;
+        ) = reader.child(&address)?;
         if parent != state.directory
             || project.project_id != *id
             || live != sealed

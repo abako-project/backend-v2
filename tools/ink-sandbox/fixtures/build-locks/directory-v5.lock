@@ -1438,7 +1438,7 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 [[package]]
 name = "storage-v5"
 version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=5a25c149aa0fdf2105098dc1b4be95e2283abb38#5a25c149aa0fdf2105098dc1b4be95e2283abb38"
+source = "git+https://github.com/abako-dev/contracts.git?rev=f147e595be06cddd8a8346cb86fd000721f8df23#f147e595be06cddd8a8346cb86fd000721f8df23"
 dependencies = [
  "ink",
  "parity-scale-codec",

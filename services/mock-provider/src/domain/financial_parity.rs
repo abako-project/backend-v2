@@ -1261,6 +1261,8 @@ struct MigrationReference {
     archives: Vec<RetainedArchive>,
     digests: Vec<String>,
     priority_cases: Vec<serde_json::Value>,
+    aggregate_cases: Vec<Value>,
+    planning_cases: Vec<Value>,
 }
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Eq, Debug)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -1271,6 +1273,7 @@ struct RetainedArchive {
 fn retained_priority_cases(
     state: &State,
     submitted: &SignedContractCallV1,
+    frozen: Option<&[Value]>,
 ) -> TestResult<Vec<Value>> {
     let mut cases = Vec::new();
     let ProviderCommand::SubmitMilestoneDelivery {
@@ -1295,7 +1298,7 @@ fn retained_priority_cases(
     let client_seed = (1..=5)
         .find(|seed| signed_account(*seed).ok() == Some(client))
         .ok_or("client key")?;
-    for overflow in [false, true] {
+    for (index, overflow) in [false, true].into_iter().enumerate() {
         let mut archived = state.archive()?;
         archived.checkpoint.next_task_id = 1_000_000;
         if overflow {
@@ -1327,10 +1330,18 @@ fn retained_priority_cases(
                 },
             },
         )?;
-        let key = subxt_signer::sr25519::Keypair::from_secret_key([client_seed; 32])?;
-        let signed = SignedContractCallV1 {
-            signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0),
-            call,
+        let signed = if let Some(frozen) = frozen {
+            let stored: SignedContractCallV1 = serde_json::from_value(
+                frozen.get(index).ok_or("priority case")?["signed"].clone(),
+            )?;
+            assert_eq!(stored.call, call);
+            stored
+        } else {
+            let key = subxt_signer::sr25519::Keypair::from_secret_key([client_seed; 32])?;
+            SignedContractCallV1 {
+                signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0),
+                call,
+            }
         };
         let inputs = execution::ExecutionInputs {
             version: 1,
@@ -1347,7 +1358,314 @@ fn retained_priority_cases(
     }
     Ok(cases)
 }
-fn migration_reference() -> TestResult<MigrationReference> {
+fn migration_signed(
+    state: &State,
+    origin: AccountId32,
+    command: ProviderCommand,
+    serial: u8,
+    frozen: Option<&Value>,
+) -> TestResult<SignedContractCallV1> {
+    let call = UnsignedContractCallV1::new(
+        state.shell.info.provider_instance_id,
+        OperationId::from_bytes([serial; 16]),
+        origin,
+        state.shell.nonce(origin),
+        UnixSeconds::new(10_000),
+        command,
+    )?;
+    if let Some(frozen) = frozen {
+        let stored: SignedContractCallV1 = serde_json::from_value(frozen["signed"].clone())?;
+        assert_eq!(stored.call, call);
+        return Ok(stored);
+    }
+    let seed = (1..=5)
+        .find(|seed| signed_account(*seed).ok() == Some(origin))
+        .ok_or("fixture key")?;
+    let key = subxt_signer::sr25519::Keypair::from_secret_key([seed; 32])?;
+    Ok(SignedContractCallV1 {
+        signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0),
+        call,
+    })
+}
+fn migration_inputs(serial: u8) -> execution::ExecutionInputs {
+    execution::ExecutionInputs {
+        version: 1,
+        now: UnixSeconds::new(500),
+        seed: [serial; 32],
+    }
+}
+fn migration_prepare(
+    state: &mut State,
+    origin: AccountId32,
+    command: ProviderCommand,
+    serial: u8,
+) -> TestResult<OperationReceipt> {
+    let signed = migration_signed(state, origin, command, serial, None)?;
+    let outcome = signed_apply(state, signed, migration_inputs(serial));
+    let receipt: OperationReceipt = serde_json::from_value(outcome["receipt"].clone())?;
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+    Ok(receipt)
+}
+fn migration_case(
+    mut state: State,
+    origin: AccountId32,
+    command: ProviderCommand,
+    serial: u8,
+    label: &str,
+    frozen: Option<&Value>,
+) -> TestResult<Value> {
+    // Native admission validates each source before the sandbox sees it.
+    state = State::from_archive(state.archive()?, state.shell.info.root_account)?;
+    let archive = serde_json::to_string(&state.archive()?)?;
+    let signed = migration_signed(&state, origin, command, serial, frozen)?;
+    let inputs = migration_inputs(serial);
+    let outcome = signed_apply(&mut state, signed.clone(), inputs.clone());
+    assert_eq!(outcome["receipt"]["outcome"]["type"], "Success");
+    Ok(
+        json!({"label":label,"archive":archive,"signed":signed,"inputs":inputs,"outcome":outcome,"afterDigest":format!("{:x}",Sha256::digest(serde_json::to_vec(&state.archive()?)?))}),
+    )
+}
+fn migration_catalog_case(
+    archives: &[RetainedArchive],
+    frozen: Option<&Value>,
+) -> TestResult<Value> {
+    let root = signed_account(1)?;
+    let first: provider_execution::migration::ArchiveV1 =
+        serde_json::from_str(&archives[0].archive)?;
+    let mut catalog = State::from_archive(first.clone(), root)?;
+    for offset in 0..14u8 {
+        migration_prepare(
+            &mut catalog,
+            root,
+            ProviderCommand::UpsertCatalogEntry(UpsertCatalogEntryRequest {
+                kind: CatalogKind::Skill,
+                id: 1000 + u32::from(offset),
+                name: format!("bulk-{offset}-{}", "x".repeat(22_000)),
+            }),
+            180 + offset,
+        )?;
+    }
+    assert!(
+        catalog
+            .engine
+            .skills
+            .values()
+            .cloned()
+            .collect::<Vec<_>>()
+            .encode()
+            .len()
+            > MAX_SIGNABLE_BYTES + 1024
+    );
+    let case = migration_case(
+        catalog,
+        root,
+        ProviderCommand::SetCompensationPolicy(CompensationPolicy {
+            coordinator_percent: Percentage::new(20)?,
+        }),
+        195,
+        "catalog above one ABI input",
+        frozen,
+    )?;
+    Ok(case)
+}
+fn migration_project_case(source: &RetainedArchive, frozen: Option<&Value>) -> TestResult<Value> {
+    let root = signed_account(1)?;
+    let source: provider_execution::migration::ArchiveV1 = serde_json::from_str(&source.archive)?;
+    let mut project = State::from_archive(source, root)?;
+    let client = signed_account(5)?;
+    let id = migration_prepare(
+        &mut project,
+        client,
+        ProviderCommand::CreateProject(CreateProjectRequest {
+            title: "Large retained project".into(),
+            description: "p".repeat(200_000),
+        }),
+        200,
+    )?
+    .created_entity_id
+    .ok_or("project id")?;
+    let coordinator = project
+        .engine
+        .projects
+        .get(&id)
+        .ok_or("project")?
+        .coordinator;
+    let mut proposal = project
+        .engine
+        .projects
+        .values()
+        .flat_map(|p| &p.proposals)
+        .next()
+        .ok_or("proposal template")?
+        .clone();
+    proposal.description = "q".repeat(80_000);
+    let definition = ProposalDefinition {
+        title: proposal.title,
+        description: proposal.description,
+        milestones: proposal
+            .milestones
+            .into_iter()
+            .map(|m| m.definition)
+            .collect(),
+    };
+    let proposal_id = migration_prepare(
+        &mut project,
+        coordinator,
+        ProviderCommand::CreateProposal {
+            project_id: id,
+            proposal: definition,
+        },
+        201,
+    )?
+    .created_entity_id
+    .ok_or("proposal id")?;
+    assert!(project.engine.projects[&id].encode().len() > MAX_SIGNABLE_BYTES + 1024);
+    let case = migration_case(
+        project,
+        coordinator,
+        ProviderCommand::SetProposalDelivery {
+            project_id: id,
+            proposal_id,
+            request: ProposalDeliveryRequest {
+                expected_revision: 0,
+                delivery: DeliveryPreference::WithinOneMonth {},
+            },
+        },
+        202,
+        "project above one ABI input",
+        frozen,
+    )?;
+    Ok(case)
+}
+fn migration_worker_case(
+    trace: &Value,
+    source: &RetainedArchive,
+    frozen: Option<&Value>,
+) -> TestResult<Value> {
+    let root = signed_account(1)?;
+    let first: provider_execution::migration::ArchiveV1 = serde_json::from_str(&source.archive)?;
+    let mut worker = State::from_archive(first, root)?;
+    let owner = signed_account(2)?;
+    for step in trace["steps"].as_array().ok_or("steps")? {
+        let mut signed: SignedContractCallV1 = serde_json::from_value(step["signed"].clone())?;
+        if signed.call.origin == owner
+            && let ProviderCommand::RegisterWorker(request) = &mut signed.call.command
+        {
+            request.display_name = "n".repeat(MAX_SIGNABLE_BYTES.checked_sub(200).ok_or("size")?);
+            let key = subxt_signer::sr25519::Keypair::from_secret_key([2; 32])?;
+            signed.signature =
+                Sr25519Signature::from_bytes(key.sign(&signed.call.signable_bytes()?).0);
+        }
+        assert_eq!(
+            signed_apply(
+                &mut worker,
+                signed,
+                serde_json::from_value(step["inputs"].clone())?
+            ),
+            step["outcome"]
+        );
+    }
+    let mut calendar = worker
+        .engine
+        .workers
+        .get(&owner)
+        .ok_or("worker")?
+        .calendar
+        .definition
+        .clone();
+    for year in 2027..2047 {
+        for week in 1..=50 {
+            calendar.overrides.push(WeekOverride {
+                week: Week::new(year, week)?,
+                capacity: calendar.default_weekly_minutes,
+            });
+        }
+    }
+    migration_prepare(
+        &mut worker,
+        owner,
+        ProviderCommand::SetCalendar(calendar.clone()),
+        210,
+    )?;
+    assert!(worker.engine.workers[&owner].encode().len() > MAX_SIGNABLE_BYTES + 1024);
+    let case = migration_case(
+        worker,
+        owner,
+        ProviderCommand::SetCalendar(calendar),
+        211,
+        "large name plus calendar and reservations",
+        frozen,
+    )?;
+    Ok(case)
+}
+fn migration_aggregate_cases(
+    trace: &Value,
+    archives: &[RetainedArchive],
+    frozen: Option<&[Value]>,
+) -> TestResult<Vec<Value>> {
+    Ok(vec![
+        migration_catalog_case(archives, frozen.and_then(|c| c.first()))?,
+        migration_project_case(&archives[1], frozen.and_then(|c| c.get(1)))?,
+        migration_worker_case(trace, &archives[0], frozen.and_then(|c| c.get(2)))?,
+    ])
+}
+fn migration_planning_cases(
+    archives: &[RetainedArchive],
+    frozen: Option<&[Value]>,
+) -> TestResult<Vec<Value>> {
+    let mut source: provider_execution::migration::ArchiveV1 =
+        serde_json::from_str(&archives[1].archive)?;
+    let project = source
+        .checkpoint
+        .projects
+        .values_mut()
+        .next()
+        .ok_or("legacy project")?;
+    let id = project.project_id;
+    let client = project.client;
+    project.planning.status = PlanningStatus::Delivered;
+    project.planning.quote = Some(PlanningQuote {
+        fee: Money::new(101),
+        minutes: Minutes::new(30),
+        window: WeekWindow::new(Week::new(2026, 1)?, Week::new(2026, 1)?)?,
+    });
+    project.planning.escrow = Money::new(101);
+    project.planning.revision = 19;
+    let balance = source
+        .checkpoint
+        .balances
+        .get_mut(&client)
+        .ok_or("client balance")?;
+    *balance = balance.checked_sub(Money::new(101))?;
+    let state = State::from_archive(source.clone(), source.checkpoint.info.root_account)?;
+    let accepted = migration_case(
+        state.clone(),
+        client,
+        ProviderCommand::AcceptPlanningDelivery {
+            project_id: id,
+            expected_revision: 19,
+        },
+        220,
+        "legacy positive planning payout",
+        frozen.and_then(|c| c.first()),
+    )?;
+    let frozen = migration_case(
+        state,
+        client,
+        ProviderCommand::DisputePlanning {
+            project_id: id,
+            request: ReasonRequest {
+                reason: "Retained paid planning dispute".into(),
+            },
+        },
+        221,
+        "legacy positive planning freeze",
+        frozen.and_then(|c| c.get(1)),
+    )?;
+    Ok(vec![accepted, frozen])
+}
+
+fn migration_reference(frozen: Option<&MigrationReference>) -> TestResult<MigrationReference> {
     let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
     let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
     state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
@@ -1355,6 +1673,8 @@ fn migration_reference() -> TestResult<MigrationReference> {
         archives: Vec::new(),
         digests: Vec::new(),
         priority_cases: Vec::new(),
+        aggregate_cases: Vec::new(),
+        planning_cases: Vec::new(),
     };
     let steps = trace["steps"].as_array().ok_or("steps")?;
     for before_step in 0..=steps.len() {
@@ -1362,6 +1682,7 @@ fn migration_reference() -> TestResult<MigrationReference> {
             reference.priority_cases = retained_priority_cases(
                 &state,
                 &serde_json::from_value(steps[52]["signed"].clone())?,
+                frozen.map(|reference| reference.priority_cases.as_slice()),
             )?;
         }
         if [0, 35, 70, 90, 113, 129].contains(&before_step) {
@@ -1385,6 +1706,15 @@ fn migration_reference() -> TestResult<MigrationReference> {
             ));
         }
     }
+    reference.aggregate_cases = migration_aggregate_cases(
+        &trace,
+        &reference.archives,
+        frozen.map(|r| r.aggregate_cases.as_slice()),
+    )?;
+    reference.planning_cases = migration_planning_cases(
+        &reference.archives,
+        frozen.map(|r| r.planning_cases.as_slice()),
+    )?;
     Ok(reference)
 }
 #[test]
@@ -1392,7 +1722,7 @@ fn migration_reference() -> TestResult<MigrationReference> {
 fn export_migration_reference() -> TestResult {
     std::fs::write(
         std::env::var("MIGRATION_REFERENCE_OUTPUT")?,
-        serde_json::to_string_pretty(&migration_reference()?)?,
+        serde_json::to_string_pretty(&migration_reference(None)?)?,
     )?;
     Ok(())
 }
@@ -1400,7 +1730,12 @@ fn export_migration_reference() -> TestResult {
 fn complete_retained_migration_reference() -> TestResult {
     let expected: MigrationReference =
         serde_json::from_str(include_str!("fixtures/migration-signed.json"))?;
-    assert_eq!(migration_reference()?, expected);
+    let actual = migration_reference(Some(&expected))?;
+    // Keep failure output small; fixture archives include complete private history.
+    assert_eq!(
+        Sha256::digest(serde_json::to_vec(&actual)?),
+        Sha256::digest(serde_json::to_vec(&expected)?)
+    );
     Ok(())
 }
 

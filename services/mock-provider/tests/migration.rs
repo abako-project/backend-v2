@@ -2,20 +2,19 @@
 #![cfg(all(feature = "storage-memory", feature = "storage-sqlite"))]
 use generated_contracts::AccountId32;
 use mock_provider::Provider;
-use std::{
-    path::PathBuf,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::path::PathBuf;
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
-static NEXT: AtomicU64 = AtomicU64::new(0);
 struct Database(PathBuf);
 impl Database {
-    fn new() -> Self {
-        Self(std::env::temp_dir().join(format!(
-            "provider-import-{}-{}.sqlite",
+    fn new() -> TestResult<Self> {
+        // PID namespaces can reuse IDs across verification commands.
+        let mut token = [0u8; 16];
+        getrandom::fill(&mut token).map_err(|_| std::io::Error::other("test path entropy"))?;
+        Ok(Self(std::env::temp_dir().join(format!(
+            "provider-import-{}-{:032x}.sqlite",
             std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        )))
+            u128::from_le_bytes(token)
+        ))))
     }
     fn url(&self) -> String {
         format!("sqlite://{}", self.0.display())
@@ -31,7 +30,7 @@ async fn fresh_import_retains_generation_and_never_replaces_existing_state() -> 
     // Imported catalogs must not be overwritten by startup's optional seed fixture.
     retained.checkpoint.skills.clear();
     retained.checkpoint.skill_metadata.clear();
-    let destination = Database::new();
+    let destination = Database::new()?;
     let imported =
         Provider::sqlite_from_archive(&destination.url(), root, retained.clone()).await?;
     assert_eq!(
@@ -57,7 +56,7 @@ async fn fresh_import_retains_generation_and_never_replaces_existing_state() -> 
         serde_json::to_vec(&restored.archive().await?)?,
         serde_json::to_vec(&retained)?
     );
-    let invalid = Database::new();
+    let invalid = Database::new()?;
     let mut unsupported = original.clone();
     unsupported.version = 2;
     assert!(
@@ -80,7 +79,7 @@ async fn fresh_import_retains_generation_and_never_replaces_existing_state() -> 
 async fn unsupported_destination_format_is_never_overwritten() -> TestResult {
     let root = AccountId32::from_bytes([7; 32]);
     let source = Provider::memory(root)?;
-    let destination = Database::new();
+    let destination = Database::new()?;
     let pool = sqlx::SqlitePool::connect(&format!("{}?mode=rwc", destination.url())).await?;
     sqlx::query("CREATE TABLE provider_state (singleton INTEGER PRIMARY KEY, format_version INTEGER NOT NULL, state BLOB NOT NULL)").execute(&pool).await?;
     sqlx::query("INSERT INTO provider_state VALUES (1,2,?)")
@@ -140,7 +139,7 @@ async fn rollback_current_wasm_state_accepts_new_native_work() -> TestResult {
         .unwrap_or_default();
     let memory = Provider::memory_from_archive(root, archive.clone()).await?;
     assert_eq!(serde_json::to_vec(&memory.archive().await?)?, bytes);
-    let destination = Database::new();
+    let destination = Database::new()?;
     let restored = Provider::sqlite_from_archive(&destination.url(), root, archive.clone()).await?;
     assert_eq!(serde_json::to_vec(&restored.archive().await?)?, bytes);
     let call = UnsignedContractCallV1::new(
