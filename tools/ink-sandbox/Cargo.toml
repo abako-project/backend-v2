@@ -15,6 +15,8 @@ default = ["std"]
 std = []
 
 [dependencies]
+mock-provider = { version = "=0.1.0", path = "../../services/mock-provider", default-features = false, features = ["storage-memory", "mock-seed"] }
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
 provider-execution = { version = "=0.1.0", path = "../../crates/provider-execution" }
 generated-contracts = { version = "=0.1.0", path = "../../crates/generated-contracts" }
 serde = { version = "1.0.229", features = ["derive"] }
@@ -32,7 +34,7 @@ scale-info = { version = "=2.11.6", features = ["derive"] }
 serde_json = "1.0"
 rand = { version = "=0.10.2", default-features = false, features = ["std_rng"] }
 sp-state-machine = "=0.48.0"
-tokio = { version = "=1.53.1", features = ["rt", "sync", "time"] }
+tokio = { version = "=1.53.1", features = ["rt", "rt-multi-thread", "sync", "time", "net", "signal", "macros"] }
 sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "sqlite-bundled"] }
 
 [lints.rust]

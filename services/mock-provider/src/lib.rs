@@ -4,10 +4,14 @@
 mod calendar;
 mod domain;
 mod http;
+mod provider_api;
+mod reference;
 mod seed;
 mod storage;
 
-pub use http::router;
+pub use http::{router, router_with_provider};
+pub use provider_api::ProviderApi;
+pub use reference::ReferenceState;
 pub use storage::Provider;
 
 use axum::{
@@ -46,6 +50,17 @@ impl Error {
             code: "provider_unavailable",
             status: StatusCode::SERVICE_UNAVAILABLE,
         }
+    }
+
+    /// Sanitized failure for a provider effect boundary.
+    #[must_use]
+    pub const fn unavailable() -> Self {
+        Self::internal()
+    }
+    #[must_use]
+    /// Whether the failure represents an unavailable provider effect.
+    pub fn is_infrastructure(&self) -> bool {
+        self.status == StatusCode::SERVICE_UNAVAILABLE
     }
 
     /// Stable machine-readable reason, without request content or secrets.
@@ -89,7 +104,8 @@ impl IntoResponse for Error {
     }
 }
 
-pub(crate) type Result<T> = std::result::Result<T, Error>;
+/// Sanitized provider domain or infrastructure failure.
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub(crate) fn require(condition: bool, code: &'static str) -> Result<()> {
     if condition {

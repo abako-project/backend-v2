@@ -58,8 +58,7 @@ impl State {
             Admission::Execute(pending) => self.execute_prepared(*pending),
         }
     }
-    #[cfg(test)]
-    fn execute_with_inputs(
+    pub(crate) fn execute_with_inputs(
         self,
         verified: VerifiedCall,
         inputs: ExecutionInputs,

@@ -23,7 +23,6 @@ serde_json.workspace = true
 thiserror.workspace = true
 getrandom.workspace = true
 rand.workspace = true
-subxt-signer.workspace = true
 parity-scale-codec.workspace = true
 sha2.workspace = true
 chrono.workspace = true
@@ -31,6 +30,7 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 
 [dev-dependencies]
+subxt-signer.workspace = true
 reqwest.workspace = true
 
 [lints]

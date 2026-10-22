@@ -175,3 +175,49 @@ or SDK dependency, lock change or exception. The canonical reference README
 records primary registry/doc checks, features, MSRV 1.88 for the complete parser
 stack, license and upstream unsafe implications. Artifact source/build locks and
 fresh-source WASM/ABI reproduction remain independently checked.
+
+
+## M8 native-reference and HTTP link (exact-lock review pending)
+
+The isolated candidate reuses the existing mock library through its verified-call
+reference/read-model API and the unchanged generic HTTP router. Normal application
+builds gain no SDK dependency. The mock's sr25519 signer was used only in tests
+and is now a dev dependency; no mnemonic/key-derivation package enters this link.
+The dependency delta adds15 packages, removes/upgrades none, and preserves every
+existing registry checksum. Every added registry version is already in the app
+lock. The unchanged four advisory/thirteen license exceptions and December1
+expiry are not extended. The wrapper fingerprint remains pending exact review.
+
+Purpose/features: local mock-provider0.1.0 with storage-memory/mock-seed; axum0.8.9
+with http1/json/query/tokio and no defaults; Tokio retains1.53.1 while adding
+multithread runtime, net, signal and macros for the candidate process. Registry
+metadata and published axum README were checked with cargo info --offline and
+cargo metadata --locked on2026-10-22. Axum requires Rust1.80, axum-core1.78;
+all added packages fit the candidate's1.96.1 baseline and existing license policy.
+HTTP/runtime OS bindings retain their upstream unsafe/native implications already
+reviewed in the app. No new crypto family is introduced. Alternative: a second
+HTTP implementation or a new process protocol would duplicate authentication and
+transport behavior; keeping the SDK isolated preserves the fast native build.
+
+Added exact packages:
+
+- axum 0.8.9
+- axum-core 0.5.6
+- errno 0.3.14
+- matchit 0.8.4
+- mime 0.3.17
+- mock-provider 0.1.0
+- ryu 1.0.23
+- serde_path_to_error 0.1.20
+- serde_urlencoded 0.7.1
+- signal-hook-registry 1.4.8
+- sync_wrapper 1.0.2
+- tokio-macros 2.7.2
+- tower 0.5.3
+- tower-layer 0.3.3
+- tower-service 0.3.3
+
+Primary references: [axum0.8.9](https://docs.rs/axum/0.8.9/axum/),
+[Tokio](https://docs.rs/tokio/1.53.1/tokio/) and exact registry manifests/checksums
+in both lockfiles. The new fingerprint must pass independent delta review before
+the SDK policy command can pass; additional findings are not silently waived.
