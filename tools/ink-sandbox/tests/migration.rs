@@ -362,7 +362,7 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
             for (name, args) in [
                 ("begin_import", Vec::new()),
                 ("seal_import", Vec::new()),
-                ("import_record", (5u8, Money::new(1)).encode()),
+                ("import_record_page", (0u32, vec![5u8, 1], true).encode()),
             ] {
                 let mut input = sp_core::hashing::blake2_256(name.as_bytes())[..4].to_vec();
                 input.extend(args);

@@ -1537,6 +1537,62 @@ fn migration_project_case(source: &RetainedArchive, frozen: Option<&Value>) -> T
     )?;
     Ok(case)
 }
+fn migration_grow_qualifications(state: &mut State, owner: AccountId32) -> TestResult {
+    let root = signed_account(1)?;
+    let mut qualifications = state.engine.workers[&owner].qualifications.clone();
+    for offset in 0..512u32 {
+        let id = 1000 + offset;
+        let mut operation = [245; 16];
+        operation[..4].copy_from_slice(&offset.to_le_bytes());
+        let call = UnsignedContractCallV1::new(
+            state.shell.info.provider_instance_id,
+            OperationId::from_bytes(operation),
+            root,
+            state.shell.nonce(root),
+            UnixSeconds::new(10_000),
+            ProviderCommand::UpsertCatalogEntry(UpsertCatalogEntryRequest {
+                kind: CatalogKind::Skill,
+                id,
+                name: format!("capacity-{offset}"),
+            }),
+        )?;
+        let key = subxt_signer::sr25519::Keypair::from_secret_key([1; 32])?;
+        let signed = SignedContractCallV1 {
+            signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0),
+            call,
+        };
+        assert_eq!(
+            signed_apply(state, signed, migration_inputs(245))["receipt"]["outcome"]["type"],
+            "Success"
+        );
+        qualifications.skill_ids.push(id);
+    }
+    migration_prepare(
+        state,
+        owner,
+        ProviderCommand::UpdateQualifications(UpdateQualificationsRequest { qualifications }),
+        212,
+    )?;
+    // This excludes the Calendar: the registry record alone exceeds a call.
+    let view = &state.engine.workers[&owner];
+    assert!(
+        (
+            view.account,
+            &view.display_name,
+            &view.qualifications,
+            view.mode,
+            view.coordinator_eligible,
+            view.calendar.calendar_id,
+            &view.worker_score,
+            &view.coordinator_score
+        )
+            .encode()
+            .len()
+            + 5
+            > MAX_SIGNABLE_BYTES + 1024
+    );
+    Ok(())
+}
 fn migration_worker_case(
     trace: &Value,
     source: &RetainedArchive,
@@ -1565,6 +1621,7 @@ fn migration_worker_case(
             step["outcome"]
         );
     }
+    migration_grow_qualifications(&mut worker, owner)?;
     let mut calendar = worker
         .engine
         .workers
@@ -1593,7 +1650,7 @@ fn migration_worker_case(
         owner,
         ProviderCommand::SetCalendar(calendar),
         211,
-        "large name plus calendar and reservations",
+        "large name plus later qualifications, calendar and reservations",
         frozen,
     )?;
     Ok(case)

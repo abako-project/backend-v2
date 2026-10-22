@@ -79,6 +79,7 @@ enum Record {
     Policies(ScorePolicy, CompensationPolicy, u32),
     Reason(Vec<u8>),
     Catalog(CatalogKind, CatalogEntry, Vec<u32>, String),
+    WorkerIndex(AccountId32),
 }
 type Reason = (
     EntityId,
@@ -137,6 +138,28 @@ fn upload(
         )?;
     }
     write(ext, bundles, state, "finish_child_import", target)
+}
+fn upload_record(
+    ext: &mut sp_io::TestExternalities,
+    bundles: &Bundles,
+    state: &State,
+    record: &Record,
+) -> Result<(), Error> {
+    let bytes = record.encode();
+    for (index, page) in bytes.chunks(8192).enumerate() {
+        write(
+            ext,
+            bundles,
+            state,
+            "import_record_page",
+            (
+                u32::try_from(index).map_err(|_| Error::Limit)?,
+                page,
+                index + 1 == bytes.len().div_ceil(8192),
+            ),
+        )?;
+    }
+    Ok(())
 }
 pub(super) fn initialize(
     bundles: &Bundles,
@@ -221,6 +244,11 @@ pub(super) fn initialize(
             coordinator_score: worker.coordinator_score.clone(),
         })
     }));
+    for worker in saved.workers.values() {
+        for _ in worker.qualifications.skill_ids.chunks(32) {
+            records.push(Record::WorkerIndex(worker.account));
+        }
+    }
     for project in saved.projects.values() {
         let disputes: Vec<_> = saved
             .disputes
@@ -311,10 +339,7 @@ pub(super) fn initialize(
             .map(|r| Record::Reason(reason_wire(r).encode())),
     );
     for record in records {
-        if record.encoded_size() + 4 > MAX_INPUT {
-            return Err(Error::Limit);
-        }
-        write(&mut ext, bundles, &state, "import_record", record)?;
+        upload_record(&mut ext, bundles, &state, &record)?;
     }
     for worker in saved.workers.values() {
         let image = (&worker.calendar, &state.directory, &state.directory, false).encode();
@@ -397,6 +422,76 @@ mod tests {
         assert_eq!(before.to_bytes().unwrap(), after.to_bytes().unwrap());
         after.restore().unwrap()
     }
+    fn staged_record_faults(
+        mut ext: sp_io::TestExternalities,
+        bundles: &Bundles,
+        state: &State,
+        record: &Record,
+    ) -> sp_io::TestExternalities {
+        let bytes = record.encode();
+        assert!(bytes.len() > 8192);
+        for (index, page, finish) in [
+            (1u32, &bytes[..8192], false),
+            (0u32, &bytes[..8192], true),
+            (0u32, &bytes[..0], false),
+        ] {
+            ext = preserved(ext, |ext| {
+                assert!(
+                    write(
+                        ext,
+                        bundles,
+                        state,
+                        "import_record_page",
+                        (index, page, finish)
+                    )
+                    .is_err()
+                );
+            });
+        }
+        write(
+            &mut ext,
+            bundles,
+            state,
+            "import_record_page",
+            (0u32, &bytes[..8192], false),
+        )
+        .unwrap();
+        ext = preserved(ext, |ext| {
+            assert!(write(ext, bundles, state, "seal_import", ()).is_err());
+        });
+        for (index, page, finish) in [
+            (0u32, &bytes[..8192], false),
+            (1u32, &bytes[8192..8193], true),
+        ] {
+            ext = preserved(ext, |ext| {
+                assert!(
+                    write(
+                        ext,
+                        bundles,
+                        state,
+                        "import_record_page",
+                        (index, page, finish)
+                    )
+                    .is_err()
+                );
+            });
+        }
+        for (index, page) in bytes.chunks(8192).enumerate().skip(1) {
+            write(
+                &mut ext,
+                bundles,
+                state,
+                "import_record_page",
+                (
+                    u32::try_from(index).unwrap(),
+                    page,
+                    index + 1 == bytes.len().div_ceil(8192),
+                ),
+            )
+            .unwrap();
+        }
+        ext
+    }
     #[test]
     fn failed_staged_child_pages_and_finish_preserve_state_and_retry_then_seal() {
         let bundles = Bundles::pinned().unwrap();
@@ -424,18 +519,35 @@ mod tests {
         let (mut ext, bytes) = super::super::directory::initialize(&bundles, fixture).unwrap();
         let state: State = serde_json::from_slice(&bytes).unwrap();
         write(&mut ext, &bundles, &state, "begin_import", ()).unwrap();
+        for id in 10..44 {
+            upload_record(
+                &mut ext,
+                &bundles,
+                &state,
+                &Record::Catalog(
+                    CatalogKind::Skill,
+                    CatalogEntry {
+                        id,
+                        name: format!("skill-{id}"),
+                        fixed: false,
+                    },
+                    Vec::new(),
+                    String::new(),
+                ),
+            )
+            .unwrap();
+        }
         let id = EntityId::from_bytes([51; 16]);
-        write(
-            &mut ext,
+        ext = staged_record_faults(
+            ext,
             &bundles,
             &state,
-            "import_record",
-            Record::Worker(WorkerImport {
+            &Record::Worker(WorkerImport {
                 account: owner,
-                display_name: "staged".into(),
+                display_name: "staged".repeat(2000),
                 qualifications: Qualifications {
                     role_ids: Vec::new(),
-                    skill_ids: Vec::new(),
+                    skill_ids: (10..44).collect(),
                 },
                 mode: WorkerMode::Worker,
                 coordinator_eligible: false,
@@ -449,8 +561,7 @@ mod tests {
                     rated_minutes: 0,
                 },
             }),
-        )
-        .unwrap();
+        );
         let target = ImportTarget::Calendar(owner);
         ext = preserved(ext, |ext| {
             assert!(
@@ -518,6 +629,12 @@ mod tests {
             .unwrap();
         }
         write(&mut ext, &bundles, &state, "finish_child_import", target).unwrap();
+        for _ in 0..2 {
+            ext = preserved(ext, |ext| {
+                assert!(write(ext, &bundles, &state, "seal_import", ()).is_err());
+            });
+            upload_record(&mut ext, &bundles, &state, &Record::WorkerIndex(owner)).unwrap();
+        }
         let exported = read_archive(&mut ext, &bundles, &state, false).unwrap();
         assert_eq!(exported.checkpoint.workers[&owner].calendar, calendar);
         write(&mut ext, &bundles, &state, "seal_import", ()).unwrap();

@@ -310,6 +310,16 @@ hash is invented. Directory seals its import capability permanently and activate
 its children only after the complete archive matches. SQLite then commits the
 runtime and retained shell together.
 
+Catalog entries, worker/project registry records and complete child images use
+ordered 8 KiB migration pages. Directory stages records in a separate temporary
+namespace, applies each complete decoded record atomically, then clears its pages.
+An unfinished record blocks sealing. Derived worker skill indexes rebuild in fixed
+batches of at most32 entries; sealing also requires every index complete. The native-authored capacity trace combines
+a near-limit worker name with 512 skills added by later valid calls, as well as
+large accumulated catalogs, calendars and Project descriptions. Paging removes
+the single-call import ceiling; finite WASM gas/memory and archive/checkpoint
+admission still apply and fail without committing a destination.
+
 `worker::archive` decodes the pinned storage-v5 cells using pallet-contracts'
 read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
 8 KiB pages and streaming contract storage admit near-256 KiB signed profiles

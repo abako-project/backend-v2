@@ -104,10 +104,19 @@ impl<'a> Storage<'a> {
         }
         T::decode_all(&mut &bytes[..]).map_err(|_| Error::InvalidState)
     }
-    fn root<T: Decode>(&mut self, address: &Account) -> Result<T, Error> {
-        let length = self.cell(address, 0u32)?;
+    fn root<T: Decode>(&mut self, state: &directory::State, importing: bool) -> Result<T, Error> {
+        let (length, import): (u32, Option<(AccountId32, EntityId, u32)>) =
+            self.cell(&state.directory, 0u32)?;
+        let expected = importing.then_some((
+            state.shell.info.root_account,
+            EntityId::from_bytes([0; 16]),
+            0,
+        ));
+        if import != expected {
+            return Err(Error::InvalidState);
+        }
         self.pages(length, |reader, index| {
-            reader.cell(address, (u32::MAX, index))
+            reader.cell(&state.directory, (u32::MAX, index))
         })
     }
     fn child<T: Decode>(&mut self, address: &Account) -> Result<T, Error> {
@@ -169,7 +178,7 @@ pub(super) fn workers(
     state: &State,
 ) -> Result<Vec<WorkerView>, Error> {
     let mut reader = Storage::new(ext);
-    let directory: Directory = reader.root(&state.directory)?;
+    let directory: Directory = reader.root(state, false)?;
     reader.workers(state, &directory, None)
 }
 pub(super) fn read(
@@ -178,7 +187,7 @@ pub(super) fn read(
     sealed: bool,
 ) -> Result<ArchiveV1, Error> {
     let mut reader = Storage::new(ext);
-    let directory: Directory = reader.root(&state.directory)?;
+    let directory: Directory = reader.root(state, !sealed)?;
     if directory.root != state.shell.info.root_account
         || directory.phase != if sealed { 2 } else { 1 }
         || !directory.bank.enabled
