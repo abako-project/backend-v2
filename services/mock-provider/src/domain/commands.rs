@@ -1,9 +1,10 @@
+use generated_contracts::provider_core::{ProjectCore, WorkerCore};
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use generated_contracts::{
     AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, MilestoneView,
-    Minutes, Money, PlanningStatus, PlanningView, ProjectView, ProviderCommand, Qualifications,
-    ReputationView, ReservationView, TaskDefinition, UnixSeconds, WorkerMode, WorkerView,
+    Minutes, Money, PlanningStatus, PlanningView, ProviderCommand, Qualifications, ReputationView,
+    ReservationView, TaskDefinition, UnixSeconds, WorkerMode,
 };
 
 use super::{Effect, RustEngine, compare_scores, empty_score};
@@ -47,7 +48,7 @@ impl RustEngine {
         Ok(())
     }
 
-    pub(super) fn worker_mut(&mut self, account: AccountId32) -> Result<&mut WorkerView> {
+    pub(super) fn worker_mut(&mut self, account: AccountId32) -> Result<&mut WorkerCore> {
         self.workers
             .get_mut(&account)
             .ok_or_else(|| Error::domain("worker_not_found"))
@@ -66,22 +67,52 @@ impl RustEngine {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(super) fn apply(
         &mut self,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
     ) -> Result<Effect> {
+        // Component fixtures have no signed shell. Only this test path supplies
+        // a fixed context; production lowers the real verified envelope.
+        let compact = if matches!(
+            command,
+            ProviderCommand::RegisterWorker(_) | ProviderCommand::CreateProject(_)
+        ) {
+            let call = generated_contracts::UnsignedContractCallV1::new(
+                generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+                generated_contracts::OperationId::from_bytes([0; 16]),
+                origin,
+                0,
+                generated_contracts::UnixSeconds::new(u64::MAX),
+                command.clone(),
+            )?;
+            crate::creation::compact_creation(&call)
+        } else {
+            None
+        };
+        self.apply_core(origin, compact.as_ref().unwrap_or(command), now)
+    }
+
+    pub(super) fn apply_core(
+        &mut self,
+        origin: AccountId32,
+        command: &ProviderCommand,
+        now: UnixSeconds,
+    ) -> Result<Effect> {
         let effect = match command {
-            ProviderCommand::RegisterWorker(request) => {
+            ProviderCommand::RegisterWorkerCore(request) => {
                 require(!self.workers.contains_key(&origin), "worker_exists")?;
                 self.qualifications(&request.qualifications)?;
                 let calendar_id = self.context.random_id();
                 self.workers.insert(
                     origin,
-                    WorkerView {
+                    WorkerCore {
                         account: origin,
-                        display_name: request.display_name.clone(),
+                        content: generated_contracts::provider_core::MetadataReferenceV1::Creation(
+                            request.content.clone(),
+                        ),
                         qualifications: request.qualifications.clone(),
                         mode: WorkerMode::Worker,
                         coordinator_eligible: false,
@@ -157,8 +188,8 @@ impl RustEngine {
                 self.compensation_policy = policy.clone();
                 Effect::new(DomainEventKind::CompensationPolicyUpdated, None, origin)
             }
-            ProviderCommand::CreateProject(request) => {
-                self.create_project(origin, &request.title, &request.description, now)?
+            ProviderCommand::CreateProjectCore(content) => {
+                self.create_project(origin, content.clone(), now)?
             }
             ProviderCommand::CreateDeposit(_)
             | ProviderCommand::ConfirmDeposit { .. }
@@ -230,8 +261,7 @@ impl RustEngine {
     fn create_project(
         &mut self,
         origin: AccountId32,
-        title: &str,
-        description: &str,
+        content: generated_contracts::provider_core::MetadataCommitmentV1,
         now: UnixSeconds,
     ) -> Result<Effect> {
         // Selection uses current capacity; approved execution reserves milestone coordination.
@@ -258,13 +288,12 @@ impl RustEngine {
         }
         self.projects.insert(
             project_id,
-            ProjectView {
+            ProjectCore {
                 project_id,
                 created_at: Some(now),
                 client: origin,
                 coordinator,
-                title: title.into(),
-                description: description.into(),
+                content: generated_contracts::provider_core::MetadataReferenceV1::Creation(content),
                 planning: PlanningView {
                     revision: 0,
                     status: PlanningStatus::Accepted,
@@ -373,7 +402,7 @@ impl RustEngine {
 
     pub(super) fn assign(
         &mut self,
-        project: &ProjectView,
+        project: &ProjectCore,
         milestone: &mut MilestoneView,
         earlier_team: &BTreeSet<AccountId32>,
     ) -> Result<()> {

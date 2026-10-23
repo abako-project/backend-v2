@@ -1,5 +1,8 @@
 //! Private, versioned migration archive. Never expose it through the HTTP API.
 //! Typed fields preserve u128 accumulators and data omitted from public snapshots.
+mod core;
+pub use core::{CoreArchiveV2, CoreCheckpointV2};
+
 use crate::{RecordedCall, Shell};
 use generated_contracts::{
     AccountId32, CatalogEntry, CompensationPolicy, DepositView, Dispute, DomainEvent,

@@ -557,12 +557,18 @@
           "owner": "0x0202020202020202020202020202020202020202020202020202020202020202",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x1ed798a40e7e5f0f84bf1b042d04f3dad408c69091e588a4eeaf6ddce371900a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": true,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -588,12 +594,18 @@
           "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x353fc2c2c6a9485bba081356c27eb685d9d4b27a2aeee0e5711d7900ddae7918",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1221,7 +1233,7 @@
         }
       },
       "seed": 10,
-      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+      "stateDigest": "31d0da589f5147cc353078f7a0e358669f8ed2a808fc0335d66c1747babdaa58"
     },
     {
       "capturedId": "0x7f982207bff99f3c0196518bbded3666",
@@ -1248,7 +1260,7 @@
         "error": "worker_exists"
       },
       "seed": 11,
-      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+      "stateDigest": "31d0da589f5147cc353078f7a0e358669f8ed2a808fc0335d66c1747babdaa58"
     },
     {
       "capturedId": "0x597aacfb5a1744166ff5e0a6e641206e",
@@ -1270,7 +1282,7 @@
         "error": "unknown_qualification"
       },
       "seed": 12,
-      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+      "stateDigest": "31d0da589f5147cc353078f7a0e358669f8ed2a808fc0335d66c1747babdaa58"
     },
     {
       "capturedId": "0x2ac61ed2accce69a92acbb2b2f312d60",
@@ -1292,7 +1304,7 @@
         "error": "worker_not_found"
       },
       "seed": 13,
-      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+      "stateDigest": "31d0da589f5147cc353078f7a0e358669f8ed2a808fc0335d66c1747babdaa58"
     },
     {
       "capturedId": "0x0da0959392a6f0f49f074c64ac9f2604",
@@ -1307,7 +1319,7 @@
         "error": "coordinator_not_eligible"
       },
       "seed": 14,
-      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+      "stateDigest": "31d0da589f5147cc353078f7a0e358669f8ed2a808fc0335d66c1747babdaa58"
     },
     {
       "capturedId": "0xacaa88f9a319dedee7d729fab59da20b",
@@ -1322,7 +1334,7 @@
         "error": "system_origin_required"
       },
       "seed": 15,
-      "stateDigest": "d284e64b6cfdae8769c2dd573ea5c402723dacc43909c26658b3fb5ff65701ef"
+      "stateDigest": "31d0da589f5147cc353078f7a0e358669f8ed2a808fc0335d66c1747babdaa58"
     },
     {
       "capturedId": "0xcaeb5e7018fffb52e24ec79633e0fe1d",
@@ -1343,7 +1355,7 @@
         }
       },
       "seed": 16,
-      "stateDigest": "7132264640209cc6e9b1b2ab262845ce630fede0af014065eb206080a2e04cc8"
+      "stateDigest": "c842ddc8f1873a035551babdab74c91d1f1e62d4a9beceeb16a68f92649ba029"
     },
     {
       "capturedId": "0x74ed346d4cc835e1945348805e28c48b",
@@ -1364,7 +1376,7 @@
         }
       },
       "seed": 17,
-      "stateDigest": "41af58e2ee5a70de16048f6f1b1c29cda76f818f2b68a4eaef8f3c9fe0bfb46d"
+      "stateDigest": "cd17f7a76b6b216943fb890c2e26782bca228ecfa41981db63a14878791341a5"
     },
     {
       "capturedId": "0xca4bce725a44e2822994d952e077596c",
@@ -1397,7 +1409,7 @@
         }
       },
       "seed": 18,
-      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+      "stateDigest": "ac4182cde1fcdcffbc9bbb4718d08d434bd4368585aa242a1a03892b2c542b7f"
     },
     {
       "capturedId": "0xc458f38fd60805f351861dc82258a343",
@@ -1414,7 +1426,7 @@
         "error": "system_origin_required"
       },
       "seed": 19,
-      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+      "stateDigest": "ac4182cde1fcdcffbc9bbb4718d08d434bd4368585aa242a1a03892b2c542b7f"
     },
     {
       "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
@@ -1431,7 +1443,7 @@
         "error": "fixed_coordinator_role"
       },
       "seed": 20,
-      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+      "stateDigest": "ac4182cde1fcdcffbc9bbb4718d08d434bd4368585aa242a1a03892b2c542b7f"
     },
     {
       "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
@@ -1447,7 +1459,7 @@
         "error": "fixed_coordinator_role"
       },
       "seed": 20,
-      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+      "stateDigest": "ac4182cde1fcdcffbc9bbb4718d08d434bd4368585aa242a1a03892b2c542b7f"
     },
     {
       "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
@@ -1463,7 +1475,7 @@
         "error": "catalog_entry_in_use"
       },
       "seed": 20,
-      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+      "stateDigest": "ac4182cde1fcdcffbc9bbb4718d08d434bd4368585aa242a1a03892b2c542b7f"
     },
     {
       "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
@@ -1479,7 +1491,7 @@
         "error": "catalog_entry_in_use"
       },
       "seed": 20,
-      "stateDigest": "97ba39afb4867866d7d8f26aa94efaa4bd17576f83d6b9626a1607efdb40f922"
+      "stateDigest": "ac4182cde1fcdcffbc9bbb4718d08d434bd4368585aa242a1a03892b2c542b7f"
     },
     {
       "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
@@ -1502,7 +1514,7 @@
         }
       },
       "seed": 20,
-      "stateDigest": "c4585c07aa66315eaad01ae252e2e428cc176e930d8806dfb98f75e258ab81d1"
+      "stateDigest": "98d5398a6441e02ea44b574850e380938974cefa942dcee9eaecf1dc7a370ce1"
     },
     {
       "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
@@ -1520,7 +1532,7 @@
         "error": "skill_name_exists"
       },
       "seed": 20,
-      "stateDigest": "c4585c07aa66315eaad01ae252e2e428cc176e930d8806dfb98f75e258ab81d1"
+      "stateDigest": "98d5398a6441e02ea44b574850e380938974cefa942dcee9eaecf1dc7a370ce1"
     },
     {
       "capturedId": "0x13dbb624c1fad6bc738de0ea7db831d5",
@@ -1545,7 +1557,7 @@
         }
       },
       "seed": 21,
-      "stateDigest": "678a0b68976c21e191107fd549bc7a080c05726bc56c4d192f972f23ad02f698"
+      "stateDigest": "e4c4cbe23b882ed003528e2d4ff1c5bf7162e0c689ee12046f5b72130f989fea"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1570,7 +1582,7 @@
         }
       },
       "seed": 22,
-      "stateDigest": "143a47b23aba0f868376952085a1c214f94405bbd5f9df30b0b1c659c65cf4af"
+      "stateDigest": "b30028620ad50b9c6dc404297676aba16fae955b19fbafd855be70206ae01fe1"
     },
     {
       "capturedId": "0x13dbb624c1fad6bc738de0ea7db831d5",
@@ -1588,7 +1600,7 @@
         "error": "request_id_collision"
       },
       "seed": 21,
-      "stateDigest": "143a47b23aba0f868376952085a1c214f94405bbd5f9df30b0b1c659c65cf4af"
+      "stateDigest": "b30028620ad50b9c6dc404297676aba16fae955b19fbafd855be70206ae01fe1"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1604,7 +1616,7 @@
         "error": "system_origin_required"
       },
       "seed": 22,
-      "stateDigest": "143a47b23aba0f868376952085a1c214f94405bbd5f9df30b0b1c659c65cf4af"
+      "stateDigest": "b30028620ad50b9c6dc404297676aba16fae955b19fbafd855be70206ae01fe1"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1627,7 +1639,7 @@
         }
       },
       "seed": 22,
-      "stateDigest": "cca0ea82afec170667a03b753b53df4e1cb6e4970b15a0ded9b2456c92d157fe"
+      "stateDigest": "b20538be247bb11855da1ab3620f5d28311d4c461dc633df05dad1d2bcd4780b"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1643,7 +1655,7 @@
         "error": "skill_name_exists"
       },
       "seed": 22,
-      "stateDigest": "cca0ea82afec170667a03b753b53df4e1cb6e4970b15a0ded9b2456c92d157fe"
+      "stateDigest": "b20538be247bb11855da1ab3620f5d28311d4c461dc633df05dad1d2bcd4780b"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1666,7 +1678,7 @@
         }
       },
       "seed": 22,
-      "stateDigest": "7b23a1a699731b473fb5049b82c6e63de72086bd9a2eed0da58acdb37faeaafe"
+      "stateDigest": "938575c8cb1b9612b306198ea772405b8ae8e4f12309e96db446bc82a818aeb5"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1682,7 +1694,7 @@
         "error": "skill_request_decided"
       },
       "seed": 22,
-      "stateDigest": "7b23a1a699731b473fb5049b82c6e63de72086bd9a2eed0da58acdb37faeaafe"
+      "stateDigest": "938575c8cb1b9612b306198ea772405b8ae8e4f12309e96db446bc82a818aeb5"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1705,7 +1717,7 @@
         }
       },
       "seed": 22,
-      "stateDigest": "863ef2855a48eb2efd1a81a09cd6fa1a484f73ed51621f098dc8831e976212d5"
+      "stateDigest": "af94ca4cd7ed87ff494dffa23f604c145ebc979227ea963576182cd79f608c5b"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1727,7 +1739,7 @@
         }
       },
       "seed": 22,
-      "stateDigest": "6291c33ff2612b92c6715b005b7e3bb0ee002c70ceebd83a916d5366e7ff575e"
+      "stateDigest": "d72828994323b3a69c0e55029c505638442320e45bb6be0320937790054cc1ee"
     },
     {
       "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
@@ -1750,7 +1762,7 @@
         }
       },
       "seed": 22,
-      "stateDigest": "405383599a92a0157d9d2cce7a0b6eaea3c144e572e89f791f47b9006201f5a4"
+      "stateDigest": "ab7cfb9a78ef17d4659e2313ec8bcf8224f0d6a62c2ec4aaedc816a99e600b7c"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1775,7 +1787,7 @@
         }
       },
       "seed": 23,
-      "stateDigest": "9071df77fbbcc239848edb3ea57f26624672d5c193fe099b935a1099ea85807c"
+      "stateDigest": "3988ac25e3826fe2e202d6e5feb33c41768c0992f96659dd037dff11a79fa8b7"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1797,7 +1809,7 @@
         }
       },
       "seed": 23,
-      "stateDigest": "d5cae5e8d2cc66c052935746a4afee3dbdcc881c88133a123e9473334628b524"
+      "stateDigest": "21befb22898ec54fabefd2e8d9f2a9d1559c4f56171c1f864801a1fa72d1efa6"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1813,7 +1825,7 @@
         "error": "unknown_role"
       },
       "seed": 23,
-      "stateDigest": "d5cae5e8d2cc66c052935746a4afee3dbdcc881c88133a123e9473334628b524"
+      "stateDigest": "21befb22898ec54fabefd2e8d9f2a9d1559c4f56171c1f864801a1fa72d1efa6"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1836,7 +1848,7 @@
         }
       },
       "seed": 23,
-      "stateDigest": "3646254ae863d39eeb08f33c59215937bd98651b65f3a22209e928e738f254e5"
+      "stateDigest": "324e4e9f41f97a48de4ef88703fbed199e3dd61f3d495bb435c461d7f04deb9e"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1864,7 +1876,7 @@
         }
       },
       "seed": 23,
-      "stateDigest": "b1af2c1abadebdf9f300115e50ca48574d1be14ee4fff429591d231ca3df0e2c"
+      "stateDigest": "ca6d079fa647c04c09cf4f46dbf3b88b111c0345cd50a9621e83320ed46b1e01"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1880,7 +1892,7 @@
         "error": "catalog_entry_in_use"
       },
       "seed": 23,
-      "stateDigest": "b1af2c1abadebdf9f300115e50ca48574d1be14ee4fff429591d231ca3df0e2c"
+      "stateDigest": "ca6d079fa647c04c09cf4f46dbf3b88b111c0345cd50a9621e83320ed46b1e01"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1896,7 +1908,7 @@
         "error": "catalog_entry_not_found"
       },
       "seed": 23,
-      "stateDigest": "b1af2c1abadebdf9f300115e50ca48574d1be14ee4fff429591d231ca3df0e2c"
+      "stateDigest": "ca6d079fa647c04c09cf4f46dbf3b88b111c0345cd50a9621e83320ed46b1e01"
     },
     {
       "capturedId": "0x8d42c935e9444730088459a2a5342119",
@@ -1919,7 +1931,7 @@
         }
       },
       "seed": 23,
-      "stateDigest": "ea182e0c141d7991f6b1878398bd721cb5dfa1b3e16d97cc3b4626f0f1e18594"
+      "stateDigest": "1e402f6ebac6bebfc7e6bc7a8b03ba12edb7b03e433d72f6131e86cbcba85373"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -1944,7 +1956,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "7c3edbd39d06f555df45e5f4bcd2344e251ab5fdf1ef4daf67aa5b6a281ff198"
+      "stateDigest": "90888c8be4575a7d7db28f28bbed352b795bbabf96aa9d726e854afdd5f9731f"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -1960,7 +1972,7 @@
         "error": "catalog_id_exhausted"
       },
       "seed": 24,
-      "stateDigest": "7c3edbd39d06f555df45e5f4bcd2344e251ab5fdf1ef4daf67aa5b6a281ff198"
+      "stateDigest": "90888c8be4575a7d7db28f28bbed352b795bbabf96aa9d726e854afdd5f9731f"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -1983,7 +1995,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "dbf369b8a768939eb37e987244a76a966a6730cf19a7c06c8ce085aec6593e00"
+      "stateDigest": "6c5adf47dd6ccea109988e16f32ffda00af524933200bac0f1c1fbb4be2e5311"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2005,7 +2017,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "dbe6cc5f571604ba7fd21f87ca4c95ad5f0e603ae15271d49daf84a8849a35e4"
+      "stateDigest": "af746651799fd153cd07b46d24907810d47622a6d3edf8b8de1b08b84f7cd703"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2035,7 +2047,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "3019f500ea593cfc0e083002678a35af768724ee347c3215718f71ac39809ae1"
+      "stateDigest": "5d1b1d4a6e14daeddb4e35482b432885d5d09608100ebd1d3be69adce6f4179f"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2056,7 +2068,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "9479036183b8e2af3c04cf6b8e4e6fc247eda9f1b5af97b9ca7f1ece24509f8a"
+      "stateDigest": "b1a955208a62947a6f41314e5e05b1cd3dfe17767f9d4e4c2fcd4907e3459b33"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2079,7 +2091,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "35c26a056b4d5ed005c948b40e0128292d88aa8843316d98183ec9425fb486a6"
+      "stateDigest": "4d8308ab85cf2dee199e3af15e34335252886f991c0946765a9cb23db16da2dc"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2102,7 +2114,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "d1fbbee72e8cb474c2d52cd6633203e6f17448943e14bd3ad976a6406f7f2b0b"
+      "stateDigest": "9cc474f19acb835dd46d5e9380c9694d0e09391d92f52505b592e4bdaf0cc79e"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2119,7 +2131,7 @@
         "error": "skill_name_exists"
       },
       "seed": 24,
-      "stateDigest": "d1fbbee72e8cb474c2d52cd6633203e6f17448943e14bd3ad976a6406f7f2b0b"
+      "stateDigest": "9cc474f19acb835dd46d5e9380c9694d0e09391d92f52505b592e4bdaf0cc79e"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2142,7 +2154,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "19764f120f1d2fb49719aaa68131ab025b5d0899cf10403fe83ce4995836d53d"
+      "stateDigest": "e399ff3f6b3d9e151db8c86fef958660bff21079db0cb942243da6a50f6b5898"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2159,7 +2171,7 @@
         "error": "skill_name_exists"
       },
       "seed": 24,
-      "stateDigest": "19764f120f1d2fb49719aaa68131ab025b5d0899cf10403fe83ce4995836d53d"
+      "stateDigest": "e399ff3f6b3d9e151db8c86fef958660bff21079db0cb942243da6a50f6b5898"
     },
     {
       "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
@@ -2182,7 +2194,7 @@
         }
       },
       "seed": 24,
-      "stateDigest": "385638c5b92e4466c962d99f834dae7a8c530e0e24ec99b77a3aa0f5887badf9"
+      "stateDigest": "0e0c105999096a23f33ab3bbdac27c3a78d08764bbe5d283b6e11a56cf77220a"
     }
   ]
 }

@@ -1,4 +1,5 @@
 //! Independent M4 component replay through production contract WASM.
+use generated_contracts::provider_core::WorkerCore;
 use generated_contracts::*;
 use ink_v5_compatibility::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
@@ -17,7 +18,7 @@ type Projection = (
     Vec<CatalogEntry>,
     Vec<CatalogEntry>,
     Vec<SkillRoleAssociation>,
-    Vec<WorkerView>,
+    Vec<WorkerCore>,
     Vec<SkillRequestView>,
 );
 type Catalog = (
@@ -156,9 +157,25 @@ fn id(seed: u8) -> EntityId {
     StdRng::from_seed([seed; 32]).fill_bytes(&mut bytes);
     EntityId::from_bytes(bytes)
 }
-fn command_input(command: ProviderCommand, seed: u8) -> Vec<u8> {
+fn command_input(command: ProviderCommand, seed: u8, origin: AccountId32) -> Vec<u8> {
+    let command = if matches!(command, ProviderCommand::RegisterWorker(_)) {
+        let call = UnsignedContractCallV1::new(
+            ProviderInstanceId::from_bytes([0; 16]),
+            OperationId::from_bytes([0; 16]),
+            origin,
+            0,
+            UnixSeconds::new(u64::MAX),
+            command,
+        )
+        .unwrap();
+        mock_provider::creation::compact_creation(&call).unwrap()
+    } else {
+        command
+    };
     match command {
-        ProviderCommand::RegisterWorker(request) => input("register_worker", (request, id(seed))),
+        ProviderCommand::RegisterWorkerCore(request) => {
+            input("register_worker_core", (request, id(seed)))
+        }
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
@@ -199,7 +216,7 @@ fn apply(directory: &Account, action: Action) -> Value {
         } => observed(decoded::<Effect>(call(
             &Account::new(origin.into_bytes()),
             directory,
-            command_input(command, seed),
+            command_input(command, seed, origin),
         ))),
         Action::Contributions {
             project_id,
@@ -284,7 +301,7 @@ fn registration(directory: &Account, origin: u8) {
         decoded::<Effect>(call(
             &account(origin),
             directory,
-            command_input(request, origin)
+            command_input(request, origin, AccountId32::from_bytes([origin; 32]))
         ))
         .is_ok()
     );
@@ -477,8 +494,11 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
             .unwrap();
             assert_eq!(created.status, Status::Success);
             let directory = created.address.unwrap();
-            let request = RegisterWorkerRequest {
-                display_name: "Candidate".into(),
+            let request = generated_contracts::provider_core::RegisterWorkerCoreRequest {
+                content: generated_contracts::provider_core::MetadataCommitmentV1 {
+                    operation_id: OperationId::from_bytes([0; 16]),
+                    hash: PayloadHash::from_bytes([9; 32]),
+                },
                 qualifications: Qualifications {
                     role_ids: vec![3],
                     skill_ids: vec![1, 2],
@@ -493,7 +513,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                     VmAction::Call {
                         address: directory.clone(),
                     },
-                    input("register_worker", (&request, id(origin))),
+                    input("register_worker_core", (&request, id(origin))),
                 )
                 .await
                 .unwrap();
@@ -582,7 +602,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                 .result()
                 .await
                 .unwrap();
-            let worker = Result::<Option<WorkerView>, u8>::decode_all(&mut &outcome.data[..])
+            let worker = Result::<Option<WorkerCore>, u8>::decode_all(&mut &outcome.data[..])
                 .unwrap()
                 .unwrap()
                 .unwrap();

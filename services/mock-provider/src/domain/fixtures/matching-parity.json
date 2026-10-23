@@ -558,12 +558,18 @@
             }
           ]
         },
+        "content": {
+          "data": {
+            "hash": "0xf27b931105077609e31b5d62daf203006a24794776c931d2458a2450bf554122",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": true,
         "coordinatorScore": {
           "ratedMinutes": 210,
           "weightedScoreSum": "101000"
         },
-        "displayName": "Candidate 2",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -590,12 +596,18 @@
           "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x5fd6182fb23de5be908dbda1fa16bb36139cdc08271f0b652363852e7c92f725",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": true,
         "coordinatorScore": {
           "ratedMinutes": 10,
           "weightedScoreSum": "5000"
         },
-        "displayName": "Candidate 3",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -622,12 +634,18 @@
           "owner": "0x0404040404040404040404040404040404040404040404040404040404040404",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x17ef320917e6e87e9044024e56c775ca77128dcfe72c4834da5dd8dd14b440c0",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 4",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -654,12 +672,18 @@
           "owner": "0x0505050505050505050505050505050505050505050505050505050505050505",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x5e6a5ef8b2b913b07cab8f1dc724cd6e0f77ae2c3379f7b056e165a82fc490c1",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 5",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -686,12 +710,18 @@
           "owner": "0x0606060606060606060606060606060606060606060606060606060606060606",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xa1b2bc2eb5054e589b868f6a2825a1f39d63e646f1719e589fc8d947122b5fe4",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 6",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -738,12 +768,18 @@
             }
           ]
         },
+        "content": {
+          "data": {
+            "hash": "0xab2a4be52104aa2444eaed51c1599d3328a6f309d935d88f6dc49709d8205e2a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 7",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -788,12 +824,18 @@
             }
           ]
         },
+        "content": {
+          "data": {
+            "hash": "0x6b7bbd55796f5e959716d55d59b1cfad4336e375b9d03ee1fdebfbdcb01cb0f8",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 8",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -841,12 +883,18 @@
             }
           ]
         },
+        "content": {
+          "data": {
+            "hash": "0x662f3d0c333c13bda76e9830bed234ca5007626f03a28941dc2f7d7c7e281fc8",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 9",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -892,12 +940,18 @@
             }
           ]
         },
+        "content": {
+          "data": {
+            "hash": "0x314cfcf1a38daae56417460be11c1987988834e0fe4ed0bd05233facd580a4b9",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 10",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -924,12 +978,18 @@
           "owner": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x58c59a82c63c12e21f3b950609781a08428d1cb9c9755ab1ae8961a18c9af461",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": true,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 11",
         "mode": "Coordinator",
         "qualifications": {
           "roleIds": [
@@ -955,12 +1015,18 @@
           "owner": "0x0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xa71e96b669d3b158ea052a89eab52dac4da0e1308f928e8df05ae444a7af97c2",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": true,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 12",
         "mode": "Coordinator",
         "qualifications": {
           "roleIds": [
@@ -986,12 +1052,18 @@
           "owner": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x6e3b35f75492e9bf089b70fd133412a6c1647d2a14fffe877c97f95d59d3e0c2",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 13",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1017,12 +1089,18 @@
           "owner": "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x68bd452d9bef484a7208df002778dfddf64dd7032c8c778477b8dfdbcba11fdc",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 14",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1048,12 +1126,18 @@
           "owner": "0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xc8f7526615d509862c85e324d4641731fd94171af3903655f2c3683f8594dbb9",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 15",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1079,12 +1163,18 @@
           "owner": "0x1010101010101010101010101010101010101010101010101010101010101010",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x06af07d087d4c4c12e0a91b1ebe7a60192d006e62ca051fb7158599feb1e743e",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 16",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1110,12 +1200,18 @@
           "owner": "0x1111111111111111111111111111111111111111111111111111111111111111",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x109de02e139e36df4fe2fefc6ce0bb24befaf82d3829623eebbd9f423995e036",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 17",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1141,12 +1237,18 @@
           "owner": "0x1212121212121212121212121212121212121212121212121212121212121212",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xadcb2e3e987df92836c61f09b25edee066f01094c238843e855f12bc80c3f1c4",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 18",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1172,12 +1274,18 @@
           "owner": "0x1313131313131313131313131313131313131313131313131313131313131313",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xf8684e9c12e3c53431670bf585e1a85bbfc1d2753c51a8ab6f9a0670f44de705",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 19",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1203,12 +1311,18 @@
           "owner": "0x1414141414141414141414141414141414141414141414141414141414141414",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x05a3380400e9a69864dcba51e5a09a0eecde766cd5fb493dafb1e97ea0c884f8",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 20",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1234,12 +1348,18 @@
           "owner": "0x1515151515151515151515151515151515151515151515151515151515151515",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x20140ca17cf20b97070011c4d7298b8a37b3b7d6f1cf528d1cd04276f193fc8c",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 21",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1265,12 +1385,18 @@
           "owner": "0x1616161616161616161616161616161616161616161616161616161616161616",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x76402cb92c9957c7e6845f39e3677b8aee3a0d7f79788ec0108b6023a76e2ca8",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 22",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1296,12 +1422,18 @@
           "owner": "0x1717171717171717171717171717171717171717171717171717171717171717",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xef62cd3f1b3336f772cf12b46414e88abdc5f44d3ea4e96ca6795bec8d0cba6b",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 23",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1327,12 +1459,18 @@
           "owner": "0x1818181818181818181818181818181818181818181818181818181818181818",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x6f256fd1d40ba9382f9df4db431dfd7642494562b803791176c3c3e6b0e6ff4f",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 24",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1358,12 +1496,18 @@
           "owner": "0x1919191919191919191919191919191919191919191919191919191919191919",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xc3bc326bab278c5605b9a0dd24beb3f15f09b8807139a47f3c24b0f5cb6c907d",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 25",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1389,12 +1533,18 @@
           "owner": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x77f152a387dfb5abbca2f7725a564c4a6fe9082540febd569cefaccc42aa3fea",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 26",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1420,12 +1570,18 @@
           "owner": "0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x2a20eb255727099dcf44948c76284f9bf03fce09ccf75801001312113778452d",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 27",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1451,12 +1607,18 @@
           "owner": "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x5f9fb5d13bdc6e91aed6e1e3b2d4fa4cc0933f2bed6db744dced319b108717a0",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 28",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1482,12 +1644,18 @@
           "owner": "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x1ba8cc6da2d1dfe9d5b3200191aae7d3a330be7c486e71886119c55515a778ee",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 29",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1513,12 +1681,18 @@
           "owner": "0x1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xff1a8a63cbca7b88c237e22f6d50ab1cf3212d8649bfbf539b8b2870eee07e9a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 30",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1544,12 +1718,18 @@
           "owner": "0x1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x826eeee543e37207bc1c92edb72293d7d38f9b8b1c710a6d8f4daee258c8e1d0",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 31",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1575,12 +1755,18 @@
           "owner": "0x2020202020202020202020202020202020202020202020202020202020202020",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xac1264acd9f3ea4f2e57d72ce138df64342ecaf317f8cbb4c44a8c7cad706892",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 32",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1606,12 +1792,18 @@
           "owner": "0x2121212121212121212121212121212121212121212121212121212121212121",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x1c637d00f369a81f3dc88ee38d97a5362aaf00cebecd26fb694bf4932f44b4cb",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 33",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1637,12 +1829,18 @@
           "owner": "0x2222222222222222222222222222222222222222222222222222222222222222",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x6a6606bd3b531f1d111ce6444e338225634522f54cfc71efb6e5a31dfe91f3ce",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 34",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1668,12 +1866,18 @@
           "owner": "0x2323232323232323232323232323232323232323232323232323232323232323",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x89375aaa706c5c7ab42d83f51ffbe8e0e77821566831bd95257d29094f63c1b7",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 35",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1699,12 +1903,18 @@
           "owner": "0x2424242424242424242424242424242424242424242424242424242424242424",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x11bb249a8bacf0313af3ab8b52afd344cfb31df789a0a90ef2de6b9c76fb927b",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 36",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1730,12 +1940,18 @@
           "owner": "0x2525252525252525252525252525252525252525252525252525252525252525",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x088cbcfe4735fb9475e543d1c41aa9fe1147624cbe90538fe16251f78f3d6dbf",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 37",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1761,12 +1977,18 @@
           "owner": "0x2626262626262626262626262626262626262626262626262626262626262626",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x5c8b201e36ccc6fb113fac5d5e8aeaf4ee615942d8ea0d4ee9bda8bdf3f5c7af",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 38",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1792,12 +2014,18 @@
           "owner": "0x2727272727272727272727272727272727272727272727272727272727272727",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xc0b6528d5d699b56287435ea8d222575eb8834d102a7e2ab08d4a22bdf22097a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 39",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1823,12 +2051,18 @@
           "owner": "0x2828282828282828282828282828282828282828282828282828282828282828",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x26615b7e8c5c5f0ccfe3c8a33298d3451cb4e1d50c709ca15f20741f3d74282f",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 40",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1854,12 +2088,18 @@
           "owner": "0x2929292929292929292929292929292929292929292929292929292929292929",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xede6e30821e0342e1961246e207887c13771f79fd7809fda7d288d98a11903bc",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 41",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1885,12 +2125,18 @@
           "owner": "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xaf259c376cf434561571d0a70a9e0bcb3aef5dcab42402e287e37304b667355a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 42",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1916,12 +2162,18 @@
           "owner": "0x2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xc0f465b30e5644fd87f512278220a0e7450560e4cca5abb3c0a5b5fb47630a4a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 43",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1947,12 +2199,18 @@
           "owner": "0x2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xb4630c74095cdecb4c7cc585fdca08300a42f64736bce5f8e62768243999b6c4",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 44",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -1978,12 +2236,18 @@
           "owner": "0x2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x9c39d2de2cc351aad573ec9ac99d3b28dc1d491d4c2e3e362365e74ce86be2d9",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 45",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2009,12 +2273,18 @@
           "owner": "0x2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x572aaa39e634aee9d6479d80e435c9ee56af5fe28335f4d32991de4d1604f462",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 46",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2040,12 +2310,18 @@
           "owner": "0x2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x614e2aeb0093453b00bfca1d0d66d584a2a9a69ca7f3618971b892ae1c8237f7",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 47",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2071,12 +2347,18 @@
           "owner": "0x3030303030303030303030303030303030303030303030303030303030303030",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x4c7a611b5f794965a298969f409375dcdf2517618246304e3c6c0e06a7c6cc89",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 48",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2102,12 +2384,18 @@
           "owner": "0x3131313131313131313131313131313131313131313131313131313131313131",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xe4e20d3da4fe9430de10167a625cbdd4b823c0ac5e93c2d0f700fe2494953fbd",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 49",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2133,12 +2421,18 @@
           "owner": "0x3232323232323232323232323232323232323232323232323232323232323232",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x65966fcf5293739e51f8cc404d42998dd0a0b479ae5a2303f14d5e2c170f5f68",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 50",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2164,12 +2458,18 @@
           "owner": "0x3333333333333333333333333333333333333333333333333333333333333333",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x776b316208057279f53fc86fcdc5b1d011cc6f307736e726a021811b2008765a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 51",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2195,12 +2495,18 @@
           "owner": "0x3434343434343434343434343434343434343434343434343434343434343434",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x9e66c050a3bb97f3f15e7862b8f6a5bca2fc8ddd78850ff1cfbf7e7cc2f03201",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 52",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2226,12 +2532,18 @@
           "owner": "0x3535353535353535353535353535353535353535353535353535353535353535",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x6f3603ee41659f3d55a58774584a2cb27faafbbe23ac8f6456b226a81ce0adc8",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 53",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2257,12 +2569,18 @@
           "owner": "0x3636363636363636363636363636363636363636363636363636363636363636",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xe348a673f9e42a0fd0f7f89eb394781c5978bb513c2f81483161033e5623b7fd",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 54",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2288,12 +2606,18 @@
           "owner": "0x3737373737373737373737373737373737373737373737373737373737373737",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x90f7ca70d3638adda3fb0abb91174900d176560e2ad84ee1dcf2bb7484d7f614",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 55",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2319,12 +2643,18 @@
           "owner": "0x3838383838383838383838383838383838383838383838383838383838383838",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xf0ae4c1c6658b5c022955e5c751aba764c64e66deb209b14d29c14c1e944cfaa",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 56",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2350,12 +2680,18 @@
           "owner": "0x3939393939393939393939393939393939393939393939393939393939393939",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xcf619be33f4cc95316565ea50bf95826aceb6fe0448375d630b3777d7ebf9041",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 57",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2381,12 +2717,18 @@
           "owner": "0x3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x7222ac8feb02143e08522e5e0647e8741d5b454cc07f6a80d224c24fa4151eed",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 58",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2412,12 +2754,18 @@
           "owner": "0x3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x1e309981552e1142e010a4737279f81cf9d83a19157ca25bd2645bb1b724737b",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 59",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2443,12 +2791,18 @@
           "owner": "0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x47e550440a6b7e9d683609d47fc14c1ba5395c274edde9c7f2bd5f81944a3fb9",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 60",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2474,12 +2828,18 @@
           "owner": "0x3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x1d79b1c894dac314d7950e1c064ae684d3df07ac9efcee5989526be73776a70a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 61",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2505,12 +2865,18 @@
           "owner": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xc6765de27f336c7cbee3fedd04ddfd95ca23bde0dcc9003618a12c616c7415c5",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 62",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2536,12 +2902,18 @@
           "owner": "0x3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x2b675f9b87e176164894f92ab5d1297318a3690add50550f2820f77519497375",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 63",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2567,12 +2939,18 @@
           "owner": "0x4040404040404040404040404040404040404040404040404040404040404040",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x3beab1e192dcec4aa6c7a1d9ead0b421f55b0c04538e4a434b51fc253f06bfec",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 64",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2598,12 +2976,18 @@
           "owner": "0x4141414141414141414141414141414141414141414141414141414141414141",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x2e73eaed9d7ed0f18f90967d63792fe0295a4f58c85b7913b7882519071851c9",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 65",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2629,12 +3013,18 @@
           "owner": "0x4242424242424242424242424242424242424242424242424242424242424242",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x914e883db769079893220e2e5816c834b7e7bf06d33e60cc9cf6ce8f96c8a824",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 66",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2660,12 +3050,18 @@
           "owner": "0x4343434343434343434343434343434343434343434343434343434343434343",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x9432e90aa87c42c70a85a2a93eddcdda5f3cb94dc42a68e12b9a7d81d6ba6d56",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 67",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2691,12 +3087,18 @@
           "owner": "0x4444444444444444444444444444444444444444444444444444444444444444",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xe53ca3fa50e6ce97136358824dc79762617ba6559404be8939e2520769f23e5d",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 68",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2722,12 +3124,18 @@
           "owner": "0x4545454545454545454545454545454545454545454545454545454545454545",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xc7328a2aa535a5b1d5f4cdaf81af9cc32309063ec17a7241604226c4ae3f6dae",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 69",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2753,12 +3161,18 @@
           "owner": "0x4646464646464646464646464646464646464646464646464646464646464646",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xffff56410788ffbe34c92c22413fd516cfd09741cb906667ebe6e267427c51b9",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 70",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2784,12 +3198,18 @@
           "owner": "0x4747474747474747474747474747474747474747474747474747474747474747",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x22ff95d3ae88ebe586e307f3e86c13832dc1012f722c2408b94c86da39b729b3",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 71",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2815,12 +3235,18 @@
           "owner": "0x4848484848484848484848484848484848484848484848484848484848484848",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x0a34186ea9e3cfbfd88fb6d5ddafe72f4b372df6ba8f2d1c53770d5a39d22518",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 72",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2846,12 +3272,18 @@
           "owner": "0x4949494949494949494949494949494949494949494949494949494949494949",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xaaf0f5ce5409dad6771d2cbf018277cff8255ce85536ad4d15e881235bce8b32",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 73",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2877,12 +3309,18 @@
           "owner": "0x4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x7b8af283d115e51fb788b3348da8c2393093ec5a4346924789e6357b0219a821",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 74",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2908,12 +3346,18 @@
           "owner": "0x4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xc6c57db7e30117e033931304eea0df0986149c92e5c91c09af135c237a268668",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 75",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2939,12 +3383,18 @@
           "owner": "0x4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x716f45be4e0661ef2e9a7eb3d4b2f374da00c16808fe7c328c31383bb3132ded",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 76",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -2970,12 +3420,18 @@
           "owner": "0x4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xfa18fd701ee7c3f4d7a38584de4a8c3a58735b35b45b0fa8d9e8f9548e2d2cc6",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 77",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -3001,12 +3457,18 @@
           "owner": "0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0xe93c0694345b132cadf2029766657185ee1817c00449cf7988ea53f367fe9c80",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 78",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -3032,12 +3494,18 @@
           "owner": "0x4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f",
           "reservations": []
         },
+        "content": {
+          "data": {
+            "hash": "0x7d7dc2266288feb37a63a4c71da2bf037dd5e5160b71a8bf5144a514e1218a06",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 79",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -3074,12 +3542,18 @@
             }
           ]
         },
+        "content": {
+          "data": {
+            "hash": "0xad7de957d27512dcfd5cbb891f54bf0f0d61f342f103b6a6571b0446a18cddd8",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "type": "Creation"
+        },
         "coordinatorEligible": false,
         "coordinatorScore": {
           "ratedMinutes": 0,
           "weightedScoreSum": "0"
         },
-        "displayName": "Candidate 80",
         "mode": "Worker",
         "qualifications": {
           "roleIds": [
@@ -3649,7 +4123,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "1895a2e4f194c375efad52c2b1bb1b33bc93a50cbf8847de3d7d31c52ee5aeca"
+      "stateDigest": "fbcfbc99376adf009cc6a46104dacd770280f7bade312281514e2b1ce743e691"
     },
     {
       "action": {
@@ -3691,7 +4165,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "d445cceb8fc1df724a7cb877bb2b3556a9d0af062daef91c634d33aa21ea1805"
+      "stateDigest": "229d46b385916bafcb6b72bc5754e89b4469171e7a5a77ca262912bf459d944b"
     },
     {
       "action": {
@@ -3733,7 +4207,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "2d51ab4e2df4507355a829296d97f8c1d5fe28d2b879e189b3553fc6996da00c"
+      "stateDigest": "981b42d4d2b340221eedbe5ae89b184037738a2037af57aaa9f4c70c30b178d5"
     },
     {
       "action": {
@@ -3774,7 +4248,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "254998f830d1f670148a65053276d1dae7139a2d2adbc8368116015dfc881b31"
+      "stateDigest": "6bdb24b996bee6fc6b6cea73800fded7b52c5e54296c7c81651ed9c42f5abe86"
     },
     {
       "action": {
@@ -3815,7 +4289,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "1808304409bf1b6e1de74b079b28a74f67b7ffc90a469231d0e9c234731888db"
+      "stateDigest": "bbed1a605e25681953e7ca815dfb8190c700c8ffcd589b7938d2a4ee3a9f9772"
     },
     {
       "action": {
@@ -3857,7 +4331,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "69b0bcb0b7cec6d40ec9b4bb81020224254d57b9b5cfdcbbca9ac72114f157b4"
+      "stateDigest": "9ce8862f519cc03b913823802ecc394bd5aaa5d0edbfd2288bf802bf93ff30e9"
     },
     {
       "action": {
@@ -3899,7 +4373,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "47529b240d7fe1ae7bc453d61387c4d87c6c0b9fcd26732432b55ad16dfbdbdb"
+      "stateDigest": "aece2ce8147ec51a117346efcc4c7f96a8ef51f51932fde09c18f768f1658b74"
     },
     {
       "action": {
@@ -3941,7 +4415,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "d9b93e0fefca63eaf199a10aa3999d987f53d32d3f606ed8b2532a7a7576d63b"
+      "stateDigest": "fdd622424f0d97a22a3a7256604bfd481da900c95146004963691856394d1ca7"
     },
     {
       "action": {
@@ -3983,7 +4457,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "4f33e4e7c67480d068b00e9e5f128612241f7835937d591f6f264a91b78624b0"
+      "stateDigest": "f6416e6cb68b59f9a3b675341b83f3b7ad3cdd7f366bef062c052180e949dbe6"
     },
     {
       "action": {
@@ -4012,7 +4486,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "7e01feb41a2289f0bbc57b7751441d107b64da6164abcf31ceb2be387ff1d1ce"
+      "stateDigest": "8f5d63a2ce0df30e35deb93a477b48c8e5ae16a54066ee8e4f2f0bfaf7b10acb"
     },
     {
       "action": {
@@ -4041,7 +4515,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "460d368a9ab292e9eaa24e0805bd08ece01250b96d43eb087d52735113112fe0"
+      "stateDigest": "fd0dd7ea8d1e18d2fbe527dcdfb797ede0b1323bacc69069cfeadeaff3471f26"
     },
     {
       "action": {
@@ -4070,7 +4544,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "c00584eb2584dd43772609f88665489362ff269cd1e6f40ab86fd68259d3fa7e"
+      "stateDigest": "a9063c264b81c993737450846c1a274a58c42baec2ee5d2e9ae217e5ee4595f6"
     },
     {
       "action": {
@@ -4099,7 +4573,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "21fdb429e4bd88acdcf31ecf6c378a138740f6d164f30256bb5172c001238864"
+      "stateDigest": "59004dd60f33a77e62712a020e1a802e26ae1090556e73a9e3f78f53167e59ca"
     },
     {
       "action": {
@@ -4184,7 +4658,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "2561b54c2153d62e56f5319ea8f5a0ea3b8b0d071a176f9f06e473867965f6e4"
+      "stateDigest": "27b28146bb68dd07b3319b31e54ddeb7d81873378b234c2a2d30d69f04dc7167"
     },
     {
       "action": {
@@ -4222,7 +4696,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "d4b16484865fe06c73de59806de87a699e82da3ec209cd5efadc59c84fa3da73"
+      "stateDigest": "cebf36d23387d8458458bfe1a26ed7bd742417f6be2cf318a05b914ae1b5f767"
     },
     {
       "action": {
@@ -4260,7 +4734,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "e2bc974443fa72984580bc402d922d8160225d39684f4be9802421b5fbf6f76a"
+      "stateDigest": "052fa3683dd2319d29f4e228f00bf763895d079cdbf2335f41f6ddf806490174"
     },
     {
       "action": {
@@ -4284,7 +4758,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "e2bc974443fa72984580bc402d922d8160225d39684f4be9802421b5fbf6f76a"
+      "stateDigest": "052fa3683dd2319d29f4e228f00bf763895d079cdbf2335f41f6ddf806490174"
     },
     {
       "action": {
@@ -4308,7 +4782,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "e2bc974443fa72984580bc402d922d8160225d39684f4be9802421b5fbf6f76a"
+      "stateDigest": "052fa3683dd2319d29f4e228f00bf763895d079cdbf2335f41f6ddf806490174"
     },
     {
       "action": {
@@ -4338,7 +4812,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "0efc507602072571d4ba96e7253c9a3484b1d3bed8c1605ccf801090d9e5db16"
+      "stateDigest": "d5174af3629f5e331c60d63945113a33f9187635a702c3856b08e4690bbd63bb"
     },
     {
       "action": {
@@ -4362,7 +4836,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "0efc507602072571d4ba96e7253c9a3484b1d3bed8c1605ccf801090d9e5db16"
+      "stateDigest": "d5174af3629f5e331c60d63945113a33f9187635a702c3856b08e4690bbd63bb"
     },
     {
       "action": {
@@ -4392,7 +4866,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "e2bc974443fa72984580bc402d922d8160225d39684f4be9802421b5fbf6f76a"
+      "stateDigest": "052fa3683dd2319d29f4e228f00bf763895d079cdbf2335f41f6ddf806490174"
     },
     {
       "action": {
@@ -4418,7 +4892,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 1
       },
-      "stateDigest": "e2bc974443fa72984580bc402d922d8160225d39684f4be9802421b5fbf6f76a"
+      "stateDigest": "052fa3683dd2319d29f4e228f00bf763895d079cdbf2335f41f6ddf806490174"
     },
     {
       "action": {
@@ -4450,7 +4924,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "e2bc974443fa72984580bc402d922d8160225d39684f4be9802421b5fbf6f76a"
+      "stateDigest": "052fa3683dd2319d29f4e228f00bf763895d079cdbf2335f41f6ddf806490174"
     },
     {
       "action": {
@@ -4481,7 +4955,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "fd30d82abd9b8388d0e2e37fc1eab3c6be587141cd51efd86b666079b5727bd1"
+      "stateDigest": "960e805c27905ac162e0582329474652bb55fff9163b366001e9ea19b7897635"
     },
     {
       "action": {
@@ -4619,7 +5093,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "426b8a73a5eacd292ff8c00cd0912c0cbeca963a08454f897e518c58312d634a"
+      "stateDigest": "334e1fa16faf86860d4e187737f6685caa0c7f241086c5a4e9b13a95a1574c57"
     },
     {
       "action": {
@@ -4680,7 +5154,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "426b8a73a5eacd292ff8c00cd0912c0cbeca963a08454f897e518c58312d634a"
+      "stateDigest": "334e1fa16faf86860d4e187737f6685caa0c7f241086c5a4e9b13a95a1574c57"
     },
     {
       "action": {
@@ -4762,7 +5236,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "426b8a73a5eacd292ff8c00cd0912c0cbeca963a08454f897e518c58312d634a"
+      "stateDigest": "334e1fa16faf86860d4e187737f6685caa0c7f241086c5a4e9b13a95a1574c57"
     },
     {
       "action": {
@@ -4811,7 +5285,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "426b8a73a5eacd292ff8c00cd0912c0cbeca963a08454f897e518c58312d634a"
+      "stateDigest": "334e1fa16faf86860d4e187737f6685caa0c7f241086c5a4e9b13a95a1574c57"
     },
     {
       "action": {
@@ -4848,7 +5322,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "ff01efb2dab899ce920115c4cd100eb820974f59ba8473c46c396dc9aa336834"
+      "stateDigest": "ff6be8639ca392c182e75e96bc3ac950cae84bfcd5426eeb25630b1e57b9ab6a"
     },
     {
       "action": {
@@ -4884,7 +5358,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "3daf971b2ada22419708252074868464c76fef8d7045e34956f0fd17d4309b47"
+      "stateDigest": "664a4eb83a902e6b49ef55997a9309177f155c662a9a36ac648f16aa05f88238"
     },
     {
       "action": {
@@ -4943,7 +5417,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "f6aa94362444349739f2c5cbff710fc587624e3fe75c59dd4306ff7a7b5e67b1"
+      "stateDigest": "18a1fff0a19ab5eae0142b6f974aee7a5ebb33982f915a917d68b8f06ec5a5fe"
     },
     {
       "action": {
@@ -4972,7 +5446,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "c165fa4bb69d45a1210132af88ea9bc25c36417029ceb92471b7a1d2342c2cf2"
+      "stateDigest": "f6311f018b956432a35b00ea220fb95d0e0d8b6c258bfa6fee5f8b7b01b37a71"
     },
     {
       "action": {
@@ -5001,7 +5475,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "21be117e79bcd9c4f8fb9b85c17f0e557412fdc05948770fb492f289317bb303"
+      "stateDigest": "043b875679477d18225ab7787f954bdf77d303e6ea70d3dd4441a0ddb302e7b7"
     },
     {
       "action": {
@@ -5042,7 +5516,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "707a90602e7ff1998b6e7269315f4e0a725ab846ef812eb09f8df72db8d9ca4f"
+      "stateDigest": "90d3059bc6f5f382d896c2848c03b50ee3c87ffd91386ec944e5ac3df8924f3a"
     },
     {
       "action": {
@@ -5071,7 +5545,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "28561ab8f0ea9257cd00208a75bdf1344434a5f26cd5f4771cbb62c7e443a6d0"
+      "stateDigest": "f88da3856048dd19df81534bd29a6ad9b7444ac794db1cbae5962707b889f05f"
     },
     {
       "action": {
@@ -5100,7 +5574,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4b4e4722402263a768d89f3b579c30ddad414b23c9c5521d306e5c7b096dcd09"
+      "stateDigest": "a50fa9d597c638c5a050ce91321932fbc940b9ca862ce86998c7aa7c08ee2fa6"
     },
     {
       "action": {
@@ -5141,7 +5615,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "3f4d9873d741ae87286d3e51d34724a4def10cdeb37d571966d27d5f4d9fae1c"
+      "stateDigest": "9f23aaf6615a26c853e2dac4ce3f536ddb870d6034dafdeb1e6bb2ef6c3b96df"
     },
     {
       "action": {
@@ -5170,7 +5644,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4f2423dd00b56d4e7884a173d2d4dc1e1cdb250aea33139f3b11e8331fc8b70e"
+      "stateDigest": "32f36c8e23cb38f2671b572da4dc74b52bd49a1a54069534239e59eeb03eb0ef"
     },
     {
       "action": {
@@ -5199,7 +5673,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5223,7 +5697,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5247,7 +5721,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5271,7 +5745,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5295,7 +5769,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5319,7 +5793,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5343,7 +5817,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5367,7 +5841,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5391,7 +5865,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5415,7 +5889,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5439,7 +5913,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5463,7 +5937,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5487,7 +5961,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5511,7 +5985,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5535,7 +6009,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5559,7 +6033,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5583,7 +6057,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5607,7 +6081,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5631,7 +6105,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5655,7 +6129,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5679,7 +6153,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5703,7 +6177,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5727,7 +6201,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5751,7 +6225,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5775,7 +6249,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5799,7 +6273,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5823,7 +6297,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5847,7 +6321,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5871,7 +6345,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5895,7 +6369,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5919,7 +6393,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5943,7 +6417,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5967,7 +6441,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -5991,7 +6465,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6015,7 +6489,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6039,7 +6513,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6063,7 +6537,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6087,7 +6561,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6111,7 +6585,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6135,7 +6609,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6159,7 +6633,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6183,7 +6657,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6207,7 +6681,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6231,7 +6705,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6255,7 +6729,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6279,7 +6753,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6303,7 +6777,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6327,7 +6801,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6351,7 +6825,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6375,7 +6849,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6399,7 +6873,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6423,7 +6897,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6447,7 +6921,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6471,7 +6945,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6495,7 +6969,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6519,7 +6993,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6543,7 +7017,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6567,7 +7041,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6591,7 +7065,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6615,7 +7089,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6639,7 +7113,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6663,7 +7137,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6687,7 +7161,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6711,7 +7185,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6735,7 +7209,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1f74e739f409ed2616bf7a85f0be3792a845473532e4ebab86671e54c9a504bc"
+      "stateDigest": "649ca7c96ae8bd3a5fb8fb114486a6a4b6a5420f95e6433cc82e22686de86101"
     },
     {
       "action": {
@@ -6776,7 +7250,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "9c13d3cc5d3b84bf0bbad49e57bf547bf366bcad8258a455275d282608ff02e9"
+      "stateDigest": "95c70805b96daa149ffb31d3fa6206b53d2b8b3b2275e9e189ef910fd6a6324d"
     },
     {
       "action": {
@@ -6817,7 +7291,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "d83c0b9e2afc07cee63cb0d0bc2b2181130b03ad5f90a873a77ce375b75f726b"
+      "stateDigest": "d305faa4023fadd27dbb0fcdb8283da01f33049ea97b1bfcf5b56bead9ae9464"
     },
     {
       "action": {
@@ -6858,7 +7332,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "035ae5400a60965a231a00cf208155195dda8eae7d2e416e799ce1f27d04cee7"
+      "stateDigest": "9871dd2dbc1a98a33809230d45cc11fea3395f0d4528c2c9dad3cadf507ba761"
     },
     {
       "action": {
@@ -6899,7 +7373,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "b1f22a4b28cd7e83bb4ee8410e1b84a7ba4e2d803ac90c9ce5bf4a8933740dbe"
+      "stateDigest": "2088d1eed319c96e1dccc357b3fe0a3781939792659225ce75910785c8714cdd"
     },
     {
       "action": {
@@ -6940,7 +7414,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "84b6525e311be436bd6be98b42c83dffbea0680cb784da71259de2b6e7d3444b"
+      "stateDigest": "e632c98d30a0b76ad0b0bc8d09671be5f0f4cd1af2b9f9a745ecaf20ae4c163c"
     },
     {
       "action": {
@@ -6981,7 +7455,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "b4b8516c77939422a14088a461c14da855ead366042959892cbf50b8548a7697"
+      "stateDigest": "f4778b0edb85283f68006d3d213dc59cc1f97eac93240902d61efbf670ea7e0d"
     },
     {
       "action": {
@@ -7022,7 +7496,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "e43c84c9afac3c586bdcb34ebb7dc671970929503db69a1fac30813b283d25e6"
+      "stateDigest": "425a83e9ce9a17174a01ea357a1072e89db64352744637a8bb08e72580f456a0"
     },
     {
       "action": {
@@ -7063,7 +7537,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "cc5c855787e079b699818933a9ea9fc63eef270c67b9f5a798a146c00aa51bc5"
+      "stateDigest": "569f5816f1a718b8be2d2e8096217246ff77b81bdace2b92db218f7b7b4817b4"
     },
     {
       "action": {
@@ -7104,7 +7578,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "c79fed0272bddb4004fb0458ed8b1c85609f0b614016737ef6b21a58c8a26e86"
+      "stateDigest": "8883f4f62a100162170490d666f07ba638ea4b585e9974a3c4f1bdff598cee3c"
     },
     {
       "action": {
@@ -7145,7 +7619,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "66b7453e8174b684f706977d12f999d76f5374996e567e7a477b380fbeebd3c8"
+      "stateDigest": "9f35655932b81ad36b6cdf8eda47096635cc5f5c0432ec812908531848bdcfec"
     },
     {
       "action": {
@@ -7186,7 +7660,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "6502e3a7345f28322dcd0e07b85db695dc0b60725aa3f55eb1b88df9ab11a587"
+      "stateDigest": "a377d4d7c90005b16458be36c83e741de7d4d061d2a3ffc29843ca1f1a12dab4"
     },
     {
       "action": {
@@ -7227,7 +7701,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "9eba470468d760b59a619457cc66caa0bdc33c4b911f4d0c7e4a115f176c434f"
+      "stateDigest": "b347d68caf475638a865afb95a6dd8251d9271e4871ee91a92ddc71ad14747db"
     },
     {
       "action": {
@@ -7268,7 +7742,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4f1a6abf3fa8b22fbd5bce6ead6ffba5c64ae010bbcbcb17f29c9488b2f017f5"
+      "stateDigest": "4b7029308ff5baa8505325696e97d37000c87079bc7368af86deba37acefddf1"
     },
     {
       "action": {
@@ -7309,7 +7783,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "dacb7a874e4598e8bbc4336090cb69062c8e2f0c4efcd76029327e87d8a69f71"
+      "stateDigest": "a5e6c8a6c8568d81f1f020aea2b330967581e95de1498699a41f0ac127645fe9"
     },
     {
       "action": {
@@ -7350,7 +7824,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "298ae99712d15271dcec209c9cca2ff0b835486b53d610d07cd48de07ce7e55c"
+      "stateDigest": "4379f8066b30633aaa1a9b9147b935bc6a12e18956818f8535ccfdb6f7aac876"
     },
     {
       "action": {
@@ -7391,7 +7865,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "f28f2b58cf47bcc7f1465638c2e45ef4243d9ea1ac5d5862c23f3d135f7b648d"
+      "stateDigest": "1aaa7a1654b26cf47a1c21a1d59caace22f1ffa1979a43bcb12275aa010dc3b7"
     },
     {
       "action": {
@@ -7432,7 +7906,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1c49e5a2f7ae6405215ae65e97954ef7854bfbd30818d339346a741d0eedee5c"
+      "stateDigest": "80b44fb21291d68500a2a8f70580e74784766bbfacd755e049d9e2ae98a35bb6"
     },
     {
       "action": {
@@ -7473,7 +7947,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "49f6850af194468b375df00a02f2d9c4ed6d052e9c8998a94d128f64ad8b44f9"
+      "stateDigest": "3e8d2ea4e3cb2ee26eac016d550307785d1616b1262ee4017722c4848ce7ce67"
     },
     {
       "action": {
@@ -7514,7 +7988,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "fb783dba2e7b6a6731b780e8c2c2d9ee774b7a5d4ec07de5f46695229243d5e3"
+      "stateDigest": "57f3fc5cfa7b48c73509a1f5f42c9240d2778f7aa4bf83980759d7e3c22a8c05"
     },
     {
       "action": {
@@ -7555,7 +8029,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "a98bfbb79facdff777bf1d7dc2421fb865f805306ca8bd51c31ea734834ac5b5"
+      "stateDigest": "c06411d72c04b0c9c451ec91cf464d62ecad4626c38594a26d7863e813454640"
     },
     {
       "action": {
@@ -7596,7 +8070,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "c96386025e4654971abd5e978f51f53287433331edbf45533d2c956bbcc6f9db"
+      "stateDigest": "b561b9cf5a9bee0e88638066e8d57c5a5053d4d8acde225dfb500e02a66fefa3"
     },
     {
       "action": {
@@ -7637,7 +8111,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "fae15103b76d58cf1cd84ab873176163c10413c38bdc3e9c145c42f551e50be2"
+      "stateDigest": "63f758faf2b1c454d5735794e70ce733bee0dcd1a784b05d86da31cf9ce7ecef"
     },
     {
       "action": {
@@ -7678,7 +8152,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4f27b16907ebb7363ba1cfbaf497bb196f4a4a1581a8df3bbc17f3f18c263708"
+      "stateDigest": "0643af0bda7ba087d5c67c750fd7ec83a4bfdddd48e4d4c7730aae1262badb4f"
     },
     {
       "action": {
@@ -7719,7 +8193,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4fc0d6b064fa80e3272fb14a60bdcc388982372338fce49131b7ea4b7c5435fe"
+      "stateDigest": "0c5f8d469ab55c52444a9dc4314f46f621d3faeecaecec8a25e28ff6546f14ee"
     },
     {
       "action": {
@@ -7760,7 +8234,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "bfc83ee5e1f519116defe8f0bd00b07cf76b4cf82ab94b1ac16fdbbc9f8d91a2"
+      "stateDigest": "32610f59329c5d360b2a3df7aeec1ffa949ab44b38dc0364c1fb6d8e75fd0cc4"
     },
     {
       "action": {
@@ -7801,7 +8275,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4b5f71176bcfb48ee45c6d2775f76848aebfe5ad492c28efdf2c193b4951f222"
+      "stateDigest": "319d8b5bbb06560e9401a896e728f493b95d0183d17812f212503140ccddbcd7"
     },
     {
       "action": {
@@ -7842,7 +8316,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "b2ad299ea09982cb00f18afe4e198fc67a469e5e754f80ab7a7df62ba33311a0"
+      "stateDigest": "567b7c19476a2e7d0d5495ed8d61ad80395054c099be4267855a1dbcc914095f"
     },
     {
       "action": {
@@ -7883,7 +8357,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "e6a3db0f575e0fc60924c130011bf33d1ced881c71da03326a76e8bf92701e9d"
+      "stateDigest": "828d43c27d98088bc0574d6a2a46fd1b12364dd42e7c8d3320d17da069996cd8"
     },
     {
       "action": {
@@ -7924,7 +8398,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "85731a3f48147f03ff68f76af4041981fccf25787316158a5502afb6834ae34a"
+      "stateDigest": "aba1c6cad49585307d0aa6ca9949326bc29b62537ea565bcb10cd56965929ff6"
     },
     {
       "action": {
@@ -7965,7 +8439,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "ecc80d0900bd09581f25a056f148480e9bd796c9d65e4d14bb4387d20649876d"
+      "stateDigest": "9735998c2cd43685eaa633c3f7f8b53636f0a03f374222442877c27c168aca07"
     },
     {
       "action": {
@@ -8006,7 +8480,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "09366177f13aae96c0d5a66abc92a1ba029e5dd615356e2ca4f7cfbc6da9670f"
+      "stateDigest": "764d62d031b0d10d79fa7d2c5b98293bea4f38144d4163e0a711bb5fdd7e7d5d"
     },
     {
       "action": {
@@ -8047,7 +8521,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "e14384b9de332ccae6bf95927694192bccb52d8f0d4da2b9d32468c611fe788b"
+      "stateDigest": "c057b8618db1445cd5a504a08fb4f9bc6868a73e43152b5987972a2dfe13da93"
     },
     {
       "action": {
@@ -8088,7 +8562,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "ddeaf14c4e2cd895a649b2e0e0978a14ddc2026e2c38d3158e8619b8748697c5"
+      "stateDigest": "639705c5cc36214d0bfe7c718a7eea7a5102a1493e9eafbf12649e3e3c1cf47d"
     },
     {
       "action": {
@@ -8129,7 +8603,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "96685c25b9b9f2ccc1dd04a487e3916036bb4f92ce3eb32e57f4ac2a3396deb1"
+      "stateDigest": "2b19cfead4a9b70b1ebadc65813d5fd101da5f6d27323c0aab65d0fd31d04119"
     },
     {
       "action": {
@@ -8170,7 +8644,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "2e07b091fcad99bd9c4bc801f217106e42b839ffe303e2187f77b28f2f505b17"
+      "stateDigest": "5137b26fa4ade1b2d23fd5a0f211a60b4a6fae97062348ba564ce2578ba291ee"
     },
     {
       "action": {
@@ -8211,7 +8685,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "e0aeff2290aa7a45383ea74322e3f96878b255dd5e80a7c20903b60fdff2d340"
+      "stateDigest": "4fb8c1780a4498f2b90210e8b5bb1b50e5af39e68c2bfa7547d8efc41f2e1e1d"
     },
     {
       "action": {
@@ -8252,7 +8726,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "66e430a20bb0df5f281af9f6c2058e9687be56aeea0e172dd40db7cf9f10a1e0"
+      "stateDigest": "35bde4737e9e2ac626fc87f781c0b5de3cbe972d92703806d1b2864681931a54"
     },
     {
       "action": {
@@ -8293,7 +8767,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "3c77a4099a8cbccf0f55ccdc5adba2da663b97385a4e14c100b6531050e338fd"
+      "stateDigest": "675bd60009832c6e3480e5f7154ef8c868b180b37eab685826652b47658a890e"
     },
     {
       "action": {
@@ -8334,7 +8808,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "98666f5a70c234ab6e259dce9fba3c39b26aa48a16b5851d1e61d0f1eb53fa8f"
+      "stateDigest": "f5e9da3e8fe1da519adcad52a863853632652d557336e025329e5a2a4333a510"
     },
     {
       "action": {
@@ -8375,7 +8849,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "0dac8b9aa3c3cd09d603b5a66985d2a96d5f2d51d10a958cc0acdea8311b2917"
+      "stateDigest": "bb634db93cad495052b9fa5d74dcd7b88c9441db31380c088e42f9ff9685afc9"
     },
     {
       "action": {
@@ -8416,7 +8890,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "39a9ff02865f113652edd7bd07a56aa3029a5bb863217192e395a33fc8284590"
+      "stateDigest": "3560d974e9d9599523ed9780cceeeeb4bf846bb76dca99cc732bab67c637ef8d"
     },
     {
       "action": {
@@ -8457,7 +8931,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "3d653e4760d9ac707fa1cffd6bebaaceb4e4bfbd8fc40ea4e0aa3e1585888ff3"
+      "stateDigest": "afe1e2ba05ff2b13fdf73ab4e7481c29d3732f40a8c7f51c0132161aa9e488cb"
     },
     {
       "action": {
@@ -8498,7 +8972,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "19183b4b583c01640b22a93a22740a24c778616c24f56347aba76e679a60bce1"
+      "stateDigest": "ac930bfb16bf5f8627ee2f0e76776163b615cb1de4841a3221cdbe9c9d5f2306"
     },
     {
       "action": {
@@ -8539,7 +9013,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "92038fe43f4127847e8e5d48e42bb287d9a71ebe538c8595d8fb8ec32da7e052"
+      "stateDigest": "db589fbf0ec270339d963e34dcd8e3b2df754077bc8819ccc5bd07fd58a65df8"
     },
     {
       "action": {
@@ -8580,7 +9054,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "5f7f6958f5f7806ed45f927595cb87685d0692377bd0622e586a64dc4b9ffdd4"
+      "stateDigest": "1a94eec7c0534fa586ad698d0b4a473303321461c279751fe843612ff401e5c4"
     },
     {
       "action": {
@@ -8621,7 +9095,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "27bd7d730711456020b398af47039522061c2a19a9982a1270d634a75a33a922"
+      "stateDigest": "2bc43c9d87a015a5b4e2ec071f8bd6c1b241585d364d8a381f3dac232f20450c"
     },
     {
       "action": {
@@ -8662,7 +9136,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "fc95f2ae8b4298e8ae9e437a148c7f2f31b8bcd9883f1818a63c94799ca0c5cc"
+      "stateDigest": "984c76f94319acce7b7bb84eda832e52ea0db640e39b62f410a36da4532d3c27"
     },
     {
       "action": {
@@ -8703,7 +9177,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "2cbc516278270634ffd0570d3dba523a6297f7a4440ac80f3cbbaaee63b47404"
+      "stateDigest": "67a2d4f3d91e337fdddd6744ccf7fb3c2bc749577d71c5f8632ee64c76946249"
     },
     {
       "action": {
@@ -8744,7 +9218,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "609a575e94d893cc43a690cf80d5529851f19383f35945b97a9c82024421c5d0"
+      "stateDigest": "422b9533bd8f2c1e88db480928232b2fe156332bd49590f20b5da105de59caa2"
     },
     {
       "action": {
@@ -8785,7 +9259,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "58787b1701389d2eba080fe895b63e120ab2456736b766683495dead44902a46"
+      "stateDigest": "3e8a1d3d5cc07671d085f81d7f2b23d1c3ce531b6163b15301929d7e8b7ca09d"
     },
     {
       "action": {
@@ -8826,7 +9300,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "f63b694a5cf68bde58065cf8dc923fd77500b0ce5cda97ac6de0c90f54d12056"
+      "stateDigest": "a792c20e4d2e73e67c1e498920e3dac80a17644253c86c75994405cabb135e95"
     },
     {
       "action": {
@@ -8867,7 +9341,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "1546d8cd42db6ce56b985f9d0acf05cd9d2143c7c01bb6274119430538496795"
+      "stateDigest": "ac770d4367724c6ad161469a02057161406633e9c0ea663cbaadfff504457b82"
     },
     {
       "action": {
@@ -8908,7 +9382,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "6628d06b9c9614aab7a65f4cd6b961d423b0dc425a21a0a9b2c8105ab1478ccb"
+      "stateDigest": "b2d24f1253c00182561b7f0afc26c0610fc2ce20e58c9779b8bdd5cd7fe855f0"
     },
     {
       "action": {
@@ -8949,7 +9423,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "ca24fee72fd526edec6bcd5b0a942c46fe966f9eeb3974cae1ae5b846bde9796"
+      "stateDigest": "a17c8e1fdac9647982c7d2f2b8cc00d3013bc5cb1b13fe78ab7c96c4c1e05b10"
     },
     {
       "action": {
@@ -8990,7 +9464,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "05c1f93610002a4ce0478ca65c83b5f5812ee66d4bb091ad4646cad95f92b788"
+      "stateDigest": "757b7530b175ea4b96114ec1f0041ce911a65cacd38cbf15b7f7424af35266d7"
     },
     {
       "action": {
@@ -9031,7 +9505,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "56d90e7646cc5ae02579518e60cf603dd970bad9766029e83cfa1af9648cfbe9"
+      "stateDigest": "3d2619814312efae9c1e3b7dd2b76950e437f67cbe446987b4b6578121d9c8d2"
     },
     {
       "action": {
@@ -9072,7 +9546,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "b7c5ea547bfabd157282615b771d44c18d4d17e005f0a1e5f051589b1cd64f80"
+      "stateDigest": "981a09bb44479c58072c1ab90c67f6bb4b259c0e2e6964c456d4c0b7419a24d8"
     },
     {
       "action": {
@@ -9113,7 +9587,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "aaac97d6b3b135c9c0ee08cc6d062855c6f2419ff560891083a83cfaa2caba8e"
+      "stateDigest": "22d60c2226473341871be75eec44706d495bfe2d50ba12a51f7a73367023218c"
     },
     {
       "action": {
@@ -9154,7 +9628,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "2220c577a655542b8780806f21c60b15669fb5e902e86acbd8394d3491cd35bc"
+      "stateDigest": "239c82016a36b171fd3a4b6c48c339755ce08a8ae44e54628548b878d982328d"
     },
     {
       "action": {
@@ -9195,7 +9669,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4949f79e57a2fb855f1dee878ab701d9998ac65b9271083a95e649ca1134db47"
+      "stateDigest": "9ab085a5b0bdbbdddd712e62994cdf22dd62ccc9790ddd68c159a60a01029c8e"
     },
     {
       "action": {
@@ -9236,7 +9710,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "f9fd08dbc0486a2be9f576ddf81b7cacaab1926cece4c8bf596ac6625a15ed61"
+      "stateDigest": "7acaacbccad7a7e74de4b413785879b79c4cdf3ac7fd04c2147d104f431b9bbb"
     },
     {
       "action": {
@@ -9277,7 +9751,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "e6b063159f63dade2fec8d93d6b1cfe1e0e77caf03bacb8a24e3e6a78289f6f1"
+      "stateDigest": "53a94a9919be75cacd249598adbc34711d57c6143ab9e70e1e7e9518468e7f53"
     },
     {
       "action": {
@@ -9318,7 +9792,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "22ac133168b24380c8804409205ade101798907e28ca008bd5eba0944493e093"
+      "stateDigest": "4cb487d66c780fa4f2329319ba8eaf5e426ef004b894ac0641d44dec976f02e4"
     },
     {
       "action": {
@@ -9359,7 +9833,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "3cd2a028930e9e5d800d248bad85b134de984ff276619c0f373e31cab04d5d7b"
+      "stateDigest": "5d3142bb64e1b42cb405e0dfd29ab0f435ed8cd285d25e104833ed4b15f627cf"
     },
     {
       "action": {
@@ -9400,7 +9874,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "62687d97f41b11085d2e7ede334857093c11ce4813a3cd124603c84abdaa6839"
+      "stateDigest": "eda510263671e76c022dd1647b2dab5ad1749e18b4461c6f4a0ae7a1060f77ae"
     },
     {
       "action": {
@@ -9441,7 +9915,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "a44aaf1977d9844ec00f9768f93dd8eb3ace6546f4c3837e0838bfa463ce906f"
+      "stateDigest": "f93bab3968911ed90089a8c785edb7f5e4e2e40ced1c2198eb9a83ee46bc7911"
     },
     {
       "action": {
@@ -9482,7 +9956,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "4d85f0a5fb18d2e6c5a135f5eec39ed5078b8a8d623ad0c242d0b03ee5c33450"
+      "stateDigest": "1b9c83b5c8518386ae31889d5d715790042cf50e282c8e3499389d1b10775049"
     },
     {
       "action": {
@@ -9524,7 +9998,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "8e0b5f92374e72f045f5211c127801968b513d958a685f9c37ee283fd37a5094"
+      "stateDigest": "041a070ace4fe805f7552e1ddd0b197f0bc06e8f81497914e812f29e55a91129"
     },
     {
       "action": {
@@ -9583,7 +10057,7 @@
         "coordinatorPercent": 50,
         "coordinatorWorkerVoteWeight": 2
       },
-      "stateDigest": "bc0060a006ed5060e21b6255f518c1a68ce90baaaaf251868672f40a059ef771"
+      "stateDigest": "1903b24f787c736dc6ab57939cb1b73c67d5071589fa22182ae3a5d1a459e648"
     }
   ]
 }

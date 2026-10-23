@@ -69,22 +69,12 @@ impl State {
         }
     }
     fn execute_prepared(mut self, pending: PreparedExecution) -> Result<(Self, OperationReceipt)> {
-        // Admission already handled replay. This predecessor can restore future
-        // receipts but cannot execute compact creation before the core cutover.
-        if matches!(
-            pending.call().command,
-            generated_contracts::ProviderCommand::RegisterWorkerCore(_)
-                | generated_contracts::ProviderCommand::CreateProjectCore(_)
-        ) {
-            return Err(Error {
-                code: "metadata_cutover_required",
-                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            });
-        }
         let mut tentative = self.engine.clone();
         tentative.context.reset(pending.inputs());
         let call = pending.call();
-        let transition = tentative.apply(call.origin, &call.command, pending.inputs().now);
+        let compact = crate::creation::compact_creation(call);
+        let command = compact.as_ref().unwrap_or(&call.command);
+        let transition = tentative.apply_core(call.origin, command, pending.inputs().now);
         let transition = match transition {
             Ok(effect) => {
                 tentative.validate()?;
@@ -106,7 +96,55 @@ impl State {
     }
     pub(super) fn validate_history(&self) -> Result<()> {
         self.shell.validate(self.shell.info.root_account)?;
+        for worker in self.engine.workers.values() {
+            self.validate_creation_ref(
+                &worker.content,
+                worker.account,
+                worker.calendar.calendar_id,
+                true,
+            )?;
+        }
+        for project in self.engine.projects.values() {
+            self.validate_creation_ref(
+                &project.content,
+                project.client,
+                project.project_id,
+                false,
+            )?;
+        }
         Ok(())
+    }
+    fn validate_creation_ref(
+        &self,
+        reference: &generated_contracts::provider_core::MetadataReferenceV1,
+        owner: AccountId32,
+        entity: generated_contracts::EntityId,
+        worker: bool,
+    ) -> Result<()> {
+        use generated_contracts::{ExecutionOutcome, ProviderCommand, UnsignedContractCallV1};
+        let generated_contracts::provider_core::MetadataReferenceV1::Creation(expected) = reference
+        else {
+            return Ok(());
+        };
+        let recorded = self
+            .shell
+            .receipts
+            .get(&expected.operation_id)
+            .ok_or_else(|| Error::domain("invalid_metadata_state"))?;
+        crate::require(
+            recorded.receipt.outcome == ExecutionOutcome::Success
+                && recorded.receipt.origin == owner
+                && recorded.receipt.created_entity_id == Some(entity),
+            "invalid_metadata_state",
+        )?;
+        let call = UnsignedContractCallV1::decode_signable(&recorded.bytes)?;
+        let compact = crate::creation::compact_creation(&call);
+        let actual = match compact.as_ref().unwrap_or(&call.command) {
+            ProviderCommand::RegisterWorkerCore(request) if worker => &request.content,
+            ProviderCommand::CreateProjectCore(content) if !worker => content,
+            _ => return Err(Error::domain("invalid_metadata_state")),
+        };
+        crate::require(actual == expected, "invalid_metadata_state")
     }
 }
 
@@ -244,7 +282,8 @@ mod tests {
 
     #[cfg(feature = "storage-sqlite")]
     #[test]
-    fn legacy_checkpoint_keeps_generation_receipts_and_nonce_without_inputs() -> Result<()> {
+    fn checkpoint_keeps_historical_inputs_without_guessing_a_missing_engine_version() -> Result<()>
+    {
         let root = root()?;
         let initial = State::new(root)?;
         let verified = call(&initial, root, worker_command())?;
@@ -257,10 +296,18 @@ mod tests {
             decoded.err().map_or_else(String::new, |e| e.to_string())
         );
         let mut legacy = serde_json::to_value(&state).map_err(|_| Error::internal())?;
-        legacy
+        let mut missing_version = legacy.clone();
+        missing_version
             .as_object_mut()
             .ok_or_else(Error::internal)?
             .remove("engine_version");
+        assert!(
+            State::restore(
+                &serde_json::to_vec(&missing_version).map_err(|_| Error::internal())?,
+                root
+            )
+            .is_err()
+        );
         for recorded in legacy["receipts"]
             .as_object_mut()
             .ok_or_else(Error::internal)?
@@ -296,10 +343,9 @@ mod tests {
     #[test]
     fn checkpoint_keeps_scores_larger_than_a_json_u64_exact() -> Result<()> {
         let root = root()?;
-        let mut state = State::new(root)?;
-        state
-            .engine
-            .apply(root, &worker_command(), UnixSeconds::new(100))?;
+        let initial = State::new(root)?;
+        let verified = call(&initial, root, worker_command())?;
+        let (mut state, _) = initial.execute(verified, UnixSeconds::new(100))?;
         let score = generated_contracts::ReputationView {
             weighted_score_sum: u128::from(u64::MAX) * 499,
             rated_minutes: u64::MAX,

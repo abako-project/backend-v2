@@ -146,7 +146,9 @@ impl RustEngine {
     }
 }
 
-fn validate_execution_sequence(project: &generated_contracts::ProjectView) -> Result<()> {
+fn validate_execution_sequence(
+    project: &generated_contracts::provider_core::ProjectCore,
+) -> Result<()> {
     let mut executed = project.proposals.iter().filter(|proposal| {
         proposal
             .milestones

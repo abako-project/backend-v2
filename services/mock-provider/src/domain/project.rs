@@ -1,11 +1,12 @@
+use generated_contracts::provider_core::ProjectCore;
 use std::collections::BTreeSet;
 
 use chrono::{Duration, NaiveDate, Weekday};
 
 use generated_contracts::{
     AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, MilestoneView,
-    Money, PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView,
-    ProviderCommand, TaskStorageView, TaskView, TeamRating, UnixSeconds,
+    Money, PlanningStatus, ProposalDefinition, ProposalStatus, ProposalView, ProviderCommand,
+    TaskStorageView, TaskView, TeamRating, UnixSeconds,
 };
 
 use super::{Effect, RecordedReason, RustEngine, add_rating};
@@ -20,7 +21,7 @@ impl RustEngine {
     )]
     pub(super) fn project_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
@@ -208,7 +209,7 @@ impl RustEngine {
 
     fn planning_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
     ) -> Result<Transition> {
@@ -239,7 +240,7 @@ impl RustEngine {
 
     fn draft_proposal_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
     ) -> Result<Transition> {
@@ -326,7 +327,7 @@ impl RustEngine {
 
     fn proposal_review_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
     ) -> Result<Transition> {
@@ -411,7 +412,7 @@ impl RustEngine {
 
     fn approve_execution(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         proposal_id: EntityId,
         expected_revision: u64,
@@ -465,7 +466,7 @@ impl RustEngine {
 
     fn lifecycle_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
@@ -541,7 +542,7 @@ impl RustEngine {
 
     fn task_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
@@ -641,7 +642,7 @@ impl RustEngine {
 
     fn milestone_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
@@ -749,7 +750,7 @@ impl RustEngine {
     }
     fn settle_delivery(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         milestone_id: EntityId,
         submission_id: EntityId,
@@ -785,7 +786,7 @@ impl RustEngine {
     }
 }
 
-fn activate_next_milestone(project: &mut ProjectView, completed_id: EntityId) -> Result<()> {
+fn activate_next_milestone(project: &mut ProjectCore, completed_id: EntityId) -> Result<()> {
     let proposal = project
         .proposals
         .iter_mut()
@@ -814,22 +815,22 @@ fn activate_next_milestone(project: &mut ProjectView, completed_id: EntityId) ->
     Ok(())
 }
 
-fn client(project: &ProjectView, origin: AccountId32) -> Result<()> {
+fn client(project: &ProjectCore, origin: AccountId32) -> Result<()> {
     require(project.client == origin, "client_required")
 }
 
-fn coordinator(project: &ProjectView, origin: AccountId32) -> Result<()> {
+fn coordinator(project: &ProjectCore, origin: AccountId32) -> Result<()> {
     require(project.coordinator == origin, "coordinator_required")
 }
 
-fn participant(project: &ProjectView, origin: AccountId32) -> Result<()> {
+fn participant(project: &ProjectCore, origin: AccountId32) -> Result<()> {
     require(
         project.client == origin || project.coordinator == origin,
         "project_party_required",
     )
 }
 
-fn planning_active(project: &ProjectView) -> Result<()> {
+fn planning_active(project: &ProjectCore) -> Result<()> {
     require(
         matches!(
             project.planning.status,
@@ -850,7 +851,7 @@ fn bump(value: &mut u64) -> Result<()> {
     Ok(())
 }
 
-fn proposal_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut ProposalView> {
+fn proposal_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut ProposalView> {
     project
         .proposals
         .iter_mut()
@@ -858,7 +859,7 @@ fn proposal_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut Proposal
         .ok_or_else(|| Error::domain("proposal_not_found"))
 }
 
-pub(super) fn milestone_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut MilestoneView> {
+pub(super) fn milestone_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut MilestoneView> {
     project
         .proposals
         .iter_mut()
@@ -867,7 +868,7 @@ pub(super) fn milestone_mut(project: &mut ProjectView, id: EntityId) -> Result<&
         .ok_or_else(|| Error::domain("milestone_not_found"))
 }
 
-fn storage_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut TaskStorageView> {
+fn storage_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut TaskStorageView> {
     project
         .proposals
         .iter_mut()
@@ -877,7 +878,7 @@ fn storage_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut TaskStora
         .ok_or_else(|| Error::domain("task_storage_not_found"))
 }
 
-fn task_mut(project: &mut ProjectView, storage: EntityId, id: u32) -> Result<&mut TaskView> {
+fn task_mut(project: &mut ProjectCore, storage: EntityId, id: u32) -> Result<&mut TaskView> {
     storage_mut(project, storage)?
         .tasks
         .iter_mut()

@@ -12,6 +12,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post, put},
 };
+use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
     BalanceView, CalendarSummaryView, CatalogKind, CatalogView, DeleteCatalogEntryRequest,
     EntityId, MAX_SIGNABLE_BYTES, Minutes, Money, NotificationView, NotificationsPage,
@@ -460,8 +461,8 @@ async fn workers(State(app): State<Arc<App>>) -> Result<Json<Vec<WorkerSummaryVi
     let mut workers = Vec::new();
     let snapshot = app.snapshot().await?;
     let generation = snapshot.info.provider_instance_id;
-    for mut worker in snapshot.workers {
-        crate::profiles::directory::compose(&app, generation, &mut worker).await?;
+    for worker in snapshot.workers {
+        let worker = crate::profiles::directory::compose(&app, generation, worker).await?;
         let mut committed = BTreeMap::<Week, Minutes>::new();
         for reservation in &worker.calendar.reservations {
             let total = committed.entry(reservation.week).or_insert(Minutes::ZERO);
@@ -531,7 +532,7 @@ async fn visible_storage_project(
     app: &App,
     session: &Session,
     storage_id: EntityId,
-) -> Result<(ProviderInstanceId, ProjectView), Error> {
+) -> Result<(ProviderInstanceId, ProjectCore), Error> {
     let snapshot = app.snapshot().await?;
     let project = snapshot
         .projects
@@ -548,7 +549,7 @@ async fn visible_storage_project(
     Ok((snapshot.info.provider_instance_id, project))
 }
 fn storage_from_project(
-    project: ProjectView,
+    project: ProjectCore,
     storage_id: EntityId,
 ) -> Result<(EntityId, TaskStorageView), Error> {
     let id = project.project_id;
@@ -576,7 +577,7 @@ async fn composed_storage(
     storage_id: EntityId,
 ) -> Result<(EntityId, TaskStorageView), Error> {
     let (generation, project) = visible_storage_project(app, session, storage_id).await?;
-    let project = crate::project_content::compose(app, generation, project).await?;
+    let project = crate::project_content::children(app, generation, project).await?;
     storage_from_project(project, storage_id)
 }
 

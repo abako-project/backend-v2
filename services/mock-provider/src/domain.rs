@@ -1,3 +1,4 @@
+use generated_contracts::provider_core::{CoreSnapshotV2, ProjectCore, WorkerCore};
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
@@ -5,9 +6,8 @@ use std::{
 
 use generated_contracts::{
     AccountId32, AccountNonce, BalanceView, CatalogEntry, CatalogView, DomainEventKind, EntityId,
-    Minutes, Money, OperationId, OperationReceipt, Percentage, ProjectView, ProviderEvents,
-    ProviderInfo, ProviderSnapshot, ReputationView, ScorePolicy, SkillRequestView,
-    SkillRoleAssociation, WorkerView,
+    Minutes, Money, OperationId, OperationReceipt, Percentage, ProviderEvents, ProviderInfo,
+    ReputationView, ScorePolicy, SkillRequestView, SkillRoleAssociation,
 };
 use serde::{Deserialize, Serialize};
 
@@ -30,12 +30,12 @@ mod validation;
 
 use provider_execution::Effect;
 
-use provider_execution::migration::{ArchiveV1, ReasonRecord as RecordedReason};
+use provider_execution::migration::{CoreArchiveV2, ReasonRecord as RecordedReason};
 
 /// Private aggregate: only authenticated calls can obtain a transition and only
 /// storage can commit it. HTTP snapshots are copies, never mutable handles.
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(from = "checkpoint::CheckpointV1")]
+#[serde(from = "checkpoint::CoreCheckpointV2")]
 pub(crate) struct State {
     #[serde(flatten)]
     shell: execution::Shell,
@@ -56,8 +56,8 @@ struct RustEngine {
     score_policy: ScorePolicy,
     #[serde(default)]
     compensation_policy: generated_contracts::CompensationPolicy,
-    workers: BTreeMap<AccountId32, WorkerView>,
-    projects: BTreeMap<EntityId, ProjectView>,
+    workers: BTreeMap<AccountId32, WorkerCore>,
+    projects: BTreeMap<EntityId, ProjectCore>,
     balances: BTreeMap<AccountId32, Money>,
     reasons: Vec<RecordedReason>,
     disputes: BTreeMap<EntityId, generated_contracts::Dispute>,
@@ -120,8 +120,9 @@ impl State {
             .get(&operation)
             .map(|record| record.receipt.clone())
     }
-    pub(crate) fn snapshot(&self) -> ProviderSnapshot {
-        ProviderSnapshot {
+    pub(crate) fn snapshot(&self) -> CoreSnapshotV2 {
+        CoreSnapshotV2 {
+            schema_version: 2,
             info: self.info(),
             catalog: CatalogView {
                 roles: self.engine.roles.values().cloned().collect(),
@@ -176,16 +177,16 @@ impl State {
         state.validate_restored(root_account)
     }
 
-    pub(crate) fn archive(&self) -> Result<ArchiveV1> {
+    pub(crate) fn archive(&self) -> Result<CoreArchiveV2> {
         self.engine.validate_task_keys()?;
-        Ok(ArchiveV1 {
-            version: 1,
+        Ok(CoreArchiveV2 {
+            version: 2,
             checkpoint: serde_json::from_slice(&self.encode()?).map_err(|_| Error::internal())?,
         })
     }
 
-    pub(crate) fn from_archive(archive: ArchiveV1, root_account: AccountId32) -> Result<Self> {
-        require(archive.version == 1, "state_configuration_mismatch")?;
+    pub(crate) fn from_archive(archive: CoreArchiveV2, root_account: AccountId32) -> Result<Self> {
+        require(archive.version == 2, "state_configuration_mismatch")?;
         let state = Self::from(archive.checkpoint).validate_restored(root_account)?;
         state.engine.validate_task_keys()?;
         Ok(state)
@@ -331,5 +332,5 @@ impl RustEngine {
 }
 
 const fn rust_engine_version() -> u32 {
-    1
+    2
 }

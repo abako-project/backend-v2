@@ -1,5 +1,6 @@
 //! Independent replay of native Directory traces against production ink WASM.
 //! Accounts/IDs are explicit fixtures; signed command routing remains pending.
+use generated_contracts::provider_core::WorkerCore;
 use generated_contracts::*;
 use ink_v5_compatibility::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
@@ -17,7 +18,7 @@ type Projection = (
     Vec<CatalogEntry>,
     Vec<CatalogEntry>,
     Vec<SkillRoleAssociation>,
-    Vec<WorkerView>,
+    Vec<WorkerCore>,
     Vec<SkillRequestView>,
 );
 type Catalog = (
@@ -121,9 +122,25 @@ fn projection(directory: &Account) -> Projection {
 fn digest(state: &Projection) -> String {
     format!("{:x}", H256::from(sha2_256(&state.encode())))
 }
-fn command_input(command: ProviderCommand, id: EntityId) -> Vec<u8> {
+fn command_input(command: ProviderCommand, id: EntityId, origin: AccountId32) -> Vec<u8> {
+    let command = if matches!(command, ProviderCommand::RegisterWorker(_)) {
+        let call = UnsignedContractCallV1::new(
+            ProviderInstanceId::from_bytes([0; 16]),
+            OperationId::from_bytes([0; 16]),
+            origin,
+            0,
+            UnixSeconds::new(u64::MAX),
+            command,
+        )
+        .unwrap();
+        mock_provider::creation::compact_creation(&call).unwrap()
+    } else {
+        command
+    };
     match command {
-        ProviderCommand::RegisterWorker(request) => input("register_worker", (request, id)),
+        ProviderCommand::RegisterWorkerCore(request) => {
+            input("register_worker_core", (request, id))
+        }
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
@@ -157,7 +174,7 @@ fn canonical_directory_trace_cross_calls_and_restart() {
             let value = call(
                 &Account::new(origin.into_bytes()),
                 &directory,
-                command_input(command, id),
+                command_input(command, id, origin),
             );
             let observed = match outcome::<Effect>(&value) {
                 Ok(effect) => {
@@ -192,8 +209,11 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
         let (mut ext, directory) = setup(&seed, false);
         ext.execute_with(|| {
             let before = digest(&projection(&directory));
-            let request = RegisterWorkerRequest {
-                display_name: "Failure".into(),
+            let request = generated_contracts::provider_core::RegisterWorkerCoreRequest {
+                content: generated_contracts::provider_core::MetadataCommitmentV1 {
+                    operation_id: OperationId::from_bytes([0; 16]),
+                    hash: PayloadHash::from_bytes([9; 32]),
+                },
                 qualifications: Qualifications {
                     role_ids: vec![2],
                     skill_ids: vec![1],
@@ -206,7 +226,10 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
             let value = call(
                 &account(2),
                 &directory,
-                input("register_worker", (request, EntityId::from_bytes([8; 16]))),
+                input(
+                    "register_worker_core",
+                    (request, EntityId::from_bytes([8; 16])),
+                ),
             );
             assert!(value.did_revert());
             assert_eq!(
@@ -222,9 +245,12 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
     }
 }
 
-fn registration() -> RegisterWorkerRequest {
-    RegisterWorkerRequest {
-        display_name: "Candidate".into(),
+fn registration() -> generated_contracts::provider_core::RegisterWorkerCoreRequest {
+    generated_contracts::provider_core::RegisterWorkerCoreRequest {
+        content: generated_contracts::provider_core::MetadataCommitmentV1 {
+            operation_id: OperationId::from_bytes([0; 16]),
+            hash: PayloadHash::from_bytes([9; 32]),
+        },
         qualifications: Qualifications {
             role_ids: vec![2],
             skill_ids: vec![1],
@@ -254,14 +280,14 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         write(
             &directory,
             2,
-            "register_worker",
+            "register_worker_core",
             (registration(), [1_u8; 16]),
         );
         let before = digest(&projection(&directory));
         reject::<Effect>(
             &directory,
             3,
-            "register_worker",
+            "register_worker_core",
             (registration(), [1_u8; 16]),
             "invalid_worker_state",
         );
@@ -269,7 +295,7 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         write(
             &directory,
             3,
-            "register_worker",
+            "register_worker_core",
             (registration(), [2_u8; 16]),
         );
         write(
@@ -447,14 +473,13 @@ fn parent_storage_failure_discards_tentative_child_instance() {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
     let (mut ext, directory) = setup(&(initial.0, initial.1, initial.2), true);
     ext.execute_with(|| {
-        let mut request = registration();
+        let request = registration();
         // Measure the successful parent/child transaction, discard it, then
         // exhaust gas at its final boundary rather than relying on packed storage.
-        request.display_name = "x".repeat(16_330);
         let id=[8_u8;16];
         let code_hash=H256::from(blake2_256(Bundles::pinned().unwrap().code("calendar-v5").unwrap()));
         let child=Contracts::contract_address(&directory,&code_hash,&input("new",(account(2),directory.clone(),id,&request.calendar)),&id);
-        let data=input("register_worker",(request,id));
+        let data=input("register_worker_core",(request,id));
         let before=digest(&projection(&directory));
         sp_io::storage::start_transaction();
         let completed=Contracts::bare_call(account(2),directory.clone(),0,GAS,None,data.clone(),DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced);

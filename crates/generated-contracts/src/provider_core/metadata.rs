@@ -9,6 +9,17 @@ use serde::{Deserialize, Serialize};
 /// does not pull a signing or hashing implementation into the frontend.
 pub const CREATION_METADATA_DOMAIN_V1: &[u8] = b"abako/creation-metadata/v1\0";
 
+/// First NDJSON line in an owner-controlled metadata exchange. Following lines
+/// are `CreationMetadataRecordV1` values verified against a selected core snapshot.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CreationMetadataHeaderV1 {
+    /// File format version; the current explicit exchange supports only 1.
+    pub schema_version: u16,
+    /// Exact target/provider generation, never reassigned during import.
+    pub generation: ProviderInstanceId,
+}
+
 /// An entity restored from the exact source archive, not a historical signer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "type", content = "data", deny_unknown_fields)]
@@ -91,6 +102,48 @@ pub struct CreationMetadataRecordV1 {
     pub content: CreationContentV1,
 }
 impl CreationMetadataRecordV1 {
+    /// Check the selected core entity's context. The owner must additionally
+    /// compare SHA-256 of `hash_input()` to `reference.hash()` before using any text.
+    #[must_use]
+    pub fn matches_context(
+        &self,
+        generation: ProviderInstanceId,
+        entity: &MetadataEntityV1,
+        owner: AccountId32,
+        reference: &super::MetadataReferenceV1,
+    ) -> bool {
+        if self.generation != generation
+            || !matches!(
+                (&self.content, entity),
+                (
+                    CreationContentV1::WorkerName { .. },
+                    MetadataEntityV1::Worker(_)
+                ) | (
+                    CreationContentV1::ProjectText { .. },
+                    MetadataEntityV1::Project(_)
+                )
+            )
+        {
+            return false;
+        }
+        match (&self.provenance, reference) {
+            (
+                MetadataProvenanceV1::Creation {
+                    operation_id,
+                    author,
+                },
+                super::MetadataReferenceV1::Creation(content),
+            ) => *operation_id == content.operation_id && *author == owner,
+            (
+                MetadataProvenanceV1::Migration {
+                    entity: retained, ..
+                },
+                super::MetadataReferenceV1::Migration(_),
+            ) => retained == entity,
+            _ => false,
+        }
+    }
+
     /// Construct from the original accepted request, never from a current worker
     /// view whose qualifications and calendar may have changed since creation.
     #[must_use]

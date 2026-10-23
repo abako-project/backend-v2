@@ -100,7 +100,11 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
         milestone: project.proposals[0].milestones[0].clone(),
     };
     *slot.lock().await = Some(case.clone());
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let legacy: EvidenceRecordReferenceV1 = serde_json::from_value(
         json!({"url":"https://example.test/historical","sha256":PayloadHash::from_bytes([8;32])}),
     )?;
@@ -230,7 +234,10 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
     unrelated.project_id = EntityId::from_bytes([53; 16]);
     unrelated.client = outsider.view.account_id;
     unrelated.coordinator = outsider.view.account_id;
-    fake.lock().await.snapshot.projects = vec![project, unrelated];
+    fake.lock().await.snapshot.projects = vec![
+        stage_project(&app, info().provider_instance_id, project).await?,
+        stage_project(&app, info().provider_instance_id, unrelated).await?,
+    ];
     let server = Server::start(http::router(app.clone())).await?;
     let http = reqwest::Client::new();
     let get_project = || {
@@ -362,7 +369,11 @@ async fn evidence_text_hashes_preserve_scoped_comment_ids_and_detect_changes() -
     project.client = client.view.account_id;
     let project_id = project.project_id;
     let milestone = project.proposals[0].milestones[0].milestone_id;
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let comment = EntityId::from_bytes([71; 16]);
     let mut submissions = Vec::new();
     for (index, message) in [
@@ -524,7 +535,11 @@ async fn evidence_generation_is_bound_before_signing_preparation() -> TestResult
             )?),
         },
     };
-    fake.lock().await.snapshot.projects.push(project);
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project).await?);
     operations::enqueue(&app, &coordinator, command, Some(id)).await?;
     fake.lock().await.snapshot.info.provider_instance_id = ProviderInstanceId::from_bytes([82; 16]);
     let job = operations::claim(&app).await?.ok_or("pending job")?;

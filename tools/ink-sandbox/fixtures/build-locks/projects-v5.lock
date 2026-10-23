@@ -374,7 +374,7 @@ dependencies = [
 [[package]]
 name = "directory-v5"
 version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=fec8550c69fd8011e54d538a887609b34cf286d8#fec8550c69fd8011e54d538a887609b34cf286d8"
+source = "git+https://github.com/abako-dev/contracts.git?rev=f38f6e718c540debda7e8b1355642d8a98228979#f38f6e718c540debda7e8b1355642d8a98228979"
 dependencies = [
  "calendar-v5",
  "chrono",
@@ -382,7 +382,7 @@ dependencies = [
  "parity-scale-codec",
  "rand 0.10.2",
  "scale-info",
- "storage-v5 0.1.0 (git+https://github.com/abako-dev/contracts.git?rev=f147e595be06cddd8a8346cb86fd000721f8df23)",
+ "storage-v5 0.1.0 (git+https://github.com/abako-dev/contracts.git?rev=48efe9074871d1b8f34461b647083eb8f76e6aac)",
 ]
 
 [[package]]
@@ -1462,7 +1462,7 @@ dependencies = [
 [[package]]
 name = "storage-v5"
 version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=f147e595be06cddd8a8346cb86fd000721f8df23#f147e595be06cddd8a8346cb86fd000721f8df23"
+source = "git+https://github.com/abako-dev/contracts.git?rev=48efe9074871d1b8f34461b647083eb8f76e6aac#48efe9074871d1b8f34461b647083eb8f76e6aac"
 dependencies = [
  "ink",
  "parity-scale-codec",

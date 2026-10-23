@@ -1,6 +1,7 @@
 //! The same contract suite exercises both storage implementations.
 #![cfg(feature = "mock-seed")]
 
+use generated_contracts::provider_core::{CoreSnapshotV2, ProjectCore};
 use std::{
     error::Error,
     sync::atomic::{AtomicU64, Ordering},
@@ -127,7 +128,7 @@ async fn success(
     assert_eq!(receipt.outcome, ExecutionOutcome::Success);
     Ok(receipt)
 }
-async fn project(provider: &Provider, id: EntityId) -> TestResult<ProjectView> {
+async fn project(provider: &Provider, id: EntityId) -> TestResult<ProjectCore> {
     provider
         .snapshot()
         .await?
@@ -521,7 +522,7 @@ async fn complete_milestone_and_assert_settlement(
 }
 
 fn assert_settlement_snapshot(
-    snapshot: &ProviderSnapshot,
+    snapshot: &CoreSnapshotV2,
     coordinator: &Keypair,
     worker: &Keypair,
     client: &Keypair,
@@ -1185,7 +1186,7 @@ async fn assert_cancellation_freezes(
     actor: &Keypair,
     project_id: EntityId,
     reason: &ReasonRequest,
-    before: &ProviderSnapshot,
+    before: &CoreSnapshotV2,
 ) -> TestResult {
     let cancel = ProviderCommand::CancelProject {
         project_id,

@@ -2,19 +2,19 @@ use crate::{
     auth::Session,
     state::{App, Error, now, parse, payload_hash, random, token},
 };
+use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
     AccountId32, AccountNonce, CreateSigningJobRequest, MAX_SIGNABLE_BYTES, OperationId,
-    OperationReceipt, OperationRef, OperationView, PAYLOAD_VERSION, PreparedCall, ProjectView,
-    ProviderCommand, ProviderInfo, ProviderOperationStatus, SignedContractCallV1, SigningJobStatus,
-    SigningJobView, UnixSeconds, UnsignedContractCallV1, WalletId, WalletLifecycle, WalletView,
-    WorkerMode,
+    OperationReceipt, OperationRef, OperationView, PAYLOAD_VERSION, PreparedCall, ProviderCommand,
+    ProviderInfo, ProviderOperationStatus, SignedContractCallV1, SigningJobStatus, SigningJobView,
+    UnixSeconds, UnsignedContractCallV1, WalletId, WalletLifecycle, WalletView, WorkerMode,
 };
 use parity_scale_codec::Encode;
 use sqlx::{Row, postgres::PgRow};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::watch, task::JoinSet};
 
-pub(crate) fn visible(project: &ProjectView, account: AccountId32) -> bool {
+pub(crate) fn visible(project: &ProjectCore, account: AccountId32) -> bool {
     project.client == account
         || project.coordinator == account
         || project
@@ -104,7 +104,7 @@ pub(crate) async fn authorize(
 
 async fn authorize_project(
     app: &App,
-    project: &ProjectView,
+    project: &ProjectCore,
     account: AccountId32,
     command: &ProviderCommand,
 ) -> Result<(), Error> {

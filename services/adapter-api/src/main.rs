@@ -3,6 +3,7 @@ mod auth;
 mod bramp;
 mod catalog;
 mod creation_metadata;
+mod creation_metadata_io;
 mod disputes;
 mod evidence;
 mod http;
@@ -35,6 +36,24 @@ async fn main() -> Result<(), Error> {
     let arguments: Vec<_> = std::env::args().skip(1).collect();
     match arguments.as_slice() {
         [] => {}
+        [command] if command == "check-provider-cutover" => {
+            creation_metadata_io::reconciled(&app).await?;
+            tracing::info!("Provider cutover queue is reconciled");
+            app.db.close().await;
+            return Ok(());
+        }
+        [command, path] if command == "import-creation-metadata" => {
+            let records = creation_metadata_io::import(&app, path.into()).await?;
+            tracing::info!(records, "Creation metadata imported and verified");
+            app.db.close().await;
+            return Ok(());
+        }
+        [command, path] if command == "export-creation-metadata" => {
+            let records = creation_metadata_io::export(&app, path.into()).await?;
+            tracing::info!(records, "Creation metadata exported and verified");
+            app.db.close().await;
+            return Ok(());
+        }
         [command] if command == "backfill-provider-content" => {
             let (workers, projects) = backfill_content(&app).await?;
             tracing::info!(workers, projects, "Provider content copies verified");
@@ -113,8 +132,8 @@ async fn backfill_content(app: &App) -> Result<(usize, usize), Error> {
     let snapshot = app.snapshot().await?;
     let generation = snapshot.info.provider_instance_id;
     let counts = (snapshot.workers.len(), snapshot.projects.len());
-    for mut worker in snapshot.workers {
-        profiles::directory::compose(app, generation, &mut worker).await?;
+    for worker in snapshot.workers {
+        profiles::directory::compose(app, generation, worker).await?;
     }
     for project in snapshot.projects {
         project_content::compose(app, generation, project).await?;

@@ -5,7 +5,7 @@ use ink_v5_compatibility::{
     worker::{Authority, WholeConfiguration, Worker},
 };
 use mock_provider::ReferenceState;
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::ArchiveV1};
+use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV2};
 use serde_json::Value;
 use std::{
     fs,
@@ -35,7 +35,7 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
         "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
     ))
     .unwrap();
-    let initial: ArchiveV1 = serde_json::from_str(
+    let initial: CoreArchiveV2 = serde_json::from_str(
         reference["archives"]
             .as_array()
             .unwrap()
@@ -79,7 +79,7 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
     );
     assert_eq!(
         serde_json::to_vec(
-            &serde_json::from_slice::<ArchiveV1>(&fs::read(&exported).unwrap()).unwrap()
+            &serde_json::from_slice::<CoreArchiveV2>(&fs::read(&exported).unwrap()).unwrap()
         )
         .unwrap(),
         serde_json::to_vec(&initial).unwrap()
@@ -237,4 +237,144 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
             .success()
     );
     assert_eq!(fs::read(source).unwrap(), native_bytes);
+}
+
+#[test]
+fn explicit_v1_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_metadata() {
+    let directory = Directory(std::env::temp_dir().join(format!(
+            "ink-core-cli-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        )));
+    fs::create_dir(&directory.0).unwrap();
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../services/mock-provider/src/domain/fixtures/predecessor-migration.json"
+    ))
+    .unwrap();
+    let source = fixture["archives"][1]["archive"]
+        .as_str()
+        .unwrap()
+        .as_bytes();
+    let before: provider_execution::migration::ArchiveV1 = serde_json::from_slice(source).unwrap();
+    let root = directory.0.join("root.hex");
+    fs::write(&root, before.checkpoint.info.root_account.to_string()).unwrap();
+    let input = directory.0.join("v1.json");
+    fs::write(&input, source).unwrap();
+    let core = directory.0.join("core.json");
+    let metadata = directory.0.join("metadata.ndjson");
+    let database = directory.0.join("unused.sqlite");
+    let result = invoke(
+        &database,
+        &root,
+        "rust",
+        &[
+            "upgrade",
+            input.to_str().unwrap(),
+            core.to_str().unwrap(),
+            metadata.to_str().unwrap(),
+        ],
+    );
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert!(!database.exists());
+    assert_eq!(fs::read(&input).unwrap(), source);
+    let current: CoreArchiveV2 = serde_json::from_slice(&fs::read(&core).unwrap()).unwrap();
+    assert_eq!(current.version, 2);
+    assert_eq!(current.checkpoint.info, before.checkpoint.info);
+    let output = directory.0.join("back.json");
+    let result = invoke(
+        &database,
+        &root,
+        "rust",
+        &[
+            "downgrade",
+            core.to_str().unwrap(),
+            metadata.to_str().unwrap(),
+            output.to_str().unwrap(),
+        ],
+    );
+    assert!(
+        result.status.success(),
+        "{}",
+        String::from_utf8_lossy(&result.stderr)
+    );
+    assert_eq!(
+        serde_json::from_slice::<Value>(&fs::read(&output).unwrap()).unwrap(),
+        serde_json::from_slice::<Value>(source).unwrap()
+    );
+    assert!(
+        !invoke(
+            &database,
+            &root,
+            "rust",
+            &[
+                "upgrade",
+                input.to_str().unwrap(),
+                core.to_str().unwrap(),
+                metadata.to_str().unwrap()
+            ]
+        )
+        .status
+        .success()
+    );
+    let original = fs::read_to_string(&metadata).unwrap();
+    let mut lines: Vec<String> = original.lines().map(str::to_owned).collect();
+    let mut header: Value = serde_json::from_str(&lines[0]).unwrap();
+    header["generation"] = serde_json::to_value(ProviderInstanceId::from_bytes([77; 16])).unwrap();
+    lines[0] = serde_json::to_string(&header).unwrap();
+    let wrong = directory.0.join("wrong.ndjson");
+    fs::write(&wrong, lines.join("\n") + "\n").unwrap();
+    let rejected = directory.0.join("rejected.json");
+    assert!(
+        !invoke(
+            &database,
+            &root,
+            "rust",
+            &[
+                "downgrade",
+                core.to_str().unwrap(),
+                wrong.to_str().unwrap(),
+                rejected.to_str().unwrap()
+            ]
+        )
+        .status
+        .success()
+    );
+    assert!(!rejected.exists());
+    let duplicate = directory.0.join("duplicate.ndjson");
+    let extra = original.lines().nth(1).unwrap();
+    fs::write(&duplicate, format!("{original}{extra}\n")).unwrap();
+    assert!(
+        !invoke(
+            &database,
+            &root,
+            "rust",
+            &[
+                "downgrade",
+                core.to_str().unwrap(),
+                duplicate.to_str().unwrap(),
+                rejected.to_str().unwrap()
+            ]
+        )
+        .status
+        .success()
+    );
+    assert!(!rejected.exists());
+    assert_eq!(fs::read(&input).unwrap(), source);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        for path in [&core, &metadata, &output] {
+            assert_eq!(
+                fs::metadata(path).unwrap().permissions().mode() & 0o777,
+                0o600
+            );
+        }
+    }
 }

@@ -1,10 +1,11 @@
 //! Read-only codec for the pinned storage-v5 layout. It copies retained facts;
 //! commands, permissions, prices and score updates still execute only in WASM.
 use super::{directory::State, *};
+use generated_contracts::provider_core::WorkerCore;
 use generated_contracts::*;
 use parity_scale_codec::DecodeAll;
 use provider_execution::migration::{
-    ArchiveV1, BrampArchive, CheckpointV1, ReasonRecord, SkillMetadata,
+    BrampArchive, CoreArchiveV2, CoreCheckpointV2, ReasonRecord, SkillMetadata,
 };
 use std::collections::BTreeMap;
 const PAGE: usize = 8192;
@@ -50,6 +51,7 @@ struct Directory {
 }
 #[derive(Decode)]
 struct WorkerRecord {
+    content: generated_contracts::provider_core::MetadataReferenceV1,
     qualifications: Qualifications,
     mode: WorkerMode,
     coordinator_eligible: bool,
@@ -144,7 +146,7 @@ impl<'a> Storage<'a> {
         state: &State,
         directory: &Directory,
         sealed: Option<bool>,
-    ) -> Result<Vec<WorkerView>, Error> {
+    ) -> Result<Vec<WorkerCore>, Error> {
         let mut workers = Vec::new();
         for account in &directory.workers {
             let worker: WorkerRecord = self.value(&state.directory, 4, *account)?;
@@ -158,9 +160,9 @@ impl<'a> Storage<'a> {
             {
                 return Err(Error::InvalidState);
             }
-            workers.push(WorkerView {
+            workers.push(WorkerCore {
                 account: *account,
-                display_name: self.value(&state.directory, 17, *account)?,
+                content: worker.content,
                 qualifications: worker.qualifications,
                 mode: worker.mode,
                 coordinator_eligible: worker.coordinator_eligible,
@@ -175,7 +177,7 @@ impl<'a> Storage<'a> {
 pub(super) fn workers(
     ext: &mut sp_io::TestExternalities,
     state: &State,
-) -> Result<Vec<WorkerView>, Error> {
+) -> Result<Vec<WorkerCore>, Error> {
     let mut reader = Storage::new(ext);
     let directory: Directory = reader.root(state, false)?;
     reader.workers(state, &directory, None)
@@ -184,7 +186,7 @@ pub(super) fn read(
     ext: &mut sp_io::TestExternalities,
     state: &State,
     sealed: bool,
-) -> Result<ArchiveV1, Error> {
+) -> Result<CoreArchiveV2, Error> {
     let mut reader = Storage::new(ext);
     let directory: Directory = reader.root(state, !sealed)?;
     if directory.root != state.shell.info.root_account
@@ -305,9 +307,9 @@ pub(super) fn read(
             return Err(Error::InvalidState);
         }
     }
-    let archive = ArchiveV1 {
-        version: 1,
-        checkpoint: CheckpointV1 {
+    let archive = CoreArchiveV2 {
+        version: 2,
+        checkpoint: CoreCheckpointV2 {
             info: state.shell.info.clone(),
             roles,
             skills,
@@ -339,7 +341,7 @@ pub(super) fn read(
             },
             next_task_id: directory.next_task_id,
             minted_units: directory.bank.minted,
-            engine_version: 1,
+            engine_version: 2,
         },
     };
     if serde_json::to_vec(&archive)

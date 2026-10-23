@@ -1,9 +1,10 @@
+use generated_contracts::provider_core::CoreSnapshotV2;
 use std::sync::Arc;
 
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
-    ProviderEvents, ProviderInfo, ProviderSnapshot, SignedContractCallV1, SkillRequestView,
-    UnixSeconds, WithdrawalView,
+    ProviderEvents, ProviderInfo, SignedContractCallV1, SkillRequestView, UnixSeconds,
+    WithdrawalView,
 };
 
 use crate::{
@@ -79,7 +80,7 @@ impl Provider {
     pub async fn sqlite_from_archive(
         url: &str,
         root: AccountId32,
-        archive: provider_execution::migration::ArchiveV1,
+        archive: provider_execution::migration::CoreArchiveV2,
     ) -> Result<Self> {
         Self::open_sqlite(url, root, Some(archive)).await
     }
@@ -88,7 +89,7 @@ impl Provider {
     async fn open_sqlite(
         url: &str,
         root: AccountId32,
-        archive: Option<provider_execution::migration::ArchiveV1>,
+        archive: Option<provider_execution::migration::CoreArchiveV2>,
     ) -> Result<Self> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::{str::FromStr, time::Duration};
@@ -166,7 +167,7 @@ impl Provider {
 
     /// Complete private archive for a paused migration; no HTTP route exposes it.
     /// The caller must drain writes before taking the cutover archive.
-    pub async fn archive(&self) -> Result<provider_execution::migration::ArchiveV1> {
+    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV2> {
         let state = self.read().await?;
         tokio::task::spawn_blocking(move || state.archive())
             .await
@@ -178,7 +179,7 @@ impl Provider {
     #[cfg(feature = "storage-memory")]
     pub async fn memory_from_archive(
         root: AccountId32,
-        archive: provider_execution::migration::ArchiveV1,
+        archive: provider_execution::migration::CoreArchiveV2,
     ) -> Result<Self> {
         let state = tokio::task::spawn_blocking(move || State::from_archive(archive, root))
             .await
@@ -276,7 +277,7 @@ impl Provider {
         Ok(self.read().await?.nonce(account))
     }
     /// Read-only internal snapshot; the adapter must filter private project data.
-    pub async fn snapshot(&self) -> Result<ProviderSnapshot> {
+    pub async fn snapshot(&self) -> Result<CoreSnapshotV2> {
         Ok(self.read().await?.snapshot())
     }
     /// A recorded result proves finality independently of its business outcome.

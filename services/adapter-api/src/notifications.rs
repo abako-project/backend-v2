@@ -137,7 +137,19 @@ async fn enrich(
                     && crate::operations::visible(p, account)
             })
         {
-            notification.project_title = Some(project.title.clone());
+            notification.project_title = match crate::creation_metadata::project_text(
+                app,
+                snapshot.info.provider_instance_id,
+                project.project_id,
+                project.client,
+                &project.content,
+            )
+            .await
+            {
+                Ok((title, _)) => Some(title),
+                Err(Error::Dependency | Error::NotFound) => None,
+                Err(error) => return Err(error),
+            };
         }
     }
     Ok(())

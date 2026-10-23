@@ -276,7 +276,11 @@ impl Shell {
                     operation_id: call.operation_id,
                     kind: effect.kind,
                     project_id: call.command.project_id().or(
-                        if matches!(call.command, ProviderCommand::CreateProject(_)) {
+                        if matches!(
+                            call.command,
+                            ProviderCommand::CreateProject(_)
+                                | ProviderCommand::CreateProjectCore(_)
+                        ) {
                             effect.entity_id
                         } else {
                             None

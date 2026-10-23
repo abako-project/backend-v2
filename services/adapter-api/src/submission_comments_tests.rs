@@ -27,7 +27,11 @@ async fn delivery_comments_verify_authors_and_hide_unconfirmed_rejections() -> T
     }];
     let project_id = project.project_id;
     let milestone_id = project.proposals[0].milestones[0].milestone_id;
-    fake.lock().await.snapshot.projects.push(project);
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project).await?);
     let rejection = ProviderCommand::RejectMilestoneDelivery {
         project_id,
         milestone_id,

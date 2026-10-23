@@ -114,7 +114,7 @@ async fn author(app: &App, account: AccountId32, role: &'static str) -> Result<A
 struct Context {
     instance: ProviderInstanceId,
     case: DisputeView,
-    title: String,
+    content: generated_contracts::provider_core::MetadataReferenceV1,
     client: Author,
     coordinator: Author,
     workers: Vec<Author>,
@@ -173,7 +173,7 @@ async fn context(app: &App, id: EntityId) -> Result<Context, Error> {
     }
     Ok(Context {
         instance: snapshot.info.provider_instance_id,
-        title: project.title.clone(),
+        content: project.content.clone(),
         case,
         client,
         coordinator,
@@ -216,7 +216,15 @@ pub(crate) async fn presentation(
         opening_reason(&app, &c).await?
     };
     let mut value = serde_json::to_value(&c.case)?;
-    value["presentation"] = json!({"projectTitle":c.title,"openingReason":reason,"client":c.client,"coordinator":c.coordinator});
+    let (title, _) = crate::creation_metadata::project_text(
+        &app,
+        c.instance,
+        c.case.dispute.project_id,
+        c.client.account_id,
+        &c.content,
+    )
+    .await?;
+    value["presentation"] = json!({"projectTitle":title,"openingReason":reason,"client":c.client,"coordinator":c.coordinator});
     Ok(Json(value))
 }
 
@@ -450,7 +458,7 @@ pub(crate) async fn history(
     }
     events.sort_by_key(|event| event["createdAt"].as_i64());
     Ok(Json(
-        json!({"project":{"id":c.case.dispute.project_id,"title":c.title,"clientId":c.client.account_id,"clientName":c.client.display_name,"consultantId":c.coordinator.account_id,"consultantName":c.coordinator.display_name},"milestone":{"id":c.case.milestone.milestone_id,"title":c.case.milestone.definition.title,"state":"Disputed"},"deliverables":deliverables,"rejections":rejections,"events":events}),
+        json!({"project":{"id":c.case.dispute.project_id,"title":crate::creation_metadata::project_text(&app, c.instance, c.case.dispute.project_id, c.client.account_id, &c.content).await?.0,"clientId":c.client.account_id,"clientName":c.client.display_name,"consultantId":c.coordinator.account_id,"consultantName":c.coordinator.display_name},"milestone":{"id":c.case.milestone.milestone_id,"title":c.case.milestone.definition.title,"state":"Disputed"},"deliverables":deliverables,"rejections":rejections,"events":events}),
     ))
 }
 

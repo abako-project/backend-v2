@@ -136,6 +136,9 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
         UnixSeconds::new(100),
     )?;
     let worker = state.engine.worker_mut(coordinator)?;
+    worker.content = generated_contracts::provider_core::MetadataReferenceV1::Migration(
+        generated_contracts::PayloadHash::from_bytes([88; 32]),
+    );
     worker.mode = WorkerMode::Coordinator;
     worker.coordinator_eligible = true;
     let created_at = UnixSeconds::new(500);
@@ -148,6 +151,14 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
         created_at,
     )?;
     let id = effect.entity_id.ok_or_else(Error::internal)?;
+    state
+        .engine
+        .projects
+        .get_mut(&id)
+        .ok_or_else(Error::internal)?
+        .content = generated_contracts::provider_core::MetadataReferenceV1::Migration(
+        generated_contracts::PayloadHash::from_bytes([89; 32]),
+    );
     assert_eq!(state.engine.projects[&id].created_at, Some(created_at));
     state.shell.events.push(DomainEvent {
         provider_instance_id: state.shell.info.provider_instance_id,

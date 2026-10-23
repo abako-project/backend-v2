@@ -352,7 +352,7 @@ fn definition(milestones: u8, requirements: u8, budget: u64) -> TestResult<Propo
             .collect::<TestResult<Vec<_>>>()?,
     })
 }
-fn project(fixture: &Fixture, id: EntityId) -> TestResult<&ProjectView> {
+fn project(fixture: &Fixture, id: EntityId) -> TestResult<&ProjectCore> {
     fixture
         .state
         .engine
@@ -1193,7 +1193,7 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
         "invalid_task_state"
     );
     let mut invalid = restored.archive()?;
-    invalid.version = 2;
+    invalid.version = 3;
     assert_eq!(
         State::from_archive(invalid, root)
             .err()
@@ -1430,7 +1430,7 @@ fn migration_catalog_case(
     frozen: Option<&Value>,
 ) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let first: provider_execution::migration::ArchiveV1 =
+    let first: provider_execution::migration::CoreArchiveV2 =
         serde_json::from_str(&archives[0].archive)?;
     let mut catalog = State::from_archive(first.clone(), root)?;
     for offset in 0..14u8 {
@@ -1470,7 +1470,8 @@ fn migration_catalog_case(
 }
 fn migration_project_case(source: &RetainedArchive, frozen: Option<&Value>) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let source: provider_execution::migration::ArchiveV1 = serde_json::from_str(&source.archive)?;
+    let source: provider_execution::migration::CoreArchiveV2 =
+        serde_json::from_str(&source.archive)?;
     let mut project = State::from_archive(source, root)?;
     let client = signed_account(5)?;
     let id = migration_prepare(
@@ -1519,7 +1520,7 @@ fn migration_project_case(source: &RetainedArchive, frozen: Option<&Value>) -> T
     )?
     .created_entity_id
     .ok_or("proposal id")?;
-    assert!(project.engine.projects[&id].encode().len() > MAX_SIGNABLE_BYTES + 1024);
+    assert!(project.engine.projects[&id].encode().len() > 16 * 1024);
     let case = migration_case(
         project,
         coordinator,
@@ -1532,7 +1533,7 @@ fn migration_project_case(source: &RetainedArchive, frozen: Option<&Value>) -> T
             },
         },
         202,
-        "project above one ABI input",
+        "proposal content above one storage cell",
         frozen,
     )?;
     Ok(case)
@@ -1573,12 +1574,12 @@ fn migration_grow_qualifications(state: &mut State, owner: AccountId32) -> TestR
         ProviderCommand::UpdateQualifications(UpdateQualificationsRequest { qualifications }),
         212,
     )?;
-    // This excludes the Calendar: the registry record alone exceeds a call.
+    // Creation names are now offchain; this retained qualification set fits a cell.
     let view = &state.engine.workers[&owner];
     assert!(
         (
             view.account,
-            &view.display_name,
+            &view.content,
             &view.qualifications,
             view.mode,
             view.coordinator_eligible,
@@ -1589,7 +1590,7 @@ fn migration_grow_qualifications(state: &mut State, owner: AccountId32) -> TestR
             .encode()
             .len()
             + 5
-            > MAX_SIGNABLE_BYTES + 1024
+            < 16 * 1024
     );
     Ok(())
 }
@@ -1599,7 +1600,8 @@ fn migration_worker_case(
     frozen: Option<&Value>,
 ) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let first: provider_execution::migration::ArchiveV1 = serde_json::from_str(&source.archive)?;
+    let first: provider_execution::migration::CoreArchiveV2 =
+        serde_json::from_str(&source.archive)?;
     let mut worker = State::from_archive(first, root)?;
     let owner = signed_account(2)?;
     for step in trace["steps"].as_array().ok_or("steps")? {
@@ -1644,7 +1646,7 @@ fn migration_worker_case(
         ProviderCommand::SetCalendar(calendar.clone()),
         210,
     )?;
-    assert!(worker.engine.workers[&owner].encode().len() > MAX_SIGNABLE_BYTES + 1024);
+    assert!(worker.engine.workers[&owner].encode().len() < 16 * 1024);
     let case = migration_case(
         worker,
         owner,
@@ -1670,7 +1672,7 @@ fn migration_planning_cases(
     archives: &[RetainedArchive],
     frozen: Option<&[Value]>,
 ) -> TestResult<Vec<Value>> {
-    let mut source: provider_execution::migration::ArchiveV1 =
+    let mut source: provider_execution::migration::CoreArchiveV2 =
         serde_json::from_str(&archives[1].archive)?;
     let project = source
         .checkpoint
@@ -1789,7 +1791,7 @@ fn ordinary_qualification_capacity_reference(frozen: Option<&[Value]>) -> TestRe
     let source = reference.aggregate_cases.get(2).ok_or("worker case")?;
     let archive = serde_json::from_str(source["archive"].as_str().ok_or("archive")?)?;
     let mut state = State::from_archive(archive, signed_account(1)?)?;
-    let original: provider_execution::migration::ArchiveV1 =
+    let original: provider_execution::migration::CoreArchiveV2 =
         serde_json::from_str(&reference.archives.last().ok_or("snapshot")?.archive)?;
     let owner = signed_account(2)?;
     let large = state.engine.workers[&owner].qualifications.clone();
@@ -1848,19 +1850,24 @@ fn complete_retained_migration_reference() -> TestResult {
 #[test]
 fn retained_large_profile_archive_is_valid_native_state() -> TestResult {
     let reference: MigrationReference =
-        serde_json::from_str(include_str!("fixtures/migration-signed.json"))?;
-    let mut archive: provider_execution::migration::ArchiveV1 =
+        serde_json::from_str(include_str!("fixtures/predecessor-migration.json"))?;
+    let mut old: provider_execution::migration::ArchiveV1 =
         serde_json::from_str(&reference.archives[1].archive)?;
-    archive
-        .checkpoint
+    old.checkpoint
         .workers
         .values_mut()
         .next()
         .ok_or("worker")?
         .display_name = "n".repeat(MAX_SIGNABLE_BYTES.checked_sub(200).ok_or("payload limit")?);
-    let bytes = serde_json::to_vec(&archive)?;
-    let restored = State::from_archive(archive.clone(), archive.checkpoint.info.root_account)?;
-    assert_eq!(serde_json::to_vec(&restored.archive()?)?, bytes);
+    let bytes = serde_json::to_vec(&old)?;
+    let (archive, records) =
+        crate::migration::from_predecessor(&bytes, old.checkpoint.info.root_account)?;
+    let records = records
+        .into_iter()
+        .map(|r| (crate::migration::source_hash(&r.hash_input()), r))
+        .collect();
+    let restored = crate::migration::to_predecessor(archive, &records)?;
+    assert_eq!(serde_json::to_vec(&restored)?, bytes);
     Ok(())
 }
 

@@ -22,6 +22,16 @@ pub enum MetadataReferenceV1 {
     #[codec(index = 1)]
     Migration(PayloadHash),
 }
+impl MetadataReferenceV1 {
+    /// Expected digest of the exact offchain record.
+    #[must_use]
+    pub const fn hash(&self) -> PayloadHash {
+        match self {
+            Self::Creation(content) => content.hash,
+            Self::Migration(hash) => *hash,
+        }
+    }
+}
 
 macro_rules! core_dto {
     ($(#[$attr:meta])* $name:ident { $($field:ident:$ty:ty),* $(,)? }) => {

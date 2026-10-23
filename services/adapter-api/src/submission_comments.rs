@@ -8,8 +8,9 @@ use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
 };
+use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
-    AccountId32, CompletionSubmission, EntityId, ProjectView, ProviderCommand, ProviderInstanceId,
+    AccountId32, CompletionSubmission, EntityId, ProviderCommand, ProviderInstanceId,
     SubmissionReview,
 };
 use serde::{Deserialize, Serialize};
@@ -64,7 +65,7 @@ pub(crate) struct Comments {
 }
 struct Context {
     instance: ProviderInstanceId,
-    project: ProjectView,
+    project: ProjectCore,
     submission: CompletionSubmission,
     milestone_id: EntityId,
     current: bool,

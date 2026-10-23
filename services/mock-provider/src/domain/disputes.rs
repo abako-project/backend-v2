@@ -1,7 +1,8 @@
+use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
     AccountId32, Dispute, DisputeResponse, DisputeStatus, DisputeView, EntityId,
     EvidenceRecordReferenceV1, MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest,
-    ProjectView, SubmissionReview, UnixSeconds,
+    SubmissionReview, UnixSeconds,
 };
 
 use super::{RustEngine, project::milestone_mut};
@@ -37,7 +38,7 @@ impl From<DisputeError> for Error {
 impl RustEngine {
     pub(super) fn open_dispute(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         request: &OpenDisputeRequest,
         now: UnixSeconds,
@@ -55,7 +56,7 @@ impl RustEngine {
 
     pub(super) fn open_dispute_with_comment(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         request: &OpenDisputeWithCommentRequest,
         now: UnixSeconds,
@@ -74,7 +75,7 @@ impl RustEngine {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn open_case(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         milestone_id: EntityId,
         rejected_submission_id: EntityId,
@@ -145,7 +146,7 @@ impl RustEngine {
 
     pub(super) fn respond_dispute(
         &mut self,
-        project: &ProjectView,
+        project: &ProjectCore,
         origin: AccountId32,
         id: EntityId,
         evidence: EvidenceRecordReferenceV1,

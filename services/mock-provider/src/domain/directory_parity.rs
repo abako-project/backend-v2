@@ -10,7 +10,7 @@ type Projection = (
     Vec<CatalogEntry>,
     Vec<CatalogEntry>,
     Vec<SkillRoleAssociation>,
-    Vec<WorkerView>,
+    Vec<WorkerCore>,
     Vec<SkillRequestView>,
 );
 fn account(n: u8) -> AccountId32 {

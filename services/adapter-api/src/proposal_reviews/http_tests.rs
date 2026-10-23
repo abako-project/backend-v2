@@ -44,7 +44,11 @@ async fn proposal_reviews_persist_versions_comments_and_permissions_without_prov
     let proposal_id = proposal.proposal_id;
     let revision = proposal.revision;
     let request = json!({"expectedProposalRevision":revision,"expectedPresentationRevision":0,"milestones":[{"key":proposal.milestones[0].definition.key,"description":"Figma outcomes","requirements":[]} ]});
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let server = Server::start(http::router(app.clone())).await?;
     let client = reqwest::Client::new();
     let url = format!(
@@ -240,7 +244,10 @@ async fn proposal_reviews_persist_versions_comments_and_permissions_without_prov
     );
     {
         let provider = fake.lock().await;
-        assert_eq!(provider.snapshot.projects, [project.clone()]);
+        assert_eq!(
+            provider.snapshot.projects,
+            [core_project(&project.clone(), info().provider_instance_id)?.0]
+        );
         assert_eq!(provider.submissions, 0);
         assert!(provider.snapshot.balances.is_empty());
     }

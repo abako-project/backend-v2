@@ -1,7 +1,7 @@
 //! Complete private archive bridge. No historical business operation is replayed.
 use super::{directory::*, *};
 use generated_contracts::*;
-use provider_execution::migration::{ArchiveV1, ReasonRecord};
+use provider_execution::migration::{CoreArchiveV2, ReasonRecord};
 use std::collections::BTreeSet;
 
 /// Fixed deployment settings; mutable catalogs and archive contents are not identity.
@@ -47,7 +47,7 @@ impl WholeConfiguration {
 #[derive(Encode)]
 struct WorkerImport {
     account: AccountId32,
-    display_name: String,
+    content: generated_contracts::provider_core::MetadataReferenceV1,
     qualifications: Qualifications,
     mode: WorkerMode,
     coordinator_eligible: bool,
@@ -166,13 +166,13 @@ fn upload_record(
 }
 pub(super) fn initialize(
     bundles: &Bundles,
-    archive: ArchiveV1,
+    archive: CoreArchiveV2,
     configuration: WholeConfiguration,
 ) -> Result<(sp_io::TestExternalities, Vec<u8>), Error> {
     configuration.validate()?;
     let saved = &archive.checkpoint;
-    if archive.version != 1
-        || saved.engine_version != 1
+    if archive.version != 2
+        || saved.engine_version != 2
         || saved.info.root_account != configuration.root
         || saved.info.provider_instance_id != configuration.generation
     {
@@ -238,7 +238,7 @@ pub(super) fn initialize(
     records.extend(saved.workers.values().map(|worker| {
         Record::Worker(WorkerImport {
             account: worker.account,
-            display_name: worker.display_name.clone(),
+            content: worker.content.clone(),
             qualifications: worker.qualifications.clone(),
             mode: worker.mode,
             coordinator_eligible: worker.coordinator_eligible,
@@ -404,14 +404,14 @@ pub(super) fn read_archive(
     _bundles: &Bundles,
     state: &State,
     sealed: bool,
-) -> Result<ArchiveV1, Error> {
+) -> Result<CoreArchiveV2, Error> {
     super::archive::read(ext, state, sealed)
 }
 pub(super) async fn export(
     pool: &SqlitePool,
     bundles: &Bundles,
     mode: Mode,
-) -> Result<ArchiveV1, Error> {
+) -> Result<CoreArchiveV2, Error> {
     if !matches!(mode, Mode::Directory { whole: true, .. }) {
         return Err(Error::IncompleteCoverage);
     }
@@ -558,9 +558,26 @@ mod tests {
             ext,
             &bundles,
             &state,
+            &Record::Catalog(
+                CatalogKind::Skill,
+                CatalogEntry {
+                    id: 44,
+                    name: "staged".repeat(2000),
+                    fixed: false,
+                },
+                Vec::new(),
+                String::new(),
+            ),
+        );
+        upload_record(
+            &mut ext,
+            &bundles,
+            &state,
             &Record::Worker(WorkerImport {
                 account: owner,
-                display_name: "staged".repeat(2000),
+                content: generated_contracts::provider_core::MetadataReferenceV1::Migration(
+                    PayloadHash::from_bytes([71; 32]),
+                ),
                 qualifications: Qualifications {
                     role_ids: Vec::new(),
                     skill_ids: (10..44).collect(),
@@ -577,7 +594,8 @@ mod tests {
                     rated_minutes: 0,
                 },
             }),
-        );
+        )
+        .unwrap();
         let target = ImportTarget::Calendar(owner);
         ext = preserved(ext, |ext| {
             assert!(

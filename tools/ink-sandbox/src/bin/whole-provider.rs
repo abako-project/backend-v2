@@ -1,11 +1,13 @@
 //! Explicit local candidate and offline migration tools; no production deployment.
+#[path = "whole_provider/metadata.rs"]
+mod metadata;
 use generated_contracts::AccountId32;
 use ink_v5_compatibility::{
     WHOLE_GAS,
     worker::{Authority, MAX_SHELL, WholeConfiguration, Worker},
 };
 use mock_provider::{Provider, ReferenceState, router_with_provider};
-use provider_execution::migration::{ArchiveV1, CheckpointV1};
+use provider_execution::migration::{CoreArchiveV2, CoreCheckpointV2};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::{
     env,
@@ -18,7 +20,7 @@ type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 fn secret(name: &str) -> Result<String> {
     Ok(fs::read_to_string(env::var(name)?)?.trim().to_owned())
 }
-fn configuration(archive: &ArchiveV1, root: AccountId32) -> Result<WholeConfiguration> {
+fn configuration(archive: &CoreArchiveV2, root: AccountId32) -> Result<WholeConfiguration> {
     if archive.checkpoint.info.root_account != root {
         return Err("configured root differs from retained root".into());
     }
@@ -29,7 +31,7 @@ fn configuration(archive: &ArchiveV1, root: AccountId32) -> Result<WholeConfigur
         gas_limit: WHOLE_GAS,
     })
 }
-fn load_archive(path: &Path) -> Result<ArchiveV1> {
+fn load_archive(path: &Path) -> Result<CoreArchiveV2> {
     let file = fs::File::open(path)?;
     let mut bytes = Vec::new();
     file.take(MAX_SHELL as u64 + 1).read_to_end(&mut bytes)?;
@@ -38,7 +40,7 @@ fn load_archive(path: &Path) -> Result<ArchiveV1> {
     }
     Ok(serde_json::from_slice(&bytes)?)
 }
-fn write_archive(path: &Path, archive: &ArchiveV1) -> Result<()> {
+fn write_archive(path: &Path, archive: &impl serde::Serialize) -> Result<()> {
     let bytes = serde_json::to_vec(archive)?;
     if bytes.len() > MAX_SHELL {
         return Err("archive exceeds limit".into());
@@ -66,7 +68,7 @@ fn reserve_database(path: &Path) -> Result<()> {
     options.open(path)?.sync_all()?;
     Ok(())
 }
-async fn stored_archive(path: &Path, native: bool, root: AccountId32) -> Result<ArchiveV1> {
+async fn stored_archive(path: &Path, native: bool, root: AccountId32) -> Result<CoreArchiveV2> {
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
         .connect_with(SqliteConnectOptions::new().filename(path).read_only(true))
@@ -78,11 +80,11 @@ async fn stored_archive(path: &Path, native: bool, root: AccountId32) -> Result<
     };
     let bytes: Vec<u8> = sqlx::query_scalar(query).fetch_one(&pool).await?;
     pool.close().await;
-    tokio::task::spawn_blocking(move || -> Result<ArchiveV1> {
+    tokio::task::spawn_blocking(move || -> Result<CoreArchiveV2> {
         let archive = if native {
-            ArchiveV1 {
-                version: 1,
-                checkpoint: serde_json::from_slice::<CheckpointV1>(&bytes)?,
+            CoreArchiveV2 {
+                version: 2,
+                checkpoint: serde_json::from_slice::<CoreCheckpointV2>(&bytes)?,
             }
         } else {
             serde_json::from_slice(&bytes)?
@@ -99,6 +101,12 @@ async fn main() -> Result<()> {
         env::var("WHOLE_DATABASE_PATH").unwrap_or_else(|_| "mock-sandbox.sqlite".into()),
     );
     let root: AccountId32 = secret("MOCK_ROOT_ACCOUNT_FILE")?.parse()?;
+    if matches!(
+        command,
+        "upgrade" | "downgrade" | "recover-creation-metadata"
+    ) {
+        return tokio::task::spawn_blocking(move || metadata::run(&args, root)).await?;
+    }
     let authority = match env::var("PROVIDER_AUTHORITY")
         .unwrap_or_else(|_| "rust".into())
         .as_str()

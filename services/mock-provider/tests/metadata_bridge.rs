@@ -1,8 +1,7 @@
-//! Predecessor history compatibility; compact creation is not enabled here.
+//! Compact execution and durable failure/replay across native store restarts.
 #![cfg(all(feature = "storage-memory", feature = "storage-sqlite"))]
 use generated_contracts::{provider_core::MetadataCommitmentV1, *};
 use mock_provider::Provider;
-use provider_execution::{Admission, VerifiedCall};
 use subxt_signer::sr25519::Keypair;
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
@@ -16,8 +15,7 @@ fn signed(
     })
 }
 #[tokio::test]
-async fn predecessor_rejects_fresh_compact_creation_but_restores_and_replays_successor_history()
--> TestResult {
+async fn compact_failure_is_recorded_once_and_replays_after_import_and_restart() -> TestResult {
     let key = Keypair::from_secret_key([1; 32])?;
     let root = AccountId32::from_bytes(key.public_key().0);
     let provider = Provider::memory(root)?;
@@ -37,33 +35,22 @@ async fn predecessor_rejects_fresh_compact_creation_but_restores_and_replays_suc
             }),
         )?,
     )?;
+    let receipt = provider
+        .execute(call.clone(), UnixSeconds::new(100))
+        .await?;
     assert_eq!(
-        provider
-            .execute(call.clone(), UnixSeconds::new(100))
-            .await
-            .err()
-            .ok_or("fresh compact execution accepted")?
-            .code(),
-        "metadata_cutover_required"
+        receipt.outcome,
+        ExecutionOutcome::Failed("no_available_candidate".into())
+    );
+    let rollback = provider.archive().await?;
+    assert_eq!(
+        serde_json::to_vec(&rollback.checkpoint.workers)?,
+        serde_json::to_vec(&original.checkpoint.workers)?
     );
     assert_eq!(
-        serde_json::to_vec(&provider.archive().await?)?,
-        serde_json::to_vec(&original)?
+        serde_json::to_vec(&rollback.checkpoint.projects)?,
+        serde_json::to_vec(&original.checkpoint.projects)?
     );
-
-    // A successor's domain rejection changes shell history, not business facts.
-    // Simulate that accepted history independently; this bridge has no new engine.
-    let mut shell = original.checkpoint.shell();
-    let Admission::Execute(pending) =
-        shell.prepare(VerifiedCall::verify(call.clone())?, UnixSeconds::new(100))?
-    else {
-        return Err("expected new execution admission".into());
-    };
-    let receipt = shell.complete(*pending, Err("no_available_coordinator"))?;
-    let mut rollback = original;
-    rollback.checkpoint.nonces = shell.nonces;
-    rollback.checkpoint.receipts = shell.receipts;
-    rollback.checkpoint.events = shell.events;
     let mut token = [0u8; 16];
     getrandom::fill(&mut token).map_err(|_| std::io::Error::other("test path entropy"))?;
     let path = std::env::temp_dir().join(format!(

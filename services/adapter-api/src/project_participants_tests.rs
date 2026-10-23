@@ -28,7 +28,11 @@ async fn participants_return_team_contacts_only_to_authorized_project_members() 
     second.milestone_id = EntityId::from_bytes([92; 16]);
     second.definition.key += 1;
     project.proposals[0].milestones.push(second);
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let server = Server::start(http::router(app.clone())).await?;
     let client = reqwest::Client::new();
     for (session, cookie, section, profile) in [

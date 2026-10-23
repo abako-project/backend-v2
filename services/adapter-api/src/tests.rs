@@ -70,7 +70,7 @@ impl Server {
     }
 }
 struct Fake {
-    snapshot: ProviderSnapshot,
+    snapshot: generated_contracts::provider_core::CoreSnapshotV2,
     jobs: BTreeMap<OperationId, SigningJobView>,
     receipts: BTreeMap<OperationId, OperationReceipt>,
     nonces: BTreeMap<AccountId32, u64>,
@@ -87,7 +87,8 @@ fn info() -> ProviderInfo {
 }
 fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
     Ok(Arc::new(Mutex::new(Fake {
-        snapshot: ProviderSnapshot {
+        snapshot: generated_contracts::provider_core::CoreSnapshotV2 {
+            schema_version: 2,
             info: info(),
             catalog: CatalogView {
                 roles: vec![],
@@ -886,27 +887,34 @@ async fn only_client_and_assigned_coordinator_can_cancel_or_dispute() -> TestRes
     let (coordinator, _) = register(&app, "coordinator").await?;
     let (outsider, _) = register(&app, "outsider").await?;
     let project_id = EntityId::from_bytes([8; 16]);
-    fake.lock().await.snapshot.projects.push(ProjectView {
-        completed: false,
-        evaluations: Vec::new(),
-        project_id,
-        client: client.view.account_id,
-        coordinator: coordinator.view.account_id,
-        created_at: Some(UnixSeconds::new(1_788_912_000)),
-        title: "Permission boundary".into(),
-        description: String::new(),
-        planning: PlanningView {
-            revision: 0,
-            status: PlanningStatus::AwaitingQuote,
-            quote: None,
-            escrow: Money::ZERO,
-            frozen: false,
-        },
-        proposals: vec![],
-        execution_escrow: Money::ZERO,
-        cancelled: false,
-        active_dispute_id: None,
-    });
+    fake.lock().await.snapshot.projects.push(
+        stage_project(
+            &app,
+            info().provider_instance_id,
+            ProjectView {
+                completed: false,
+                evaluations: Vec::new(),
+                project_id,
+                client: client.view.account_id,
+                coordinator: coordinator.view.account_id,
+                created_at: Some(UnixSeconds::new(1_788_912_000)),
+                title: "Permission boundary".into(),
+                description: String::new(),
+                planning: PlanningView {
+                    revision: 0,
+                    status: PlanningStatus::AwaitingQuote,
+                    quote: None,
+                    escrow: Money::ZERO,
+                    frozen: false,
+                },
+                proposals: vec![],
+                execution_escrow: Money::ZERO,
+                cancelled: false,
+                active_dispute_id: None,
+            },
+        )
+        .await?,
+    );
     let request = ReasonRequest {
         reason: "Review required".into(),
     };
@@ -1317,7 +1325,11 @@ async fn notifications_enrich_verified_author_and_visible_project_without_privat
     project.client = owner.view.account_id;
     project.coordinator = coordinator.view.account_id;
     project.title = "Real project title".into();
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     sqlx::query("INSERT INTO worker_profiles(principal_id,name,contact_email,languages,image_data,image_mime_type,updated_at) VALUES($1,'Real coordinator','private@example.test',ARRAY[]::text[],$2,'image/png',1)")
         .bind(coordinator.view.principal_id.to_string()).bind(vec![1_u8,2,3]).execute(&app.db).await?;
     let event = DomainEvent {
@@ -1394,3 +1406,95 @@ mod evidence_commitments;
 
 #[path = "content_copy_tests.rs"]
 mod content_copies;
+
+// Synthetic retained-entity fixtures explicitly stage API-owned preimages.
+// They do not invent old signed creation operations.
+fn core_project(
+    project: &ProjectView,
+    generation: ProviderInstanceId,
+) -> Result<
+    (
+        generated_contracts::provider_core::ProjectCore,
+        generated_contracts::provider_core::CreationMetadataRecordV1,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    use generated_contracts::provider_core::*;
+    let record = CreationMetadataRecordV1 {
+        generation,
+        provenance: MetadataProvenanceV1::Migration {
+            source_archive_hash: PayloadHash::from_bytes([88; 32]),
+            entity: MetadataEntityV1::Project(project.project_id),
+        },
+        content: CreationContentV1::ProjectText {
+            title: project.title.clone(),
+            description: project.description.clone(),
+        },
+    };
+    let mut value = serde_json::to_value(project)?;
+    let object = value.as_object_mut().ok_or("project fixture object")?;
+    object.remove("title");
+    object.remove("description");
+    object.insert(
+        "content".into(),
+        serde_json::to_value(MetadataReferenceV1::Migration(PayloadHash::from_bytes(
+            hash(&record.hash_input()),
+        )))?,
+    );
+    Ok((serde_json::from_value(value)?, record))
+}
+async fn stage_project(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: ProjectView,
+) -> Result<generated_contracts::provider_core::ProjectCore, Box<dyn std::error::Error>> {
+    let (core, record) = core_project(&project, generation)?;
+    let mut tx = app.db.begin().await?;
+    crate::creation_metadata::insert(
+        &mut tx,
+        generation,
+        false,
+        hash(&record.hash_input()),
+        &serde_json::to_string(&record)?,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(core)
+}
+async fn stage_worker(
+    app: &App,
+    generation: ProviderInstanceId,
+    worker: WorkerView,
+) -> Result<generated_contracts::provider_core::WorkerCore, Box<dyn std::error::Error>> {
+    use generated_contracts::provider_core::*;
+    let record = CreationMetadataRecordV1 {
+        generation,
+        provenance: MetadataProvenanceV1::Migration {
+            source_archive_hash: PayloadHash::from_bytes([88; 32]),
+            entity: MetadataEntityV1::Worker(worker.account),
+        },
+        content: CreationContentV1::WorkerName {
+            display_name: worker.display_name.clone(),
+        },
+    };
+    let mut value = serde_json::to_value(worker)?;
+    let object = value.as_object_mut().ok_or("worker fixture object")?;
+    object.remove("displayName");
+    object.insert(
+        "content".into(),
+        serde_json::to_value(MetadataReferenceV1::Migration(PayloadHash::from_bytes(
+            hash(&record.hash_input()),
+        )))?,
+    );
+    let mut tx = app.db.begin().await?;
+    crate::creation_metadata::insert(
+        &mut tx,
+        generation,
+        true,
+        hash(&record.hash_input()),
+        &serde_json::to_string(&record)?,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(serde_json::from_value(value)?)
+}
