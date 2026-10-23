@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshotV2};
+use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshotV3};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -254,6 +254,9 @@ impl App {
         sqlx::raw_sql(include_str!("../migrations/0015_creation_metadata.sql"))
             .execute(&mut *migration)
             .await?;
+        sqlx::raw_sql(include_str!("../migrations/0016_proposal_documents.sql"))
+            .execute(&mut *migration)
+            .await?;
         migration.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
@@ -305,11 +308,11 @@ impl App {
             .map_err(|_| Error::Dependency)?;
         decode_response(response).await
     }
-    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshotV2, Error> {
-        let snapshot: CoreSnapshotV2 = self
+    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshotV3, Error> {
+        let snapshot: CoreSnapshotV3 = self
             .get(&self.config.provider_url, "/internal/snapshot")
             .await?;
-        if snapshot.schema_version != 2 {
+        if snapshot.schema_version != 3 {
             return Err(Error::Dependency);
         }
         Ok(snapshot)

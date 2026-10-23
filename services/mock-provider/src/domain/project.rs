@@ -1,12 +1,15 @@
 use generated_contracts::provider_core::ProjectCore;
+use generated_contracts::provider_core::{
+    MilestoneCore, ProposalContentReferenceV1, ProposalCore, ProposalTerms,
+};
 use std::collections::BTreeSet;
 
 use chrono::{Duration, NaiveDate, Weekday};
 
 use generated_contracts::{
-    AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, MilestoneView,
-    Money, PlanningStatus, ProposalDefinition, ProposalStatus, ProposalView, ProviderCommand,
-    TaskStorageView, TaskView, TeamRating, UnixSeconds,
+    AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, Money,
+    PlanningStatus, ProposalStatus, ProviderCommand, TaskStorageView, TaskView, TeamRating,
+    UnixSeconds,
 };
 
 use super::{Effect, RecordedReason, RustEngine, add_rating};
@@ -174,15 +177,15 @@ impl RustEngine {
             | ProviderCommand::AcceptPlanningDelivery { .. } => {
                 self.planning_command(project, origin, command)
             }
-            ProviderCommand::CreateProposal { .. }
-            | ProviderCommand::UpdateProposal { .. }
+            ProviderCommand::CreateProposalCore { .. }
+            | ProviderCommand::UpdateProposalCore { .. }
             | ProviderCommand::DeleteProposal { .. }
             | ProviderCommand::SetProposalDelivery { .. } => {
                 self.draft_proposal_command(project, origin, command)
             }
             ProviderCommand::SubmitProposal { .. }
             | ProviderCommand::ApproveExecution { .. }
-            | ProviderCommand::RequestProposalChanges { .. }
+            | ProviderCommand::RequestProposalChangesCore { .. }
             | ProviderCommand::WithdrawProposal { .. } => {
                 self.proposal_review_command(project, origin, command)
             }
@@ -245,7 +248,9 @@ impl RustEngine {
         command: &ProviderCommand,
     ) -> Result<Transition> {
         let (kind, proposal_id) = match command {
-            ProviderCommand::CreateProposal { proposal, .. } => {
+            ProviderCommand::CreateProposalCore {
+                proposal, content, ..
+            } => {
                 coordinator(project, origin)?;
                 planning_active(project)?;
                 self.proposal_qualifications(proposal)?;
@@ -254,11 +259,10 @@ impl RustEngine {
                     milestone.allocate_budget(&self.compensation_policy)?;
                 }
                 let proposal_id = self.context.random_id();
-                project.proposals.push(ProposalView {
+                project.proposals.push(ProposalCore {
                     proposal_id,
                     revision: 0,
-                    title: proposal.title.clone(),
-                    description: proposal.description.clone(),
+                    content: ProposalContentReferenceV1::Signed(content.clone()),
                     status: ProposalStatus::Draft,
                     milestones: make_milestones(&self.context, &proposal, &[])?,
                     change_request: None,
@@ -267,9 +271,10 @@ impl RustEngine {
                 });
                 (DomainEventKind::ProposalCreated, proposal_id)
             }
-            ProviderCommand::UpdateProposal {
+            ProviderCommand::UpdateProposalCore {
                 proposal_id,
                 proposal,
+                content,
                 ..
             } => {
                 coordinator(project, origin)?;
@@ -287,8 +292,7 @@ impl RustEngine {
                 current.milestones =
                     make_milestones(&self.context, &proposal, &current.milestones)?;
                 current.compensation_policy = Some(self.compensation_policy.clone());
-                current.title.clone_from(&proposal.title);
-                current.description.clone_from(&proposal.description);
+                current.content = ProposalContentReferenceV1::Signed(content.clone());
                 bump(&mut current.revision)?;
                 (DomainEventKind::ProposalUpdated, *proposal_id)
             }
@@ -385,9 +389,9 @@ impl RustEngine {
                 self.approve_execution(project, origin, *proposal_id, *expected_revision)?;
                 (DomainEventKind::ExecutionApproved, *proposal_id)
             }
-            ProviderCommand::RequestProposalChanges {
+            ProviderCommand::RequestProposalChangesCore {
                 proposal_id,
-                request,
+                content,
                 ..
             } => {
                 client(project, origin)?;
@@ -397,7 +401,7 @@ impl RustEngine {
                     "proposal_not_pending",
                 )?;
                 proposal.status = ProposalStatus::Draft;
-                proposal.change_request = Some(request.reference.clone());
+                proposal.change_request = Some(ProposalContentReferenceV1::Signed(content.clone()));
                 bump(&mut proposal.revision)?;
                 if project.planning.status == PlanningStatus::Delivered {
                     project.planning.status = PlanningStatus::Accepted;
@@ -851,7 +855,7 @@ fn bump(value: &mut u64) -> Result<()> {
     Ok(())
 }
 
-fn proposal_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut ProposalView> {
+fn proposal_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut ProposalCore> {
     project
         .proposals
         .iter_mut()
@@ -859,7 +863,7 @@ fn proposal_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut Proposal
         .ok_or_else(|| Error::domain("proposal_not_found"))
 }
 
-pub(super) fn milestone_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut MilestoneView> {
+pub(super) fn milestone_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut MilestoneCore> {
     project
         .proposals
         .iter_mut()
@@ -886,23 +890,21 @@ fn task_mut(project: &mut ProjectCore, storage: EntityId, id: u32) -> Result<&mu
         .ok_or_else(|| Error::domain("task_not_found"))
 }
 
-pub(super) fn proposal_definition(proposal: &ProposalView) -> ProposalDefinition {
-    ProposalDefinition {
-        title: proposal.title.clone(),
-        description: proposal.description.clone(),
+pub(super) fn proposal_definition(proposal: &ProposalCore) -> ProposalTerms {
+    ProposalTerms {
         milestones: proposal
             .milestones
             .iter()
-            .map(|milestone| milestone.definition.clone())
+            .map(|m| m.definition.clone())
             .collect(),
     }
 }
 
 fn make_milestones(
     context: &super::execution::EngineContext,
-    proposal: &ProposalDefinition,
-    previous: &[MilestoneView],
-) -> Result<Vec<MilestoneView>> {
+    proposal: &ProposalTerms,
+    previous: &[MilestoneCore],
+) -> Result<Vec<MilestoneCore>> {
     proposal
         .milestones
         .iter()
@@ -916,7 +918,7 @@ fn make_milestones(
                 Ok(milestone)
             } else {
                 let milestone_id = context.random_id();
-                Ok(MilestoneView {
+                Ok(MilestoneCore {
                     milestone_id,
                     definition: definition.clone(),
                     status: None,
@@ -935,7 +937,7 @@ fn make_milestones(
         .collect()
 }
 
-fn validate_delivery_estimate(proposal: &ProposalView) -> Result<()> {
+fn validate_delivery_estimate(proposal: &ProposalCore) -> Result<()> {
     let Some(DeliveryPreference::SpecificDate { date }) = &proposal.delivery else {
         return Ok(());
     };

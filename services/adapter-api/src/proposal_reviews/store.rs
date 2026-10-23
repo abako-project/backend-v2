@@ -1,21 +1,23 @@
 use super::{
     Context,
-    models::{
-        CommentsPage, PostComment, PresentationView, PutPresentation, ReviewComment, definition,
-    },
+    models::{CommentsPage, PostComment, PresentationView, PutPresentation, ReviewComment},
 };
 use crate::state::{Error, now, parse};
 use generated_contracts::ProposalDefinition;
 use sqlx::{PgPool, Row, postgres::PgRow};
 
-fn view(row: &PgRow, context: &Context) -> Result<PresentationView, Error> {
+fn view(
+    row: &PgRow,
+    context: &Context,
+    definition: &ProposalDefinition,
+) -> Result<PresentationView, Error> {
     let saved: ProposalDefinition = serde_json::from_str(&row.try_get::<String, _>("definition")?)?;
     Ok(PresentationView {
         proposal_id: context.proposal.proposal_id,
         revision: row.try_get("revision")?,
         proposal_revision: u64::try_from(row.try_get::<i64, _>("proposal_revision")?)
             .map_err(|_| Error::Internal)?,
-        matches_current_definition: saved == definition(&context.proposal),
+        matches_current_definition: &saved == definition,
         milestones: serde_json::from_str(&row.try_get::<String, _>("milestones")?)?,
     })
 }
@@ -41,15 +43,17 @@ fn comment(row: &PgRow) -> Result<ReviewComment, Error> {
 pub(super) async fn presentation(
     pool: &PgPool,
     c: &Context,
+    definition: &ProposalDefinition,
 ) -> Result<Option<PresentationView>, Error> {
     let row = sqlx::query("SELECT revision, proposal_revision, definition::text, milestones::text FROM proposal_presentations WHERE provider_instance_id=$1 AND project_id=$2 AND proposal_id=$3 ORDER BY revision DESC LIMIT 1")
         .bind(c.instance.to_string()).bind(c.project_id.to_string()).bind(c.proposal.proposal_id.to_string()).fetch_optional(pool).await?;
-    row.as_ref().map(|row| view(row, c)).transpose()
+    row.as_ref().map(|row| view(row, c, definition)).transpose()
 }
 pub(super) async fn put_presentation(
     pool: &PgPool,
     c: &Context,
     request: &PutPresentation,
+    definition: &ProposalDefinition,
 ) -> Result<(bool, PresentationView), Error> {
     request.validate(&c.proposal)?;
     let instance = c.instance.to_string();
@@ -63,7 +67,7 @@ pub(super) async fn put_presentation(
         .await?;
     let row = sqlx::query("SELECT revision, proposal_revision, definition::text, milestones::text FROM proposal_presentations WHERE provider_instance_id=$1 AND project_id=$2 AND proposal_id=$3 ORDER BY revision DESC LIMIT 1")
         .bind(&instance).bind(&project).bind(&proposal).fetch_optional(&mut *tx).await?;
-    let current = row.as_ref().map(|r| view(r, c)).transpose()?;
+    let current = row.as_ref().map(|r| view(r, c, definition)).transpose()?;
     if let Some(current) = &current
         && Some(current.revision) == request.expected_presentation_revision.checked_add(1)
         && current.proposal_revision == request.expected_proposal_revision
@@ -81,7 +85,7 @@ pub(super) async fn put_presentation(
     let next = revision.checked_add(1).ok_or(Error::Internal)?;
     sqlx::query("INSERT INTO proposal_presentations (provider_instance_id,project_id,proposal_id,revision,proposal_revision,definition,milestones) VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb)")
         .bind(&instance).bind(&project).bind(&proposal).bind(next).bind(i64::try_from(c.proposal.revision).map_err(|_|Error::Invalid)?)
-        .bind(serde_json::to_string(&definition(&c.proposal))?).bind(serde_json::to_string(&request.milestones)?).execute(&mut *tx).await?;
+        .bind(serde_json::to_string(definition)?).bind(serde_json::to_string(&request.milestones)?).execute(&mut *tx).await?;
     tx.commit().await?;
     Ok((
         current.is_none(),
@@ -114,13 +118,36 @@ pub(super) async fn comments(
     };
     Ok(CommentsPage { items, next_after })
 }
+/// Existing immutable snapshots replay without resolving today's definition.
+/// The transactional write repeats this check to cover concurrent first requests.
+pub(super) async fn replay(
+    pool: &PgPool,
+    c: &Context,
+    request: &PostComment,
+) -> Result<Option<ReviewComment>, Error> {
+    request.validate()?;
+    let row=sqlx::query("SELECT comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text,delivery::text FROM proposal_review_comments WHERE provider_instance_id=$1 AND project_id=$2 AND proposal_id=$3 AND author_account=$4 AND request_id=$5")
+        .bind(c.instance.to_string()).bind(c.project_id.to_string()).bind(c.proposal.proposal_id.to_string()).bind(c.account.to_string()).bind(request.request_id.to_string()).fetch_optional(pool).await?;
+    row.as_ref()
+        .map(|row| {
+            let saved = comment(row)?;
+            if saved.message != request.message
+                || saved.proposal_revision != request.expected_proposal_revision
+            {
+                return Err(Error::Conflict("review_request_conflict"));
+            }
+            Ok(saved)
+        })
+        .transpose()
+}
 pub(super) async fn post_comment(
     pool: &PgPool,
     c: &Context,
     request: &PostComment,
+    definition: &ProposalDefinition,
 ) -> Result<(bool, ReviewComment), Error> {
     request.validate()?;
-    let presentation = presentation(pool, c)
+    let presentation = presentation(pool, c, definition)
         .await?
         .filter(|p| p.matches_current_definition);
     let instance = c.instance.to_string();
@@ -152,7 +179,7 @@ pub(super) async fn post_comment(
     }
     let row=sqlx::query("INSERT INTO proposal_review_comments (provider_instance_id,project_id,proposal_id,request_id,author_account,proposal_revision,created_at,message,definition,presentation,delivery) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11::jsonb) RETURNING comment_id,proposal_revision,author_account,created_at,message,definition::text,presentation::text,delivery::text")
         .bind(&instance).bind(&project).bind(&proposal).bind(&request_id).bind(&author).bind(i64::try_from(c.proposal.revision).map_err(|_|Error::Invalid)?).bind(now()?).bind(&request.message)
-        .bind(serde_json::to_string(&definition(&c.proposal))?).bind(presentation.map(|p|serde_json::to_string(&p)).transpose()?).bind(c.proposal.delivery.as_ref().map(serde_json::to_string).transpose()?).fetch_one(&mut *tx).await?;
+        .bind(serde_json::to_string(definition)?).bind(presentation.map(|p|serde_json::to_string(&p)).transpose()?).bind(c.proposal.delivery.as_ref().map(serde_json::to_string).transpose()?).fetch_one(&mut *tx).await?;
     let saved = comment(&row)?;
     tx.commit().await?;
     Ok((true, saved))

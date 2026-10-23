@@ -203,7 +203,7 @@ impl Submission {
 #[derive(Clone, Debug, Encode, Decode)]
 pub(super) struct Milestone {
     pub(super) milestone_id: g::EntityId,
-    pub(super) definition: g::MilestoneDefinition,
+    pub(super) definition: g::provider_core::MilestoneTerms,
     pub(super) status: Option<g::MilestoneStatus>,
     pub(super) assignments: Vec<g::AssignmentView>,
     pub(super) worker_ratings: Vec<g::WorkerRating>,
@@ -213,7 +213,7 @@ pub(super) struct Milestone {
 }
 impl Milestone {
     pub(super) fn from_domain(
-        value: g::MilestoneView,
+        value: g::provider_core::MilestoneCore,
         refs: &mut LegacyReferences,
     ) -> Result<Self, Error> {
         Ok(Self {
@@ -231,8 +231,11 @@ impl Milestone {
                 .collect::<Result<_, _>>()?,
         })
     }
-    pub(super) fn into_domain(self, refs: &LegacyReferences) -> Result<g::MilestoneView, Error> {
-        Ok(g::MilestoneView {
+    pub(super) fn into_domain(
+        self,
+        refs: &LegacyReferences,
+    ) -> Result<g::provider_core::MilestoneCore, Error> {
+        Ok(g::provider_core::MilestoneCore {
             milestone_id: self.milestone_id,
             definition: self.definition,
             status: self.status,
@@ -253,24 +256,22 @@ impl Milestone {
 pub(super) struct Proposal {
     pub(super) proposal_id: g::EntityId,
     pub(super) revision: u64,
-    pub(super) title: String,
-    pub(super) description: String,
+    pub(super) content: g::provider_core::ProposalContentReferenceV1,
     pub(super) status: g::ProposalStatus,
     pub(super) milestones: Vec<Milestone>,
-    pub(super) change_request: Option<String>,
+    pub(super) change_request: Option<g::provider_core::ProposalContentReferenceV1>,
     pub(super) delivery: Option<g::DeliveryPreference>,
     pub(super) compensation_policy: Option<g::CompensationPolicy>,
 }
 impl Proposal {
     pub(super) fn from_domain(
-        value: g::ProposalView,
+        value: g::provider_core::ProposalCore,
         refs: &mut LegacyReferences,
     ) -> Result<Self, Error> {
         Ok(Self {
             proposal_id: value.proposal_id,
             revision: value.revision,
-            title: value.title,
-            description: value.description,
+            content: value.content,
             status: value.status,
             milestones: value
                 .milestones
@@ -282,12 +283,14 @@ impl Proposal {
             compensation_policy: value.compensation_policy,
         })
     }
-    pub(super) fn into_domain(self, refs: &LegacyReferences) -> Result<g::ProposalView, Error> {
-        Ok(g::ProposalView {
+    pub(super) fn into_domain(
+        self,
+        refs: &LegacyReferences,
+    ) -> Result<g::provider_core::ProposalCore, Error> {
+        Ok(g::provider_core::ProposalCore {
             proposal_id: self.proposal_id,
             revision: self.revision,
-            title: self.title,
-            description: self.description,
+            content: self.content,
             status: self.status,
             milestones: self
                 .milestones

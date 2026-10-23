@@ -1,5 +1,9 @@
 # R2a: immutable creation content
 
+Historical V1→V2 procedure, using the R2a binaries and tools. The current
+V2→V3 proposal cohort uses [R2b1](r2b-proposals.md); its converter does not
+convert V1.
+
 Implementation of the approved SPEC-0015 worker-name and Project root
 text slice. Public REST/JSON/SSE requests and responses are unchanged. Proposal,
 catalog and task ownership remain later stages. Review/evidence is in the
@@ -157,7 +161,8 @@ actual frozen predecessor (known test identities, no deployment data):
 
 ```sh
 R2A_ROLLBACK_OUTPUT_DIR=/tmp/r2a-case cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked --test core_metadata
-python3 scripts/check-core-rollback.py --case /tmp/r2a-case --predecessor-binaries /path/to/84ab1e4-binaries
+# Run the R2a revision of check-core-rollback.py with 84ab1e4 binaries.
+# The current script instead verifies the R2b1 V3→V2 cohort.
 ```
 
 That rehearsal verifies Rust/Shadow/Sandbox predecessor imports after successful

@@ -2,6 +2,8 @@
 //! Typed fields preserve u128 accumulators and data omitted from public snapshots.
 mod core;
 pub use core::{CoreArchiveV2, CoreCheckpointV2};
+mod core_v3;
+pub use core_v3::{CoreArchiveV3, CoreCheckpointV3};
 
 use crate::{RecordedCall, Shell};
 use generated_contracts::{

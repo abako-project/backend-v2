@@ -621,66 +621,10 @@ impl MilestoneDefinition {
     /// and the remainder to workers by planned minutes. Largest fractions receive
     /// residual units; ties keep coordinator then declared requirement order.
     pub fn allocate_budget(&mut self, policy: &CompensationPolicy) -> Result<(), ContractError> {
-        let total = u128::from(self.total()?.units());
-        let effort: u128 = self.requirements.iter().try_fold(0_u128, |sum, r| {
-            sum.checked_add(u128::from(r.minutes.get()))
-                .ok_or(ContractError::Invalid("budget overflow"))
-        })?;
-        if total > 0 && effort == 0 {
-            return Err(ContractError::Invalid(
-                "positive budget requires worker hours",
-            ));
-        }
-        let percent = u128::from(policy.coordinator_percent.get());
-        let denominator = effort
-            .checked_mul(100)
-            .ok_or(ContractError::Invalid("budget overflow"))?;
-        let weights: Vec<_> = std::iter::once(percent * effort)
-            .chain(
-                self.requirements
-                    .iter()
-                    .map(|r| (100 - percent) * u128::from(r.minutes.get())),
-            )
-            .collect();
-        let numerators: Vec<_> = weights
-            .iter()
-            .map(|weight| {
-                total
-                    .checked_mul(*weight)
-                    .ok_or(ContractError::Invalid("budget overflow"))
-            })
-            .collect::<Result<_, _>>()?;
-        let mut shares: Vec<_> = numerators
-            .iter()
-            .map(|amount| amount.checked_div(denominator).unwrap_or(0))
-            .collect();
-        let mut remainder = total - shares.iter().sum::<u128>();
-        let mut order: Vec<_> = (0..shares.len()).collect();
-        order.sort_by(|a, b| {
-            let fraction = |index: usize| {
-                if denominator == 0 {
-                    0
-                } else {
-                    numerators[index] % denominator
-                }
-            };
-            fraction(*b).cmp(&fraction(*a)).then_with(|| a.cmp(b))
-        });
-        for index in order {
-            if remainder == 0 {
-                break;
-            }
-            shares[index] += 1;
-            remainder -= 1;
-        }
-        self.coordinator_fee = Money::new(
-            u64::try_from(shares[0]).map_err(|_| ContractError::Invalid("budget overflow"))?,
-        );
-        for (requirement, share) in self.requirements.iter_mut().zip(shares.into_iter().skip(1)) {
-            requirement.budget = Money::new(
-                u64::try_from(share).map_err(|_| ContractError::Invalid("budget overflow"))?,
-            );
-        }
+        let mut terms = provider_core::MilestoneTerms::from(&*self);
+        terms.allocate_budget(policy)?;
+        self.coordinator_fee = terms.coordinator_fee;
+        self.requirements = terms.requirements;
         Ok(())
     }
 

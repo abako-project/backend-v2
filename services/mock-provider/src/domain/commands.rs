@@ -1,10 +1,11 @@
+use generated_contracts::provider_core::{MilestoneCore, ProposalTerms};
 use generated_contracts::provider_core::{ProjectCore, WorkerCore};
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use generated_contracts::{
-    AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, MilestoneView,
-    Minutes, Money, PlanningStatus, PlanningView, ProviderCommand, Qualifications, ReputationView,
-    ReservationView, TaskDefinition, UnixSeconds, WorkerMode,
+    AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, Minutes, Money,
+    PlanningStatus, PlanningView, ProviderCommand, Qualifications, ReputationView, ReservationView,
+    TaskDefinition, UnixSeconds, WorkerMode,
 };
 
 use super::{Effect, RustEngine, compare_scores, empty_score};
@@ -33,10 +34,7 @@ impl RustEngine {
         )
     }
 
-    pub(super) fn proposal_qualifications(
-        &self,
-        proposal: &generated_contracts::ProposalDefinition,
-    ) -> Result<()> {
+    pub(super) fn proposal_qualifications(&self, proposal: &ProposalTerms) -> Result<()> {
         for milestone in &proposal.milestones {
             for requirement in &milestone.requirements {
                 self.qualifications(&Qualifications {
@@ -78,7 +76,11 @@ impl RustEngine {
         // a fixed context; production lowers the real verified envelope.
         let compact = if matches!(
             command,
-            ProviderCommand::RegisterWorker(_) | ProviderCommand::CreateProject(_)
+            ProviderCommand::RegisterWorker(_)
+                | ProviderCommand::CreateProject(_)
+                | ProviderCommand::CreateProposal { .. }
+                | ProviderCommand::UpdateProposal { .. }
+                | ProviderCommand::RequestProposalChanges { .. }
         ) {
             let call = generated_contracts::UnsignedContractCallV1::new(
                 generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
@@ -89,6 +91,7 @@ impl RustEngine {
                 command.clone(),
             )?;
             crate::creation::compact_creation(&call)
+                .or_else(|| crate::proposal::compact_proposal(&call))
         } else {
             None
         };
@@ -403,7 +406,7 @@ impl RustEngine {
     pub(super) fn assign(
         &mut self,
         project: &ProjectCore,
-        milestone: &mut MilestoneView,
+        milestone: &mut MilestoneCore,
         earlier_team: &BTreeSet<AccountId32>,
     ) -> Result<()> {
         let window = milestone.definition.window;

@@ -14,6 +14,8 @@ mod profiles;
 mod project_briefs;
 mod project_content;
 mod project_participants;
+mod proposal_metadata;
+mod proposal_metadata_io;
 mod proposal_reviews;
 mod state;
 mod submission_comments;
@@ -39,6 +41,18 @@ async fn main() -> Result<(), Error> {
         [command] if command == "check-provider-cutover" => {
             creation_metadata_io::reconciled(&app).await?;
             tracing::info!("Provider cutover queue is reconciled");
+            app.db.close().await;
+            return Ok(());
+        }
+        [command, path] if command == "import-proposal-metadata" => {
+            let records = proposal_metadata_io::import(&app, path.into()).await?;
+            tracing::info!(records, "Proposal metadata imported and verified");
+            app.db.close().await;
+            return Ok(());
+        }
+        [command, path] if command == "export-proposal-metadata" => {
+            let records = proposal_metadata_io::export(&app, path.into()).await?;
+            tracing::info!(records, "Proposal metadata exported and verified");
             app.db.close().await;
             return Ok(());
         }

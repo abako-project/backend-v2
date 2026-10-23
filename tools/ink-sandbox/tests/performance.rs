@@ -5,7 +5,7 @@ use ink_v5_compatibility::{
     worker::{Authority, WholeConfiguration, Worker},
 };
 use mock_provider::ReferenceState;
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV2};
+use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV3};
 use serde_json::Value;
 use sp_core::{Pair, sr25519};
 use std::time::Instant;
@@ -54,12 +54,12 @@ fn prepare(
     assert_eq!(receipt.outcome, ExecutionOutcome::Success);
     (state, receipt)
 }
-fn fixture() -> (CoreArchiveV2, SignedContractCallV1) {
+fn fixture() -> (CoreArchiveV3, SignedContractCallV1) {
     let fixture: Value = serde_json::from_str(include_str!(
         "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
     ))
     .unwrap();
-    let archive: CoreArchiveV2 = serde_json::from_str(
+    let archive: CoreArchiveV3 = serde_json::from_str(
         fixture["archives"]
             .as_array()
             .unwrap()

@@ -9,8 +9,8 @@ use axum::{
     http::StatusCode,
 };
 use generated_contracts::{
-    AccountId32, DisputeView, EntityId, OpenDisputeWithCommentRequest, ProposalStatus,
-    ProviderCommand, ProviderInstanceId, SubmissionReview,
+    AccountId32, EntityId, OpenDisputeWithCommentRequest, ProposalStatus, ProviderCommand,
+    ProviderInstanceId, SubmissionReview,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -113,7 +113,7 @@ async fn author(app: &App, account: AccountId32, role: &'static str) -> Result<A
 }
 struct Context {
     instance: ProviderInstanceId,
-    case: DisputeView,
+    case: generated_contracts::provider_core::CoreDisputeView,
     content: generated_contracts::provider_core::MetadataReferenceV1,
     client: Author,
     coordinator: Author,
@@ -180,7 +180,11 @@ async fn context(app: &App, id: EntityId) -> Result<Context, Error> {
         workers,
     })
 }
-async fn opening_reason(app: &App, c: &Context) -> Result<String, Error> {
+async fn opening_reason(
+    app: &App,
+    c: &Context,
+    dispute: &generated_contracts::Dispute,
+) -> Result<String, Error> {
     if let Some(id) = c.case.dispute.opening_comment_id {
         let row=sqlx::query("SELECT reason,project_id,milestone_id,submission_id,author_account FROM dispute_opening_arguments WHERE provider_instance_id=$1 AND comment_id=$2")
             .bind(c.instance.to_string()).bind(id.to_string()).fetch_optional(&app.db).await?.ok_or(Error::Dependency)?;
@@ -197,8 +201,7 @@ async fn opening_reason(app: &App, c: &Context) -> Result<String, Error> {
         }
         return Ok(row.try_get("reason")?);
     }
-    c.case
-        .dispute
+    dispute
         .evidence
         .as_ref()
         .and_then(|e| e.url().map(str::to_owned))
@@ -208,14 +211,18 @@ pub(crate) async fn presentation(
     State(app): State<Arc<App>>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Error> {
-    let mut c = context(&app, parse(&id)?).await?;
-    let verified = crate::evidence::case(&app, c.instance, &mut c.case).await?;
+    let c = context(&app, parse(&id)?).await?;
+    let (generation, mut view) = super::present(&app, c.case.clone()).await?;
+    if generation != c.instance {
+        return Err(Error::Dependency);
+    }
+    let verified = crate::evidence::case(&app, c.instance, &mut view).await?;
     let reason = if let Some(text) = verified.opening {
         text
     } else {
-        opening_reason(&app, &c).await?
+        opening_reason(&app, &c, &view.dispute).await?
     };
-    let mut value = serde_json::to_value(&c.case)?;
+    let mut value = serde_json::to_value(&view)?;
     let (title, _) = crate::creation_metadata::project_text(
         &app,
         c.instance,
@@ -398,13 +405,17 @@ pub(crate) async fn history(
     State(app): State<Arc<App>>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, Error> {
-    let mut c = context(&app, parse(&id)?).await?;
-    let verified = crate::evidence::case(&app, c.instance, &mut c.case).await?;
+    let c = context(&app, parse(&id)?).await?;
+    let (generation, mut view) = super::present(&app, c.case.clone()).await?;
+    if generation != c.instance {
+        return Err(Error::Dependency);
+    }
+    let verified = crate::evidence::case(&app, c.instance, &mut view).await?;
     let mut deliverables = Vec::new();
     let mut rejections = Vec::new();
     let mut events = Vec::new();
     let dispute_id = c.case.dispute.dispute_id;
-    for s in &c.case.milestone.submissions {
+    for s in &view.milestone.submissions {
         let row=sqlx::query("SELECT documentation,links FROM submission_presentations WHERE provider_instance_id=$1 AND submission_id=$2").bind(c.instance.to_string()).bind(s.submission_id.to_string()).fetch_optional(&app.db).await?;
         let documentation = if let Some(r) = &row {
             r.try_get::<Option<String>, _>("documentation")?
@@ -458,7 +469,7 @@ pub(crate) async fn history(
     }
     events.sort_by_key(|event| event["createdAt"].as_i64());
     Ok(Json(
-        json!({"project":{"id":c.case.dispute.project_id,"title":crate::creation_metadata::project_text(&app, c.instance, c.case.dispute.project_id, c.client.account_id, &c.content).await?.0,"clientId":c.client.account_id,"clientName":c.client.display_name,"consultantId":c.coordinator.account_id,"consultantName":c.coordinator.display_name},"milestone":{"id":c.case.milestone.milestone_id,"title":c.case.milestone.definition.title,"state":"Disputed"},"deliverables":deliverables,"rejections":rejections,"events":events}),
+        json!({"project":{"id":c.case.dispute.project_id,"title":crate::creation_metadata::project_text(&app, c.instance, c.case.dispute.project_id, c.client.account_id, &c.content).await?.0,"clientId":c.client.account_id,"clientName":c.client.display_name,"consultantId":c.coordinator.account_id,"consultantName":c.coordinator.display_name},"milestone":{"id":c.case.milestone.milestone_id,"title":view.milestone.definition.title,"state":"Disputed"},"deliverables":deliverables,"rejections":rejections,"events":events}),
     ))
 }
 

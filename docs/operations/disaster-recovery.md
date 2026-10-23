@@ -21,11 +21,12 @@ The preview guide records a verified isolated restore for that mock deployment.
 Automated encrypted backups, retention, production restore drills, key-version
 recovery and regional failover remain undefined. Master-key rotation remains an open SPEC-0001 reconciliation item; no rotation command is available.
 
-SPEC-0015 R2a moves immutable directory names and Project root text into adapter
+SPEC-0015 R2a/R2b1 moves immutable directory names, Project root text and
+proposal documents into adapter
 PostgreSQL. The provider archive contains references and cannot reconstruct
-compact creation preimages alone. Preserve the complete API backup with the
+compact creation or proposal preimages alone. Preserve the complete API backup with the
 current core archive and wallet state. Its owner-only metadata exchange exports
 selected confirmed content, not sessions, pending operations or the full API
-backup. Follow the [explicit R2a transition and rollback procedure](../../specs/0015-adapter-core-boundary/r2a-creation.md)
+backup. Follow the [explicit V2↔V3 transition and rollback procedure](../../specs/0015-adapter-core-boundary/r2b-proposals.md)
 for paused/reconciled operations, fresh destinations and the matching predecessor
 binary. This does not establish a production disaster-recovery guarantee.

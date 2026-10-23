@@ -1,34 +1,118 @@
-//! One explicit predecessor exchange. No old business engine runs here.
-//! The caller uses owner exports and fresh stores, never cross-service tables.
+//! One explicit V2→V3 owner exchange. No predecessor business engine runs here.
 use crate::{Error, ReferenceState, Result, require};
 use generated_contracts::{
-    ExecutionOutcome, PayloadHash, UnsignedContractCallV1,
+    AccountId32, EntityId, ExecutionOutcome, PayloadHash, UnsignedContractCallV1,
     provider_core::{
-        CreationContentV1, CreationMetadataRecordV1, MetadataEntityV1, MetadataProvenanceV1,
-        MetadataReferenceV1, ProjectCore, WorkerCore,
+        CreationContentV1, CreationMetadataRecordV1, MetadataEntityV1, MetadataReferenceV1,
+        MilestoneCore, MilestoneTerms, ProjectCore, ProjectCoreV2, ProposalContentReferenceV1,
+        ProposalContentV1, ProposalCore, ProposalMetadataRecordV1, ProposalProvenanceV1,
     },
 };
-use provider_execution::migration::{ArchiveV1, CheckpointV1, CoreArchiveV2, CoreCheckpointV2};
+use provider_execution::migration::{
+    CoreArchiveV2, CoreArchiveV3, CoreCheckpointV2, CoreCheckpointV3,
+};
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
-/// Hash the exact immutable file bytes; do not reserialize before hashing.
+/// Hash exact immutable owner-export bytes; never normalize/reencode first.
 #[must_use]
 pub fn source_hash(bytes: &[u8]) -> PayloadHash {
     PayloadHash::from_bytes(Sha256::digest(bytes).into())
 }
-
-/// Retain all facts/history while moving the two descriptive roots offchain.
-/// The returned records have explicit migration provenance, including entities
-/// whose original creation operation is absent from the retained history.
+fn migrated(
+    generation: generated_contracts::ProviderInstanceId,
+    source_archive_hash: PayloadHash,
+    project_id: EntityId,
+    proposal_id: EntityId,
+    content: ProposalContentV1,
+    records: &mut Vec<ProposalMetadataRecordV1>,
+) -> ProposalContentReferenceV1 {
+    let record = ProposalMetadataRecordV1 {
+        generation,
+        project_id,
+        provenance: ProposalProvenanceV1::Migration {
+            source_archive_hash,
+            proposal_id,
+        },
+        content,
+    };
+    let reference = ProposalContentReferenceV1::Migration(source_hash(&record.hash_input()));
+    records.push(record);
+    reference
+}
+fn compact_proposals(
+    proposals: Vec<generated_contracts::ProposalView>,
+    generation: generated_contracts::ProviderInstanceId,
+    source: PayloadHash,
+    id: EntityId,
+    records: &mut Vec<ProposalMetadataRecordV1>,
+) -> Result<Vec<ProposalCore>> {
+    let mut result = Vec::new();
+    for proposal in proposals {
+        let definition = generated_contracts::ProposalDefinition {
+            title: proposal.title,
+            description: proposal.description,
+            milestones: proposal
+                .milestones
+                .iter()
+                .map(|m| m.definition.clone())
+                .collect(),
+        };
+        definition.validate()?;
+        let content = migrated(
+            generation,
+            source,
+            id,
+            proposal.proposal_id,
+            ProposalContentV1::Definition(definition),
+            records,
+        );
+        let change_request = proposal.change_request.map(|text| {
+            migrated(
+                generation,
+                source,
+                id,
+                proposal.proposal_id,
+                ProposalContentV1::ChangeRequest(text),
+                records,
+            )
+        });
+        let milestones = proposal
+            .milestones
+            .into_iter()
+            .map(|m| MilestoneCore {
+                definition: MilestoneTerms::from(&m.definition),
+                milestone_id: m.milestone_id,
+                status: m.status,
+                assignments: m.assignments,
+                worker_ratings: m.worker_ratings,
+                task_storage: m.task_storage,
+                frozen: m.frozen,
+                submissions: m.submissions,
+            })
+            .collect();
+        result.push(ProposalCore {
+            proposal_id: proposal.proposal_id,
+            revision: proposal.revision,
+            content,
+            status: proposal.status,
+            milestones,
+            change_request,
+            delivery: proposal.delivery,
+            compensation_policy: proposal.compensation_policy,
+        });
+    }
+    Ok(result)
+}
+/// Retain every current fact/history while moving proposal text to its API owner.
 pub fn from_predecessor(
     bytes: &[u8],
-    root: generated_contracts::AccountId32,
-) -> Result<(CoreArchiveV2, Vec<CreationMetadataRecordV1>)> {
-    let old: ArchiveV1 =
+    root: AccountId32,
+) -> Result<(CoreArchiveV3, Vec<ProposalMetadataRecordV1>)> {
+    let old: CoreArchiveV2 =
         serde_json::from_slice(bytes).map_err(|_| Error::domain("invalid_migration_archive"))?;
     require(
-        old.version == 1 && old.checkpoint.engine_version == 1,
+        old.version == 2 && old.checkpoint.engine_version == 2,
         "invalid_migration_archive",
     )?;
     old.checkpoint.shell().validate(root)?;
@@ -36,49 +120,9 @@ pub fn from_predecessor(
     let old = old.checkpoint;
     let generation = old.info.provider_instance_id;
     let mut records = Vec::new();
-    let mut workers = BTreeMap::new();
-    for (account, worker) in old.workers {
-        let record = CreationMetadataRecordV1 {
-            generation,
-            provenance: MetadataProvenanceV1::Migration {
-                source_archive_hash: source,
-                entity: MetadataEntityV1::Worker(account),
-            },
-            content: CreationContentV1::WorkerName {
-                display_name: worker.display_name,
-            },
-        };
-        let content = MetadataReferenceV1::Migration(source_hash(&record.hash_input()));
-        records.push(record);
-        workers.insert(
-            account,
-            WorkerCore {
-                account: worker.account,
-                content,
-                qualifications: worker.qualifications,
-                mode: worker.mode,
-                coordinator_eligible: worker.coordinator_eligible,
-                calendar: worker.calendar,
-                worker_score: worker.worker_score,
-                coordinator_score: worker.coordinator_score,
-            },
-        );
-    }
     let mut projects = BTreeMap::new();
     for (id, project) in old.projects {
-        let record = CreationMetadataRecordV1 {
-            generation,
-            provenance: MetadataProvenanceV1::Migration {
-                source_archive_hash: source,
-                entity: MetadataEntityV1::Project(id),
-            },
-            content: CreationContentV1::ProjectText {
-                title: project.title,
-                description: project.description,
-            },
-        };
-        let content = MetadataReferenceV1::Migration(source_hash(&record.hash_input()));
-        records.push(record);
+        let proposals = compact_proposals(project.proposals, generation, source, id, &mut records)?;
         projects.insert(
             id,
             ProjectCore {
@@ -86,9 +130,9 @@ pub fn from_predecessor(
                 created_at: project.created_at,
                 client: project.client,
                 coordinator: project.coordinator,
-                content,
+                content: project.content,
                 planning: project.planning,
-                proposals: project.proposals,
+                proposals,
                 execution_escrow: project.execution_escrow,
                 cancelled: project.cancelled,
                 completed: project.completed,
@@ -97,9 +141,9 @@ pub fn from_predecessor(
             },
         );
     }
-    let archive = CoreArchiveV2 {
-        version: 2,
-        checkpoint: CoreCheckpointV2 {
+    let archive = CoreArchiveV3 {
+        version: 3,
+        checkpoint: CoreCheckpointV3 {
             info: old.info,
             roles: old.roles,
             skills: old.skills,
@@ -107,8 +151,7 @@ pub fn from_predecessor(
             skill_requests: old.skill_requests,
             score_policy: old.score_policy,
             compensation_policy: old.compensation_policy,
-            workers,
-            projects,
+            workers: old.workers,
             balances: old.balances,
             nonces: old.nonces,
             receipts: old.receipts,
@@ -118,73 +161,97 @@ pub fn from_predecessor(
             bramp: old.bramp,
             next_task_id: old.next_task_id,
             minted_units: old.minted_units,
-            engine_version: 2,
+            projects,
+            engine_version: 3,
         },
     };
-    let archive = ReferenceState::from_archive(root, archive)?.archive()?;
-    Ok((archive, records))
+    Ok((
+        ReferenceState::from_archive(root, archive)?.archive()?,
+        records,
+    ))
 }
-
-fn content(
+fn record<'a>(
     generation: generated_contracts::ProviderInstanceId,
-    entity: &MetadataEntityV1,
-    owner: generated_contracts::AccountId32,
-    reference: &MetadataReferenceV1,
-    records: &BTreeMap<PayloadHash, CreationMetadataRecordV1>,
-) -> Result<CreationContentV1> {
+    project_id: EntityId,
+    proposal_id: EntityId,
+    author: AccountId32,
+    reference: &ProposalContentReferenceV1,
+    records: &'a BTreeMap<PayloadHash, ProposalMetadataRecordV1>,
+) -> Result<&'a ProposalMetadataRecordV1> {
     let record = records
         .get(&reference.hash())
         .ok_or_else(|| Error::domain("metadata_record_missing"))?;
     require(
-        record.matches_context(generation, entity, owner, reference)
+        record.matches_context(generation, project_id, proposal_id, author, reference)
             && source_hash(&record.hash_input()) == reference.hash(),
         "invalid_metadata_record",
     )?;
-    Ok(record.content.clone())
+    Ok(record)
 }
-
-/// Rehydrate the immediately preceding cohort with *current* facts and exact
-/// retained calls, including compact command bytes recognized by its bridge.
+/// Rehydrate only proposal fields; R2a creation refs and every recorded byte stay intact.
 pub fn to_predecessor(
-    archive: CoreArchiveV2,
-    records: &BTreeMap<PayloadHash, CreationMetadataRecordV1>,
-) -> Result<ArchiveV1> {
-    let root = archive.checkpoint.info.root_account;
-    let saved = ReferenceState::from_archive(root, archive)?
+    archive: CoreArchiveV3,
+    records: &BTreeMap<PayloadHash, ProposalMetadataRecordV1>,
+) -> Result<CoreArchiveV2> {
+    let saved = ReferenceState::from_archive(archive.checkpoint.info.root_account, archive)?
         .archive()?
         .checkpoint;
     let generation = saved.info.provider_instance_id;
-    let mut workers = BTreeMap::new();
-    for (account, worker) in saved.workers {
-        let CreationContentV1::WorkerName { display_name } = content(
-            generation,
-            &MetadataEntityV1::Worker(account),
-            account,
-            &worker.content,
-            records,
-        )?
-        else {
-            return Err(Error::domain("invalid_metadata_record"));
-        };
-        workers.insert(account, worker.into_view(display_name));
-    }
     let mut projects = BTreeMap::new();
     for (id, project) in saved.projects {
-        let CreationContentV1::ProjectText { title, description } = content(
-            generation,
-            &MetadataEntityV1::Project(id),
-            project.client,
-            &project.content,
-            records,
-        )?
-        else {
-            return Err(Error::domain("invalid_metadata_record"));
-        };
-        projects.insert(id, project.into_view(title, description));
+        let mut proposals = Vec::new();
+        for proposal in project.proposals {
+            let selected = record(
+                generation,
+                id,
+                proposal.proposal_id,
+                project.coordinator,
+                &proposal.content,
+                records,
+            )?;
+            let definition = proposal.definition(selected)?;
+            let change = proposal
+                .change_request
+                .as_ref()
+                .map(|reference| {
+                    let selected = record(
+                        generation,
+                        id,
+                        proposal.proposal_id,
+                        project.client,
+                        reference,
+                        records,
+                    )?;
+                    if let ProposalContentV1::ChangeRequest(text) = &selected.content {
+                        Ok(text.clone())
+                    } else {
+                        Err(Error::domain("invalid_metadata_record"))
+                    }
+                })
+                .transpose()?;
+            proposals.push(proposal.into_view(definition, change)?);
+        }
+        projects.insert(
+            id,
+            ProjectCoreV2 {
+                project_id: project.project_id,
+                created_at: project.created_at,
+                client: project.client,
+                coordinator: project.coordinator,
+                content: project.content,
+                planning: project.planning,
+                proposals,
+                execution_escrow: project.execution_escrow,
+                cancelled: project.cancelled,
+                completed: project.completed,
+                evaluations: project.evaluations,
+                active_dispute_id: project.active_dispute_id,
+            },
+        );
     }
-    Ok(ArchiveV1 {
-        version: 1,
-        checkpoint: CheckpointV1 {
+    Ok(CoreArchiveV2 {
+        version: 2,
+        checkpoint: CoreCheckpointV2 {
             info: saved.info,
             roles: saved.roles,
             skills: saved.skills,
@@ -192,8 +259,7 @@ pub fn to_predecessor(
             skill_requests: saved.skill_requests,
             score_policy: saved.score_policy,
             compensation_policy: saved.compensation_policy,
-            workers,
-            projects,
+            workers: saved.workers,
             balances: saved.balances,
             nonces: saved.nonces,
             receipts: saved.receipts,
@@ -203,14 +269,75 @@ pub fn to_predecessor(
             bramp: saved.bramp,
             next_task_id: saved.next_task_id,
             minted_units: saved.minted_units,
-            engine_version: 1,
+            projects,
+            engine_version: 2,
         },
     })
+}
+/// Recover only successful legacy operations selected by current core refs.
+/// Compact operation preimages still require the API's backup/export.
+pub fn recover_legacy_proposals(archive: &CoreArchiveV3) -> Result<Vec<ProposalMetadataRecordV1>> {
+    let saved =
+        ReferenceState::from_archive(archive.checkpoint.info.root_account, archive.clone())?
+            .archive()?
+            .checkpoint;
+    let mut records = Vec::new();
+    for accepted in saved.receipts.values() {
+        if accepted.receipt.outcome != ExecutionOutcome::Success {
+            continue;
+        }
+        let call = UnsignedContractCallV1::decode_signable(&accepted.bytes)?;
+        let Some(candidate) = ProposalMetadataRecordV1::from_command(
+            call.provider_instance_id,
+            call.origin,
+            call.operation_id,
+            &call.command,
+        ) else {
+            continue;
+        };
+        let Some(project) = saved.projects.get(&candidate.project_id) else {
+            continue;
+        };
+        let Some(proposal) = accepted
+            .receipt
+            .created_entity_id
+            .and_then(|id| project.proposals.iter().find(|p| p.proposal_id == id))
+        else {
+            continue;
+        };
+        let (reference, author) = match &candidate.content {
+            ProposalContentV1::Definition(_) => (Some(&proposal.content), project.coordinator),
+            ProposalContentV1::ChangeRequest(_) => {
+                (proposal.change_request.as_ref(), project.client)
+            }
+        };
+        let Some(ProposalContentReferenceV1::Signed(commitment)) = reference else {
+            continue;
+        };
+        if commitment.operation_id != call.operation_id {
+            continue;
+        }
+        require(
+            candidate.matches_context(
+                saved.info.provider_instance_id,
+                project.project_id,
+                proposal.proposal_id,
+                author,
+                reference.ok_or_else(Error::internal)?,
+            ) && source_hash(&candidate.hash_input()) == commitment.hash,
+            "invalid_metadata_record",
+        )?;
+        if matches!(candidate.content, ProposalContentV1::Definition(_)) {
+            proposal.definition(&candidate)?;
+        }
+        records.push(candidate);
+    }
+    Ok(records)
 }
 
 /// Reconstruct successful legacy creation preimages from retained owner history.
 /// This is recovery for direct legacy calls; normal API writes stage before signing.
-pub fn recover_legacy_creations(archive: &CoreArchiveV2) -> Result<Vec<CreationMetadataRecordV1>> {
+pub fn recover_legacy_creations(archive: &CoreArchiveV3) -> Result<Vec<CreationMetadataRecordV1>> {
     let validated =
         ReferenceState::from_archive(archive.checkpoint.info.root_account, archive.clone())?
             .archive()?;

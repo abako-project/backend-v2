@@ -18,7 +18,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
                 if id != c.dispute.dispute_id.to_string() {
                     return Err(Error::NotFound);
                 }
-                Ok::<_, Error>(Json(c))
+                Ok::<_, Error>(Json(core_case(c)?))
             }
         }),
     );

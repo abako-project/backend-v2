@@ -38,6 +38,8 @@ mod submission_presentations;
 
 #[path = "creation_metadata_tests.rs"]
 mod creation_metadata;
+#[path = "proposal_metadata_tests.rs"]
+mod proposal_documents;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
@@ -70,7 +72,7 @@ impl Server {
     }
 }
 struct Fake {
-    snapshot: generated_contracts::provider_core::CoreSnapshotV2,
+    snapshot: generated_contracts::provider_core::CoreSnapshotV3,
     jobs: BTreeMap<OperationId, SigningJobView>,
     receipts: BTreeMap<OperationId, OperationReceipt>,
     nonces: BTreeMap<AccountId32, u64>,
@@ -78,7 +80,7 @@ struct Fake {
     lose_reply: bool,
     fail_before_execution: bool,
 }
-fn info() -> ProviderInfo {
+pub(crate) fn info() -> ProviderInfo {
     ProviderInfo {
         provider_instance_id: ProviderInstanceId::from_bytes([1; 16]),
         root_account: AccountId32::from_bytes([9; 32]),
@@ -87,8 +89,8 @@ fn info() -> ProviderInfo {
 }
 fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
     Ok(Arc::new(Mutex::new(Fake {
-        snapshot: generated_contracts::provider_core::CoreSnapshotV2 {
-            schema_version: 2,
+        snapshot: generated_contracts::provider_core::CoreSnapshotV3 {
+            schema_version: 3,
             info: info(),
             catalog: CatalogView {
                 roles: vec![],
@@ -1409,7 +1411,7 @@ mod content_copies;
 
 // Synthetic retained-entity fixtures explicitly stage API-owned preimages.
 // They do not invent old signed creation operations.
-fn core_project(
+pub(crate) fn core_project(
     project: &ProjectView,
     generation: ProviderInstanceId,
 ) -> Result<
@@ -1436,6 +1438,10 @@ fn core_project(
     object.remove("title");
     object.remove("description");
     object.insert(
+        "proposals".into(),
+        serde_json::to_value(core_proposals(project, generation)?.0)?,
+    );
+    object.insert(
         "content".into(),
         serde_json::to_value(MetadataReferenceV1::Migration(PayloadHash::from_bytes(
             hash(&record.hash_input()),
@@ -1458,6 +1464,15 @@ async fn stage_project(
         &serde_json::to_string(&record)?,
     )
     .await?;
+    for record in core_proposals(&project, generation)?.1 {
+        crate::proposal_metadata::insert(
+            &mut tx,
+            generation,
+            hash(&record.hash_input()),
+            &serde_json::to_string(&record)?,
+        )
+        .await?;
+    }
     tx.commit().await?;
     Ok(core)
 }
@@ -1497,4 +1512,106 @@ async fn stage_worker(
     .await?;
     tx.commit().await?;
     Ok(serde_json::from_value(value)?)
+}
+
+fn core_proposals(
+    project: &ProjectView,
+    generation: ProviderInstanceId,
+) -> Result<
+    (
+        Vec<generated_contracts::provider_core::ProposalCore>,
+        Vec<generated_contracts::provider_core::ProposalMetadataRecordV1>,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    use generated_contracts::provider_core::*;
+    let mut records = Vec::new();
+    let mut proposals = Vec::new();
+    for proposal in &project.proposals {
+        let definition = ProposalDefinition {
+            title: proposal.title.clone(),
+            description: proposal.description.clone(),
+            milestones: proposal
+                .milestones
+                .iter()
+                .map(|m| m.definition.clone())
+                .collect(),
+        };
+        let record = ProposalMetadataRecordV1 {
+            generation,
+            project_id: project.project_id,
+            provenance: ProposalProvenanceV1::Migration {
+                source_archive_hash: PayloadHash::from_bytes([88; 32]),
+                proposal_id: proposal.proposal_id,
+            },
+            content: ProposalContentV1::Definition(definition),
+        };
+        let content = ProposalContentReferenceV1::Migration(PayloadHash::from_bytes(hash(
+            &record.hash_input(),
+        )));
+        records.push(record);
+        let change = proposal.change_request.as_ref().map(|text| {
+            let record = ProposalMetadataRecordV1 {
+                generation,
+                project_id: project.project_id,
+                provenance: ProposalProvenanceV1::Migration {
+                    source_archive_hash: PayloadHash::from_bytes([88; 32]),
+                    proposal_id: proposal.proposal_id,
+                },
+                content: ProposalContentV1::ChangeRequest(text.clone()),
+            };
+            let reference = ProposalContentReferenceV1::Migration(PayloadHash::from_bytes(hash(
+                &record.hash_input(),
+            )));
+            records.push(record);
+            reference
+        });
+        let mut value = serde_json::to_value(proposal)?;
+        let object = value.as_object_mut().ok_or("proposal fixture")?;
+        object.remove("title");
+        object.remove("description");
+        object.insert("content".into(), serde_json::to_value(content)?);
+        object.insert("changeRequest".into(), serde_json::to_value(change)?);
+        for milestone in object
+            .get_mut("milestones")
+            .and_then(serde_json::Value::as_array_mut)
+            .ok_or("milestones fixture")?
+        {
+            milestone["definition"]
+                .as_object_mut()
+                .ok_or("definition fixture")?
+                .remove("title");
+        }
+        proposals.push(serde_json::from_value(value)?);
+    }
+    Ok((proposals, records))
+}
+fn core_case(
+    case: DisputeView,
+) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
+    let mut value = serde_json::to_value(case)?;
+    value["milestone"]["definition"]
+        .as_object_mut()
+        .ok_or(Error::Internal)?
+        .remove("title");
+    Ok(serde_json::from_value(value)?)
+}
+
+async fn stage_proposal_documents(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: &ProjectView,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut tx = app.db.begin().await?;
+    for record in core_proposals(project, generation)?.1 {
+        crate::proposal_metadata::insert(
+            &mut tx,
+            generation,
+            hash(&record.hash_input()),
+            &serde_json::to_string(&record)?,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
 }

@@ -1,8 +1,9 @@
 //! Transport effect boundary shared by native and whole-provider candidates.
 use crate::{Provider, Result};
-use generated_contracts::provider_core::CoreSnapshotV2;
+use generated_contracts::provider_core::CoreDisputeView;
+use generated_contracts::provider_core::CoreSnapshotV3;
 use generated_contracts::{
-    AccountId32, AccountNonce, DepositView, DisputeView, EntityId, OperationId, OperationReceipt,
+    AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
     ProviderEvents, ProviderInfo, SignedContractCallV1, SkillRequestView, UnixSeconds,
     WithdrawalView,
 };
@@ -15,7 +16,7 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
     /// Next nonce for a new account operation.
     fn nonce(&self, account: AccountId32) -> impl Future<Output = Result<AccountNonce>> + Send;
     /// Internal read model; the adapter still filters project visibility.
-    fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshotV2>> + Send;
+    fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshotV3>> + Send;
     /// Recorded finality independent of the original transport response.
     fn receipt(
         &self,
@@ -39,7 +40,7 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
         origin: AccountId32,
     ) -> impl Future<Output = Result<Vec<SkillRequestView>>> + Send;
     /// Public case projection without internal provider state.
-    fn dispute(&self, id: EntityId) -> impl Future<Output = Result<DisputeView>> + Send;
+    fn dispute(&self, id: EntityId) -> impl Future<Output = Result<CoreDisputeView>> + Send;
     /// Read a deposit using the existing owner/system policy.
     fn bramp_deposit(
         &self,
@@ -60,7 +61,7 @@ impl ProviderApi for Provider {
     async fn nonce(&self, account: AccountId32) -> Result<AccountNonce> {
         Self::nonce(self, account).await
     }
-    async fn snapshot(&self) -> Result<CoreSnapshotV2> {
+    async fn snapshot(&self) -> Result<CoreSnapshotV3> {
         Self::snapshot(self).await
     }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
@@ -79,7 +80,7 @@ impl ProviderApi for Provider {
     async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestView>> {
         Self::skill_requests(self, origin).await
     }
-    async fn dispute(&self, id: EntityId) -> Result<DisputeView> {
+    async fn dispute(&self, id: EntityId) -> Result<CoreDisputeView> {
         Self::dispute(self, id).await
     }
     async fn bramp_deposit(&self, origin: AccountId32, id: EntityId) -> Result<DepositView> {

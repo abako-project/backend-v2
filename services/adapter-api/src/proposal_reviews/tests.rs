@@ -1,14 +1,17 @@
 use super::models::*;
-use generated_contracts::ProposalView;
+use generated_contracts::ProjectView;
 use serde_json::json;
 
 #[test]
 fn validates_keys_bounds_experience_and_unknown_fields() -> Result<(), Box<dyn std::error::Error>> {
     let doc: serde_json::Value =
         serde_json::from_str(include_str!("../../../../contracts/openapi.json"))?;
-    let proposal: ProposalView = serde_json::from_value(
-        doc["components"]["schemas"]["ProjectView"]["examples"][0]["proposals"][0].clone(),
-    )?;
+    let project: ProjectView =
+        serde_json::from_value(doc["components"]["schemas"]["ProjectView"]["examples"][0].clone())?;
+    let proposal = crate::tests::core_project(&project, crate::tests::info().provider_instance_id)?
+        .0
+        .proposals
+        .remove(0);
     let key = proposal.milestones[0].definition.key;
     let request_key = proposal.milestones[0].definition.requirements[0].key;
     let mut request: PutPresentation = serde_json::from_value(

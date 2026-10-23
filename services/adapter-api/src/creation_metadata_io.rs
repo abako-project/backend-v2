@@ -4,7 +4,7 @@ use crate::state::{App, Error, hash};
 use generated_contracts::{
     AccountId32, PayloadHash,
     provider_core::{
-        CoreSnapshotV2, CreationMetadataHeaderV1, CreationMetadataRecordV1, MetadataEntityV1,
+        CoreSnapshotV3, CreationMetadataHeaderV1, CreationMetadataRecordV1, MetadataEntityV1,
         MetadataReferenceV1,
     },
 };
@@ -27,7 +27,7 @@ pub(crate) async fn reconciled(app: &App) -> Result<(), Error> {
     }
     Ok(())
 }
-fn selected(snapshot: CoreSnapshotV2) -> Result<Selected, Error> {
+fn selected(snapshot: CoreSnapshotV3) -> Result<Selected, Error> {
     let mut selected = BTreeMap::new();
     for worker in snapshot.workers {
         let key = worker.content.hash();
@@ -63,7 +63,7 @@ fn selected(snapshot: CoreSnapshotV2) -> Result<Selected, Error> {
     }
     Ok(selected)
 }
-async fn next<T: DeserializeOwned + Send + 'static>(
+pub(crate) async fn next<T: DeserializeOwned + Send + 'static>(
     mut reader: BufReader<File>,
 ) -> Result<(BufReader<File>, Option<T>), Error> {
     tokio::task::spawn_blocking(move || {
@@ -83,7 +83,10 @@ async fn next<T: DeserializeOwned + Send + 'static>(
     })
     .await?
 }
-async fn write<T: Serialize + Send + 'static>(mut file: File, value: T) -> Result<File, Error> {
+pub(crate) async fn write<T: Serialize + Send + 'static>(
+    mut file: File,
+    value: T,
+) -> Result<File, Error> {
     tokio::task::spawn_blocking(move || {
         let bytes = serde_json::to_vec(&value)?;
         if u64::try_from(bytes.len()).map_err(|_| Error::Invalid)? + 1 > MAX_LINE {

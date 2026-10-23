@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Rehearse R2a rollback with frozen predecessor binaries and disposable fixtures.
+"""Rehearse the current V3→V2 proposal rollback with disposable services.
 
-Generate the case with tools/ink-sandbox/tests/core_metadata.rs and
-R2A_ROLLBACK_OUTPUT_DIR, then supply the retained 84ab1e4 binaries. This runs no
-wallet, accesses no application database and performs no live cutover.
+Generate a case with the real Sandbox proposal_metadata test and
+R2B_ROLLBACK_OUTPUT_DIR. Supply the current and frozen 38287da binaries.
+This performs no live cutover; PostgreSQL, custody/provider stores and secrets
+are disposable. Only owners' CLI/HTTP interfaces transfer service data.
 """
 import argparse
 from contextlib import ExitStack
@@ -12,7 +13,6 @@ import importlib.util
 import json
 import os
 from pathlib import Path
-import secrets
 import subprocess
 import tempfile
 
@@ -23,63 +23,120 @@ SPEC.loader.exec_module(POC)
 
 
 def load(path):
-    with path.open() as source:
-        return json.load(source)
+    return json.loads(path.read_bytes())
 
 
-def cli(binary, args, environment, marker):
+def cli(binary, args, environment):
     result = subprocess.run([str(binary), *map(str, args)],
                             env={**os.environ, **environment}, capture_output=True, timeout=120)
-    POC.require(marker not in result.stdout and marker not in result.stderr,
-                "predecessor CLI disclosed the disposable service token")
-    POC.require(result.returncode == 0, "predecessor CLI failed; rollback not verified")
+    for name, marker in POC.Client.secret_markers:
+        POC.require(marker not in result.stdout and marker not in result.stderr,
+                    "owner CLI disclosed " + name)
+    POC.require(result.returncode == 0, f"owner CLI failed: {binary.name} {args[0]}; rollback not verified")
 
 
-def run(case, binaries):
-    binary = binaries / "whole-provider"
+def proposal_rows(database_url):
+    result = subprocess.run(["psql", database_url, "-v", "ON_ERROR_STOP=1", "-At", "-c",
+                             "SELECT provider_instance_id||':'||encode(content_hash,'hex')||':'||payload "
+                             "FROM proposal_documents ORDER BY provider_instance_id,content_hash"],
+                            capture_output=True, timeout=30, check=True)
+    return result.stdout
+
+
+def run(case, binaries, predecessor):
     expected = load(case / "predecessor.json")
     calls, receipts, next_calls = (load(case / name) for name in ("calls.json", "receipts.json", "next.json"))
-    POC.require(expected["version"] == 1 and expected["checkpoint"]["engine_version"] == 1,
-                "expected an explicit predecessor cohort")
-    print("Predecessor whole-provider SHA-256:", hashlib.sha256(binary.read_bytes()).hexdigest(), flush=True)
+    POC.require(expected["version"] == 2 and expected["checkpoint"]["engine_version"] == 2,
+                "expected the explicit supported V2 predecessor")
+    for directory in (binaries, predecessor):
+        print("whole-provider SHA-256:", hashlib.sha256((directory / "whole-provider").read_bytes()).hexdigest(), flush=True)
     for authority in ("rust", "shadow", "sandbox"):
         with ExitStack() as resources:
-            directory = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="r2a-rollback-")))
-            token = secrets.token_urlsafe(40).encode()
-            token_file = directory / "service-token"
-            token_file.write_bytes(token)
-            token_file.chmod(0o600)
-            environment = {
-                "WHOLE_DATABASE_PATH": str(directory / "predecessor.sqlite"),
-                "PROVIDER_AUTHORITY": authority,
-                "MOCK_ROOT_ACCOUNT_FILE": str(case / "root-account.hex"),
-                "INTERNAL_SERVICE_TOKEN_FILE": str(token_file),
+            directory = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="proposal-rollback-")))
+            database_url = POC.temporary_postgres(resources, directory)
+            secret_dir = directory / "secrets"
+            subprocess.run([str(binaries / "wallet"), "init-dev-secrets", str(secret_dir)],
+                           check=True, stdout=subprocess.DEVNULL)
+            # The retained SDK fixture uses this public development identity.
+            # All other generated secrets remain random, private and disposable.
+            (secret_dir / "root-seed.hex").write_text("01" * 32)
+            POC.Client.secret_markers = tuple((name, (secret_dir / name).read_bytes().strip()) for name in
+                                            ("service-token", "master-key.hex", "root-seed.hex", "bootstrap-admin-password"))
+            common = {"INTERNAL_SERVICE_TOKEN_FILE": str(secret_dir / "service-token")}
+            provider_environment = {
+                **common, "WHOLE_DATABASE_PATH": str(directory / "current.sqlite"),
+                "PROVIDER_AUTHORITY": "sandbox", "MOCK_ROOT_ACCOUNT_FILE": str(case / "root-account.hex"),
             }
-            POC.Client.secret_markers = (("disposable service token", token),)
-            authorization = {"Authorization": "Bearer " + token.decode()}
-            cli(binary, ["import", case / "predecessor.json"], environment, token)
+            wallet_logs = []
+            wallet = POC.launch(resources, binaries / "wallet", POC.available_port(), {
+                **common, "CUSTODY_DATABASE_URL": f"sqlite://{directory}/custody.sqlite?mode=rwc",
+                "CUSTODY_MASTER_KEY_FILE": str(secret_dir / "master-key.hex"),
+                "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
+            }, wallet_logs)
+            adapter_environment = {
+                **common, "ADAPTER_DATABASE_URL": database_url, "CUSTODY_URL": wallet.base,
+                "ALLOWED_ORIGINS": ",".join(POC.ORIGINS), "COOKIE_SECURE": "false",
+                "BOOTSTRAP_ADMIN_USERNAME": "admin",
+                "BOOTSTRAP_ADMIN_PASSWORD_FILE": str(secret_dir / "bootstrap-admin-password"),
+                "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),
+            }
+            cli(binaries / "whole-provider", ["import", case / "core.json"], provider_environment)
+            with ExitStack() as current:
+                logs = []
+                provider = POC.launch(current, binaries / "whole-provider", POC.available_port(), provider_environment, logs)
+                current_adapter = {**adapter_environment, "MOCK_PROVIDER_URL": provider.base}
+                cli(binaries / "adapter-api", ["import-creation-metadata", case / "creation.ndjson"], current_adapter)
+                cli(binaries / "adapter-api", ["import-proposal-metadata", case / "metadata.ndjson"], current_adapter)
+                cli(binaries / "adapter-api", ["backfill-provider-content"], current_adapter)
+                exported = directory / "selected-proposals.ndjson"
+                cli(binaries / "adapter-api", ["export-proposal-metadata", exported], current_adapter)
+                metadata_before = proposal_rows(database_url)
+                POC.require(bool(metadata_before), "paired rehearsal imported no proposal content")
+                POC.scan_secret_logs(logs)
+            current_core, old_core = directory / "current.json", directory / "rollback.json"
+            cli(binaries / "whole-provider", ["export", current_core], provider_environment)
+            cli(binaries / "whole-provider", ["downgrade", current_core, exported, old_core], provider_environment)
+            POC.require(load(old_core) == expected, "owner conversion changed expected current V2 state")
+            provider_environment = {**provider_environment, "WHOLE_DATABASE_PATH": str(directory / "predecessor.sqlite"),
+                                    "PROVIDER_AUTHORITY": authority}
+            cli(predecessor / "whole-provider", ["import", old_core], provider_environment)
+            token = (secret_dir / "service-token").read_text().strip()
+            authorization = {"Authorization": "Bearer " + token}
             for phase in ("first", "reopened"):
                 with ExitStack() as serving:
                     logs = []
-                    client = POC.launch(serving, binary, POC.available_port(), environment, logs)
-                    snapshot = client.request("GET", "/internal/snapshot", headers=authorization)
+                    provider = POC.launch(serving, predecessor / "whole-provider", POC.available_port(), provider_environment, logs)
+                    adapter_env = {**adapter_environment, "MOCK_PROVIDER_URL": provider.base}
+                    cli(predecessor / "adapter-api", ["backfill-provider-content"], adapter_env)
+                    adapter = POC.launch(serving, predecessor / "adapter-api", POC.available_port(), adapter_env, logs)
+                    adapter.request("GET", "/api/platform")
+                    adapter.request("GET", "/api/catalog")
+                    POC.require(proposal_rows(database_url) == metadata_before,
+                                "predecessor startup altered API-owned proposal history")
+                    snapshot = provider.request("GET", "/internal/snapshot", headers=authorization)
                     saved = expected["checkpoint"]
-                    POC.require(snapshot["info"] == saved["info"], "rollback changed generation or root")
+                    POC.require(snapshot["schemaVersion"] == 2 and snapshot["info"] == saved["info"],
+                                "predecessor did not reopen the retained V2 generation")
                     for collection in ("workers", "projects"):
                         wanted = [value for _, value in sorted(saved[collection].items())]
                         POC.require(snapshot[collection] == wanted, "rollback changed current " + collection)
                     for call, receipt in zip(calls, receipts, strict=True):
-                        replay = client.request("POST", "/internal/contracts/call", call, headers=authorization)
-                        POC.require(replay == receipt, "compact receipt changed on predecessor replay")
+                        POC.require(provider.request("POST", "/internal/contracts/call", call, headers=authorization) == receipt,
+                                    "retained compact receipt changed on predecessor replay")
                     if phase == "reopened":
                         for call in next_calls:
-                            result = client.request("POST", "/internal/contracts/call", call, headers=authorization)
-                            POC.require(result["outcome"]["type"] == "Success", "ordinary predecessor work failed")
-                            POC.require(client.request("POST", "/internal/contracts/call", call, headers=authorization) == result,
-                                        "further work was not idempotent")
+                            result = provider.request("POST", "/internal/contracts/call", call, headers=authorization)
+                            POC.require(result["outcome"]["type"] == "Success", "further legacy provider work failed")
+                            POC.require(provider.request("POST", "/internal/contracts/call", call, headers=authorization) == result,
+                                        "further legacy work was not idempotent")
+                        adapter.authenticate("/api/auth/login", {"username": "admin", "password": (secret_dir / "bootstrap-admin-password").read_text().strip()})
+                        operation = adapter.command("POST", "/api/projects", {"title": "API after rollback", "description": "Current V2 cohort still works"})
+                        project = adapter.request("GET", "/api/projects/" + operation["receipt"]["createdEntityId"])
+                        POC.require(project["title"] == "API after rollback" and project["description"] == "Current V2 cohort still works",
+                                    "old API did not preserve further frontend creation")
                     POC.scan_secret_logs(logs)
                 output = directory / (phase + ".json")
-                cli(binary, ["export", output], environment, token)
+                cli(predecessor / "whole-provider", ["export", output], provider_environment)
                 observed = load(output)
                 if phase == "first":
                     POC.require(observed == expected, "replay/import changed complete predecessor state")
@@ -88,20 +145,33 @@ def run(case, binaries):
                     POC.require(after["balances"] == before["balances"] and after["minted_units"] == before["minted_units"],
                                 "further work changed funds")
                     POC.require(after["workers"] == before["workers"] and after["next_task_id"] == before["next_task_id"],
-                                "further work changed worker facts or task counters")
-                    POC.require(len(after["projects"]) == len(before["projects"]) + 1,
-                                "ordinary creation did not create exactly one Project")
-                    POC.require(len(after["receipts"]) == len(before["receipts"]) + len(next_calls)
-                                and len(after["events"]) == len(before["events"]) + len(next_calls),
-                                "further work changed receipt/event accounting")
+                                "further work changed workers or task counters")
+                    POC.require(len(after["projects"]) == len(before["projects"]) + 2, "further Project accounting changed")
+                    POC.require(len(after["receipts"]) == len(before["receipts"]) + len(next_calls) + 1
+                                and len(after["events"]) == len(before["events"]) + len(next_calls) + 1,
+                                "further receipt/event accounting changed")
                     for operation, receipt in before["receipts"].items():
-                        POC.require(after["receipts"][operation] == receipt, "retained call bytes or receipt changed")
-            print("PASS", authority, "current-state rollback: compact success, exact replay, restart and further legacy work", flush=True)
+                        POC.require(after["receipts"][operation] == receipt, "retained bytes or receipt changed")
+            # The direct legacy Project has no API preimage until owner recovery;
+            # the further REST Project already has its atomically staged record.
+            recovered = directory / "legacy-creation.ndjson"
+            cli(predecessor / "whole-provider", ["recover-creation-metadata", output, recovered], provider_environment)
+            with ExitStack() as recovery:
+                logs = []
+                provider = POC.launch(recovery, predecessor / "whole-provider", POC.available_port(), provider_environment, logs)
+                adapter_env = {**adapter_environment, "MOCK_PROVIDER_URL": provider.base}
+                cli(predecessor / "adapter-api", ["import-creation-metadata", recovered], adapter_env)
+                cli(predecessor / "adapter-api", ["backfill-provider-content"], adapter_env)
+                POC.scan_secret_logs(logs)
+            POC.scan_secret_logs(wallet_logs)
+            POC.require(proposal_rows(database_url) == metadata_before, "old API altered proposal documents")
+            print("PASS", authority, "current-state rollback: successful 51–53, funded approval, API/PostgreSQL restart, replay and further REST work", flush=True)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--case", required=True, type=Path)
+    parser.add_argument("--candidate-binaries", required=True, type=Path)
     parser.add_argument("--predecessor-binaries", required=True, type=Path)
-    arguments = parser.parse_args()
-    run(arguments.case.resolve(), arguments.predecessor_binaries.resolve())
+    args = parser.parse_args()
+    run(args.case.resolve(), args.candidate_binaries.resolve(), args.predecessor_binaries.resolve())

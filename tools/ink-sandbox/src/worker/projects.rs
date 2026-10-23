@@ -194,14 +194,18 @@ fn command_input(
             input("create_project_core", (content, seed))
         }
         ProviderCommand::SetCompensationPolicy(policy) => input("set_compensation_policy", policy),
-        ProviderCommand::CreateProposal { proposal, .. } => {
-            input("create_proposal", (proposal, seed))
-        }
-        ProviderCommand::UpdateProposal {
+        ProviderCommand::CreateProposalCore {
+            proposal, content, ..
+        } => input("create_proposal_core", (proposal, content, seed)),
+        ProviderCommand::UpdateProposalCore {
             proposal_id,
             proposal,
+            content,
             ..
-        } => input("update_proposal", (proposal_id, proposal, seed)),
+        } => input(
+            "update_proposal_core",
+            (proposal_id, proposal, content, seed),
+        ),
         ProviderCommand::DeleteProposal { proposal_id, .. } => {
             input("delete_proposal", proposal_id)
         }
@@ -213,11 +217,11 @@ fn command_input(
             request,
             ..
         } => input("set_proposal_delivery", (proposal_id, request)),
-        ProviderCommand::RequestProposalChanges {
+        ProviderCommand::RequestProposalChangesCore {
             proposal_id,
-            request,
+            content,
             ..
-        } => input("request_proposal_changes", (proposal_id, request)),
+        } => input("request_proposal_changes_core", (proposal_id, content)),
         ProviderCommand::WithdrawProposal {
             proposal_id,
             expected_revision,
@@ -290,7 +294,8 @@ pub(super) fn execute(
     let directory = &state.directory;
     let refs = &mut state.legacy_references;
     let call = pending.call();
-    let compact = mock_provider::creation::compact_creation(call);
+    let compact = mock_provider::creation::compact_creation(call)
+        .or_else(|| mock_provider::proposal::compact_proposal(call));
     let command = compact.as_ref().unwrap_or(&call.command);
     let data = command_input(command, pending.inputs().seed, event_cursor, refs)?;
     let mut invocation = Invocation {

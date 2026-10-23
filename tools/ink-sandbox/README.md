@@ -13,14 +13,14 @@ promotion and two observed release cycles remain open. Earlier milestone section
 below describe the retained compatibility tests; historical acceptance records
 live in `progress/handoffs/SPEC-0013*.md`.
 
-SPEC-0015 R2a now uses CoreArchiveV2 / engine version 2 and CoreSnapshotV2. Worker
-names and Project root text are API-owned preimages; native/WASM creation carries
-fixed references. Existing data needs an explicit paired transition, not an
-implicit startup conversion. See the [current ownership, migration and rollback
-guide](../../specs/0015-adapter-core-boundary/r2a-creation.md) before changing a
-retained cohort. Directory and Project are 189,484 and 163,316 bytes. The code,
-value and memory limits are unchanged. The paging helper remains for later
-R2b/R3 content moves and R4/R5 storage simplification.
+SPEC-0015 R2b1 uses CoreArchiveV3 / engine version 3 and CoreSnapshotV3. Worker
+names, Project root and proposal text, milestone titles and change explanations
+are API-owned; native/WASM state retains fixed references and actual numeric
+terms. Existing V2 data requires an explicit paired transition. See the
+[current ownership, migration and rollback guide](../../specs/0015-adapter-core-boundary/r2b-proposals.md).
+Directory and Project are 189,484 and 162,865 bytes. Code, value and memory limits
+are unchanged. Catalog/reason content remains R2b2, tasks R3 and removal of the
+paging helper R4/R5.
 
 ```sh
 bash scripts/verify.sh ink-sandbox
@@ -243,7 +243,7 @@ The candidate SQLite schema distinguishes raw, legacy Calendar and Directory sig
 Earlier proof/candidate SQLite files without the mode column reject startup;
 these were never application provider data. Runtime/lock identity changes also
 reject old candidate checkpoints. At this earlier milestone, app SQLite/JSON
-was unchanged; the current R2a cohort instead requires the explicit transition
+was unchanged; the current R2b1 cohort instead requires the explicit transition
 linked at the start of this guide.
 
 `NoRandomness` is still unused v5 host scaffolding, not matching entropy.
@@ -326,7 +326,7 @@ frontend flow or application storage format. See [M6 evidence](../../progress/ha
 ## Complete retained-state migration candidate (M7)
 
 `Worker::import_archive` creates a fresh candidate store from the private typed
-`CoreArchiveV2`. Its caller must first validate the archive with the native bridge,
+`CoreArchiveV3`. Its caller must first validate the archive with the native bridge,
 pause writes, drain pending operations and reconcile uncertain outcomes. There is
 no HTTP import endpoint. `Worker::reopen` requires an existing sealed store;
 imports reject populated destinations and never regenerate incompatible state.
@@ -346,7 +346,7 @@ namespace, applies each complete decoded record atomically, then clears its page
 An unfinished record blocks sealing. Derived worker skill indexes rebuild in fixed
 batches of at most 32 entries; sealing also requires every index complete. The
 native-authored capacity trace retains 512 skills added by later valid calls,
-large catalogs, calendars and proposal descriptions. R2a worker/Project root text
+large catalogs, calendars and proposal descriptions. R2b1 worker/Project root and proposal text
 now stays offchain; the immediate-predecessor corpus preserves the old stress
 inputs for explicit conversion tests. Paging removes
 the single-call import ceiling; finite WASM gas/memory and archive/checkpoint

@@ -5,7 +5,7 @@ use generated_contracts::provider_core::WorkerCore;
 use generated_contracts::*;
 use parity_scale_codec::DecodeAll;
 use provider_execution::migration::{
-    BrampArchive, CoreArchiveV2, CoreCheckpointV2, ReasonRecord, SkillMetadata,
+    BrampArchive, CoreArchiveV3, CoreCheckpointV3, ReasonRecord, SkillMetadata,
 };
 use std::collections::BTreeMap;
 const PAGE: usize = 8192;
@@ -186,7 +186,7 @@ pub(super) fn read(
     ext: &mut sp_io::TestExternalities,
     state: &State,
     sealed: bool,
-) -> Result<CoreArchiveV2, Error> {
+) -> Result<CoreArchiveV3, Error> {
     let mut reader = Storage::new(ext);
     let directory: Directory = reader.root(state, !sealed)?;
     if directory.root != state.shell.info.root_account
@@ -307,9 +307,9 @@ pub(super) fn read(
             return Err(Error::InvalidState);
         }
     }
-    let archive = CoreArchiveV2 {
-        version: 2,
-        checkpoint: CoreCheckpointV2 {
+    let archive = CoreArchiveV3 {
+        version: 3,
+        checkpoint: CoreCheckpointV3 {
             info: state.shell.info.clone(),
             roles,
             skills,
@@ -341,7 +341,7 @@ pub(super) fn read(
             },
             next_task_id: directory.next_task_id,
             minted_units: directory.bank.minted,
-            engine_version: 2,
+            engine_version: 3,
         },
     };
     if serde_json::to_vec(&archive)

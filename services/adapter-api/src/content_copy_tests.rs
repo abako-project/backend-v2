@@ -53,6 +53,9 @@ async fn provider_content_copies_preserve_large_values_scope_and_concurrent_vers
     original.proposals[0].description = "q".repeat(80_000);
     let mut newer = original.clone();
     newer.proposals[0].title = "Changed title".into();
+    newer.proposals[0].milestones[0].task_storage.tasks[0]
+        .task
+        .title = "Changed tracking task".into();
     let generation = info().provider_instance_id;
     let (old, new) = tokio::try_join!(
         crate::project_content::compose(

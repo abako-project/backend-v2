@@ -1,8 +1,9 @@
 use super::RustEngine;
 use crate::{Error, Result, require};
+use generated_contracts::provider_core::MilestoneCore;
 use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
-    CompletionSubmission, Dispute, EntityId, MilestoneStatus, MilestoneView, SubmissionReview,
+    CompletionSubmission, Dispute, EntityId, MilestoneStatus, SubmissionReview,
 };
 use std::collections::BTreeSet;
 
@@ -31,7 +32,7 @@ impl RustEngine {
 fn validate_milestone(
     state: &RustEngine,
     project: &ProjectCore,
-    milestone: &MilestoneView,
+    milestone: &MilestoneCore,
     identities: &mut BTreeSet<EntityId>,
 ) -> Result<()> {
     for (index, submission) in milestone.submissions.iter().enumerate() {

@@ -2,9 +2,9 @@
 
 | Owner | Authoritative data | Storage |
 |---|---|---|
-| mock-provider | Catalogues, worker qualifications/calendars, Project core facts, proposals, milestones/tasks, reservations, reputation, simulated Bramp holds and funds, nonces, receipts and events | Memory or its own SQLite database |
+| mock-provider | Catalogues, worker qualifications/calendars, Project core facts, numeric proposal terms, milestones/tasks, reservations, reputation, simulated Bramp holds and funds, nonces, receipts and events | Memory or its own SQLite database |
 | wallet | Principal/wallet binding, encrypted seeds, signing jobs, lifecycle and audit | Custody SQLite |
-| adapter-api | Credentials, sessions, descriptive profiles, immutable worker directory names and Project root text, queued operations, event ingestion cursors, recipient notifications and read state | Adapter PostgreSQL |
+| adapter-api | Credentials, sessions, descriptive profiles, immutable worker directory names, Project root text and proposal documents, queued operations, event ingestion cursors, recipient notifications and read state | Adapter PostgreSQL |
 | Leptos | Browser presentation state | No authoritative business database |
 
 Services access each other's HTTP interfaces, not databases. Identifiers link records across boundaries without cross-service foreign keys. Browser DTOs are defined in generated-contracts; service storage models remain private.
@@ -27,18 +27,22 @@ volume or Compose project name as described in [deployment](../../infra/README.m
 No development SQLite-to-PostgreSQL backfill is supplied. Retention,
 personal-data deletion and production backup schedules are not implemented policies.
 
-SPEC-0015 R2a makes the API authoritative for immutable worker directory names
-and Project root title/description. Queued compact commands and their exact
-preimages commit together in PostgreSQL. Core V2 snapshots/archives contain
-context-bound references; public views verify and resolve them after visibility
-checks. Authorization and financial operations use raw core facts. Proposal/task
-content still uses R1 verified child copies until its later ownership cutover;
-old copy rows are retained, without a name/text fallback or permanent second
-writer. `adapter-api backfill-provider-content` verifies the selected views
-through provider HTTP without signing or submitting work.
+SPEC-0015 R2a/R2b1 makes the API authoritative for immutable worker directory
+names, Project root title/description, proposal titles/descriptions, milestone
+titles and change-request explanations. Compact commands and exact preimages
+commit together in PostgreSQL. Core V3 snapshots/archives contain context-bound
+references plus actual numeric terms, captured compensation policy and revision.
+Public views verify selected content after visibility checks and use allocated
+core amounts. Authorization and financial operations use raw core facts.
 
-Migration and rollback require the matching core state **and** API-owned content,
-not a provider checkpoint alone. The [R2a operator procedure](../../specs/0015-adapter-core-boundary/r2a-creation.md)
-documents the explicit predecessor transition, queue reconciliation, protected
-metadata exchange and recovery of successful direct legacy calls.
-See [the milestone evidence](../../progress/handoffs/SPEC-0015.md).
+R1 child copies now contain tasks only, pending R3. Historical rows and immutable
+review-comment snapshots are retained; there is no text fallback or second writer.
+`adapter-api backfill-provider-content` verifies selected views through provider
+HTTP without signing or submitting work. Catalog names/moderation and cancellation
+or planning-dispute reasons remain R2b2; the paging helper remains until R4/R5.
+
+Migration and rollback require matching current core state **and** API-owned
+content. The [R2b1 operator procedure](../../specs/0015-adapter-core-boundary/r2b-proposals.md)
+documents the explicit V2↔V3 transition, queue reconciliation, protected metadata
+exchange and recovery of successful direct legacy calls. R2a creation references
+survive that transition unchanged. See [milestone evidence](../../progress/handoffs/SPEC-0015.md).

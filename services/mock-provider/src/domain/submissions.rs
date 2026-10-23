@@ -1,9 +1,10 @@
+use generated_contracts::provider_core::MilestoneCore;
 use generated_contracts::provider_core::ProjectCore;
 use std::collections::BTreeSet;
 
 use generated_contracts::{
     AccountId32, CompletionSubmission, EntityId, EvidenceRecordReferenceV1, MilestoneStatus,
-    MilestoneView, SubmissionReview, UnixSeconds, WorkerRating,
+    SubmissionReview, UnixSeconds, WorkerRating,
 };
 
 use super::project::milestone_mut;
@@ -55,7 +56,7 @@ pub(super) fn submit(
 }
 
 pub(super) fn pending(
-    milestone: &mut MilestoneView,
+    milestone: &mut MilestoneCore,
     submission_id: EntityId,
 ) -> Result<&mut CompletionSubmission> {
     let submission = milestone

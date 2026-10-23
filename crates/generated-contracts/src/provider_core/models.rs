@@ -54,11 +54,18 @@ core_dto!(/// Project business facts. Proposal/task children move in subsequent 
 ProjectCore {
     project_id: EntityId, created_at: Option<UnixSeconds>, client: AccountId32,
     coordinator: AccountId32, content: MetadataReferenceV1, planning: PlanningView,
+    proposals: Vec<super::ProposalCore>, execution_escrow: Money, cancelled: bool,
+    completed: bool, evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId>
+});
+core_dto!(/// Retained V2 predecessor fields; data exchange only, never a second engine.
+ProjectCoreV2 {
+    project_id: EntityId, created_at: Option<UnixSeconds>, client: AccountId32,
+    coordinator: AccountId32, content: MetadataReferenceV1, planning: PlanningView,
     proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool,
     completed: bool, evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId>
 });
 core_dto!(/// Private generation snapshot; the adapter assembles public views.
-CoreSnapshotV2 {
+CoreSnapshotV3 {
     schema_version: u16, info: ProviderInfo, catalog: CatalogView,
     workers: Vec<WorkerCore>, projects: Vec<ProjectCore>, balances: Vec<BalanceView>
 });
@@ -83,7 +90,12 @@ impl ProjectCore {
     /// Assemble only with verified root content; current proposal/task children
     /// come from this core record, never from a stale content-copy snapshot.
     #[must_use]
-    pub fn into_view(self, title: String, description: String) -> ProjectView {
+    pub fn into_view(
+        self,
+        title: String,
+        description: String,
+        proposals: Vec<ProposalView>,
+    ) -> ProjectView {
         ProjectView {
             project_id: self.project_id,
             created_at: self.created_at,
@@ -92,7 +104,7 @@ impl ProjectCore {
             title,
             description,
             planning: self.planning,
-            proposals: self.proposals,
+            proposals,
             execution_escrow: self.execution_escrow,
             cancelled: self.cancelled,
             completed: self.completed,

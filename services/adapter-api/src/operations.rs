@@ -234,6 +234,7 @@ pub(crate) async fn enqueue(
     };
     let generation = if crate::evidence::needs_commitment(&command)
         || crate::creation_metadata::needs_record(&command)
+        || crate::proposal_metadata::needs_record(&command)
     {
         Some(app.snapshot().await?.info.provider_instance_id)
     } else {
@@ -262,6 +263,9 @@ pub(crate) async fn enqueue(
     let command = if let Some(generation) = generation {
         let command =
             crate::creation_metadata::capture(&mut tx, generation, account, operation_id, command)
+                .await?;
+        let command =
+            crate::proposal_metadata::capture(&mut tx, generation, account, operation_id, command)
                 .await?;
         crate::evidence::prepare(&mut tx, session, generation, operation_id, command).await?
     } else {

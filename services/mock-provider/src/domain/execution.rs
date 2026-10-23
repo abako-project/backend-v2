@@ -69,23 +69,11 @@ impl State {
         }
     }
     fn execute_prepared(mut self, pending: PreparedExecution) -> Result<(Self, OperationReceipt)> {
-        // The supported predecessor must replay these exact future bytes, but
-        // fresh execution waits for the paired API/core ownership transition.
-        if matches!(
-            pending.call().command,
-            generated_contracts::ProviderCommand::CreateProposalCore { .. }
-                | generated_contracts::ProviderCommand::UpdateProposalCore { .. }
-                | generated_contracts::ProviderCommand::RequestProposalChangesCore { .. }
-        ) {
-            return Err(Error {
-                code: "metadata_cutover_required",
-                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            });
-        }
         let mut tentative = self.engine.clone();
         tentative.context.reset(pending.inputs());
         let call = pending.call();
-        let compact = crate::creation::compact_creation(call);
+        let compact = crate::creation::compact_creation(call)
+            .or_else(|| crate::proposal::compact_proposal(call));
         let command = compact.as_ref().unwrap_or(&call.command);
         let transition = tentative.apply_core(call.origin, command, pending.inputs().now);
         let transition = match transition {
@@ -124,8 +112,93 @@ impl State {
                 project.project_id,
                 false,
             )?;
+            for proposal in &project.proposals {
+                self.validate_proposal_ref(project, proposal, &proposal.content, false)?;
+                if let Some(reference) = &proposal.change_request {
+                    self.validate_proposal_ref(project, proposal, reference, true)?;
+                }
+            }
         }
         Ok(())
+    }
+    fn validate_proposal_ref(
+        &self,
+        project: &generated_contracts::provider_core::ProjectCore,
+        proposal: &generated_contracts::provider_core::ProposalCore,
+        reference: &generated_contracts::provider_core::ProposalContentReferenceV1,
+        change: bool,
+    ) -> Result<()> {
+        use generated_contracts::{
+            ExecutionOutcome, ProviderCommand, UnsignedContractCallV1,
+            provider_core::ProposalContentReferenceV1,
+        };
+        let ProposalContentReferenceV1::Signed(expected) = reference else {
+            return Ok(());
+        };
+        let accepted = self
+            .shell
+            .receipts
+            .get(&expected.operation_id)
+            .ok_or_else(|| Error::domain("invalid_proposal_metadata_state"))?;
+        crate::require(
+            accepted.receipt.outcome == ExecutionOutcome::Success
+                && accepted.receipt.origin
+                    == if change {
+                        project.client
+                    } else {
+                        project.coordinator
+                    }
+                && accepted.receipt.created_entity_id == Some(proposal.proposal_id),
+            "invalid_proposal_metadata_state",
+        )?;
+        let call = UnsignedContractCallV1::decode_signable(&accepted.bytes)?;
+        crate::require(
+            call.command.project_id() == Some(project.project_id),
+            "invalid_proposal_metadata_state",
+        )?;
+        let lowered = crate::proposal::compact_proposal(&call);
+        match lowered.as_ref().unwrap_or(&call.command) {
+            ProviderCommand::CreateProposalCore {
+                content,
+                proposal: terms,
+                ..
+            } if !change => Self::validate_quoted_proposal(proposal, expected, content, terms),
+            ProviderCommand::UpdateProposalCore {
+                proposal_id,
+                content,
+                proposal: terms,
+                ..
+            } if !change && *proposal_id == proposal.proposal_id => {
+                Self::validate_quoted_proposal(proposal, expected, content, terms)
+            }
+            ProviderCommand::RequestProposalChangesCore {
+                proposal_id,
+                content,
+                ..
+            } if change && *proposal_id == proposal.proposal_id => {
+                crate::require(content == expected, "invalid_proposal_metadata_state")
+            }
+            _ => Err(Error::domain("invalid_proposal_metadata_state")),
+        }
+    }
+    fn validate_quoted_proposal(
+        proposal: &generated_contracts::provider_core::ProposalCore,
+        expected: &generated_contracts::provider_core::MetadataCommitmentV1,
+        actual: &generated_contracts::provider_core::MetadataCommitmentV1,
+        terms: &generated_contracts::provider_core::ProposalTerms,
+    ) -> Result<()> {
+        let mut allocated = terms.clone();
+        let policy = proposal
+            .compensation_policy
+            .as_ref()
+            .ok_or_else(|| Error::domain("invalid_proposal_metadata_state"))?;
+        for milestone in &mut allocated.milestones {
+            milestone.allocate_budget(policy)?;
+        }
+        crate::require(
+            actual == expected && allocated == proposal.terms(),
+            "invalid_proposal_metadata_state",
+        )
     }
     fn validate_creation_ref(
         &self,

@@ -1,4 +1,4 @@
-use generated_contracts::provider_core::{CoreSnapshotV2, ProjectCore, WorkerCore};
+use generated_contracts::provider_core::{CoreSnapshotV3, ProjectCore, WorkerCore};
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
@@ -30,12 +30,12 @@ mod validation;
 
 use provider_execution::Effect;
 
-use provider_execution::migration::{CoreArchiveV2, ReasonRecord as RecordedReason};
+use provider_execution::migration::{CoreArchiveV3, ReasonRecord as RecordedReason};
 
 /// Private aggregate: only authenticated calls can obtain a transition and only
 /// storage can commit it. HTTP snapshots are copies, never mutable handles.
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(from = "checkpoint::CoreCheckpointV2")]
+#[serde(from = "checkpoint::CoreCheckpointV3")]
 pub(crate) struct State {
     #[serde(flatten)]
     shell: execution::Shell,
@@ -102,7 +102,10 @@ impl State {
     ) -> Result<generated_contracts::WithdrawalView> {
         self.engine.bramp_withdrawal(origin, id)
     }
-    pub(crate) fn dispute_view(&self, id: EntityId) -> Result<generated_contracts::DisputeView> {
+    pub(crate) fn dispute_view(
+        &self,
+        id: EntityId,
+    ) -> Result<generated_contracts::provider_core::CoreDisputeView> {
         self.engine.dispute_view(id)
     }
     pub(crate) fn info(&self) -> ProviderInfo {
@@ -120,9 +123,9 @@ impl State {
             .get(&operation)
             .map(|record| record.receipt.clone())
     }
-    pub(crate) fn snapshot(&self) -> CoreSnapshotV2 {
-        CoreSnapshotV2 {
-            schema_version: 2,
+    pub(crate) fn snapshot(&self) -> CoreSnapshotV3 {
+        CoreSnapshotV3 {
+            schema_version: 3,
             info: self.info(),
             catalog: CatalogView {
                 roles: self.engine.roles.values().cloned().collect(),
@@ -177,16 +180,16 @@ impl State {
         state.validate_restored(root_account)
     }
 
-    pub(crate) fn archive(&self) -> Result<CoreArchiveV2> {
+    pub(crate) fn archive(&self) -> Result<CoreArchiveV3> {
         self.engine.validate_task_keys()?;
-        Ok(CoreArchiveV2 {
-            version: 2,
+        Ok(CoreArchiveV3 {
+            version: 3,
             checkpoint: serde_json::from_slice(&self.encode()?).map_err(|_| Error::internal())?,
         })
     }
 
-    pub(crate) fn from_archive(archive: CoreArchiveV2, root_account: AccountId32) -> Result<Self> {
-        require(archive.version == 2, "state_configuration_mismatch")?;
+    pub(crate) fn from_archive(archive: CoreArchiveV3, root_account: AccountId32) -> Result<Self> {
+        require(archive.version == 3, "state_configuration_mismatch")?;
         let state = Self::from(archive.checkpoint).validate_restored(root_account)?;
         state.engine.validate_task_keys()?;
         Ok(state)
@@ -332,5 +335,5 @@ impl RustEngine {
 }
 
 const fn rust_engine_version() -> u32 {
-    2
+    3
 }

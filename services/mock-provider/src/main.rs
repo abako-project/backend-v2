@@ -77,7 +77,7 @@ async fn import_native(
         if bytes.len() > 67_108_864 {
             return Err(std::io::Error::other("archive exceeds limit"));
         }
-        let archive: provider_execution::migration::CoreArchiveV2 = serde_json::from_slice(&bytes)
+        let archive: provider_execution::migration::CoreArchiveV3 = serde_json::from_slice(&bytes)
             .map_err(|_| std::io::Error::other("invalid core archive"))?;
         let mut options = fs::OpenOptions::new();
         options.write(true).create_new(true);

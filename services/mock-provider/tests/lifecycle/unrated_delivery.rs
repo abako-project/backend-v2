@@ -1,5 +1,5 @@
 use super::*;
-use generated_contracts::provider_core::CoreSnapshotV2;
+use generated_contracts::provider_core::CoreSnapshotV3;
 
 pub(super) async fn unrated_delivery(provider: Provider) -> TestResult {
     let (_, coordinator, worker, client) = setup(&provider).await?;
@@ -96,7 +96,7 @@ pub(super) async fn unrated_delivery(provider: Provider) -> TestResult {
 async fn final_evaluations(
     provider: &Provider,
     id: EntityId,
-    milestone: &MilestoneView,
+    milestone: &generated_contracts::provider_core::MilestoneCore,
     client: &Keypair,
     coordinator: &Keypair,
     worker: &Keypair,
@@ -161,10 +161,10 @@ async fn final_evaluations(
 async fn verify_final_evaluations(
     provider: &Provider,
     id: EntityId,
-    milestone: &MilestoneView,
+    milestone: &generated_contracts::provider_core::MilestoneCore,
     coordinator: &Keypair,
     worker: &Keypair,
-    before: &CoreSnapshotV2,
+    before: &CoreSnapshotV3,
 ) -> TestResult {
     use generated_contracts::{AccountRating, EvaluateProjectRequest};
     let vote = |ratings| ProviderCommand::EvaluateProject {

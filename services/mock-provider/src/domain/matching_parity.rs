@@ -121,9 +121,11 @@ fn transition(engine: &mut RustEngine, action: &Action) -> crate::Result<Value> 
             let mut earlier = BTreeSet::new();
             let mut result = Vec::new();
             for (id, definition) in milestones {
-                let mut milestone = MilestoneView {
+                let mut milestone = generated_contracts::provider_core::MilestoneCore {
                     milestone_id: *id,
-                    definition: definition.clone(),
+                    definition: generated_contracts::provider_core::MilestoneTerms::from(
+                        definition,
+                    ),
                     status: None,
                     assignments: vec![],
                     worker_ratings: vec![],

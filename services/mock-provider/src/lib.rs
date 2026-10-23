@@ -6,6 +6,7 @@ pub mod creation;
 mod domain;
 mod http;
 pub mod migration;
+pub mod proposal;
 mod provider_api;
 mod reference;
 mod seed;

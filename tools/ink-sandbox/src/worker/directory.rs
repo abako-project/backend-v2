@@ -44,7 +44,7 @@ pub type FinancialProjection = (
     MoneyProjection,
     Vec<(
         generated_contracts::Dispute,
-        generated_contracts::MilestoneView,
+        generated_contracts::provider_core::MilestoneCore,
     )>,
 );
 pub type MoneyProjection = (
@@ -514,7 +514,7 @@ pub(super) struct Applied {
     pub(super) state: State,
     pub(super) receipt: OperationReceipt,
     pub(super) outcome: Outcome,
-    pub(super) archive: Option<provider_execution::migration::CoreArchiveV2>,
+    pub(super) archive: Option<provider_execution::migration::CoreArchiveV3>,
 }
 pub(super) enum Evaluation {
     Replay(OperationReceipt),
@@ -543,14 +543,6 @@ pub(super) fn evaluate(
         }
         Admission::Execute(pending) => *pending,
     };
-    if matches!(
-        pending.call().command,
-        ProviderCommand::CreateProposalCore { .. }
-            | ProviderCommand::UpdateProposalCore { .. }
-            | ProviderCommand::RequestProposalChangesCore { .. }
-    ) {
-        return Err(Error::Invariant("metadata_cutover_required"));
-    }
     if (money_command(&pending.call().command)
         || super::projects::requires_money(&pending.call().command))
         && !matches!(mode, Mode::Directory { money: true, .. })

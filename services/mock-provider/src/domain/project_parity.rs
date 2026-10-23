@@ -127,7 +127,10 @@ impl Fixture {
             .get(&id)
             .ok_or_else(|| "project".into())
     }
-    fn proposal(&self, id: EntityId) -> TestResult<&ProposalView> {
+    fn proposal(
+        &self,
+        id: EntityId,
+    ) -> TestResult<&generated_contracts::provider_core::ProposalCore> {
         self.project(id)?
             .proposals
             .first()

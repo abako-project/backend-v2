@@ -16,16 +16,12 @@ struct Content {
 struct Proposal {
     id: EntityId,
     revision: u64,
-    title: String,
-    description: String,
-    change_request: Option<String>,
     milestones: Vec<Milestone>,
 }
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Milestone {
     id: EntityId,
-    title: String,
     task_storage: TaskStorageView,
 }
 impl Content {
@@ -37,15 +33,11 @@ impl Content {
                 .map(|p| Proposal {
                     id: p.proposal_id,
                     revision: p.revision,
-                    title: p.title.clone(),
-                    description: p.description.clone(),
-                    change_request: p.change_request.clone(),
                     milestones: p
                         .milestones
                         .iter()
                         .map(|m| Milestone {
                             id: m.milestone_id,
-                            title: m.definition.title.clone(),
                             task_storage: m.task_storage.clone(),
                         })
                         .collect(),
@@ -56,11 +48,7 @@ impl Content {
     /// Called only after exact equality against the provider-selected source.
     fn apply(self, project: &mut ProjectCore) {
         for (source, target) in self.proposals.into_iter().zip(&mut project.proposals) {
-            target.title = source.title;
-            target.description = source.description;
-            target.change_request = source.change_request;
             for (source, target) in source.milestones.into_iter().zip(&mut target.milestones) {
-                target.definition.title = source.title;
                 target.task_storage = source.task_storage;
             }
         }
@@ -81,7 +69,7 @@ pub(crate) async fn children(
         let payload = serde_json::to_string(&expected)?;
         let fingerprint = hash(
             &[
-                b"abako/project-children-copy/v2\0".as_slice(),
+                b"abako/project-task-copy/v3\0".as_slice(),
                 generation.as_bytes(),
                 project.project_id.as_bytes(),
                 payload.as_bytes(),
@@ -115,7 +103,7 @@ pub(crate) async fn compose(
     generation: ProviderInstanceId,
     project: ProjectCore,
 ) -> Result<ProjectView, Error> {
-    let project = children(app, generation, project).await?;
+    let mut project = children(app, generation, project).await?;
     let (title, description) = crate::creation_metadata::project_text(
         app,
         generation,
@@ -124,5 +112,19 @@ pub(crate) async fn compose(
         &project.content,
     )
     .await?;
-    Ok(project.into_view(title, description))
+    let mut proposals = Vec::with_capacity(project.proposals.len());
+    for proposal in std::mem::take(&mut project.proposals) {
+        proposals.push(
+            crate::proposal_metadata::compose(
+                app,
+                generation,
+                project.project_id,
+                project.coordinator,
+                project.client,
+                proposal,
+            )
+            .await?,
+        );
+    }
+    Ok(project.into_view(title, description, proposals))
 }

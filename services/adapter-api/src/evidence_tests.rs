@@ -54,7 +54,7 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
                 if case.dispute.dispute_id.to_string() != id {
                     return Err(Error::NotFound);
                 }
-                Ok::<_, Error>(Json(case))
+                Ok::<_, Error>(Json(core_case(case)?))
             }
         }),
     );

@@ -329,6 +329,7 @@ async fn creation_metadata_exchange_preserves_exact_views_and_is_idempotent() ->
     let mut worker = content_copies::source_worker()?;
     worker.display_name = format!("\0{}", "名".repeat(60_000));
     let project_core = stage_project(&source, generation, project.clone()).await?;
+    stage_proposal_documents(&target, generation, &project).await?;
     let worker_core = stage_worker(&source, generation, worker.clone()).await?;
     fake.lock().await.snapshot.projects = vec![project_core.clone()];
     fake.lock().await.snapshot.workers = vec![worker_core.clone()];
@@ -480,6 +481,7 @@ async fn creation_metadata_failure_affects_presentation_without_blocking_authori
     let ProviderCommand::CreateProjectCore(commitment) = serde_json::from_str(&queued)? else {
         return Err("compact creation missing".into());
     };
+    stage_proposal_documents(&app, generation, &project).await?;
     let mut core = core_project(&project, generation)?.0;
     core.content = generated_contracts::provider_core::MetadataReferenceV1::Creation(commitment);
     let server = Server::start(crate::http::router(app.clone())).await?;
@@ -630,6 +632,7 @@ async fn creation_metadata_recovery_import_requires_all_other_selected_content_t
     )
     .ok_or("creation record")?;
     let hash = PayloadHash::from_bytes(hash(&record.hash_input()));
+    stage_proposal_documents(&app, generation, &b).await?;
     let mut b_core = core_project(&b, generation)?.0;
     b_core.content = MetadataReferenceV1::Creation(MetadataCommitmentV1 { operation_id, hash });
     fake.lock().await.snapshot.projects = vec![a_core.clone(), b_core.clone()];

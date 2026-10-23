@@ -1,7 +1,7 @@
 //! Complete private archive bridge. No historical business operation is replayed.
 use super::{directory::*, *};
 use generated_contracts::*;
-use provider_execution::migration::{CoreArchiveV2, ReasonRecord};
+use provider_execution::migration::{CoreArchiveV3, ReasonRecord};
 use std::collections::BTreeSet;
 
 /// Fixed deployment settings; mutable catalogs and archive contents are not identity.
@@ -166,13 +166,13 @@ fn upload_record(
 }
 pub(super) fn initialize(
     bundles: &Bundles,
-    archive: CoreArchiveV2,
+    archive: CoreArchiveV3,
     configuration: WholeConfiguration,
 ) -> Result<(sp_io::TestExternalities, Vec<u8>), Error> {
     configuration.validate()?;
     let saved = &archive.checkpoint;
-    if archive.version != 2
-        || saved.engine_version != 2
+    if archive.version != 3
+        || saved.engine_version != 3
         || saved.info.root_account != configuration.root
         || saved.info.provider_instance_id != configuration.generation
     {
@@ -404,14 +404,14 @@ pub(super) fn read_archive(
     _bundles: &Bundles,
     state: &State,
     sealed: bool,
-) -> Result<CoreArchiveV2, Error> {
+) -> Result<CoreArchiveV3, Error> {
     super::archive::read(ext, state, sealed)
 }
 pub(super) async fn export(
     pool: &SqlitePool,
     bundles: &Bundles,
     mode: Mode,
-) -> Result<CoreArchiveV2, Error> {
+) -> Result<CoreArchiveV3, Error> {
     if !matches!(mode, Mode::Directory { whole: true, .. }) {
         return Err(Error::IncompleteCoverage);
     }

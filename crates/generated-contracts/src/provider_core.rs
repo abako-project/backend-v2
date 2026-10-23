@@ -30,3 +30,6 @@ pub struct RegisterWorkerCoreRequest {
     /// Capacity and override facts still enforced by the core.
     pub calendar: CalendarDefinition,
 }
+
+mod proposal_metadata;
+pub use proposal_metadata::*;

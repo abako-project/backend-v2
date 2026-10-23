@@ -1,4 +1,5 @@
-use generated_contracts::provider_core::CoreSnapshotV2;
+use generated_contracts::provider_core::CoreDisputeView;
+use generated_contracts::provider_core::CoreSnapshotV3;
 use std::sync::Arc;
 
 use generated_contracts::{
@@ -49,10 +50,7 @@ impl Provider {
     }
 
     /// Explicit public case projection, without internal state or receipts.
-    pub async fn dispute(
-        &self,
-        id: generated_contracts::EntityId,
-    ) -> Result<generated_contracts::DisputeView> {
+    pub async fn dispute(&self, id: generated_contracts::EntityId) -> Result<CoreDisputeView> {
         self.read().await?.dispute_view(id)
     }
     /// New disposable memory generation; recreating it invalidates old signatures.
@@ -80,7 +78,7 @@ impl Provider {
     pub async fn sqlite_from_archive(
         url: &str,
         root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV2,
+        archive: provider_execution::migration::CoreArchiveV3,
     ) -> Result<Self> {
         Self::open_sqlite(url, root, Some(archive)).await
     }
@@ -89,7 +87,7 @@ impl Provider {
     async fn open_sqlite(
         url: &str,
         root: AccountId32,
-        archive: Option<provider_execution::migration::CoreArchiveV2>,
+        archive: Option<provider_execution::migration::CoreArchiveV3>,
     ) -> Result<Self> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::{str::FromStr, time::Duration};
@@ -167,7 +165,7 @@ impl Provider {
 
     /// Complete private archive for a paused migration; no HTTP route exposes it.
     /// The caller must drain writes before taking the cutover archive.
-    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV2> {
+    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV3> {
         let state = self.read().await?;
         tokio::task::spawn_blocking(move || state.archive())
             .await
@@ -179,7 +177,7 @@ impl Provider {
     #[cfg(feature = "storage-memory")]
     pub async fn memory_from_archive(
         root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV2,
+        archive: provider_execution::migration::CoreArchiveV3,
     ) -> Result<Self> {
         let state = tokio::task::spawn_blocking(move || State::from_archive(archive, root))
             .await
@@ -277,7 +275,7 @@ impl Provider {
         Ok(self.read().await?.nonce(account))
     }
     /// Read-only internal snapshot; the adapter must filter private project data.
-    pub async fn snapshot(&self) -> Result<CoreSnapshotV2> {
+    pub async fn snapshot(&self) -> Result<CoreSnapshotV3> {
         Ok(self.read().await?.snapshot())
     }
     /// A recorded result proves finality independently of its business outcome.

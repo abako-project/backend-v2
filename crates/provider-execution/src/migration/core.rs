@@ -1,10 +1,10 @@
-//! Current archive format. V1 remains only the explicit predecessor exchange.
+//! Immediate predecessor exchange for the proposal ownership transition.
 use super::{BrampArchive, ReasonRecord, SkillMetadata};
 use crate::{RecordedCall, Shell};
 use generated_contracts::{
     AccountId32, CatalogEntry, CompensationPolicy, Dispute, DomainEvent, EntityId, Money,
     OperationId, ProviderInfo, ScorePolicy, SkillRequestView,
-    provider_core::{ProjectCore, WorkerCore},
+    provider_core::{ProjectCoreV2, WorkerCore},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -39,7 +39,7 @@ pub struct CoreCheckpointV2 {
     /// All workers, calendars, reservations and exact score accumulators.
     pub workers: BTreeMap<AccountId32, WorkerCore>,
     /// All Projects and their retained nested histories.
-    pub projects: BTreeMap<EntityId, ProjectCore>,
+    pub projects: BTreeMap<EntityId, ProjectCoreV2>,
     /// Visible free asset balances, including retained zero entries.
     pub balances: BTreeMap<AccountId32, Money>,
     /// Next signed operation nonce per origin.

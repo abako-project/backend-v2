@@ -1,8 +1,9 @@
+use generated_contracts::provider_core::CoreDisputeView;
 use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
-    AccountId32, Dispute, DisputeResponse, DisputeStatus, DisputeView, EntityId,
-    EvidenceRecordReferenceV1, MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest,
-    SubmissionReview, UnixSeconds,
+    AccountId32, Dispute, DisputeResponse, DisputeStatus, EntityId, EvidenceRecordReferenceV1,
+    MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest, SubmissionReview,
+    UnixSeconds,
 };
 
 use super::{RustEngine, project::milestone_mut};
@@ -174,7 +175,7 @@ impl RustEngine {
         Ok(())
     }
 
-    pub(crate) fn dispute_view(&self, id: EntityId) -> Result<DisputeView> {
+    pub(crate) fn dispute_view(&self, id: EntityId) -> Result<CoreDisputeView> {
         let dispute = self
             .disputes
             .get(&id)
@@ -189,7 +190,7 @@ impl RustEngine {
                     .find(|m| m.milestone_id == dispute.milestone_id)
             })
             .ok_or_else(Error::internal)?;
-        Ok(DisputeView {
+        Ok(CoreDisputeView {
             dispute: dispute.clone(),
             milestone: milestone.clone(),
         })

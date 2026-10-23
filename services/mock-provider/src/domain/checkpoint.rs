@@ -2,10 +2,10 @@
 //! Keep typed JSON decoding here: serde flatten buffers map keys as strings and
 //! cannot decode the existing integer-keyed catalogs through that buffer.
 use super::{RustEngine, State, execution};
-pub(super) use provider_execution::migration::CoreCheckpointV2;
+pub(super) use provider_execution::migration::CoreCheckpointV3;
 use std::collections::BTreeMap;
-impl From<CoreCheckpointV2> for State {
-    fn from(saved: CoreCheckpointV2) -> Self {
+impl From<CoreCheckpointV3> for State {
+    fn from(saved: CoreCheckpointV3) -> Self {
         let root = saved.info.root_account;
         Self {
             shell: execution::Shell {
