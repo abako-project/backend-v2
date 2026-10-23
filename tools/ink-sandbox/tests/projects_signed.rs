@@ -363,8 +363,10 @@ fn direct_permissions_and_query_isolation_preserve_project_registry_and_global_i
                         EntityId::from_bytes([42; 16]),
                         account(4),
                         account(2),
-                        "Forged".to_string(),
-                        "".to_string(),
+                        generated_contracts::provider_core::MetadataCommitmentV1 {
+                            operation_id: OperationId::from_bytes([42; 16]),
+                            hash: PayloadHash::from_bytes([42; 32]),
+                        },
                         100u64,
                     ),
                 ),
