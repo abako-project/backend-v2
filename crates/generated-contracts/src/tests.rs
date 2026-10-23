@@ -458,3 +458,69 @@ fn proposal_bridge_preserves_indexes_numeric_validation_and_operation_binding()
     assert!(ProposalTerms { milestones: vec![] }.validate().is_err());
     Ok(())
 }
+
+#[test]
+fn catalog_reason_bridge_preserves_indexes_validation_and_operation_binding()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::MetadataCommitmentV1;
+    let mut call = sample_call()?;
+    let project_id = EntityId::from_bytes([1; 16]);
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([3; 32]),
+    };
+    let commands = [
+        ProviderCommand::UpsertCatalogEntryCore {
+            kind: CatalogKind::Skill,
+            id: 99,
+            content: content.clone(),
+        },
+        ProviderCommand::CreateSkillRequestCore {
+            role_ids: vec![1],
+            content: content.clone(),
+        },
+        ProviderCommand::CancelProjectCore {
+            project_id,
+            content: content.clone(),
+        },
+        ProviderCommand::DisputePlanningCore {
+            project_id,
+            content: content.clone(),
+        },
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 54 + index);
+        assert_eq!(
+            command.project_id(),
+            if index >= 2 { Some(project_id) } else { None }
+        );
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+        let mut other = call.clone();
+        other.operation_id = OperationId::from_bytes([99; 16]);
+        assert!(other.signable_bytes().is_err());
+    }
+    assert!(
+        ProviderCommand::UpsertCatalogEntryCore {
+            kind: CatalogKind::Skill,
+            id: 0,
+            content: content.clone()
+        }
+        .validate()
+        .is_err()
+    );
+    for role_ids in [vec![], vec![0], vec![1, 1]] {
+        assert!(
+            ProviderCommand::CreateSkillRequestCore {
+                role_ids,
+                content: content.clone()
+            }
+            .validate()
+            .is_err()
+        );
+    }
+    Ok(())
+}

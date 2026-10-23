@@ -530,6 +530,28 @@ pub enum ProviderCommand {
         proposal_id: EntityId,
         content: provider_core::MetadataCommitmentV1,
     },
+    // V3 decoder/replay bridge for catalog and lifecycle content ownership.
+    #[codec(index = 54)]
+    UpsertCatalogEntryCore {
+        kind: CatalogKind,
+        id: u32,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 55)]
+    CreateSkillRequestCore {
+        role_ids: Vec<u32>,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 56)]
+    CancelProjectCore {
+        project_id: EntityId,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 57)]
+    DisputePlanningCore {
+        project_id: EntityId,
+        content: provider_core::MetadataCommitmentV1,
+    },
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -649,6 +671,13 @@ impl ProviderCommand {
     /// invariants must still be enforced in the provider transaction.
     pub fn validate(&self) -> Result<(), ContractError> {
         match self {
+            Self::UpsertCatalogEntryCore { id: 0, .. } => Err(ContractError::Invalid("catalog ID")),
+            Self::CreateSkillRequestCore { role_ids, .. } => {
+                if role_ids.is_empty() {
+                    return Err(ContractError::Invalid("skill role IDs"));
+                }
+                catalog_ids(role_ids, "skill role IDs")
+            }
             Self::CreateProposalCore { proposal, .. }
             | Self::UpdateProposalCore { proposal, .. } => proposal.validate(),
             Self::RegisterWorkerCore(request) => {
@@ -748,6 +777,8 @@ impl ProviderCommand {
             | Self::AcceptPlanningDelivery { project_id, .. }
             | Self::ApproveExecution { project_id, .. }
             | Self::RequestProposalChanges { project_id, .. }
+            | Self::CancelProjectCore { project_id, .. }
+            | Self::DisputePlanningCore { project_id, .. }
             | Self::CancelProject { project_id, .. }
             | Self::DisputePlanning { project_id, .. }
             | Self::RejectMilestoneCompletion { project_id, .. }
@@ -805,9 +836,11 @@ impl UnsignedContractCallV1 {
             ProviderCommand::CreateProjectCore(content) => Some(content.operation_id),
             ProviderCommand::CreateProposalCore { content, .. }
             | ProviderCommand::UpdateProposalCore { content, .. }
-            | ProviderCommand::RequestProposalChangesCore { content, .. } => {
-                Some(content.operation_id)
-            }
+            | ProviderCommand::RequestProposalChangesCore { content, .. }
+            | ProviderCommand::UpsertCatalogEntryCore { content, .. }
+            | ProviderCommand::CreateSkillRequestCore { content, .. }
+            | ProviderCommand::CancelProjectCore { content, .. }
+            | ProviderCommand::DisputePlanningCore { content, .. } => Some(content.operation_id),
             _ => None,
         };
         if metadata_operation.is_some_and(|id| id != self.operation_id) {

@@ -213,7 +213,18 @@ pub(super) async fn execute(
             tx.rollback().await?;
             return Ok(receipt);
         }
-        Admission::Execute(pending) => pending.inputs().clone(),
+        Admission::Execute(pending) => {
+            if matches!(
+                pending.call().command,
+                generated_contracts::ProviderCommand::UpsertCatalogEntryCore { .. }
+                    | generated_contracts::ProviderCommand::CreateSkillRequestCore { .. }
+                    | generated_contracts::ProviderCommand::CancelProjectCore { .. }
+                    | generated_contracts::ProviderCommand::DisputePlanningCore { .. }
+            ) {
+                return Err(Error::Invariant("metadata_cutover_required"));
+            }
+            pending.inputs().clone()
+        }
     };
     let comparing = native.diagnostics.comparison == "matched";
     // A failed metered primary must not start unmetered native comparison work.

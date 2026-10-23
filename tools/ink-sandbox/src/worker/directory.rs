@@ -543,6 +543,15 @@ pub(super) fn evaluate(
         }
         Admission::Execute(pending) => *pending,
     };
+    if matches!(
+        pending.call().command,
+        ProviderCommand::UpsertCatalogEntryCore { .. }
+            | ProviderCommand::CreateSkillRequestCore { .. }
+            | ProviderCommand::CancelProjectCore { .. }
+            | ProviderCommand::DisputePlanningCore { .. }
+    ) {
+        return Err(Error::Invariant("metadata_cutover_required"));
+    }
     if (money_command(&pending.call().command)
         || super::projects::requires_money(&pending.call().command))
         && !matches!(mode, Mode::Directory { money: true, .. })
