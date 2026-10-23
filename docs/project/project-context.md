@@ -48,7 +48,7 @@ source-pinned Directory, Calendar and Project WASM inside one native runtime.
 Rust, Shadow and Sandbox authority share the existing private HTTP boundary;
 the native reference remains available for differential checks. This candidate
 includes full application-domain parity, durable restart and current-state
-import/rollback. Its unchanged SDK graph passes the separately approved scoped
+import/rollback. Its reviewed SDK graph passes the separately approved scoped
 dependency policy. It is not the deployed Kreivo contract cohort or a real-chain
 provider; changing an endpoint URL cannot supply compatible execution and
 reconciliation. ink! v6 remains outside scope.
