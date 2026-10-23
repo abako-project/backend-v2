@@ -233,3 +233,122 @@ async fn provider_content_copies_failed_insert_does_not_change_source_and_retry_
     app.db.close().await;
     Ok(())
 }
+
+#[tokio::test]
+#[allow(
+    clippy::too_many_lines,
+    reason = "Compare all task write aliases with project routes under one corrupt-copy scenario."
+)]
+async fn provider_content_copies_cannot_block_raw_task_write_aliases() -> TestResult {
+    let fake = fake()?;
+    let internal = Server::start(internal(fake.clone())).await?;
+    let app = app(&internal).await?;
+    let (coordinator, cookie) = register(&app, "content_coordinator").await?;
+    let mut project = source_project()?;
+    project.coordinator = coordinator.view.account_id;
+    project.proposals[0].milestones[0].task_storage.tasks[0]
+        .task
+        .assignees = vec![coordinator.view.account_id];
+    let task = project.proposals[0].milestones[0].task_storage.tasks[0]
+        .task
+        .clone();
+    let id = project.project_id;
+    let storage = project.proposals[0].milestones[0]
+        .task_storage
+        .task_storage_id;
+    fake.lock().await.snapshot.projects.push(project.clone());
+    crate::project_content::compose(&app, info().provider_instance_id, project.clone()).await?;
+    sqlx::query("UPDATE project_content_copies SET payload=jsonb_set(payload::jsonb,'{title}','\"tampered\"')::text").execute(&app.db).await?;
+    let before: String = sqlx::query_scalar("SELECT payload FROM project_content_copies")
+        .fetch_one(&app.db)
+        .await?;
+    let server = Server::start(crate::http::router(app.clone())).await?;
+    let http = reqwest::Client::new();
+    let alias = format!("{}/api/task-storages/{storage}/tasks", server.url);
+    let nested = format!(
+        "{}/api/projects/{id}/task-storages/{storage}/tasks",
+        server.url
+    );
+    for url in [
+        format!("{}/api/task-storages/{storage}", server.url),
+        format!("{alias}/1"),
+    ] {
+        assert_eq!(
+            http.get(url)
+                .header(header::COOKIE, &cookie)
+                .send()
+                .await?
+                .status(),
+            StatusCode::SERVICE_UNAVAILABLE
+        );
+    }
+    for (index, (method, alias_url, nested_url, body)) in [
+        (
+            reqwest::Method::POST,
+            alias.clone(),
+            nested.clone(),
+            serde_json::to_value(&task)?,
+        ),
+        (
+            reqwest::Method::PUT,
+            format!("{alias}/1"),
+            format!("{nested}/1"),
+            serde_json::to_value(&task)?,
+        ),
+        (
+            reqwest::Method::PATCH,
+            format!("{alias}/1"),
+            format!("{nested}/1/progress"),
+            json!({"status":"Done","loggedMinutes":2}),
+        ),
+        (
+            reqwest::Method::DELETE,
+            format!("{alias}/1"),
+            format!("{nested}/1"),
+            json!({"expectedRevision":project.proposals[0].revision}),
+        ),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut commands = Vec::new();
+        for (offset, url) in [alias_url, nested_url].into_iter().enumerate() {
+            let serial = u8::try_from(index * 2 + offset + 1)?;
+            let operation = OperationId::from_bytes([serial; 16]);
+            let response = http
+                .request(method.clone(), url)
+                .header(header::COOKIE, &cookie)
+                .header(header::ORIGIN, "http://localhost:3000")
+                .header("X-CSRF-Token", &coordinator.view.csrf_token)
+                .header("Idempotency-Key", operation.to_string())
+                .json(&body)
+                .send()
+                .await?;
+            assert_eq!(
+                response.status(),
+                StatusCode::ACCEPTED,
+                "{method} pair {index}"
+            );
+            let command: String =
+                sqlx::query_scalar("SELECT command_json FROM operations WHERE operation_id=$1")
+                    .bind(operation.to_string())
+                    .fetch_one(&app.db)
+                    .await?;
+            commands.push(serde_json::from_str::<ProviderCommand>(&command)?);
+        }
+        assert_eq!(
+            commands[0], commands[1],
+            "{method} aliases must queue identical native commands"
+        );
+    }
+    let after: String = sqlx::query_scalar("SELECT payload FROM project_content_copies")
+        .fetch_one(&app.db)
+        .await?;
+    assert_eq!(before, after, "writes must not touch the presentation copy");
+    assert_eq!(fake.lock().await.snapshot.projects, vec![project]);
+    assert_eq!(fake.lock().await.submissions, 0);
+    server.finish().await?;
+    internal.finish().await?;
+    app.db.close().await;
+    Ok(())
+}

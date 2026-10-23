@@ -15,8 +15,9 @@ use axum::{
 use generated_contracts::{
     BalanceView, CalendarSummaryView, CatalogKind, CatalogView, DeleteCatalogEntryRequest,
     EntityId, MAX_SIGNABLE_BYTES, Minutes, Money, NotificationView, NotificationsPage,
-    OperationRef, OperationView, ProjectView, ProviderCommand, ProviderInfo, RevisionRequest,
-    SessionView, TaskStorageView, TaskView, WalletView, Week, WeeklyCommitment, WorkerSummaryView,
+    OperationRef, OperationView, ProjectView, ProviderCommand, ProviderInfo, ProviderInstanceId,
+    RevisionRequest, SessionView, TaskStorageView, TaskView, WalletView, Week, WeeklyCommitment,
+    WorkerSummaryView,
 };
 use serde::{Deserialize, de::DeserializeOwned};
 use std::{
@@ -526,11 +527,11 @@ async fn project(
     Ok(Json(project))
 }
 
-async fn visible_storage(
+async fn visible_storage_project(
     app: &App,
     session: &Session,
     storage_id: EntityId,
-) -> Result<(EntityId, TaskStorageView), Error> {
+) -> Result<(ProviderInstanceId, ProjectView), Error> {
     let snapshot = app.snapshot().await?;
     let project = snapshot
         .projects
@@ -544,17 +545,39 @@ async fn visible_storage(
                     .any(|m| m.task_storage.task_storage_id == storage_id)
         })
         .ok_or(Error::NotFound)?;
-    let project =
-        crate::project_content::compose(app, snapshot.info.provider_instance_id, project).await?;
-    let project_id = project.project_id;
+    Ok((snapshot.info.provider_instance_id, project))
+}
+fn storage_from_project(
+    project: ProjectView,
+    storage_id: EntityId,
+) -> Result<(EntityId, TaskStorageView), Error> {
+    let id = project.project_id;
     let storage = project
         .proposals
         .into_iter()
         .flat_map(|p| p.milestones)
         .find(|m| m.task_storage.task_storage_id == storage_id)
-        .ok_or(Error::Dependency)?
+        .ok_or(Error::NotFound)?
         .task_storage;
-    Ok((project_id, storage))
+    Ok((id, storage))
+}
+/// Command resolution uses raw authoritative facts, never presentation copies.
+async fn visible_storage(
+    app: &App,
+    session: &Session,
+    storage_id: EntityId,
+) -> Result<(EntityId, TaskStorageView), Error> {
+    let (_, project) = visible_storage_project(app, session, storage_id).await?;
+    storage_from_project(project, storage_id)
+}
+async fn composed_storage(
+    app: &App,
+    session: &Session,
+    storage_id: EntityId,
+) -> Result<(EntityId, TaskStorageView), Error> {
+    let (generation, project) = visible_storage_project(app, session, storage_id).await?;
+    let project = crate::project_content::compose(app, generation, project).await?;
+    storage_from_project(project, storage_id)
 }
 
 async fn task_storage(
@@ -562,7 +585,7 @@ async fn task_storage(
     Extension(session): Extension<Session>,
     Path(storage_id): Path<String>,
 ) -> Result<Json<TaskStorageView>, Error> {
-    let (_, storage) = visible_storage(&app, &session, parse(&storage_id)?).await?;
+    let (_, storage) = composed_storage(&app, &session, parse(&storage_id)?).await?;
     Ok(Json(storage))
 }
 
@@ -571,7 +594,7 @@ async fn task(
     Extension(session): Extension<Session>,
     Path((storage_id, task_id)): Path<(String, String)>,
 ) -> Result<Json<TaskView>, Error> {
-    let (_, storage) = visible_storage(&app, &session, parse(&storage_id)?).await?;
+    let (_, storage) = composed_storage(&app, &session, parse(&storage_id)?).await?;
     let task_id = parse::<u32>(&task_id)?;
     Ok(Json(
         storage
