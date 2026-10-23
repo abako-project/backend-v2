@@ -1,6 +1,7 @@
 # R3a: prepare task consumers before changing ownership
 
-This is a compatible reader milestone within approved SPEC-0015. Task execution,
+This is a compatible reader milestone within approved SPEC-0015. The owner
+selected frontend compatibility first on 2026-10-24. Task execution,
 permissions, signing, provider state, notification ingestion and emitted payloads
 remain unchanged. It does not enable adapter-owned task writes.
 

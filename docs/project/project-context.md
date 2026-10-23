@@ -1,7 +1,7 @@
 # Current implementation and limitations
 
-Application baseline: `608c70b`; current candidate includes SPEC-0015 R2b2,
-2026-10-23. This page describes implementation;
+Application baseline: `608c70b`; current candidate includes SPEC-0015 R2b2 and
+R3a consumer compatibility, 2026-10-24. This page describes implementation;
 [specifications](../../SPECS.md) define approved behavior. Dated handoffs record
 verification of their own revisions, not a fresh verification of every later commit.
 
@@ -60,7 +60,11 @@ current-label/skill-origin refs; public DTOs stay unchanged. Existing V3 stores
 require the explicit [paired V3↔V4 exchange and rollback](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
 The API uses the existing operation queue for normalized skill-name admission;
 core still assigns actual IDs and enforces permissions and role references.
-Tasks remain R3 and paging removal R4/R5. Formal performance acceptance,
+The [R3a reader contract](../../specs/0015-adapter-core-boundary/r3-task-compatibility.md)
+adds dormant Queued/taskResult/AdapterTask forms and updates built-in consumers;
+current task writes and emitted provider payloads are unchanged. Independent
+frontend compatibility must precede task-shaped emission. Task execution,
+persistence and the rollback bridge remain R3b; paging removal remains R4/R5. Formal performance acceptance,
 promotion and two observed stable releases remain open. No image publication,
 deployment or onchain upgrade is authorized by this candidate.
 
