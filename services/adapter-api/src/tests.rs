@@ -36,6 +36,9 @@ mod proposal_reviews;
 #[path = "submission_presentations_tests.rs"]
 mod submission_presentations;
 
+#[path = "creation_metadata_tests.rs"]
+mod creation_metadata;
+
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
 

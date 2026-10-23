@@ -3,6 +3,9 @@ use crate::{CalendarDefinition, OperationId, PayloadHash, Qualifications};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
+mod metadata;
+pub use metadata::*;
+
 /// Fixed reference to an immutable adapter-owned creation record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]

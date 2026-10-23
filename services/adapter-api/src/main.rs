@@ -2,6 +2,7 @@
 mod auth;
 mod bramp;
 mod catalog;
+mod creation_metadata;
 mod disputes;
 mod evidence;
 mod http;
