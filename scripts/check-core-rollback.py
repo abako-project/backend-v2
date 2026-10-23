@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Rehearse the current V3→V2 proposal rollback with disposable services.
+"""Rehearse the current V4→V3 catalog/reason rollback with disposable services.
 
-Generate a case with the real Sandbox proposal_metadata test and
-R2B_ROLLBACK_OUTPUT_DIR. Supply the current and frozen 38287da binaries.
+Generate a case with the real Sandbox catalog_metadata test and
+R2B2_ROLLBACK_OUTPUT_DIR. Supply the current and frozen d215b65 binaries.
 This performs no live cutover; PostgreSQL, custody/provider stores and secrets
 are disposable. Only owners' CLI/HTTP interfaces transfer service data.
 """
@@ -36,23 +36,26 @@ def cli(binary, args, environment):
 
 
 def proposal_rows(database_url):
-    result = subprocess.run(["psql", database_url, "-v", "ON_ERROR_STOP=1", "-At", "-c",
-                             "SELECT provider_instance_id||':'||encode(content_hash,'hex')||':'||payload "
-                             "FROM proposal_documents ORDER BY provider_instance_id,content_hash"],
-                            capture_output=True, timeout=30, check=True)
-    return result.stdout
+    records = []
+    for table in ("proposal_documents", "catalog_documents", "lifecycle_reason_documents"):
+        result = subprocess.run(["psql", database_url, "-v", "ON_ERROR_STOP=1", "-At", "-c",
+                                 "SELECT provider_instance_id||':'||encode(content_hash,'hex')||':'||payload "
+                                 f"FROM {table} ORDER BY provider_instance_id,content_hash"],
+                                capture_output=True, timeout=30, check=True)
+        records.append(result.stdout)
+    return tuple(records)
 
 
 def run(case, binaries, predecessor):
     expected = load(case / "predecessor.json")
     calls, receipts, next_calls = (load(case / name) for name in ("calls.json", "receipts.json", "next.json"))
-    POC.require(expected["version"] == 2 and expected["checkpoint"]["engine_version"] == 2,
-                "expected the explicit supported V2 predecessor")
+    POC.require(expected["version"] == 3 and expected["checkpoint"]["engine_version"] == 3,
+                "expected the explicit supported V3 predecessor")
     for directory in (binaries, predecessor):
         print("whole-provider SHA-256:", hashlib.sha256((directory / "whole-provider").read_bytes()).hexdigest(), flush=True)
     for authority in ("rust", "shadow", "sandbox"):
         with ExitStack() as resources:
-            directory = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="proposal-rollback-")))
+            directory = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="catalog-rollback-")))
             database_url = POC.temporary_postgres(resources, directory)
             secret_dir = directory / "secrets"
             subprocess.run([str(binaries / "wallet"), "init-dev-secrets", str(secret_dir)],
@@ -86,17 +89,21 @@ def run(case, binaries, predecessor):
                 provider = POC.launch(current, binaries / "whole-provider", POC.available_port(), provider_environment, logs)
                 current_adapter = {**adapter_environment, "MOCK_PROVIDER_URL": provider.base}
                 cli(binaries / "adapter-api", ["import-creation-metadata", case / "creation.ndjson"], current_adapter)
-                cli(binaries / "adapter-api", ["import-proposal-metadata", case / "metadata.ndjson"], current_adapter)
+                cli(binaries / "adapter-api", ["import-proposal-metadata", case / "proposals.ndjson"], current_adapter)
+                cli(binaries / "adapter-api", ["import-catalog-metadata", case / "catalog.ndjson"], current_adapter)
+                cli(binaries / "adapter-api", ["import-reason-metadata", case / "reasons.ndjson"], current_adapter)
                 cli(binaries / "adapter-api", ["backfill-provider-content"], current_adapter)
-                exported = directory / "selected-proposals.ndjson"
-                cli(binaries / "adapter-api", ["export-proposal-metadata", exported], current_adapter)
+                exported = directory / "selected-catalog.ndjson"
+                cli(binaries / "adapter-api", ["export-catalog-metadata", exported], current_adapter)
+                exported_reasons = directory / "selected-reasons.ndjson"
+                cli(binaries / "adapter-api", ["export-reason-metadata", exported_reasons], current_adapter)
                 metadata_before = proposal_rows(database_url)
-                POC.require(bool(metadata_before), "paired rehearsal imported no proposal content")
+                POC.require(all(metadata_before), "paired rehearsal imported no selected context content")
                 POC.scan_secret_logs(logs)
             current_core, old_core = directory / "current.json", directory / "rollback.json"
             cli(binaries / "whole-provider", ["export", current_core], provider_environment)
-            cli(binaries / "whole-provider", ["downgrade", current_core, exported, old_core], provider_environment)
-            POC.require(load(old_core) == expected, "owner conversion changed expected current V2 state")
+            cli(binaries / "whole-provider", ["downgrade", current_core, exported, exported_reasons, old_core], provider_environment)
+            POC.require(load(old_core) == expected, "owner conversion changed expected current V3 state")
             provider_environment = {**provider_environment, "WHOLE_DATABASE_PATH": str(directory / "predecessor.sqlite"),
                                     "PROVIDER_AUTHORITY": authority}
             cli(predecessor / "whole-provider", ["import", old_core], provider_environment)
@@ -112,11 +119,11 @@ def run(case, binaries, predecessor):
                     adapter.request("GET", "/api/platform")
                     adapter.request("GET", "/api/catalog")
                     POC.require(proposal_rows(database_url) == metadata_before,
-                                "predecessor startup altered API-owned proposal history")
+                                "predecessor startup altered API-owned context history")
                     snapshot = provider.request("GET", "/internal/snapshot", headers=authorization)
                     saved = expected["checkpoint"]
-                    POC.require(snapshot["schemaVersion"] == 2 and snapshot["info"] == saved["info"],
-                                "predecessor did not reopen the retained V2 generation")
+                    POC.require(snapshot["schemaVersion"] == 3 and snapshot["info"] == saved["info"],
+                                "predecessor did not reopen the retained V3 generation")
                     for collection in ("workers", "projects"):
                         wanted = [value for _, value in sorted(saved[collection].items())]
                         POC.require(snapshot[collection] == wanted, "rollback changed current " + collection)
@@ -164,8 +171,8 @@ def run(case, binaries, predecessor):
                 cli(predecessor / "adapter-api", ["backfill-provider-content"], adapter_env)
                 POC.scan_secret_logs(logs)
             POC.scan_secret_logs(wallet_logs)
-            POC.require(proposal_rows(database_url) == metadata_before, "old API altered proposal documents")
-            print("PASS", authority, "current-state rollback: successful 51–53, funded approval, API/PostgreSQL restart, replay and further REST work", flush=True)
+            POC.require(proposal_rows(database_url) == metadata_before, "old API altered context documents")
+            print("PASS", authority, "current-state rollback: successful 54–57, funded state, API/PostgreSQL restart, replay and further REST work", flush=True)
 
 
 if __name__ == "__main__":

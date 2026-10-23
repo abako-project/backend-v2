@@ -1,19 +1,22 @@
-use generated_contracts::provider_core::{CoreSnapshotV3, ProjectCore, WorkerCore};
+use generated_contracts::provider_core::{
+    CatalogCore, CatalogEntryCore, CoreSnapshotV4, ProjectCore, SkillRequestCore, SkillRoleCore,
+    WorkerCore,
+};
 use std::{
     cmp::Ordering,
     collections::{BTreeMap, BTreeSet},
 };
 
 use generated_contracts::{
-    AccountId32, AccountNonce, BalanceView, CatalogEntry, CatalogView, DomainEventKind, EntityId,
-    Minutes, Money, OperationId, OperationReceipt, Percentage, ProviderEvents, ProviderInfo,
-    ReputationView, ScorePolicy, SkillRequestView, SkillRoleAssociation,
+    AccountId32, AccountNonce, BalanceView, DomainEventKind, EntityId, Minutes, Money, OperationId,
+    OperationReceipt, Percentage, ProviderEvents, ProviderInfo, ReputationView, ScorePolicy,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{Error, Result, require, seed::SkillMetadata};
 
 mod bramp;
+mod catalog_history;
 mod catalog_requests;
 mod checkpoint;
 mod commands;
@@ -30,12 +33,13 @@ mod validation;
 
 use provider_execution::Effect;
 
-use provider_execution::migration::{CoreArchiveV3, ReasonRecord as RecordedReason};
+use generated_contracts::provider_core::ReasonCore as RecordedReason;
+use provider_execution::migration::CoreArchiveV4;
 
 /// Private aggregate: only authenticated calls can obtain a transition and only
 /// storage can commit it. HTTP snapshots are copies, never mutable handles.
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(from = "checkpoint::CoreCheckpointV3")]
+#[serde(from = "checkpoint::CoreCheckpointV4")]
 pub(crate) struct State {
     #[serde(flatten)]
     shell: execution::Shell,
@@ -48,11 +52,11 @@ pub(crate) struct State {
 /// Business state has no signatures, nonces, receipts or durable event log.
 #[derive(Clone, Serialize)]
 struct RustEngine {
-    roles: BTreeMap<u32, CatalogEntry>,
-    skills: BTreeMap<u32, CatalogEntry>,
+    roles: BTreeMap<u32, CatalogEntryCore>,
+    skills: BTreeMap<u32, CatalogEntryCore>,
     skill_metadata: BTreeMap<u32, SkillMetadata>,
     #[serde(default)]
-    skill_requests: BTreeMap<EntityId, SkillRequestView>,
+    skill_requests: BTreeMap<EntityId, SkillRequestCore>,
     score_policy: ScorePolicy,
     #[serde(default)]
     compensation_policy: generated_contracts::CompensationPolicy,
@@ -73,19 +77,77 @@ struct RustEngine {
 
 impl State {
     pub(crate) fn new(root_account: AccountId32) -> Result<Self> {
+        let shell = execution::Shell::new(root_account)?;
+        let generation = shell.info.provider_instance_id;
         Ok(Self {
-            shell: execution::Shell::new(root_account)?,
+            shell,
             engine_version: rust_engine_version(),
-            engine: RustEngine::new(root_account)?,
+            engine: RustEngine::new(root_account, generation)?,
         })
+    }
+
+    #[cfg(test)]
+    fn set_fixture_generation(&mut self, generation: generated_contracts::ProviderInstanceId) {
+        use generated_contracts::{
+            CatalogKind,
+            provider_core::{CatalogReferenceV1, catalog_seed_v1},
+        };
+        self.shell.info.provider_instance_id = generation;
+        for seed in catalog_seed_v1() {
+            let reference = CatalogReferenceV1::Seed(crate::migration::source_hash(
+                &seed.record(generation).hash_input(),
+            ));
+            let catalog = if seed.kind == CatalogKind::Role {
+                &mut self.engine.roles
+            } else {
+                &mut self.engine.skills
+            };
+            if let Some(entry) = catalog.get_mut(&seed.id)
+                && matches!(entry.content, CatalogReferenceV1::Seed(_))
+            {
+                entry.content = reference.clone();
+            }
+            if seed.kind == CatalogKind::Skill
+                && let Some(metadata) = self.engine.skill_metadata.get_mut(&seed.id)
+                && matches!(metadata.origin, CatalogReferenceV1::Seed(_))
+            {
+                metadata.origin = reference;
+            }
+        }
     }
 
     #[cfg(feature = "storage-sqlite")]
     pub(crate) fn seed(&mut self) {
-        self.engine.seed();
+        self.engine.seed(self.shell.info.provider_instance_id);
     }
 
-    pub(crate) fn skill_requests(&self, origin: AccountId32) -> Vec<SkillRequestView> {
+    pub(crate) fn lifecycle_reasons(
+        &self,
+        after: u64,
+        limit: usize,
+    ) -> Result<generated_contracts::provider_core::ReasonPageV1> {
+        require((1..=256).contains(&limit), "invalid_reason_limit")?;
+        let start = usize::try_from(after).map_err(|_| Error::bad("invalid_reason_cursor"))?;
+        require(start <= self.engine.reasons.len(), "invalid_reason_cursor")?;
+        let reasons: Vec<_> = self
+            .engine
+            .reasons
+            .iter()
+            .skip(start)
+            .take(limit)
+            .cloned()
+            .collect();
+        Ok(generated_contracts::provider_core::ReasonPageV1 {
+            generation: self.info().provider_instance_id,
+            start: after,
+            next: after
+                .checked_add(u64::try_from(reasons.len()).map_err(|_| Error::internal())?)
+                .ok_or_else(Error::internal)?,
+            total: u64::try_from(self.engine.reasons.len()).map_err(|_| Error::internal())?,
+            reasons,
+        })
+    }
+    pub(crate) fn skill_requests(&self, origin: AccountId32) -> Vec<SkillRequestCore> {
         self.engine.skill_requests(origin)
     }
     pub(crate) fn bramp_deposit(
@@ -123,20 +185,21 @@ impl State {
             .get(&operation)
             .map(|record| record.receipt.clone())
     }
-    pub(crate) fn snapshot(&self) -> CoreSnapshotV3 {
-        CoreSnapshotV3 {
-            schema_version: 3,
+    pub(crate) fn snapshot(&self) -> CoreSnapshotV4 {
+        CoreSnapshotV4 {
+            schema_version: 4,
             info: self.info(),
-            catalog: CatalogView {
+            catalog: CatalogCore {
                 roles: self.engine.roles.values().cloned().collect(),
                 skills: self.engine.skills.values().cloned().collect(),
                 skill_roles: self
                     .engine
                     .skill_metadata
                     .iter()
-                    .map(|(skill_id, metadata)| SkillRoleAssociation {
+                    .map(|(skill_id, metadata)| SkillRoleCore {
                         skill_id: *skill_id,
                         role_ids: metadata.role_ids.clone(),
+                        origin: metadata.origin.clone(),
                     })
                     .collect(),
                 score_policy: self.engine.score_policy,
@@ -180,16 +243,16 @@ impl State {
         state.validate_restored(root_account)
     }
 
-    pub(crate) fn archive(&self) -> Result<CoreArchiveV3> {
+    pub(crate) fn archive(&self) -> Result<CoreArchiveV4> {
         self.engine.validate_task_keys()?;
-        Ok(CoreArchiveV3 {
-            version: 3,
+        Ok(CoreArchiveV4 {
+            version: 4,
             checkpoint: serde_json::from_slice(&self.encode()?).map_err(|_| Error::internal())?,
         })
     }
 
-    pub(crate) fn from_archive(archive: CoreArchiveV3, root_account: AccountId32) -> Result<Self> {
-        require(archive.version == 3, "state_configuration_mismatch")?;
+    pub(crate) fn from_archive(archive: CoreArchiveV4, root_account: AccountId32) -> Result<Self> {
+        require(archive.version == 4, "state_configuration_mismatch")?;
         let state = Self::from(archive.checkpoint).validate_restored(root_account)?;
         state.engine.validate_task_keys()?;
         Ok(state)
@@ -285,7 +348,10 @@ fn compare_scores(left: &ReputationView, right: &ReputationView) -> Ordering {
 }
 
 impl RustEngine {
-    fn new(root_account: AccountId32) -> Result<Self> {
+    fn new(
+        root_account: AccountId32,
+        generation: generated_contracts::ProviderInstanceId,
+    ) -> Result<Self> {
         let mut state = Self {
             roles: BTreeMap::new(),
             skills: BTreeMap::new(),
@@ -304,21 +370,21 @@ impl RustEngine {
             skill_index: BTreeMap::new(),
             context: execution::EngineContext::new(root_account),
         };
-        state.roles.insert(
-            1,
-            CatalogEntry {
-                id: 1,
-                name: "coordinator".into(),
-                fixed: true,
-            },
-        );
-        state.seed();
+        state.roles.insert(1, crate::seed::coordinator(generation));
+        state.seed(generation);
         Ok(state)
     }
 
-    pub(crate) fn seed(&mut self) {
+    pub(crate) fn seed(&mut self, generation: generated_contracts::ProviderInstanceId) {
         #[cfg(feature = "mock-seed")]
-        crate::seed::seed(&mut self.roles, &mut self.skills, &mut self.skill_metadata);
+        crate::seed::seed(
+            generation,
+            &mut self.roles,
+            &mut self.skills,
+            &mut self.skill_metadata,
+        );
+        #[cfg(not(feature = "mock-seed"))]
+        let _ = generation;
     }
 
     fn rebuild_index(&mut self) {
@@ -335,5 +401,5 @@ impl RustEngine {
 }
 
 const fn rust_engine_version() -> u32 {
-    3
+    4
 }

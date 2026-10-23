@@ -1,17 +1,18 @@
 //! Frozen domain traces are independently replayed by the real WASM suite.
 //! Domain and signed-operation fixtures also replay through the isolated VM.
 use super::super::*;
+use generated_contracts::provider_core::{CatalogEntryCore, SkillRequestCore, SkillRoleCore};
 use generated_contracts::*;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
 type TestResult<T = ()> = std::result::Result<T, Box<dyn std::error::Error>>;
 type Projection = (
-    Vec<CatalogEntry>,
-    Vec<CatalogEntry>,
-    Vec<SkillRoleAssociation>,
+    Vec<CatalogEntryCore>,
+    Vec<CatalogEntryCore>,
+    Vec<SkillRoleCore>,
     Vec<WorkerCore>,
-    Vec<SkillRequestView>,
+    Vec<SkillRequestCore>,
 );
 fn account(n: u8) -> AccountId32 {
     AccountId32::from_bytes([n; 32])
@@ -29,9 +30,10 @@ pub(super) fn projection(engine: &RustEngine) -> Projection {
         engine
             .skill_metadata
             .iter()
-            .map(|(id, metadata)| SkillRoleAssociation {
+            .map(|(id, metadata)| SkillRoleCore {
                 skill_id: *id,
                 role_ids: metadata.role_ids.clone(),
+                origin: metadata.origin.clone(),
             })
             .collect(),
         engine.workers.values().cloned().collect(),
@@ -73,7 +75,10 @@ fn apply(
 fn canonical_directory_parity_trace() -> TestResult {
     let fixture: Value = serde_json::from_str(include_str!("fixtures/directory-parity.json"))?;
     assert_eq!(fixture["schemaVersion"], 1);
-    let mut engine = RustEngine::new(account(1))?;
+    let mut engine = RustEngine::new(
+        account(1),
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     assert_eq!(json!(projection(&engine)), fixture["initial"]);
     for step in fixture["steps"].as_array().ok_or("missing steps")? {
         let command: ProviderCommand = serde_json::from_value(step["command"].clone())?;
@@ -96,7 +101,10 @@ fn canonical_directory_parity_trace() -> TestResult {
 #[test]
 #[ignore = "explicit trace authoring only"]
 fn export_directory_trace() -> TestResult {
-    let mut engine = RustEngine::new(account(1))?;
+    let mut engine = RustEngine::new(
+        account(1),
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     let initial = json!(projection(&engine));
     let mut steps = Vec::new();
     for (origin, command, seed) in scenario()? {
@@ -293,7 +301,7 @@ fn canonical_signed_directory_trace() -> TestResult {
     let fixture: Value = serde_json::from_str(include_str!("fixtures/directory-signed.json"))?;
     let root = serde_json::from_value(fixture["root"].clone())?;
     let mut state = State::new(root)?;
-    state.shell.info.provider_instance_id = serde_json::from_value(fixture["generation"].clone())?;
+    state.set_fixture_generation(serde_json::from_value(fixture["generation"].clone())?);
     assert_eq!(json!(projection(&state.engine)), fixture["initial"]);
     for (index, step) in fixture["steps"]
         .as_array()
@@ -326,7 +334,7 @@ fn export_signed_directory_trace() -> TestResult {
     let root = signed_account(1)?;
     let generation = ProviderInstanceId::from_bytes([97; 16]);
     let mut state = State::new(root)?;
-    state.shell.info.provider_instance_id = generation;
+    state.set_fixture_generation(generation);
     let initial = json!(projection(&state.engine));
     let mut steps = Vec::new();
     let mut commands = scenario()?;

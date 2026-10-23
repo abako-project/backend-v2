@@ -1,5 +1,7 @@
 //! Independent M4 component replay through production contract WASM.
-use generated_contracts::provider_core::WorkerCore;
+use generated_contracts::provider_core::{
+    CatalogEntryCore, SkillRequestCore, SkillRoleCore, WorkerCore,
+};
 use generated_contracts::*;
 use ink_v5_compatibility::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
@@ -15,16 +17,16 @@ use sp_core::{
 };
 
 type Projection = (
-    Vec<CatalogEntry>,
-    Vec<CatalogEntry>,
-    Vec<SkillRoleAssociation>,
+    Vec<CatalogEntryCore>,
+    Vec<CatalogEntryCore>,
+    Vec<SkillRoleCore>,
     Vec<WorkerCore>,
-    Vec<SkillRequestView>,
+    Vec<SkillRequestCore>,
 );
 type Catalog = (
-    Vec<CatalogEntry>,
-    Vec<CatalogEntry>,
-    Vec<SkillRoleAssociation>,
+    Vec<CatalogEntryCore>,
+    Vec<CatalogEntryCore>,
+    Vec<SkillRoleCore>,
 );
 #[derive(Debug, Decode, Serialize)]
 #[serde(rename_all = "camelCase")]

@@ -81,6 +81,10 @@ impl RustEngine {
                 | ProviderCommand::CreateProposal { .. }
                 | ProviderCommand::UpdateProposal { .. }
                 | ProviderCommand::RequestProposalChanges { .. }
+                | ProviderCommand::UpsertCatalogEntry(_)
+                | ProviderCommand::CreateSkillRequest(_)
+                | ProviderCommand::CancelProject { .. }
+                | ProviderCommand::DisputePlanning { .. }
         ) {
             let call = generated_contracts::UnsignedContractCallV1::new(
                 generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
@@ -92,6 +96,8 @@ impl RustEngine {
             )?;
             crate::creation::compact_creation(&call)
                 .or_else(|| crate::proposal::compact_proposal(&call))
+                .or_else(|| crate::catalog_content::compact_catalog(&call))
+                .or_else(|| crate::catalog_content::compact_reason(&call))
         } else {
             None
         };
@@ -162,14 +168,14 @@ impl RustEngine {
                 self.worker_mut(request.account)?.coordinator_eligible = true;
                 Effect::new(DomainEventKind::CoordinatorPromoted, None, request.account)
             }
-            ProviderCommand::UpsertCatalogEntry(request) => {
-                self.upsert_catalog_entry(origin, request)?
+            ProviderCommand::UpsertCatalogEntryCore { kind, id, content } => {
+                self.upsert_catalog_entry(origin, *kind, *id, content)?
             }
             ProviderCommand::DeleteCatalogEntry(request) => {
                 self.delete_catalog_entry(request.kind, request.id, origin)?
             }
-            ProviderCommand::CreateSkillRequest(request) => {
-                self.create_skill_request(origin, request)?
+            ProviderCommand::CreateSkillRequestCore { role_ids, content } => {
+                self.create_skill_request(origin, role_ids, content)?
             }
             ProviderCommand::DecideSkillRequest(request) => {
                 self.decide_skill_request(origin, request)?

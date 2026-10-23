@@ -108,6 +108,7 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
             .skill_ids
             .is_empty()
     );
+    // Name uniqueness is an adapter admission rule; core retains numeric facts.
     assert!(
         state
             .engine
@@ -120,7 +121,7 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
                 }),
                 NOW,
             )
-            .is_err()
+            .is_ok()
     );
     state.engine.validate()?;
     Ok(())

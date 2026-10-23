@@ -1,19 +1,20 @@
 //! Read-only codec for the pinned storage-v5 layout. It copies retained facts;
 //! commands, permissions, prices and score updates still execute only in WASM.
 use super::{directory::State, *};
-use generated_contracts::provider_core::WorkerCore;
+use generated_contracts::provider_core::{
+    CatalogEntryCore, ReasonCore, ReasonReferenceV1, SkillMetadataCore, SkillRequestCore,
+    WorkerCore,
+};
 use generated_contracts::*;
 use parity_scale_codec::DecodeAll;
-use provider_execution::migration::{
-    BrampArchive, CoreArchiveV3, CoreCheckpointV3, ReasonRecord, SkillMetadata,
-};
+use provider_execution::migration::{BrampArchive, CoreArchiveV4, CoreCheckpointV4};
 use std::collections::BTreeMap;
 const PAGE: usize = 8192;
 type Reason = (
     EntityId,
     Option<EntityId>,
     AccountId32,
-    String,
+    ReasonReferenceV1,
     UnixSeconds,
     DomainEventKind,
 );
@@ -186,7 +187,7 @@ pub(super) fn read(
     ext: &mut sp_io::TestExternalities,
     state: &State,
     sealed: bool,
-) -> Result<CoreArchiveV3, Error> {
+) -> Result<CoreArchiveV4, Error> {
     let mut reader = Storage::new(ext);
     let directory: Directory = reader.root(state, !sealed)?;
     if directory.root != state.shell.info.root_account
@@ -200,22 +201,22 @@ pub(super) fn read(
     let mut skills = BTreeMap::new();
     let mut metadata = BTreeMap::new();
     for id in &directory.roles {
-        let entry: CatalogEntry = reader.value(&state.directory, 1, *id)?;
+        let entry: CatalogEntryCore = reader.value(&state.directory, 1, *id)?;
         if entry.id != *id {
             return Err(Error::InvalidState);
         }
         roles.insert(*id, entry);
     }
     for id in &directory.skills {
-        let entry: CatalogEntry = reader.value(&state.directory, 2, *id)?;
+        let entry: CatalogEntryCore = reader.value(&state.directory, 2, *id)?;
         if entry.id != *id {
             return Err(Error::InvalidState);
         }
         skills.insert(*id, entry);
         metadata.insert(
             *id,
-            SkillMetadata {
-                category: reader.value(&state.directory, 18, *id)?,
+            SkillMetadataCore {
+                origin: reader.value(&state.directory, 18, *id)?,
                 role_ids: reader.value(&state.directory, 3, *id)?,
             },
         );
@@ -227,7 +228,7 @@ pub(super) fn read(
         .collect();
     let mut requests = BTreeMap::new();
     for id in &directory.requests {
-        let request: SkillRequestView = reader.value(&state.directory, 6, *id)?;
+        let request: SkillRequestCore = reader.value(&state.directory, 6, *id)?;
         if request.request_id != *id {
             return Err(Error::InvalidState);
         }
@@ -307,9 +308,9 @@ pub(super) fn read(
             return Err(Error::InvalidState);
         }
     }
-    let archive = CoreArchiveV3 {
-        version: 3,
-        checkpoint: CoreCheckpointV3 {
+    let archive = CoreArchiveV4 {
+        version: 4,
+        checkpoint: CoreCheckpointV4 {
             info: state.shell.info.clone(),
             roles,
             skills,
@@ -325,11 +326,11 @@ pub(super) fn read(
             events: state.shell.events.clone(),
             reasons: reasons
                 .into_iter()
-                .map(|r| ReasonRecord {
+                .map(|r| ReasonCore {
                     project_id: r.0,
                     milestone_id: r.1,
                     origin: r.2,
-                    reason: r.3,
+                    content: r.3,
                     occurred_at: r.4,
                     kind: r.5,
                 })
@@ -341,7 +342,7 @@ pub(super) fn read(
             },
             next_task_id: directory.next_task_id,
             minted_units: directory.bank.minted,
-            engine_version: 3,
+            engine_version: 4,
         },
     };
     if serde_json::to_vec(&archive)

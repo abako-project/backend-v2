@@ -117,3 +117,6 @@ pub(crate) fn require(condition: bool, code: &'static str) -> Result<()> {
         Err(Error::domain(code))
     }
 }
+
+/// Explicit compact catalog/reason legacy conversion. No preimages are stored.
+pub mod catalog_content;

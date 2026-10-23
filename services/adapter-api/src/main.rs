@@ -2,6 +2,9 @@
 mod auth;
 mod bramp;
 mod catalog;
+mod catalog_claims;
+mod catalog_metadata;
+mod catalog_metadata_io;
 mod creation_metadata;
 mod creation_metadata_io;
 mod disputes;
@@ -17,6 +20,8 @@ mod project_participants;
 mod proposal_metadata;
 mod proposal_metadata_io;
 mod proposal_reviews;
+mod reason_metadata;
+mod reason_metadata_io;
 mod state;
 mod submission_comments;
 mod submission_presentations;
@@ -36,45 +41,8 @@ async fn main() -> Result<(), Error> {
     let bind_addr = config.bind_addr.clone();
     let app = Arc::new(App::new(config).await?);
     let arguments: Vec<_> = std::env::args().skip(1).collect();
-    match arguments.as_slice() {
-        [] => {}
-        [command] if command == "check-provider-cutover" => {
-            creation_metadata_io::reconciled(&app).await?;
-            tracing::info!("Provider cutover queue is reconciled");
-            app.db.close().await;
-            return Ok(());
-        }
-        [command, path] if command == "import-proposal-metadata" => {
-            let records = proposal_metadata_io::import(&app, path.into()).await?;
-            tracing::info!(records, "Proposal metadata imported and verified");
-            app.db.close().await;
-            return Ok(());
-        }
-        [command, path] if command == "export-proposal-metadata" => {
-            let records = proposal_metadata_io::export(&app, path.into()).await?;
-            tracing::info!(records, "Proposal metadata exported and verified");
-            app.db.close().await;
-            return Ok(());
-        }
-        [command, path] if command == "import-creation-metadata" => {
-            let records = creation_metadata_io::import(&app, path.into()).await?;
-            tracing::info!(records, "Creation metadata imported and verified");
-            app.db.close().await;
-            return Ok(());
-        }
-        [command, path] if command == "export-creation-metadata" => {
-            let records = creation_metadata_io::export(&app, path.into()).await?;
-            tracing::info!(records, "Creation metadata exported and verified");
-            app.db.close().await;
-            return Ok(());
-        }
-        [command] if command == "backfill-provider-content" => {
-            let (workers, projects) = backfill_content(&app).await?;
-            tracing::info!(workers, projects, "Provider content copies verified");
-            app.db.close().await;
-            return Ok(());
-        }
-        _ => return Err(Error::Config),
+    if owner_command(&app, &arguments).await? {
+        return Ok(());
     }
     auth::bootstrap(&app).await?;
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
@@ -122,6 +90,73 @@ async fn main() -> Result<(), Error> {
         }
     }
     outcome
+}
+
+async fn owner_command(app: &App, arguments: &[String]) -> Result<bool, Error> {
+    match arguments {
+        [] => Ok(false),
+        [command] if command == "check-provider-cutover" => {
+            creation_metadata_io::reconciled(app).await?;
+            tracing::info!("Provider cutover queue is reconciled");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "import-catalog-metadata" => {
+            let records = catalog_metadata_io::import(app, path.into()).await?;
+            tracing::info!(records, "catalog metadata imported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "export-catalog-metadata" => {
+            let records = catalog_metadata_io::export(app, path.into()).await?;
+            tracing::info!(records, "catalog metadata exported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "import-reason-metadata" => {
+            let records = reason_metadata_io::import(app, path.into()).await?;
+            tracing::info!(records, "reason metadata imported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "export-reason-metadata" => {
+            let records = reason_metadata_io::export(app, path.into()).await?;
+            tracing::info!(records, "reason metadata exported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "import-proposal-metadata" => {
+            let records = proposal_metadata_io::import(app, path.into()).await?;
+            tracing::info!(records, "Proposal metadata imported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "export-proposal-metadata" => {
+            let records = proposal_metadata_io::export(app, path.into()).await?;
+            tracing::info!(records, "Proposal metadata exported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "import-creation-metadata" => {
+            let records = creation_metadata_io::import(app, path.into()).await?;
+            tracing::info!(records, "Creation metadata imported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "export-creation-metadata" => {
+            let records = creation_metadata_io::export(app, path.into()).await?;
+            tracing::info!(records, "Creation metadata exported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command] if command == "backfill-provider-content" => {
+            let (workers, projects) = backfill_content(app).await?;
+            tracing::info!(workers, projects, "Provider content copies verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        _ => Err(Error::Config),
+    }
 }
 
 async fn shutdown() -> Result<(), Error> {

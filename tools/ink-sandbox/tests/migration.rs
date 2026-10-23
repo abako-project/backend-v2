@@ -5,7 +5,7 @@ use ink_v5_compatibility::{
     worker::{Error, WholeConfiguration, Worker},
 };
 use parity_scale_codec::{DecodeAll, Encode};
-use provider_execution::migration::CoreArchiveV3;
+use provider_execution::migration::CoreArchiveV4;
 use serde::Deserialize;
 use sp_core::{H256, hashing::sha2_256};
 use std::{
@@ -33,7 +33,7 @@ fn reference() -> Reference {
     ))
     .unwrap()
 }
-fn config(archive: &CoreArchiveV3) -> WholeConfiguration {
+fn config(archive: &CoreArchiveV4) -> WholeConfiguration {
     WholeConfiguration {
         root: archive.checkpoint.info.root_account,
         generation: archive.checkpoint.info.provider_instance_id,
@@ -81,7 +81,7 @@ fn run(future: impl std::future::Future<Output = ()>) {
 fn retained_archives_import_exactly_restart_and_never_replace_populated_stores() {
     run(async {
         for retained in reference().archives {
-            let archive: CoreArchiveV3 = serde_json::from_str(&retained.archive).unwrap();
+            let archive: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
             let configuration = config(&archive);
             let db = Database::new();
             let worker =
@@ -123,7 +123,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
             .iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let archive: CoreArchiveV3 = serde_json::from_str(&retained.archive).unwrap();
+        let archive: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
         let db = Database::new();
         let configuration = config(&archive);
         let worker = Worker::import_archive(db.0.clone(), archive, configuration.clone())
@@ -184,7 +184,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
             .result()
             .await
             .unwrap();
-        let expected: CoreArchiveV3 =
+        let expected: CoreArchiveV4 =
             serde_json::from_str(&reference.archives.last().unwrap().archive).unwrap();
         use ink_v5_compatibility::worker::comparison::*;
         let last: SignedContractCallV1 = serde_json::from_value(
@@ -224,7 +224,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
 #[test]
 fn missing_incompatible_and_failed_imports_never_regenerate_state() {
     run(async {
-        let original: CoreArchiveV3 =
+        let original: CoreArchiveV4 =
             serde_json::from_str(&reference().archives[0].archive).unwrap();
         let configuration = config(&original);
         let db = Database::new();
@@ -234,7 +234,7 @@ fn missing_incompatible_and_failed_imports_never_regenerate_state() {
                 .is_err()
         );
         let mut invalid = original.clone();
-        invalid.version = 4;
+        invalid.version = 5;
         assert!(
             Worker::import_archive(db.0.clone(), invalid, configuration.clone())
                 .await
@@ -260,7 +260,7 @@ fn missing_incompatible_and_failed_imports_never_regenerate_state() {
 fn retained_score_overflow_precedes_missing_modern_worker_ratings() {
     run(async {
         for case in reference().priority_cases {
-            let archive: CoreArchiveV3 =
+            let archive: CoreArchiveV4 =
                 serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
             let configuration = config(&archive);
             let db = Database::new();
@@ -297,7 +297,7 @@ fn retained_score_overflow_precedes_missing_modern_worker_ratings() {
     })
 }
 
-fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV3) {
+fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV4) {
     use frame_support::traits::fungibles::Inspect;
     use ink_v5_compatibility::{Account, Assets, Contracts, checkpoint::Checkpoint};
     let shell: serde_json::Value = serde_json::from_slice(&stored.2).unwrap();
@@ -350,7 +350,7 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
             Account,
             worker::{Action, Invocation, Status},
         };
-        let archive: CoreArchiveV3 =
+        let archive: CoreArchiveV4 =
             serde_json::from_str(&reference().archives[0].archive).unwrap();
         let configuration = config(&archive);
         let db = Database::new();
@@ -409,22 +409,18 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
 }
 
 #[test]
-fn retained_large_proposal_is_completely_importable_and_exportable() {
+fn retained_large_catalog_label_is_completely_importable_and_exportable() {
     run(async {
         let source: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/proposal-predecessor.json"
+            "../../../services/mock-provider/src/domain/fixtures/catalog-predecessor.json"
         ))
         .unwrap();
-        let mut old: provider_execution::migration::CoreArchiveV2 =
+        let mut old: provider_execution::migration::CoreArchiveV3 =
             serde_json::from_str(source["archives"][1]["archive"].as_str().unwrap()).unwrap();
-        old.checkpoint
-            .projects
-            .values_mut()
-            .find_map(|project| project.proposals.first_mut())
-            .unwrap()
-            .description = "n".repeat(MAX_SIGNABLE_BYTES / 2);
+        old.checkpoint.skills.get_mut(&1).unwrap().name =
+            "Catalog\0".repeat(MAX_SIGNABLE_BYTES / 32);
         let original = serde_json::to_vec(&old).unwrap();
-        let (archive, records) =
+        let (archive, records, reasons) =
             mock_provider::migration::from_predecessor(&original, old.checkpoint.info.root_account)
                 .unwrap();
         let records = records
@@ -443,7 +439,12 @@ fn retained_large_proposal_is_completely_importable_and_exportable() {
             serde_json::to_vec(&current).unwrap(),
             serde_json::to_vec(&archive).unwrap()
         );
-        let restored = mock_provider::migration::to_predecessor(current, &records).unwrap();
+        let reasons = reasons
+            .into_iter()
+            .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
+            .collect();
+        let restored =
+            mock_provider::migration::to_predecessor(current, &records, &reasons).unwrap();
         assert_eq!(serde_json::to_vec(&restored).unwrap(), original);
     })
 }
@@ -456,7 +457,7 @@ async fn retained_case_with_gas(
     output: Option<&str>,
     gas: frame_support::weights::Weight,
 ) {
-    let archive: CoreArchiveV3 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
+    let archive: CoreArchiveV4 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
     let mut configuration = config(&archive);
     configuration.gas_limit = gas;
     let db = Database::new();
@@ -530,7 +531,7 @@ fn retained_positive_planning_escrow_pays_and_freezes_with_complete_backing() {
 fn ordinary_retained_qualification_capacity_matches_native() {
     run(async {
         let source = reference().aggregate_cases.remove(2);
-        let archive: CoreArchiveV3 =
+        let archive: CoreArchiveV4 =
             serde_json::from_str(source["archive"].as_str().unwrap()).unwrap();
         let mut configuration = config(&archive);
         configuration.gas_limit = ink_v5_compatibility::WHOLE_GAS;
@@ -581,7 +582,7 @@ fn ordinary_retained_qualification_capacity_matches_native() {
 #[test]
 fn whole_resource_failure_preserves_runtime_shell_and_retry_after_restart() {
     run(async {
-        let archive: CoreArchiveV3 =
+        let archive: CoreArchiveV4 =
             serde_json::from_str(&reference().archives[0].archive).unwrap();
         let mut configuration = config(&archive);
         configuration.gas_limit = frame_support::weights::Weight::from_parts(1, 1);
@@ -650,7 +651,7 @@ fn whole_modes_serialize_primary_reference_replay_and_restart() {
             .iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV3 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
             "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
         ))
@@ -791,7 +792,7 @@ fn whole_reference_storage_failure_competition_and_incomplete_shadow_are_explici
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV3 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
             "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
         ))
@@ -935,7 +936,7 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV3 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
         let configuration = config(&initial);
         let unsupported = Database::new();
         let mut disabled = configuration.clone();
@@ -1078,7 +1079,7 @@ fn whole_differences_persist_without_substituting_either_primary() {
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV3 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
             "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
         ))
@@ -1101,8 +1102,9 @@ fn whole_differences_persist_without_substituting_either_primary() {
                 .values_mut()
                 .next()
                 .unwrap()
-                .category
-                .push_str("different");
+                .origin = generated_contracts::provider_core::CatalogReferenceV1::Migration(
+                PayloadHash::from_bytes([99; 32]),
+            );
             let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", db.0.display()))
                 .await
                 .unwrap();
@@ -1210,7 +1212,7 @@ fn whole_differences_persist_without_substituting_either_primary() {
 fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback() {
     run(async {
         use ink_v5_compatibility::worker::Authority;
-        let initial: CoreArchiveV3 = serde_json::from_str(
+        let initial: CoreArchiveV4 = serde_json::from_str(
             &reference()
                 .archives
                 .into_iter()

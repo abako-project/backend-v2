@@ -189,7 +189,8 @@ impl RustEngine {
             | ProviderCommand::WithdrawProposal { .. } => {
                 self.proposal_review_command(project, origin, command)
             }
-            ProviderCommand::CancelProject { .. } | ProviderCommand::DisputePlanning { .. } => {
+            ProviderCommand::CancelProjectCore { .. }
+            | ProviderCommand::DisputePlanningCore { .. } => {
                 self.lifecycle_command(project, origin, command, now)
             }
             ProviderCommand::CreateTask { .. }
@@ -476,14 +477,14 @@ impl RustEngine {
         now: UnixSeconds,
     ) -> Result<Transition> {
         match command {
-            ProviderCommand::CancelProject { request, .. } => {
+            ProviderCommand::CancelProjectCore { content, .. } => {
                 participant(project, origin)?;
                 require(!project.completed, "project_completed")?;
                 self.record_reason(
                     project.project_id,
                     None,
                     origin,
-                    request.reason.clone(),
+                    content.clone(),
                     now,
                     DomainEventKind::ProjectCancelled,
                 );
@@ -499,7 +500,7 @@ impl RustEngine {
                 }
                 Ok((DomainEventKind::ProjectCancelled, Some(project.project_id)))
             }
-            ProviderCommand::DisputePlanning { request, .. } => {
+            ProviderCommand::DisputePlanningCore { content, .. } => {
                 participant(project, origin)?;
                 require(
                     matches!(
@@ -514,7 +515,7 @@ impl RustEngine {
                     project.project_id,
                     None,
                     origin,
-                    request.reason.clone(),
+                    content.clone(),
                     now,
                     DomainEventKind::PlanningDisputed,
                 );
@@ -530,7 +531,7 @@ impl RustEngine {
         project_id: EntityId,
         milestone_id: Option<EntityId>,
         origin: AccountId32,
-        reason: String,
+        content: generated_contracts::provider_core::MetadataCommitmentV1,
         occurred_at: UnixSeconds,
         kind: DomainEventKind,
     ) {
@@ -538,7 +539,7 @@ impl RustEngine {
             project_id,
             milestone_id,
             origin,
-            reason,
+            content: generated_contracts::provider_core::ReasonReferenceV1::Write(content),
             occurred_at,
             kind,
         });

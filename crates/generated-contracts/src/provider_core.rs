@@ -33,3 +33,13 @@ pub struct RegisterWorkerCoreRequest {
 
 mod proposal_metadata;
 pub use proposal_metadata::*;
+
+mod catalog;
+pub use catalog::*;
+mod catalog_metadata;
+pub use catalog_metadata::*;
+mod reasons;
+pub use reasons::*;
+
+mod catalog_seed;
+pub use catalog_seed::*;

@@ -13,14 +13,14 @@ promotion and two observed release cycles remain open. Earlier milestone section
 below describe the retained compatibility tests; historical acceptance records
 live in `progress/handoffs/SPEC-0013*.md`.
 
-SPEC-0015 R2b1 uses CoreArchiveV3 / engine version 3 and CoreSnapshotV3. Worker
-names, Project root and proposal text, milestone titles and change explanations
-are API-owned; native/WASM state retains fixed references and actual numeric
-terms. Existing V2 data requires an explicit paired transition. See the
-[current ownership, migration and rollback guide](../../specs/0015-adapter-core-boundary/r2b-proposals.md).
-Directory and Project are 189,484 and 162,865 bytes. Code, value and memory limits
-are unchanged. Catalog/reason content remains R2b2, tasks R3 and removal of the
-paging helper R4/R5.
+SPEC-0015 R2b2 uses CoreArchiveV4 / engine version4 and CoreSnapshotV4. The API
+owns worker names, Project root/proposal content, milestone titles, change
+explanations, catalog labels/categories, request narrative and lifecycle reasons.
+Core retains actual numeric terms, permissions, moderated request lifecycle and
+fixed references; current catalog label and skill origin are separate. Existing
+V3 stores require the [paired owner exchange and current-state rollback](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
+Directory and Project are167305 and163514 bytes; code/value/memory limits are
+unchanged. Tasks remain R3 and removal of the paging helper R4/R5.
 
 ```sh
 bash scripts/verify.sh ink-sandbox
@@ -326,7 +326,7 @@ frontend flow or application storage format. See [M6 evidence](../../progress/ha
 ## Complete retained-state migration candidate (M7)
 
 `Worker::import_archive` creates a fresh candidate store from the private typed
-`CoreArchiveV3`. Its caller must first validate the archive with the native bridge,
+`CoreArchiveV4`. Its caller must first validate the archive with the native bridge,
 pause writes, drain pending operations and reconcile uncertain outcomes. There is
 no HTTP import endpoint. `Worker::reopen` requires an existing sealed store;
 imports reject populated destinations and never regenerate incompatible state.

@@ -2,7 +2,7 @@
 //! count as agreement, including when both available projections look identical.
 use super::Error;
 use generated_contracts::OperationReceipt;
-use provider_execution::migration::CoreArchiveV3;
+use provider_execution::migration::CoreArchiveV4;
 
 #[derive(Clone, Copy)]
 pub enum ObservedOutcome<'a> {
@@ -11,7 +11,7 @@ pub enum ObservedOutcome<'a> {
     Incomplete,
 }
 pub struct Observation<'a> {
-    pub archive: Option<&'a CoreArchiveV3>,
+    pub archive: Option<&'a CoreArchiveV4>,
     pub outcome: ObservedOutcome<'a>,
 }
 #[derive(Debug, PartialEq, Eq)]
@@ -33,7 +33,7 @@ pub fn compare(
     };
     if [reference_state, candidate_state]
         .iter()
-        .any(|archive| archive.version != 3 || archive.checkpoint.engine_version != 3)
+        .any(|archive| archive.version != 4 || archive.checkpoint.engine_version != 4)
     {
         return Ok(Comparison::Incomplete);
     }

@@ -1,7 +1,10 @@
 //! Complete private archive bridge. No historical business operation is replayed.
 use super::{directory::*, *};
+use generated_contracts::provider_core::{
+    CatalogEntryCore, CatalogReferenceV1, ReasonCore, ReasonReferenceV1, SkillRequestCore,
+};
 use generated_contracts::*;
-use provider_execution::migration::{CoreArchiveV3, ReasonRecord};
+use provider_execution::migration::CoreArchiveV4;
 use std::collections::BTreeSet;
 
 /// Fixed deployment settings; mutable catalogs and archive contents are not identity.
@@ -78,26 +81,26 @@ enum Record {
     Withdrawal(WithdrawalView),
     Balance(AccountId32, Money),
     Issuance(Money),
-    SkillRequest(SkillRequestView),
+    SkillRequest(SkillRequestCore),
     Policies(ScorePolicy, CompensationPolicy, u32),
     Reason(Vec<u8>),
-    Catalog(CatalogKind, CatalogEntry, Vec<u32>, String),
+    Catalog(CatalogKind, CatalogEntryCore, Vec<u32>, CatalogReferenceV1),
     WorkerIndex(AccountId32),
 }
 type Reason = (
     EntityId,
     Option<EntityId>,
     AccountId32,
-    String,
+    ReasonReferenceV1,
     UnixSeconds,
     DomainEventKind,
 );
-fn reason_wire(reason: &ReasonRecord) -> Reason {
+fn reason_wire(reason: &ReasonCore) -> Reason {
     (
         reason.project_id,
         reason.milestone_id,
         reason.origin,
-        reason.reason.clone(),
+        reason.content.clone(),
         reason.occurred_at,
         reason.kind,
     )
@@ -166,13 +169,13 @@ fn upload_record(
 }
 pub(super) fn initialize(
     bundles: &Bundles,
-    archive: CoreArchiveV3,
+    archive: CoreArchiveV4,
     configuration: WholeConfiguration,
 ) -> Result<(sp_io::TestExternalities, Vec<u8>), Error> {
     configuration.validate()?;
     let saved = &archive.checkpoint;
-    if archive.version != 3
-        || saved.engine_version != 3
+    if archive.version != 4
+        || saved.engine_version != 4
         || saved.info.root_account != configuration.root
         || saved.info.provider_instance_id != configuration.generation
     {
@@ -190,10 +193,15 @@ pub(super) fn initialize(
         root: configuration.root,
         funded_accounts: Vec::new(),
         catalog: (
-            vec![CatalogEntry {
+            vec![CatalogEntryCore {
                 id: 1,
-                name: "coordinator".into(),
                 fixed: true,
+                content: saved
+                    .roles
+                    .get(&1)
+                    .ok_or(Error::InvalidState)?
+                    .content
+                    .clone(),
             }],
             Vec::new(),
             Vec::new(),
@@ -219,20 +227,17 @@ pub(super) fn initialize(
         saved.compensation_policy.clone(),
         saved.next_task_id,
     ));
-    records.extend(
-        saved
-            .roles
-            .values()
-            .cloned()
-            .map(|entry| Record::Catalog(CatalogKind::Role, entry, Vec::new(), String::new())),
-    );
+    records.extend(saved.roles.values().cloned().map(|entry| {
+        let origin = entry.content.clone();
+        Record::Catalog(CatalogKind::Role, entry, Vec::new(), origin)
+    }));
     for (id, entry) in &saved.skills {
         let metadata = saved.skill_metadata.get(id).ok_or(Error::InvalidState)?;
         records.push(Record::Catalog(
             CatalogKind::Skill,
             entry.clone(),
             metadata.role_ids.clone(),
-            metadata.category.clone(),
+            metadata.origin.clone(),
         ));
     }
     records.extend(saved.workers.values().map(|worker| {
@@ -404,14 +409,14 @@ pub(super) fn read_archive(
     _bundles: &Bundles,
     state: &State,
     sealed: bool,
-) -> Result<CoreArchiveV3, Error> {
+) -> Result<CoreArchiveV4, Error> {
     super::archive::read(ext, state, sealed)
 }
 pub(super) async fn export(
     pool: &SqlitePool,
     bundles: &Bundles,
     mode: Mode,
-) -> Result<CoreArchiveV3, Error> {
+) -> Result<CoreArchiveV4, Error> {
     if !matches!(mode, Mode::Directory { whole: true, .. }) {
         return Err(Error::IncompleteCoverage);
     }
@@ -517,9 +522,9 @@ mod tests {
             root,
             funded_accounts: vec![owner],
             catalog: (
-                vec![CatalogEntry {
+                vec![CatalogEntryCore {
                     id: 1,
-                    name: "coordinator".into(),
+                    content: CatalogReferenceV1::Migration(PayloadHash::from_bytes([2; 32])),
                     fixed: true,
                 }],
                 Vec::new(),
@@ -542,32 +547,34 @@ mod tests {
                 &state,
                 &Record::Catalog(
                     CatalogKind::Skill,
-                    CatalogEntry {
+                    CatalogEntryCore {
                         id,
-                        name: format!("skill-{id}"),
+                        content: CatalogReferenceV1::Migration(PayloadHash::from_bytes(
+                            [u8::try_from(id).unwrap(); 32],
+                        )),
                         fixed: false,
                     },
                     Vec::new(),
-                    String::new(),
+                    CatalogReferenceV1::Migration(PayloadHash::from_bytes([5; 32])),
                 ),
             )
             .unwrap();
         }
         let id = EntityId::from_bytes([51; 16]);
+        // Descriptive labels no longer span pages. A historical request may
+        // retain many distinct (subsequently deleted) role IDs instead.
         ext = staged_record_faults(
             ext,
             &bundles,
             &state,
-            &Record::Catalog(
-                CatalogKind::Skill,
-                CatalogEntry {
-                    id: 44,
-                    name: "staged".repeat(2000),
-                    fixed: false,
-                },
-                Vec::new(),
-                String::new(),
-            ),
+            &Record::SkillRequest(SkillRequestCore {
+                request_id: EntityId::from_bytes([52; 16]),
+                requester: owner,
+                content: CatalogReferenceV1::Migration(PayloadHash::from_bytes([77; 32])),
+                role_ids: (1..2200).collect(),
+                status: SkillRequestStatus::Rejected,
+                skill_id: None,
+            }),
         );
         upload_record(
             &mut ext,

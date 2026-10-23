@@ -455,7 +455,16 @@ async fn password(
     auth::change_password(&app, &session, json(&headers, &body)?).await
 }
 async fn catalog(State(app): State<Arc<App>>) -> Result<Json<CatalogView>, Error> {
-    Ok(Json(app.snapshot().await?.catalog))
+    let snapshot = app.snapshot().await?;
+    Ok(Json(
+        crate::catalog_metadata::compose(
+            &app,
+            snapshot.info.provider_instance_id,
+            snapshot.info.root_account,
+            snapshot.catalog,
+        )
+        .await?,
+    ))
 }
 async fn workers(State(app): State<Arc<App>>) -> Result<Json<Vec<WorkerSummaryView>>, Error> {
     let mut workers = Vec::new();

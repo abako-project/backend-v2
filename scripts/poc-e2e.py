@@ -85,14 +85,17 @@ class Client:
         self.session = self.request("POST", path, body, 201 if path.endswith("/register") else 200)
         return self.session["accountId"]
 
-    def command(self, method, path, body=None, operation_id=None, expected_outcome="Success"):
+    def command(self, method, path, body=None, operation_id=None, expected_outcome="Success", expected_status="Finalized"):
         key = operation_id or "0x" + secrets.token_hex(16)
         reference = self.request(method, path, body, 202, {"Idempotency-Key": key})
         require(reference["operationId"] == key, "adapter changed caller idempotency key")
         deadline = time.monotonic() + 45
         while time.monotonic() < deadline:
             operation = self.request("GET", "/api/operations/" + key)
-            if operation["status"] == "Finalized":
+            if operation["status"] == expected_status:
+                if expected_status != "Finalized":
+                    require(operation["receipt"] is None, "adapter admission fabricated a provider receipt")
+                    return operation
                 receipt = operation["receipt"]
                 require(receipt["outcome"]["type"] == expected_outcome,
                         f"expected {expected_outcome}, got {receipt['outcome'].get('type')}: "
@@ -725,8 +728,8 @@ def exercise_catalog(admin, worker, outsider):
             "approval silently qualified the worker")
     duplicate = worker.command("POST", "/api/catalog/skill-requests",
                                {"name": "  " + skill_name.upper() + "  ", "roleIds": [3]},
-                               expected_outcome="Failed")
-    require(duplicate["receipt"]["outcome"]["code"] == "skill_name_exists",
+                               expected_status="Rejected")
+    require(duplicate["errorCode"] == "skill_name_exists",
             "normalized duplicate created a second global skill")
 
 

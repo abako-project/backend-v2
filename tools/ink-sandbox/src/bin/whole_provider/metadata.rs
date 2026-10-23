@@ -1,18 +1,21 @@
-//! Offline owner-file conversion only. The current binary has one core engine.
+//! Offline V3↔V4 owner-file exchange. The binary has one current business engine.
 use super::{Result, load_archive, write_archive};
 use generated_contracts::{
-    AccountId32, PayloadHash,
-    provider_core::{CreationMetadataHeaderV1, ProposalMetadataHeaderV1, ProposalMetadataRecordV1},
+    AccountId32, PayloadHash, ProviderInstanceId,
+    provider_core::{
+        CatalogMetadataHeaderV1, CatalogMetadataRecordV1, CreationMetadataHeaderV1,
+        ProposalMetadataHeaderV1, ReasonMetadataHeaderV1, ReasonMetadataRecordV1,
+    },
 };
 use ink_v5_compatibility::worker::MAX_SHELL;
 use mock_provider::migration;
+use serde::{Serialize, de::DeserializeOwned};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     fs::{File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
     path::Path,
 };
-
 fn output_file(path: &Path) -> Result<File> {
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
@@ -23,25 +26,25 @@ fn output_file(path: &Path) -> Result<File> {
     }
     Ok(options.open(path)?)
 }
-fn write_metadata(
-    path: &Path,
-    generation: generated_contracts::ProviderInstanceId,
-    records: &[ProposalMetadataRecordV1],
-) -> Result<()> {
+fn write_metadata<H: Serialize, T: Serialize>(path: &Path, header: H, records: &[T]) -> Result<()> {
     let mut file = output_file(path)?;
-    serde_json::to_writer(
-        &mut file,
-        &ProposalMetadataHeaderV1 {
-            schema_version: 1,
-            generation,
-        },
-    )?;
-    file.write_all(b"\n")?;
+    let mut total = 0usize;
+    write_line(&mut file, &header, &mut total)?;
     for record in records {
-        serde_json::to_writer(&mut file, record)?;
-        file.write_all(b"\n")?;
+        write_line(&mut file, record, &mut total)?;
     }
     file.sync_all()?;
+    Ok(())
+}
+fn write_line(file: &mut File, value: &impl Serialize, total: &mut usize) -> Result<()> {
+    let bytes = serde_json::to_vec(value)?;
+    let count = bytes.len().checked_add(1).ok_or("metadata exceeds limit")?;
+    *total = total.checked_add(count).ok_or("metadata exceeds limit")?;
+    if count > 33_554_432 || *total > MAX_SHELL {
+        return Err("metadata exceeds limit".into());
+    }
+    file.write_all(&bytes)?;
+    file.write_all(b"\n")?;
     Ok(())
 }
 fn line(reader: &mut BufReader<File>, total: &mut usize) -> Result<Option<Vec<u8>>> {
@@ -59,72 +62,72 @@ fn line(reader: &mut BufReader<File>, total: &mut usize) -> Result<Option<Vec<u8
     }
     Ok(Some(bytes))
 }
-fn read_metadata(
+fn read_metadata<H: DeserializeOwned, T: DeserializeOwned>(
     path: &Path,
-    generation: generated_contracts::ProviderInstanceId,
-) -> Result<BTreeMap<PayloadHash, ProposalMetadataRecordV1>> {
+    valid_header: impl FnOnce(H) -> bool,
+    key: impl Fn(&T) -> Option<PayloadHash>,
+) -> Result<BTreeMap<PayloadHash, T>> {
     let mut reader = BufReader::new(File::open(path)?);
     let mut total = 0;
-    let header: ProposalMetadataHeaderV1 =
-        serde_json::from_slice(&line(&mut reader, &mut total)?.ok_or("metadata header missing")?)
-            .map_err(|_| "invalid metadata header")?;
-    if header.schema_version != 1 || header.generation != generation {
+    let header =
+        serde_json::from_slice(&line(&mut reader, &mut total)?.ok_or("metadata header missing")?)?;
+    if !valid_header(header) {
         return Err("metadata generation/version mismatch".into());
     }
     let mut records = BTreeMap::new();
     while let Some(bytes) = line(&mut reader, &mut total)? {
-        let record: ProposalMetadataRecordV1 =
-            serde_json::from_slice(&bytes).map_err(|_| "invalid metadata record")?;
-        if record.generation != generation {
-            return Err("metadata generation mismatch".into());
-        }
-        if records
-            .insert(migration::source_hash(&record.hash_input()), record)
-            .is_some()
-        {
+        let record: T = serde_json::from_slice(&bytes)?;
+        let key = key(&record).ok_or("metadata generation mismatch")?;
+        if records.insert(key, record).is_some() {
             return Err("duplicate metadata record".into());
         }
     }
     Ok(records)
 }
-
+fn catalog_header(generation: ProviderInstanceId) -> CatalogMetadataHeaderV1 {
+    CatalogMetadataHeaderV1 {
+        schema_version: 1,
+        generation,
+    }
+}
+fn reason_header(generation: ProviderInstanceId) -> ReasonMetadataHeaderV1 {
+    ReasonMetadataHeaderV1 {
+        schema_version: 1,
+        generation,
+    }
+}
 pub(super) fn run(args: &[String], root: AccountId32) -> Result<()> {
     match args {
-        [command, source, core_output, metadata_output] if command == "upgrade" => {
-            let mut bytes = Vec::new();
-            File::open(source)?.take(MAX_SHELL as u64 + 1).read_to_end(&mut bytes)?;
-            if bytes.len() > MAX_SHELL { return Err("archive exceeds limit".into()); }
-            let (core, records) = migration::from_predecessor(&bytes, root)?;
-            write_archive(Path::new(core_output), &core)?;
-            write_metadata(Path::new(metadata_output), core.checkpoint.info.provider_instance_id, &records)?;
+        [command,source,core_output,catalog_output,reason_output] if command=="upgrade"=>{
+            let mut bytes=Vec::new();File::open(source)?.take(MAX_SHELL as u64+1).read_to_end(&mut bytes)?;
+            if bytes.len()>MAX_SHELL{return Err("archive exceeds limit".into());}
+            let (core,catalog,reasons)=migration::from_predecessor(&bytes,root)?;let generation=core.checkpoint.info.provider_instance_id;
+            write_archive(Path::new(core_output),&core)?;
+            write_metadata(Path::new(catalog_output),catalog_header(generation),&catalog)?;
+            write_metadata(Path::new(reason_output),reason_header(generation),&reasons)?;
         }
-        [command, source, metadata, output] if command == "downgrade" => {
-            let core = load_archive(Path::new(source))?;
-            if core.checkpoint.info.root_account != root { return Err("configured root differs from retained root".into()); }
-            let records = read_metadata(Path::new(metadata), core.checkpoint.info.provider_instance_id)?;
-            if records.len() != core.checkpoint.projects.values().flat_map(|p| &p.proposals).try_fold(0usize, |sum,p|sum.checked_add(1 + usize::from(p.change_request.is_some())).ok_or("entity count overflow"))? {
-                return Err("metadata cohort is incomplete or contains unused records".into());
+        [command,source,catalog_path,reason_path,output] if command=="downgrade"=>{
+            let core=load_archive(Path::new(source))?;if core.checkpoint.info.root_account!=root{return Err("configured root differs from retained root".into());}
+            let generation=core.checkpoint.info.provider_instance_id;
+            let catalog=read_metadata(Path::new(catalog_path),|h:CatalogMetadataHeaderV1|h.schema_version==1&&h.generation==generation,|r:&CatalogMetadataRecordV1|(r.generation==generation).then(||migration::source_hash(&r.hash_input())))?;
+            let reasons=read_metadata(Path::new(reason_path),|h:ReasonMetadataHeaderV1|h.schema_version==1&&h.generation==generation,|r:&ReasonMetadataRecordV1|(r.generation==generation).then(||migration::source_hash(&r.hash_input())))?;
+            let saved=&core.checkpoint;
+            let expected:BTreeSet<_>=saved.roles.values().chain(saved.skills.values()).map(|e|e.content.hash()).chain(saved.skill_metadata.values().map(|s|s.origin.hash())).chain(saved.skill_requests.values().map(|r|r.content.hash())).collect();
+            let expected_reasons:BTreeSet<_>=saved.reasons.iter().map(|r|r.content.hash()).collect();
+            if expected!=catalog.keys().copied().collect() || expected_reasons!=reasons.keys().copied().collect(){return Err("metadata cohort is incomplete or contains unused records".into());}
+            write_archive(Path::new(output),&migration::to_predecessor(core,&catalog,&reasons)?)?;
+        }
+        [command,source,output] if matches!(command.as_str(),"recover-creation-metadata"|"recover-proposal-metadata"|"recover-catalog-metadata"|"recover-reason-metadata")=>{
+            let core=load_archive(Path::new(source))?;if core.checkpoint.info.root_account!=root{return Err("configured root differs from retained root".into());}
+            let generation=core.checkpoint.info.provider_instance_id;let output=Path::new(output);
+            match command.as_str(){
+                "recover-creation-metadata"=>write_metadata(output,CreationMetadataHeaderV1{schema_version:1,generation},&migration::recover_legacy_creations(&core)?)?,
+                "recover-proposal-metadata"=>write_metadata(output,ProposalMetadataHeaderV1{schema_version:1,generation},&migration::recover_legacy_proposals(&core)?)?,
+                "recover-catalog-metadata"=>write_metadata(output,catalog_header(generation),&migration::recover_legacy_catalog(&core)?)?,
+                _=>write_metadata(output,reason_header(generation),&migration::recover_legacy_reasons(&core)?)?,
             }
-            let old = migration::to_predecessor(core, &records)?;
-            write_archive(Path::new(output), &old)?;
         }
-        [command, source, output] if command == "recover-creation-metadata" => {
-            let core = load_archive(Path::new(source))?;
-            if core.checkpoint.info.root_account != root { return Err("configured root differs from retained root".into()); }
-            let records = migration::recover_legacy_creations(&core)?;
-            let mut file=output_file(Path::new(output))?;
-            serde_json::to_writer(&mut file,&CreationMetadataHeaderV1{schema_version:1,generation:core.checkpoint.info.provider_instance_id})?;
-            file.write_all(b"\n")?;
-            for record in &records { serde_json::to_writer(&mut file,record)?;file.write_all(b"\n")?; }
-            file.sync_all()?;
-        }
-        [command, source, output] if command == "recover-proposal-metadata" => {
-            let core=load_archive(Path::new(source))?;
-            if core.checkpoint.info.root_account != root {return Err("configured root differs from retained root".into());}
-            let records=migration::recover_legacy_proposals(&core)?;
-            write_metadata(Path::new(output),core.checkpoint.info.provider_instance_id,&records)?;
-        }
-        _ => return Err("usage: whole-provider upgrade V2 V3 PROPOSALS | downgrade V3 PROPOSALS V2 | recover-creation-metadata CORE METADATA | recover-proposal-metadata CORE PROPOSALS".into()),
+        _=>return Err("usage: whole-provider upgrade V3 V4 CATALOG REASONS | downgrade V4 CATALOG REASONS V3 | recover-{creation,proposal,catalog,reason}-metadata CORE OUTPUT".into()),
     }
     Ok(())
 }

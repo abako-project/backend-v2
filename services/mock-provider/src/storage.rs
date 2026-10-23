@@ -1,11 +1,10 @@
 use generated_contracts::provider_core::CoreDisputeView;
-use generated_contracts::provider_core::CoreSnapshotV3;
+use generated_contracts::provider_core::{CoreSnapshotV4, ReasonPageV1, SkillRequestCore};
 use std::sync::Arc;
 
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
-    ProviderEvents, ProviderInfo, SignedContractCallV1, SkillRequestView, UnixSeconds,
-    WithdrawalView,
+    ProviderEvents, ProviderInfo, SignedContractCallV1, UnixSeconds, WithdrawalView,
 };
 
 use crate::{
@@ -31,7 +30,12 @@ pub struct Provider {
 
 impl Provider {
     /// Requests are visible only to their worker or the configured system account.
-    pub async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestView>> {
+    /// Bounded owner-only reason facts; content stays in the adapter.
+    pub async fn lifecycle_reasons(&self, after: u64, limit: usize) -> Result<ReasonPageV1> {
+        self.read().await?.lifecycle_reasons(after, limit)
+    }
+    /// Requests visible to their worker or the configured system account.
+    pub async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestCore>> {
         Ok(self.read().await?.skill_requests(origin))
     }
 
@@ -78,7 +82,7 @@ impl Provider {
     pub async fn sqlite_from_archive(
         url: &str,
         root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV3,
+        archive: provider_execution::migration::CoreArchiveV4,
     ) -> Result<Self> {
         Self::open_sqlite(url, root, Some(archive)).await
     }
@@ -87,7 +91,7 @@ impl Provider {
     async fn open_sqlite(
         url: &str,
         root: AccountId32,
-        archive: Option<provider_execution::migration::CoreArchiveV3>,
+        archive: Option<provider_execution::migration::CoreArchiveV4>,
     ) -> Result<Self> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::{str::FromStr, time::Duration};
@@ -165,7 +169,7 @@ impl Provider {
 
     /// Complete private archive for a paused migration; no HTTP route exposes it.
     /// The caller must drain writes before taking the cutover archive.
-    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV3> {
+    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV4> {
         let state = self.read().await?;
         tokio::task::spawn_blocking(move || state.archive())
             .await
@@ -177,7 +181,7 @@ impl Provider {
     #[cfg(feature = "storage-memory")]
     pub async fn memory_from_archive(
         root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV3,
+        archive: provider_execution::migration::CoreArchiveV4,
     ) -> Result<Self> {
         let state = tokio::task::spawn_blocking(move || State::from_archive(archive, root))
             .await
@@ -275,7 +279,7 @@ impl Provider {
         Ok(self.read().await?.nonce(account))
     }
     /// Read-only internal snapshot; the adapter must filter private project data.
-    pub async fn snapshot(&self) -> Result<CoreSnapshotV3> {
+    pub async fn snapshot(&self) -> Result<CoreSnapshotV4> {
         Ok(self.read().await?.snapshot())
     }
     /// A recorded result proves finality independently of its business outcome.

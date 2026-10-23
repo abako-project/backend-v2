@@ -54,7 +54,7 @@ fn digest(state: &State) -> TestResult<String> {
 fn canonical_signed_financial_trace() -> TestResult {
     let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
     let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
-    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
     assert_eq!(json!(projection(&state)?), trace["initial"]);
     for (index, step) in trace["steps"].as_array().ok_or("steps")?.iter().enumerate() {
         for probe in trace["temporalProbes"]
@@ -176,7 +176,7 @@ impl Fixture {
 fn export_financial_trace() -> TestResult {
     let output = std::env::var("FINANCIAL_SIGNED_TRACE_OUTPUT")?;
     let mut state = State::new(signed_account(1)?)?;
-    state.shell.info.provider_instance_id = ProviderInstanceId::from_bytes([109; 16]);
+    state.set_fixture_generation(ProviderInstanceId::from_bytes([109; 16]));
     let initial = projection(&state)?;
     let mut fixture = Fixture {
         state,
@@ -1131,7 +1131,7 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
     let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
     let root = serde_json::from_value(trace["root"].clone())?;
     let mut state = State::new(root)?;
-    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
     for (index, step) in trace["steps"].as_array().ok_or("steps")?.iter().enumerate() {
         let before = state.encode()?;
         // Typed decoding is essential: retained reputation can exceed JSON's u64 range.
@@ -1193,7 +1193,7 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
         "invalid_task_state"
     );
     let mut invalid = restored.archive()?;
-    invalid.version = 4;
+    invalid.version = 5;
     assert_eq!(
         State::from_archive(invalid, root)
             .err()
@@ -1224,7 +1224,7 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
 fn native_accepts_large_worker_profile_payload() -> TestResult {
     for length in [17 * 1024, MAX_SIGNABLE_BYTES - 200] {
         let mut state = State::new(signed_account(1)?)?;
-        state.shell.info.provider_instance_id = ProviderInstanceId::from_bytes([109; 16]);
+        state.set_fixture_generation(ProviderInstanceId::from_bytes([109; 16]));
         let mut fixture = Fixture {
             state,
             steps: Vec::new(),
@@ -1430,7 +1430,7 @@ fn migration_catalog_case(
     frozen: Option<&Value>,
 ) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let first: provider_execution::migration::CoreArchiveV3 =
+    let first: provider_execution::migration::CoreArchiveV4 =
         serde_json::from_str(&archives[0].archive)?;
     let mut catalog = State::from_archive(first.clone(), root)?;
     for offset in 0..14u8 {
@@ -1454,7 +1454,7 @@ fn migration_catalog_case(
             .collect::<Vec<_>>()
             .encode()
             .len()
-            > MAX_SIGNABLE_BYTES + 1024
+            < MAX_SIGNABLE_BYTES
     );
     let case = migration_case(
         catalog,
@@ -1463,14 +1463,14 @@ fn migration_catalog_case(
             coordinator_percent: Percentage::new(20)?,
         }),
         195,
-        "catalog above one ABI input",
+        "catalog with large offchain labels",
         frozen,
     )?;
     Ok(case)
 }
 fn migration_project_case(source: &RetainedArchive, frozen: Option<&Value>) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let source: provider_execution::migration::CoreArchiveV3 =
+    let source: provider_execution::migration::CoreArchiveV4 =
         serde_json::from_str(&source.archive)?;
     let mut project = State::from_archive(source, root)?;
     let client = signed_account(5)?;
@@ -1609,7 +1609,7 @@ fn migration_worker_case(
     frozen: Option<&Value>,
 ) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let first: provider_execution::migration::CoreArchiveV3 =
+    let first: provider_execution::migration::CoreArchiveV4 =
         serde_json::from_str(&source.archive)?;
     let mut worker = State::from_archive(first, root)?;
     let owner = signed_account(2)?;
@@ -1681,7 +1681,7 @@ fn migration_planning_cases(
     archives: &[RetainedArchive],
     frozen: Option<&[Value]>,
 ) -> TestResult<Vec<Value>> {
-    let mut source: provider_execution::migration::CoreArchiveV3 =
+    let mut source: provider_execution::migration::CoreArchiveV4 =
         serde_json::from_str(&archives[1].archive)?;
     let project = source
         .checkpoint
@@ -1736,7 +1736,7 @@ fn migration_planning_cases(
 fn migration_reference(frozen: Option<&MigrationReference>) -> TestResult<MigrationReference> {
     let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
     let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
-    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
     let mut reference = MigrationReference {
         archives: Vec::new(),
         digests: Vec::new(),
@@ -1800,7 +1800,7 @@ fn ordinary_qualification_capacity_reference(frozen: Option<&[Value]>) -> TestRe
     let source = reference.aggregate_cases.get(2).ok_or("worker case")?;
     let archive = serde_json::from_str(source["archive"].as_str().ok_or("archive")?)?;
     let mut state = State::from_archive(archive, signed_account(1)?)?;
-    let original: provider_execution::migration::CoreArchiveV3 =
+    let original: provider_execution::migration::CoreArchiveV4 =
         serde_json::from_str(&reference.archives.last().ok_or("snapshot")?.archive)?;
     let owner = signed_account(2)?;
     let large = state.engine.workers[&owner].qualifications.clone();
@@ -1857,10 +1857,10 @@ fn complete_retained_migration_reference() -> TestResult {
 }
 
 #[test]
-fn retained_r2a_creation_refs_survive_proposal_conversion() -> TestResult {
+fn retained_creation_and_proposal_refs_survive_catalog_conversion() -> TestResult {
     let reference: MigrationReference =
-        serde_json::from_str(include_str!("fixtures/proposal-predecessor.json"))?;
-    let old: provider_execution::migration::CoreArchiveV2 = serde_json::from_str(
+        serde_json::from_str(include_str!("fixtures/catalog-predecessor.json"))?;
+    let old: provider_execution::migration::CoreArchiveV3 = serde_json::from_str(
         &reference
             .archives
             .last()
@@ -1868,7 +1868,7 @@ fn retained_r2a_creation_refs_survive_proposal_conversion() -> TestResult {
             .archive,
     )?;
     let bytes = serde_json::to_vec(&old)?;
-    let (core, records) =
+    let (core, records, reasons) =
         crate::migration::from_predecessor(&bytes, old.checkpoint.info.root_account)?;
     assert_eq!(
         serde_json::to_vec(&core.checkpoint.workers)?,
@@ -1881,7 +1881,11 @@ fn retained_r2a_creation_refs_survive_proposal_conversion() -> TestResult {
         .into_iter()
         .map(|r| (crate::migration::source_hash(&r.hash_input()), r))
         .collect();
-    let restored = crate::migration::to_predecessor(core, &records)?;
+    let reasons = reasons
+        .into_iter()
+        .map(|r| (crate::migration::source_hash(&r.hash_input()), r))
+        .collect();
+    let restored = crate::migration::to_predecessor(core, &records, &reasons)?;
     assert_eq!(serde_json::to_vec(&restored)?, bytes);
     Ok(())
 }
@@ -1895,7 +1899,7 @@ fn committed_evidence_preserves_receipts_money_replay_and_current_archives() -> 
     let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
     let root = serde_json::from_value(trace["root"].clone())?;
     let mut state = State::new(root)?;
-    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
     let frozen: Value = serde_json::from_str(include_str!("fixtures/evidence-signed.json"))?;
     let authoring = std::env::var("EVIDENCE_FIXTURE_OUTPUT").ok();
     let mut counts = [0usize; 4];

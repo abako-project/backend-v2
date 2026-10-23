@@ -155,7 +155,10 @@ fn transition(engine: &mut RustEngine, action: &Action) -> crate::Result<Value> 
 fn canonical_reputation_matching_trace() -> TestResult {
     let fixture: Value = serde_json::from_str(include_str!("fixtures/matching-parity.json"))?;
     assert_eq!(fixture["schemaVersion"], 1);
-    let mut engine = RustEngine::new(account(1))?;
+    let mut engine = RustEngine::new(
+        account(1),
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     for (index, step) in fixture["steps"]
         .as_array()
         .ok_or("steps")?
@@ -173,7 +176,10 @@ fn canonical_reputation_matching_trace() -> TestResult {
 #[test]
 #[ignore = "explicit M4 trace authoring only"]
 fn export_matching_trace() -> TestResult {
-    let mut engine = RustEngine::new(account(1))?;
+    let mut engine = RustEngine::new(
+        account(1),
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     let initial = json!(projection(&engine));
     let mut steps = Vec::new();
     for action in scenario()? {

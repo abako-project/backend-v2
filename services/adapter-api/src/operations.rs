@@ -181,6 +181,10 @@ async fn authorize_project(
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "Keep admission, immutable metadata staging and queue insertion in one explicit transaction."
+)]
 pub(crate) async fn enqueue(
     app: &App,
     session: &Session,
@@ -235,11 +239,14 @@ pub(crate) async fn enqueue(
     let generation = if crate::evidence::needs_commitment(&command)
         || crate::creation_metadata::needs_record(&command)
         || crate::proposal_metadata::needs_record(&command)
+        || crate::reason_metadata::needs_record(&command)
+        || crate::catalog_metadata::operation(&command)
     {
         Some(app.snapshot().await?.info.provider_instance_id)
     } else {
         None
     };
+    let catalog_operation = crate::catalog_metadata::operation(&command);
     let time = now()?;
     let mut tx = app.db.begin().await?;
     // One database-wide enqueue lock preserves both queue limits across replicas.
@@ -262,6 +269,12 @@ pub(crate) async fn enqueue(
     }
     let command = if let Some(generation) = generation {
         let command =
+            crate::catalog_metadata::capture(&mut tx, generation, account, operation_id, command)
+                .await?;
+        let command =
+            crate::reason_metadata::capture(&mut tx, generation, account, operation_id, command)
+                .await?;
+        let command =
             crate::creation_metadata::capture(&mut tx, generation, account, operation_id, command)
                 .await?;
         let command =
@@ -275,9 +288,9 @@ pub(crate) async fn enqueue(
     if command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
         return Err(Error::Invalid);
     }
-    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes, provider_instance_id) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10, $11)")
+    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes, provider_instance_id, catalog_operation) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10, $11, $12)")
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
-        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).execute(&mut *tx).await?;
+        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).bind(catalog_operation).execute(&mut *tx).await?;
     sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, 'operation_authorized', 'ok', $3)")
         .bind(session.view.principal_id.to_string()).bind(operation_id.to_string()).bind(time).execute(&mut *tx).await?;
     tx.commit().await?;
@@ -396,7 +409,7 @@ pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
     let time = now()?;
     let lease = token()?.to_string();
     let mut tx = app.db.begin().await?;
-    let row = sqlx::query("SELECT * FROM operations o WHERE o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE previous.wallet_id = o.wallet_id AND previous.creation_sequence < o.creation_sequence AND previous.status NOT IN ('Finalized', 'Rejected', 'Expired')) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
+    let row = sqlx::query("SELECT * FROM operations o WHERE o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE (previous.wallet_id = o.wallet_id OR (o.catalog_operation AND previous.catalog_operation)) AND previous.creation_sequence < o.creation_sequence AND (previous.status NOT IN ('Finalized', 'Rejected', 'Expired') OR (o.catalog_operation AND previous.catalog_operation AND previous.status='Expired' AND previous.possibly_submitted))) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
         .bind(time).fetch_optional(&mut *tx).await?;
     let Some(row) = row else {
         tx.commit().await?;
@@ -416,7 +429,12 @@ pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
     tx.commit().await?;
     Ok(Some(job))
 }
-async fn save(app: &App, job: &Job, release: bool) -> Result<(), Error> {
+async fn save(
+    app: &App,
+    job: &Job,
+    release: bool,
+    completion: Option<crate::catalog_claims::Completion>,
+) -> Result<(), Error> {
     let time = now()?;
     let mut tx = app.db.begin().await?;
     let result = sqlx::query("UPDATE operations SET status = $1, signable_payload = $2, signed_json = $3, provider_instance_id = $4, receipt_json = $5, error_code = $6, possibly_submitted = $7, attempt_count = $8, next_attempt_at = $9, lease_token = CASE WHEN $10 THEN NULL ELSE lease_token END, lease_until = CASE WHEN $11 THEN NULL ELSE lease_until END WHERE operation_id = $12 AND lease_token = $13 AND lease_until > $14")
@@ -424,6 +442,9 @@ async fn save(app: &App, job: &Job, release: bool) -> Result<(), Error> {
         .bind(job.submitted).bind(job.attempts).bind(job.next).bind(release).bind(release).bind(job.id.to_string()).bind(&job.lease).bind(time).execute(&mut *tx).await?;
     if result.rows_affected() != 1 {
         return Err(Error::Conflict("lease_lost"));
+    }
+    if let Some(completion) = completion {
+        crate::catalog_claims::publish(&mut tx, job.id, completion).await?;
     }
     sqlx::query("INSERT INTO audit_records(operation_id, event_kind, result_code, occurred_at) VALUES ($1, 'operation_stage', $2, $3)")
         .bind(job.id.to_string()).bind(name(job.status)).bind(time).execute(&mut *tx).await?;
@@ -433,15 +454,32 @@ async fn save(app: &App, job: &Job, release: bool) -> Result<(), Error> {
 
 pub(crate) async fn process(app: &App, mut job: Job) -> Result<(), Error> {
     let time = now()?;
-    let outcome = advance(app, &mut job, time).await;
-    if let Err(error) = outcome {
-        if matches!(error, Error::Conflict("lease_lost")) {
-            return Ok(());
-        }
-        tracing::warn!(operation_id = %job.id, stage = ?job.status, code = error.status_code().1, "operation stage failed");
-        job.retry(time, error.status_code().1);
+    let outcome = async {
+        advance(app, &mut job, time).await?;
+        crate::catalog_claims::completion(
+            app,
+            &job.command,
+            job.instance.as_deref(),
+            job.status,
+            job.submitted,
+            job.error.as_deref(),
+            job.receipt.as_deref(),
+        )
+        .await
     }
-    match save(app, &job, true).await {
+    .await;
+    let completion = match outcome {
+        Ok(completion) => completion,
+        Err(error) => {
+            if matches!(error, Error::Conflict("lease_lost")) {
+                return Ok(());
+            }
+            tracing::warn!(operation_id = %job.id, stage = ?job.status, code = error.status_code().1, "operation stage failed");
+            job.retry(now()?, error.status_code().1);
+            None
+        }
+    };
+    match save(app, &job, true, completion).await {
         Err(Error::Conflict("lease_lost")) => Ok(()),
         result => result,
     }
@@ -468,6 +506,28 @@ async fn advance(app: &App, job: &mut Job, time: i64) -> Result<(), Error> {
         if info.payload_version != PAYLOAD_VERSION {
             job.terminal(ProviderOperationStatus::Rejected, "unsupported_provider");
             return Ok(());
+        }
+        if crate::catalog_metadata::operation(&job.command) {
+            match crate::catalog_claims::prepare(
+                app,
+                job.id,
+                job.account,
+                &job.command,
+                &info,
+                &job.lease,
+            )
+            .await?
+            {
+                crate::catalog_claims::Admission::Ready => {}
+                crate::catalog_claims::Admission::Duplicate => {
+                    job.terminal(ProviderOperationStatus::Rejected, "skill_name_exists");
+                    return Ok(());
+                }
+                crate::catalog_claims::Admission::Wait => {
+                    job.next = time + 1;
+                    return Ok(());
+                }
+            }
         }
         let nonce: AccountNonce = app
             .get(
@@ -609,7 +669,7 @@ async fn advance(app: &App, job: &mut Job, time: i64) -> Result<(), Error> {
     // This durable marker precedes sending any bytes. A crash here is uncertain, never rejected.
     job.submitted = true;
     job.status = ProviderOperationStatus::Submitted;
-    save(app, job, false).await?;
+    save(app, job, false, None).await?;
     let response = app
         .internal(
             reqwest::Method::POST,

@@ -673,10 +673,7 @@ impl ProviderCommand {
         match self {
             Self::UpsertCatalogEntryCore { id: 0, .. } => Err(ContractError::Invalid("catalog ID")),
             Self::CreateSkillRequestCore { role_ids, .. } => {
-                if role_ids.is_empty() {
-                    return Err(ContractError::Invalid("skill role IDs"));
-                }
-                catalog_ids(role_ids, "skill role IDs")
+                provider_core::validate_skill_request_roles(role_ids)
             }
             Self::CreateProposalCore { proposal, .. }
             | Self::UpdateProposalCore { proposal, .. } => proposal.validate(),

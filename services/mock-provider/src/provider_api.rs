@@ -1,11 +1,11 @@
 //! Transport effect boundary shared by native and whole-provider candidates.
 use crate::{Provider, Result};
 use generated_contracts::provider_core::CoreDisputeView;
-use generated_contracts::provider_core::CoreSnapshotV3;
+use generated_contracts::provider_core::CoreSnapshotV4;
+use generated_contracts::provider_core::SkillRequestCore;
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
-    ProviderEvents, ProviderInfo, SignedContractCallV1, SkillRequestView, UnixSeconds,
-    WithdrawalView,
+    ProviderEvents, ProviderInfo, SignedContractCallV1, UnixSeconds, WithdrawalView,
 };
 use std::future::Future;
 
@@ -16,7 +16,7 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
     /// Next nonce for a new account operation.
     fn nonce(&self, account: AccountId32) -> impl Future<Output = Result<AccountNonce>> + Send;
     /// Internal read model; the adapter still filters project visibility.
-    fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshotV3>> + Send;
+    fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshotV4>> + Send;
     /// Recorded finality independent of the original transport response.
     fn receipt(
         &self,
@@ -34,11 +34,17 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
         call: SignedContractCallV1,
         now: UnixSeconds,
     ) -> impl Future<Output = Result<OperationReceipt>> + Send;
+    /// Bounded private lifecycle facts; no explanatory text is returned.
+    fn lifecycle_reasons(
+        &self,
+        after: u64,
+        limit: usize,
+    ) -> impl Future<Output = Result<generated_contracts::provider_core::ReasonPageV1>> + Send;
     /// Requests visible to their worker or the configured system account.
     fn skill_requests(
         &self,
         origin: AccountId32,
-    ) -> impl Future<Output = Result<Vec<SkillRequestView>>> + Send;
+    ) -> impl Future<Output = Result<Vec<SkillRequestCore>>> + Send;
     /// Public case projection without internal provider state.
     fn dispute(&self, id: EntityId) -> impl Future<Output = Result<CoreDisputeView>> + Send;
     /// Read a deposit using the existing owner/system policy.
@@ -61,7 +67,7 @@ impl ProviderApi for Provider {
     async fn nonce(&self, account: AccountId32) -> Result<AccountNonce> {
         Self::nonce(self, account).await
     }
-    async fn snapshot(&self) -> Result<CoreSnapshotV3> {
+    async fn snapshot(&self) -> Result<CoreSnapshotV4> {
         Self::snapshot(self).await
     }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
@@ -77,7 +83,14 @@ impl ProviderApi for Provider {
     ) -> Result<OperationReceipt> {
         Self::execute(self, call, now).await
     }
-    async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestView>> {
+    async fn lifecycle_reasons(
+        &self,
+        after: u64,
+        limit: usize,
+    ) -> Result<generated_contracts::provider_core::ReasonPageV1> {
+        Self::lifecycle_reasons(self, after, limit).await
+    }
+    async fn skill_requests(&self, origin: AccountId32) -> Result<Vec<SkillRequestCore>> {
         Self::skill_requests(self, origin).await
     }
     async fn dispute(&self, id: EntityId) -> Result<CoreDisputeView> {

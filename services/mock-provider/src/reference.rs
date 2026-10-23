@@ -1,12 +1,13 @@
 //! Temporary native reference and read models for the whole-provider rollout.
 use crate::{Error, Result, domain::State};
 use generated_contracts::provider_core::CoreDisputeView;
-use generated_contracts::provider_core::CoreSnapshotV3;
+use generated_contracts::provider_core::CoreSnapshotV4;
+use generated_contracts::provider_core::SkillRequestCore;
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
-    ProviderEvents, ProviderInfo, SkillRequestView, WithdrawalView,
+    ProviderEvents, ProviderInfo, WithdrawalView,
 };
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV3};
+use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV4};
 
 /// Private-engine bridge; construction validates a complete retained archive.
 /// These synchronous methods belong on a dedicated worker or blocking pool.
@@ -14,7 +15,7 @@ use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV3
 pub struct ReferenceState(State);
 impl ReferenceState {
     /// Validate domain and retained shell before creating the reference.
-    pub fn from_archive(root: AccountId32, archive: CoreArchiveV3) -> Result<Self> {
+    pub fn from_archive(root: AccountId32, archive: CoreArchiveV4) -> Result<Self> {
         State::from_archive(archive, root).map(Self)
     }
     /// Apply one verified call with captured inputs; no storage commit occurs here.
@@ -28,7 +29,7 @@ impl ReferenceState {
             .map(|(state, receipt)| (Self(state), receipt))
     }
     /// Export complete current domain and shell state.
-    pub fn archive(&self) -> Result<CoreArchiveV3> {
+    pub fn archive(&self) -> Result<CoreArchiveV4> {
         self.0.archive()
     }
     /// Generation and root identity used for signing.
@@ -43,7 +44,7 @@ impl ReferenceState {
     }
     /// Internal read model; the adapter still filters project visibility.
     #[must_use]
-    pub fn snapshot(&self) -> CoreSnapshotV3 {
+    pub fn snapshot(&self) -> CoreSnapshotV4 {
         self.0.snapshot()
     }
     /// Recorded finality independent of the original transport response.
@@ -58,9 +59,17 @@ impl ReferenceState {
         }
         Ok(self.0.events(after, limit))
     }
+    /// Bounded private lifecycle facts for explicit owner metadata exchange.
+    pub fn lifecycle_reasons(
+        &self,
+        after: u64,
+        limit: usize,
+    ) -> Result<generated_contracts::provider_core::ReasonPageV1> {
+        self.0.lifecycle_reasons(after, limit)
+    }
     /// Requests visible to their worker or the configured system account.
     #[must_use]
-    pub fn skill_requests(&self, origin: AccountId32) -> Vec<SkillRequestView> {
+    pub fn skill_requests(&self, origin: AccountId32) -> Vec<SkillRequestCore> {
         self.0.skill_requests(origin)
     }
     /// Public case projection without internal provider state.

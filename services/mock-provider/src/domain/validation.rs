@@ -19,7 +19,7 @@ impl RustEngine {
         require(
             self.roles
                 .get(&1)
-                .is_some_and(|role| role.name == "coordinator" && role.fixed),
+                .is_some_and(|role| role.id == 1 && role.fixed),
             "invalid_catalog_state",
         )?;
         let mut identities = BTreeSet::new();

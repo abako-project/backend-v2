@@ -50,6 +50,7 @@ pub fn router_with_provider<P: ProviderApi>(provider: P, service_token: &str) ->
         .route("/internal/events", get(events::<P>))
         .route("/internal/snapshot", get(snapshot::<P>))
         .route("/internal/catalog/skill-requests", get(skill_requests::<P>))
+        .route("/internal/lifecycle-reasons", get(lifecycle_reasons::<P>))
         .route("/internal/disputes/{dispute_id}", get(dispute::<P>))
         .route("/internal/bramp/deposits/{deposit_id}", get(deposit::<P>))
         .route(
@@ -120,6 +121,25 @@ async fn skill_requests<P: ProviderApi>(
 ) -> Result<impl IntoResponse> {
     let Query(query) = query.map_err(|_| Error::bad("invalid_skill_requests_query"))?;
     Ok(Json(state.provider.skill_requests(query.account).await?))
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReasonQuery {
+    after: u64,
+    limit: usize,
+}
+async fn lifecycle_reasons<P: ProviderApi>(
+    State(state): State<App<P>>,
+    query: std::result::Result<Query<ReasonQuery>, QueryRejection>,
+) -> Result<impl IntoResponse> {
+    let Query(query) = query.map_err(|_| Error::bad("invalid_reason_query"))?;
+    Ok(Json(
+        state
+            .provider
+            .lifecycle_reasons(query.after, query.limit)
+            .await?,
+    ))
 }
 
 async fn dispute<P: ProviderApi>(

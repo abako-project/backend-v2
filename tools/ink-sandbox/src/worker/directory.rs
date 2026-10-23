@@ -1,9 +1,11 @@
 //! M3 ABI bridge. Domain permissions and rules run only in the pinned contracts.
 use super::*;
-use generated_contracts::provider_core::{ProjectCore, WorkerCore};
+use generated_contracts::provider_core::{
+    CatalogCore, CatalogEntryCore, ProjectCore, ReasonReferenceV1, SkillRequestCore, SkillRoleCore,
+    WorkerCore,
+};
 use generated_contracts::{
-    CatalogEntry, CatalogView, CompensationPolicy, DomainEventKind, EntityId, ProviderCommand,
-    ProviderInstanceId, ScorePolicy, SkillRequestView, SkillRoleAssociation,
+    CompensationPolicy, DomainEventKind, EntityId, ProviderCommand, ProviderInstanceId, ScorePolicy,
 };
 use parity_scale_codec::DecodeAll;
 use provider_execution::{Admission, Effect, ExecutionInputs, VerifiedCall};
@@ -12,28 +14,28 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
 pub type DirectoryCatalog = (
-    Vec<CatalogEntry>,
-    Vec<CatalogEntry>,
-    Vec<SkillRoleAssociation>,
+    Vec<CatalogEntryCore>,
+    Vec<CatalogEntryCore>,
+    Vec<SkillRoleCore>,
 );
 pub type DirectoryProjection = (
-    Vec<CatalogEntry>,
-    Vec<CatalogEntry>,
-    Vec<SkillRoleAssociation>,
+    Vec<CatalogEntryCore>,
+    Vec<CatalogEntryCore>,
+    Vec<SkillRoleCore>,
     Vec<WorkerCore>,
-    Vec<SkillRequestView>,
+    Vec<SkillRequestCore>,
 );
 
 pub type MarketplaceProjection = (
-    CatalogView,
+    CatalogCore,
     Vec<WorkerCore>,
-    Vec<SkillRequestView>,
+    Vec<SkillRequestCore>,
     Vec<ProjectCore>,
     Vec<(
         EntityId,
         Option<EntityId>,
         AccountId32,
-        String,
+        ReasonReferenceV1,
         generated_contracts::UnixSeconds,
         DomainEventKind,
     )>,
@@ -362,10 +364,12 @@ fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<
         ProviderCommand::SetScorePolicy(policy) => input("set_score_policy", policy),
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
         ProviderCommand::PromoteCoordinator(request) => input("promote_coordinator", request),
-        ProviderCommand::UpsertCatalogEntry(request) => input("upsert_catalog_entry", request),
+        ProviderCommand::UpsertCatalogEntryCore { kind, id, content } => {
+            input("upsert_catalog_entry_core", (kind, id, content))
+        }
         ProviderCommand::DeleteCatalogEntry(request) => input("delete_catalog_entry", request),
-        ProviderCommand::CreateSkillRequest(request) => {
-            input("create_skill_request", (request, id()))
+        ProviderCommand::CreateSkillRequestCore { role_ids, content } => {
+            input("create_skill_request_core", (role_ids, content, id()))
         }
         ProviderCommand::DecideSkillRequest(request) => input("decide_skill_request", request),
         _ => return Err(Error::IncompleteCoverage),
@@ -514,7 +518,7 @@ pub(super) struct Applied {
     pub(super) state: State,
     pub(super) receipt: OperationReceipt,
     pub(super) outcome: Outcome,
-    pub(super) archive: Option<provider_execution::migration::CoreArchiveV3>,
+    pub(super) archive: Option<provider_execution::migration::CoreArchiveV4>,
 }
 pub(super) enum Evaluation {
     Replay(OperationReceipt),
@@ -543,15 +547,6 @@ pub(super) fn evaluate(
         }
         Admission::Execute(pending) => *pending,
     };
-    if matches!(
-        pending.call().command,
-        ProviderCommand::UpsertCatalogEntryCore { .. }
-            | ProviderCommand::CreateSkillRequestCore { .. }
-            | ProviderCommand::CancelProjectCore { .. }
-            | ProviderCommand::DisputePlanningCore { .. }
-    ) {
-        return Err(Error::Invariant("metadata_cutover_required"));
-    }
     if (money_command(&pending.call().command)
         || super::projects::requires_money(&pending.call().command))
         && !matches!(mode, Mode::Directory { money: true, .. })
@@ -581,7 +576,8 @@ pub(super) fn evaluate(
     }
     let prior_references = state.legacy_references.clone();
     let event_cursor = state.shell.events.last().map_or(0, |event| event.cursor);
-    let compact = mock_provider::creation::compact_creation(pending.call());
+    let compact = mock_provider::creation::compact_creation(pending.call())
+        .or_else(|| mock_provider::catalog_content::compact_catalog(pending.call()));
     let command = compact.as_ref().unwrap_or(&pending.call().command);
     let outcome = match command_input(command, pending.inputs()) {
         Ok(data) => {
@@ -814,7 +810,7 @@ fn read_marketplace(
         EntityId,
         Option<EntityId>,
         AccountId32,
-        String,
+        ReasonReferenceV1,
         generated_contracts::UnixSeconds,
         DomainEventKind,
     )> = Vec::new();
@@ -829,7 +825,7 @@ fn read_marketplace(
             EntityId,
             Option<EntityId>,
             AccountId32,
-            String,
+            ReasonReferenceV1,
             generated_contracts::UnixSeconds,
             DomainEventKind,
         )> = read(ext, bundles, &address, origin, "reasons", ())?;
@@ -838,7 +834,7 @@ fn read_marketplace(
     }
     reasons.sort_by_key(Encode::encode);
     Ok((
-        CatalogView {
+        CatalogCore {
             roles,
             skills,
             skill_roles,

@@ -69,25 +69,13 @@ impl State {
         }
     }
     fn execute_prepared(mut self, pending: PreparedExecution) -> Result<(Self, OperationReceipt)> {
-        // The supported predecessor must replay these exact future bytes, but
-        // fresh execution waits for the paired API/core ownership transition.
-        if matches!(
-            pending.call().command,
-            generated_contracts::ProviderCommand::UpsertCatalogEntryCore { .. }
-                | generated_contracts::ProviderCommand::CreateSkillRequestCore { .. }
-                | generated_contracts::ProviderCommand::CancelProjectCore { .. }
-                | generated_contracts::ProviderCommand::DisputePlanningCore { .. }
-        ) {
-            return Err(Error {
-                code: "metadata_cutover_required",
-                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
-            });
-        }
         let mut tentative = self.engine.clone();
         tentative.context.reset(pending.inputs());
         let call = pending.call();
         let compact = crate::creation::compact_creation(call)
-            .or_else(|| crate::proposal::compact_proposal(call));
+            .or_else(|| crate::proposal::compact_proposal(call))
+            .or_else(|| crate::catalog_content::compact_catalog(call))
+            .or_else(|| crate::catalog_content::compact_reason(call));
         let command = compact.as_ref().unwrap_or(&call.command);
         let transition = tentative.apply_core(call.origin, command, pending.inputs().now);
         let transition = match transition {
@@ -133,6 +121,8 @@ impl State {
                 }
             }
         }
+        self.validate_catalog_history()?;
+        self.validate_reason_history()?;
         Ok(())
     }
     fn validate_proposal_ref(

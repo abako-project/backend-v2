@@ -69,6 +69,11 @@ CoreSnapshotV3 {
     schema_version: u16, info: ProviderInfo, catalog: CatalogView,
     workers: Vec<WorkerCore>, projects: Vec<ProjectCore>, balances: Vec<BalanceView>
 });
+core_dto!(/// Private current core snapshot; catalog presentation stays in the API.
+CoreSnapshotV4 {
+    schema_version: u16, info: ProviderInfo, catalog: super::CatalogCore,
+    workers: Vec<WorkerCore>, projects: Vec<ProjectCore>, balances: Vec<BalanceView>
+});
 
 impl WorkerCore {
     /// Assemble only with the exact verified directory-name preimage.

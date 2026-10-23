@@ -256,8 +256,10 @@ fn command_input(
             expected_revision,
             ..
         } => input("delete_task", (task_storage_id, task_id, expected_revision)),
-        ProviderCommand::CancelProject { request, .. } => input("cancel_project", request),
-        ProviderCommand::DisputePlanning { request, .. } => input("dispute_planning", request),
+        ProviderCommand::CancelProjectCore { content, .. } => input("cancel_project_core", content),
+        ProviderCommand::DisputePlanningCore { content, .. } => {
+            input("dispute_planning_core", content)
+        }
         _ => return Err(Error::IncompleteCoverage),
     })
 }
@@ -295,7 +297,8 @@ pub(super) fn execute(
     let refs = &mut state.legacy_references;
     let call = pending.call();
     let compact = mock_provider::creation::compact_creation(call)
-        .or_else(|| mock_provider::proposal::compact_proposal(call));
+        .or_else(|| mock_provider::proposal::compact_proposal(call))
+        .or_else(|| mock_provider::catalog_content::compact_reason(call));
     let command = compact.as_ref().unwrap_or(&call.command);
     let data = command_input(command, pending.inputs().seed, event_cursor, refs)?;
     let mut invocation = Invocation {

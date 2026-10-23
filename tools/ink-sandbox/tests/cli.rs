@@ -5,7 +5,7 @@ use ink_v5_compatibility::{
     worker::{Authority, WholeConfiguration, Worker},
 };
 use mock_provider::ReferenceState;
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV3};
+use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV4};
 use serde_json::Value;
 use std::{
     fs,
@@ -35,7 +35,7 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
         "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
     ))
     .unwrap();
-    let initial: CoreArchiveV3 = serde_json::from_str(
+    let initial: CoreArchiveV4 = serde_json::from_str(
         reference["archives"]
             .as_array()
             .unwrap()
@@ -79,7 +79,7 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
     );
     assert_eq!(
         serde_json::to_vec(
-            &serde_json::from_slice::<CoreArchiveV3>(&fs::read(&exported).unwrap()).unwrap()
+            &serde_json::from_slice::<CoreArchiveV4>(&fs::read(&exported).unwrap()).unwrap()
         )
         .unwrap(),
         serde_json::to_vec(&initial).unwrap()
@@ -240,7 +240,7 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
 }
 
 #[test]
-fn explicit_v2_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_metadata() {
+fn explicit_v3_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_metadata() {
     let directory = Directory(std::env::temp_dir().join(format!(
             "ink-core-cli-{}-{}",
             std::process::id(),
@@ -251,21 +251,22 @@ fn explicit_v2_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_m
         )));
     fs::create_dir(&directory.0).unwrap();
     let fixture: Value = serde_json::from_str(include_str!(
-        "../../../services/mock-provider/src/domain/fixtures/proposal-predecessor.json"
+        "../../../services/mock-provider/src/domain/fixtures/catalog-predecessor.json"
     ))
     .unwrap();
     let source = fixture["archives"][1]["archive"]
         .as_str()
         .unwrap()
         .as_bytes();
-    let before: provider_execution::migration::CoreArchiveV2 =
+    let before: provider_execution::migration::CoreArchiveV3 =
         serde_json::from_slice(source).unwrap();
     let root = directory.0.join("root.hex");
     fs::write(&root, before.checkpoint.info.root_account.to_string()).unwrap();
-    let input = directory.0.join("v2.json");
+    let input = directory.0.join("v3.json");
     fs::write(&input, source).unwrap();
     let core = directory.0.join("core.json");
     let metadata = directory.0.join("metadata.ndjson");
+    let reasons = directory.0.join("reasons.ndjson");
     let database = directory.0.join("unused.sqlite");
     let result = invoke(
         &database,
@@ -276,6 +277,7 @@ fn explicit_v2_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_m
             input.to_str().unwrap(),
             core.to_str().unwrap(),
             metadata.to_str().unwrap(),
+            reasons.to_str().unwrap(),
         ],
     );
     assert!(
@@ -285,8 +287,8 @@ fn explicit_v2_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_m
     );
     assert!(!database.exists());
     assert_eq!(fs::read(&input).unwrap(), source);
-    let current: CoreArchiveV3 = serde_json::from_slice(&fs::read(&core).unwrap()).unwrap();
-    assert_eq!(current.version, 3);
+    let current: CoreArchiveV4 = serde_json::from_slice(&fs::read(&core).unwrap()).unwrap();
+    assert_eq!(current.version, 4);
     assert_eq!(current.checkpoint.info, before.checkpoint.info);
     let output = directory.0.join("back.json");
     let result = invoke(
@@ -297,6 +299,7 @@ fn explicit_v2_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_m
             "downgrade",
             core.to_str().unwrap(),
             metadata.to_str().unwrap(),
+            reasons.to_str().unwrap(),
             output.to_str().unwrap(),
         ],
     );
@@ -318,7 +321,8 @@ fn explicit_v2_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_m
                 "upgrade",
                 input.to_str().unwrap(),
                 core.to_str().unwrap(),
-                metadata.to_str().unwrap()
+                metadata.to_str().unwrap(),
+                reasons.to_str().unwrap()
             ]
         )
         .status
@@ -341,6 +345,7 @@ fn explicit_v2_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_m
                 "downgrade",
                 core.to_str().unwrap(),
                 wrong.to_str().unwrap(),
+                reasons.to_str().unwrap(),
                 rejected.to_str().unwrap()
             ]
         )

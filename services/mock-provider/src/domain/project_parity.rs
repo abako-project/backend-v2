@@ -1,6 +1,7 @@
 //! Frozen signed M5 trace; the isolated VM does not link this native engine.
 use super::super::*;
 use super::directory_parity::{shell_digest, signed_account, signed_apply};
+use generated_contracts::provider_core::{CatalogCore, ReasonReferenceV1, SkillRequestCore};
 use generated_contracts::*;
 use parity_scale_codec::Encode;
 use serde_json::{Value, json};
@@ -10,14 +11,14 @@ type Reason = (
     EntityId,
     Option<EntityId>,
     AccountId32,
-    String,
+    ReasonReferenceV1,
     UnixSeconds,
     DomainEventKind,
 );
 pub(super) type Projection = (
-    CatalogView,
+    CatalogCore,
     Vec<WorkerCore>,
-    Vec<SkillRequestView>,
+    Vec<SkillRequestCore>,
     Vec<ProjectCore>,
     Vec<Reason>,
 );
@@ -32,7 +33,7 @@ pub(super) fn projection(state: &State) -> Projection {
                 r.project_id,
                 r.milestone_id,
                 r.origin,
-                r.reason.clone(),
+                r.content.clone(),
                 r.occurred_at,
                 r.kind,
             )
@@ -55,7 +56,7 @@ fn canonical_signed_project_trace() -> TestResult {
     let trace: Value = serde_json::from_str(include_str!("fixtures/project-signed.json"))?;
     assert_eq!(trace["schemaVersion"], 1);
     let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
-    state.shell.info.provider_instance_id = serde_json::from_value(trace["generation"].clone())?;
+    state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
     assert_eq!(json!(projection(&state)), trace["initial"]);
     for (index, step) in trace["steps"].as_array().ok_or("steps")?.iter().enumerate() {
         assert_eq!(
@@ -183,7 +184,7 @@ fn export_project_trace() -> TestResult {
     let root = signed_account(1)?;
     let generation = ProviderInstanceId::from_bytes([107; 16]);
     let mut state = State::new(root)?;
-    state.shell.info.provider_instance_id = generation;
+    state.set_fixture_generation(generation);
     let initial = json!(projection(&state));
     let mut fixture = Fixture {
         state,

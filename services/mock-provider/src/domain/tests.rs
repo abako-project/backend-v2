@@ -46,7 +46,10 @@ fn exact_scores_do_not_round_or_overflow() -> Result<()> {
 
 #[test]
 fn selection_uses_only_the_reputation_for_the_requested_mode() -> Result<()> {
-    let mut state = RustEngine::new(AccountId32::from_bytes([1; 32]))?;
+    let mut state = RustEngine::new(
+        AccountId32::from_bytes([1; 32]),
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     let first = AccountId32::from_bytes([2; 32]);
     let second = AccountId32::from_bytes([3; 32]);
     for account in [first, second] {
@@ -104,7 +107,7 @@ fn persisted_state_cannot_bypass_catalog_or_supply_invariants() -> Result<()> {
         .roles
         .get_mut(&1)
         .ok_or_else(Error::internal)?
-        .name = "replacement".into();
+        .fixed = false;
     assert!(State::restore(&state.encode()?, root).is_err());
     let mut state = State::new(root)?;
     state.engine.balances.insert(root, Money::new(1));

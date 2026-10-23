@@ -554,7 +554,10 @@ fn startup_checks_fixture_identity_mode_and_contract_pointer() {
                 .is_err()
         );
         let mut wrong = fixture(GAS);
-        wrong.catalog.0[1].name = "Changed".into();
+        wrong.catalog.0[1].content =
+            generated_contracts::provider_core::CatalogReferenceV1::Migration(
+                PayloadHash::from_bytes([11; 32]),
+            );
         assert!(
             Worker::start_directory_fixture(db.0.clone(), wrong)
                 .await

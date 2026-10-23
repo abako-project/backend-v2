@@ -1,17 +1,17 @@
-//! R2a creation commitments survive the proposal-only V2↔V3 transition.
+//! R2a creation commitments survive the catalog-only V3↔V4 transition.
 use generated_contracts::{provider_core::*, *};
 use ink_v5_compatibility::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };
 use parity_scale_codec::Encode;
-use provider_execution::{ExecutionInputs, migration::CoreArchiveV3};
+use provider_execution::{ExecutionInputs, migration::CoreArchiveV4};
 use sp_core::{Pair, sr25519};
 fn account(seed: u8) -> AccountId32 {
     AccountId32::from_bytes(sr25519::Pair::from_seed(&[seed; 32]).public().0)
 }
 fn signed(
-    core: &CoreArchiveV3,
+    core: &CoreArchiveV4,
     actor: u8,
     op: u8,
     command: ProviderCommand,
@@ -34,7 +34,7 @@ fn signed(
         call,
     }
 }
-fn config(core: &CoreArchiveV3) -> WholeConfiguration {
+fn config(core: &CoreArchiveV4) -> WholeConfiguration {
     WholeConfiguration {
         root: core.checkpoint.info.root_account,
         generation: core.checkpoint.info.provider_instance_id,
@@ -43,11 +43,11 @@ fn config(core: &CoreArchiveV3) -> WholeConfiguration {
     }
 }
 #[test]
-fn creation_refs_large_preimages_recovery_and_replay_survive_proposal_cutover() {
+fn creation_refs_large_preimages_recovery_and_replay_survive_catalog_cutover() {
     tokio::runtime::Builder::new_current_thread().enable_all().build().unwrap().block_on(async {
-    let previous:serde_json::Value=serde_json::from_str(include_str!("../../../services/mock-provider/src/domain/fixtures/proposal-predecessor.json")).unwrap();
+    let previous:serde_json::Value=serde_json::from_str(include_str!("../../../services/mock-provider/src/domain/fixtures/catalog-predecessor.json")).unwrap();
     let source=previous["archives"][1]["archive"].as_str().unwrap().as_bytes();
-    let (initial,records)=mock_provider::migration::from_predecessor(source,account(1)).unwrap();
+    let (initial,records,reasons)=mock_provider::migration::from_predecessor(source,account(1)).unwrap();
     let records=records.into_iter().map(|r|(mock_provider::migration::source_hash(&r.hash_input()),r)).collect();
     let path=std::env::temp_dir().join(format!("creation-v3-{}.sqlite",std::process::id()));
     let worker=Worker::import_whole(path.clone(),initial.clone(),config(&initial),Authority::Sandbox).await.unwrap();
@@ -82,8 +82,9 @@ fn creation_refs_large_preimages_recovery_and_replay_survive_proposal_cutover() 
     let recovered=mock_provider::migration::recover_legacy_creations(&current).unwrap();
     assert!(recovered.iter().any(|r|matches!(r.provenance,MetadataProvenanceV1::Creation{operation_id,..} if operation_id==OperationId::from_bytes([243;16]))));
     assert!(!recovered.iter().any(|r|matches!(r.provenance,MetadataProvenanceV1::Creation{operation_id,..} if [241,242,244].iter().any(|v|operation_id==OperationId::from_bytes([*v;16])))));
-    // V2 already owns creation refs: proposal rollback never needs their preimages.
-    let old=mock_provider::migration::to_predecessor(current.clone(),&records).unwrap();
+    // V3 already owns creation/proposal refs: catalog rollback never needs their preimages.
+    let reasons=reasons.into_iter().map(|r|(mock_provider::migration::source_hash(&r.hash_input()),r)).collect();
+    let old=mock_provider::migration::to_predecessor(current.clone(),&records,&reasons).unwrap();
     assert_eq!(old.checkpoint.workers[&account(8)],current.checkpoint.workers[&account(8)]);
     for (id,project) in &current.checkpoint.projects {assert_eq!(old.checkpoint.projects[id].content,project.content);}
     assert_eq!(serde_json::to_vec(&old.checkpoint.receipts).unwrap(),serde_json::to_vec(&current.checkpoint.receipts).unwrap());

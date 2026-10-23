@@ -39,6 +39,21 @@ kind and ordering, replacing text with a fixed reference. Migration identifies
 the source archive and original record position. Existing public reason write
 routes stay compatible; no new history endpoint is needed.
 
+The existing operation queue gets one catalog-specific FIFO across wallets;
+its blockers and wallet FIFO both use strictly earlier creation_sequence. This
+ends at each transport operation's known outcome, not at a request remaining
+Pending. Ordinary paths do not hydrate catalog content, while the usual wallet
+FIFO can still make a later operation wait. API naming rejection uses existing
+202/polling with terminal Rejected/error_code and no invented provider outcome.
+
+Ordinary native SQLite reopen still reseeds missing defaults; imported stores
+still skip that step. If reseeding/direct core writes produce a duplicate label
+graph, fail closed rather than silently pick a winner or alter data. Raw authorized
+Delete and DecideReject, including their claim finalization, must permit sequential
+repair without whole-graph composition. Never release another ID's same-digest
+claim. Require a content-valid graph before rollback/export to the stricter V3
+predecessor; API naming guarantees do not cover arbitrary direct core writes.
+
 ## Queue and metadata
 
 Reuse existing enqueue/process/finalize transactions. Store immutable catalog and
@@ -98,3 +113,100 @@ reviews the exact complete milestone and scope. Keep public REST/JSON/SSE unchan
 container publication, deployment, promotion and stable release observation remain
 separate owner gates. No service, dependency, generic document registry, storage
 engine or runtime-limit increase is added here.
+
+## V4 owner procedure
+
+Current private formats are CoreSnapshotV4/schemaVersion4 and
+CoreArchiveV4/version4/engine_version4. The immediate frozen predecessor is
+`d215b65c9c58c7353630f203eb9ee1587bf23a52`: paired adapter, wallet, native and
+whole-provider executables, with the accepted V3 contract artifacts. Earlier
+installations must complete the historical R2a/R2b1 exchanges first. The current
+binary does not execute an earlier business engine.
+
+Pause public writes and operation workers, reconcile every pending/ambiguous
+operation, and run `adapter-api check-provider-cutover` using the matching API
+PostgreSQL. Stop all other writers. Preserve coherent PostgreSQL, provider and
+wallet SQLite, original keys/configuration and frozen executables. Export the
+stopped predecessor's current owner archive and keep its exact bytes:
+
+```sh
+old-whole-provider export-native predecessor-v3.json
+# Use export for a predecessor whole-provider store.
+whole-provider upgrade predecessor-v3.json core-v4.json catalog.ndjson reasons.ndjson
+mock-provider import core-v4.json fresh-native.sqlite
+# Or configure a fresh WHOLE_DATABASE_PATH and chosen authority:
+whole-provider import core-v4.json
+```
+
+Conversion verifies the original generation/root/history, transfers only this
+content slice and emits explicit documents bound to the exact source archive
+hash. Import the fresh target internally with original root and keys, keeping
+public writes paused. Using the paired API data:
+
+```sh
+adapter-api import-catalog-metadata catalog.ndjson
+adapter-api import-reason-metadata reasons.ndjson
+adapter-api backfill-provider-content
+```
+
+NDJSON has a version1/generation header. A shared request/approved label/origin
+is one record, checked against every selected context. Imports verify exact
+digest, generation, namespace, entity, author/source and request roles, plus a
+unique current skill-name graph. Partial recovery files omit only already valid
+selected records. Missing/foreign/duplicate/conflicting data rolls back SQL import.
+Files are create-new with Unix0600; an interrupted multi-file export can leave
+partial files, so retain sources and retry to fresh paths. Sequential line bounds
+remain32MiB; the offline converter retains64MiB total archive/metadata bounds.
+The private authenticated `/internal/lifecycle-reasons?after=0&limit=256` returns
+only compact facts with generation/cursor/total, allowing ordered owner exchange
+without a public reason-history API or all-history snapshot expansion.
+
+Verify the current public views and coherent target before resuming. Native
+ordinary reopen retains its existing reseeding behavior; imported stores remain
+sealed without reseeding. Repair invalid names through authorized raw Delete or
+Reject, one operation at a time, before name-sensitive work or export. Arbitrary
+direct core writes bypass API uniqueness; duplicate graphs fail closed. Missing
+catalog text does not force ordinary money or lifecycle paths to hydrate it.
+
+For current-state rollback, pause and reconcile again. While the current provider
+is internally available, export selected contexts, then stop it:
+
+```sh
+adapter-api export-catalog-metadata current-catalog.ndjson
+adapter-api export-reason-metadata current-reasons.ndjson
+whole-provider export current-v4.json
+# Use export-native for native SQLite.
+whole-provider downgrade current-v4.json current-catalog.ndjson current-reasons.ndjson current-v3.json
+```
+
+This includes successful new compact writes, actual assigned IDs, categories and
+historical request/reason content. Creation/proposal refs, exact funds, counters,
+nonces, signed bytes, inputs, receipts and events remain intact. Import into a new
+store with frozen d215b65, restore its paired adapter/provider with the same API
+PostgreSQL/wallet/keys, and verify reads, exact replay across restart and further
+ordinary REST work. A pre-cutover checkpoint would discard later work. Owner
+backup still covers sessions, profiles, tasks, comments, evidence, pending/unused
+and historical documents beyond this selected exchange.
+
+Successful selected legacy writes or reviewed defaults can recover their exact
+preimages through owner tools; compact writes and imported records still require
+API backup:
+
+```sh
+whole-provider recover-catalog-metadata current-v4.json recovered-catalog.ndjson
+whole-provider recover-reason-metadata current-v4.json recovered-reasons.ndjson
+adapter-api import-catalog-metadata recovered-catalog.ndjson
+adapter-api import-reason-metadata recovered-reasons.ndjson
+```
+
+Existing creation/proposal recovery commands remain available. Recovery never
+fabricates signatures or fills a missing compact preimage. The disposable proof
+case and paired rehearsal use known test identities and isolated stores:
+
+```sh
+R2B2_ROLLBACK_OUTPUT_DIR=/tmp/r2b2-case cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked --test catalog_metadata -- --nocapture
+python3 scripts/check-core-rollback.py --case /tmp/r2b2-case --candidate-binaries /path/to/current-binaries --predecessor-binaries /path/to/d215b65-binaries
+```
+
+These commands describe the intended verification; final observed results belong
+in the handoff/PR. They do not authorize a live cutover, release or deployment.

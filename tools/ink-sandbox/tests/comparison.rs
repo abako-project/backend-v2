@@ -1,13 +1,13 @@
 use ink_v5_compatibility::worker::comparison::*;
-use provider_execution::migration::CoreArchiveV3;
-fn archive() -> CoreArchiveV3 {
+use provider_execution::migration::CoreArchiveV4;
+fn archive() -> CoreArchiveV4 {
     let fixture: serde_json::Value = serde_json::from_str(include_str!(
         "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
     ))
     .unwrap();
     serde_json::from_str(fixture["archives"][5]["archive"].as_str().unwrap()).unwrap()
 }
-fn observed(archive: &CoreArchiveV3) -> Observation<'_> {
+fn observed(archive: &CoreArchiveV4) -> Observation<'_> {
     Observation {
         archive: Some(archive),
         outcome: ObservedOutcome::Rejected {
@@ -30,8 +30,9 @@ fn complete_comparison_detects_private_metadata_counters_and_exact_scores() {
         .values_mut()
         .next()
         .unwrap()
-        .category
-        .push('!');
+        .origin = generated_contracts::provider_core::CatalogReferenceV1::Migration(
+        generated_contracts::PayloadHash::from_bytes([99; 32]),
+    );
     let mut counter = original.clone();
     counter.checkpoint.next_task_id += 1;
     let mut score = original.clone();
@@ -75,7 +76,7 @@ fn missing_coverage_and_unreadable_exports_are_incomplete() {
         );
     }
     let mut incompatible = original.clone();
-    incompatible.version = 4;
+    incompatible.version = 5;
     assert_eq!(
         compare(observed(&original), observed(&incompatible)).unwrap(),
         Comparison::Incomplete

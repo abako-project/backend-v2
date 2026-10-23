@@ -7,7 +7,7 @@ use ink_v5_compatibility::{
 use parity_scale_codec::Encode;
 use provider_execution::{
     ExecutionInputs,
-    migration::{CoreArchiveV2, CoreArchiveV3},
+    migration::{CoreArchiveV3, CoreArchiveV4},
 };
 use sp_core::{Pair, sr25519};
 use std::{
@@ -22,7 +22,7 @@ fn account(seed: u8) -> AccountId32 {
 fn actor(account_id: AccountId32) -> u8 {
     (1..=10).find(|seed| account(*seed) == account_id).unwrap()
 }
-fn config(core: &CoreArchiveV3) -> WholeConfiguration {
+fn config(core: &CoreArchiveV4) -> WholeConfiguration {
     WholeConfiguration {
         root: core.checkpoint.info.root_account,
         generation: core.checkpoint.info.provider_instance_id,
@@ -31,7 +31,7 @@ fn config(core: &CoreArchiveV3) -> WholeConfiguration {
     }
 }
 fn signed(
-    core: &CoreArchiveV3,
+    core: &CoreArchiveV4,
     actor: u8,
     op: u8,
     command: ProviderCommand,
@@ -56,7 +56,7 @@ fn signed(
 }
 struct Run {
     worker: Worker,
-    core: CoreArchiveV3,
+    core: CoreArchiveV4,
     records: BTreeMap<PayloadHash, ProposalMetadataRecordV1>,
     calls: Vec<SignedContractCallV1>,
     receipts: Vec<OperationReceipt>,
@@ -156,7 +156,7 @@ fn ndjson<T: serde::Serialize>(
     }
     f.sync_all().unwrap();
 }
-fn export(run: &Run, old: &CoreArchiveV2, next: &[SignedContractCallV1], directory: &Path) {
+fn export(run: &Run, old: &CoreArchiveV3, next: &[SignedContractCallV1], directory: &Path) {
     std::fs::create_dir_all(directory).unwrap();
     json(&directory.join("core.json"), &run.core);
     json(&directory.join("predecessor.json"), old);
@@ -194,25 +194,28 @@ fn compact_proposals_bind_execution_time_policy_preserve_revisions_and_roll_back
 }
 async fn rehearsal() {
     let reference: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../services/mock-provider/src/domain/fixtures/proposal-predecessor.json"
+        "../../../services/mock-provider/src/domain/fixtures/catalog-predecessor.json"
     ))
     .unwrap();
     let source = reference["archives"][1]["archive"].as_str().unwrap();
-    let previous: CoreArchiveV2 = serde_json::from_str(source).unwrap();
+    let previous: CoreArchiveV3 = serde_json::from_str(source).unwrap();
     let project_id = *previous.checkpoint.projects.first_key_value().unwrap().0;
     let project = &previous.checkpoint.projects[&project_id];
     let coordinator = actor(project.coordinator);
     let client = actor(project.client);
     let original_proposal = project.proposals[0].proposal_id;
-    let mut definition = ProposalDefinition {
-        title: "Committed\0proposal".into(),
-        description: "λ".repeat(40_000),
-        milestones: project.proposals[0]
-            .milestones
-            .iter()
-            .map(|m| m.definition.clone())
-            .collect(),
-    };
+    let (core, catalog_records, reason_records) =
+        mock_provider::migration::from_predecessor(source.as_bytes(), account(1)).unwrap();
+    let records: BTreeMap<_, _> = mock_provider::migration::recover_legacy_proposals(&core)
+        .unwrap()
+        .into_iter()
+        .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
+        .collect();
+    let mut definition = project.proposals[0]
+        .definition(&records[&project.proposals[0].content.hash()])
+        .unwrap();
+    definition.title = "Committed\0proposal".into();
+    definition.description = "λ".repeat(40_000);
     for milestone in &mut definition.milestones {
         milestone.title = format!("Milestone\0{}", milestone.key);
         milestone.coordinator_fee = Money::ZERO;
@@ -222,8 +225,6 @@ async fn rehearsal() {
         }
         milestone.requirements[0].budget = Money::new(100);
     }
-    let (core, records) =
-        mock_provider::migration::from_predecessor(source.as_bytes(), account(1)).unwrap();
     let path = std::env::temp_dir().join(format!("proposal-success-{}.sqlite", std::process::id()));
     let worker = Worker::import_whole(
         path.clone(),
@@ -236,10 +237,7 @@ async fn rehearsal() {
     let mut run = Run {
         worker,
         core,
-        records: records
-            .into_iter()
-            .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
-            .collect(),
+        records,
         calls: vec![],
         receipts: vec![],
     };
@@ -443,15 +441,9 @@ async fn rehearsal() {
     )
     .await;
     let legacy = previous.checkpoint.projects[&project_id].proposals[0].clone();
-    let legacy_definition = ProposalDefinition {
-        title: legacy.title,
-        description: legacy.description,
-        milestones: legacy
-            .milestones
-            .into_iter()
-            .map(|m| m.definition)
-            .collect(),
-    };
+    let legacy_definition = legacy
+        .definition(&run.records[&legacy.content.hash()])
+        .unwrap();
     run.call(
         coordinator,
         208,
@@ -550,7 +542,20 @@ async fn rehearsal() {
     assert_eq!(selected.change_request, change_ref);
     assert_eq!(run.core.checkpoint.minted_units, funded_issuance);
     let records = run.selected();
-    let old = mock_provider::migration::to_predecessor(run.core.clone(), &records).unwrap();
+    let catalog_records = catalog_records
+        .into_iter()
+        .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
+        .collect();
+    let reason_records = reason_records
+        .into_iter()
+        .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
+        .collect();
+    let old = mock_provider::migration::to_predecessor(
+        run.core.clone(),
+        &catalog_records,
+        &reason_records,
+    )
+    .unwrap();
     let restored = old.checkpoint.projects[&project_id]
         .proposals
         .iter()
@@ -570,16 +575,22 @@ async fn rehearsal() {
         .command
         .encoded_size();
     println!(
-        "Proposal logical SCALE: V2 view {} bytes; V3 core {} bytes; compact creation input {} bytes",
+        "Proposal logical SCALE: V3 core {} bytes; V4 core {} bytes; compact creation input {} bytes",
         restored.encoded_size(),
         current_proposal.encoded_size(),
         compact_input
     );
-    assert_eq!(restored.title, definition.title);
-    assert_eq!(restored.description, definition.description);
+    let restored_definition = restored
+        .definition(&records[&restored.content.hash()])
+        .unwrap();
+    assert_eq!(restored_definition.title, definition.title);
+    assert_eq!(restored_definition.description, definition.description);
+    let change = records
+        .get(&restored.change_request.as_ref().unwrap().hash())
+        .unwrap();
     assert_eq!(
-        restored.change_request.as_deref(),
-        Some("Requested\0changes")
+        change.content,
+        ProposalContentV1::ChangeRequest("Requested\0changes".into())
     );
     for m in &restored.milestones {
         assert_eq!(m.definition.coordinator_fee, Money::new(70));
@@ -605,11 +616,19 @@ async fn rehearsal() {
     );
     let mut missing = records.clone();
     missing.remove(&selected_ref.hash());
-    assert!(mock_provider::migration::to_predecessor(run.core.clone(), &missing).is_err());
+    assert!(
+        restored
+            .definition(missing.get(&selected_ref.hash()).unwrap_or(change))
+            .is_err()
+    );
     let mut tampered = records.clone();
     tampered.get_mut(&selected_ref.hash()).unwrap().content =
         ProposalContentV1::ChangeRequest("wrong kind".into());
-    assert!(mock_provider::migration::to_predecessor(run.core.clone(), &tampered).is_err());
+    assert!(
+        restored
+            .definition(&tampered[&selected_ref.hash()])
+            .is_err()
+    );
     let mut swapped = run.core.clone();
     let project = swapped.checkpoint.projects.get_mut(&project_id).unwrap();
     let bad = project
@@ -695,7 +714,7 @@ async fn rehearsal() {
             }),
         ),
     ];
-    if let Some(output) = std::env::var_os("R2B_ROLLBACK_OUTPUT_DIR") {
+    if let Some(output) = std::env::var_os("R2B_PROPOSAL_PRESERVATION_OUTPUT_DIR") {
         export(&run, &old, &next, Path::new(&output));
     }
     run.worker.shutdown().await.unwrap();

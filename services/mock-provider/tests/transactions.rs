@@ -1,7 +1,7 @@
 //! The same contract suite exercises both storage implementations.
 #![cfg(feature = "mock-seed")]
 
-use generated_contracts::provider_core::{CoreSnapshotV3, ProjectCore};
+use generated_contracts::provider_core::{CoreSnapshotV4, ProjectCore};
 use std::{
     error::Error,
     sync::atomic::{AtomicU64, Ordering},
@@ -182,7 +182,11 @@ async fn setup(provider: &Provider) -> TestResult<(Keypair, Keypair, Keypair, Ke
     let catalog = provider.snapshot().await?.catalog;
     assert_eq!(catalog.roles.len(), 9);
     assert_eq!(catalog.skills.len(), 33);
-    assert_eq!(catalog.skills[15].name, "graphql");
+    assert_eq!(catalog.skills[15].id, 16);
+    assert!(matches!(
+        catalog.skills[15].content,
+        generated_contracts::provider_core::CatalogReferenceV1::Seed(_)
+    ));
     let root = key(1)?;
     let coordinator = key(2)?;
     let worker = key(3)?;
@@ -522,7 +526,7 @@ async fn complete_milestone_and_assert_settlement(
 }
 
 fn assert_settlement_snapshot(
-    snapshot: &CoreSnapshotV3,
+    snapshot: &CoreSnapshotV4,
     coordinator: &Keypair,
     worker: &Keypair,
     client: &Keypair,
@@ -1186,7 +1190,7 @@ async fn assert_cancellation_freezes(
     actor: &Keypair,
     project_id: EntityId,
     reason: &ReasonRequest,
-    before: &CoreSnapshotV3,
+    before: &CoreSnapshotV4,
 ) -> TestResult {
     let cancel = ProviderCommand::CancelProject {
         project_id,
@@ -1463,6 +1467,7 @@ async fn independent_runtimes_share_transactions_and_retained_generation() -> Te
         name: "Rust edited".into(),
     });
     success(&first, &root, rename).await?;
+    let renamed = first.snapshot().await?.catalog.skills[0].content.clone();
     success(
         &first,
         &root,
@@ -1495,8 +1500,8 @@ async fn independent_runtimes_share_transactions_and_retained_generation() -> Te
         17
     );
     assert_eq!(
-        restored.snapshot().await?.catalog.skills[0].name,
-        "Rust edited"
+        restored.snapshot().await?.catalog.skills[0].content,
+        renamed
     );
     assert!(Provider::sqlite(&url, account(&key(2)?)).await.is_err());
     drop(restored);

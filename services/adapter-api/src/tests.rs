@@ -36,10 +36,14 @@ mod proposal_reviews;
 #[path = "submission_presentations_tests.rs"]
 mod submission_presentations;
 
+#[path = "catalog_metadata_tests.rs"]
+mod catalog_documents;
 #[path = "creation_metadata_tests.rs"]
 mod creation_metadata;
 #[path = "proposal_metadata_tests.rs"]
 mod proposal_documents;
+#[path = "reason_metadata_tests.rs"]
+mod reason_documents;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
@@ -72,13 +76,18 @@ impl Server {
     }
 }
 struct Fake {
-    snapshot: generated_contracts::provider_core::CoreSnapshotV3,
+    snapshot: generated_contracts::provider_core::CoreSnapshotV4,
     jobs: BTreeMap<OperationId, SigningJobView>,
     receipts: BTreeMap<OperationId, OperationReceipt>,
     nonces: BTreeMap<AccountId32, u64>,
     submissions: usize,
     lose_reply: bool,
     fail_before_execution: bool,
+    catalog_requests: Vec<generated_contracts::provider_core::SkillRequestCore>,
+    reasons: Vec<generated_contracts::provider_core::ReasonCore>,
+    fail_catalog_completion: bool,
+    snapshot_failures: usize,
+    next_outcome: Option<ExecutionOutcome>,
 }
 pub(crate) fn info() -> ProviderInfo {
     ProviderInfo {
@@ -89,10 +98,10 @@ pub(crate) fn info() -> ProviderInfo {
 }
 fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
     Ok(Arc::new(Mutex::new(Fake {
-        snapshot: generated_contracts::provider_core::CoreSnapshotV3 {
-            schema_version: 3,
+        snapshot: generated_contracts::provider_core::CoreSnapshotV4 {
+            schema_version: 4,
             info: info(),
-            catalog: CatalogView {
+            catalog: generated_contracts::provider_core::CatalogCore {
                 roles: vec![],
                 skills: vec![],
                 skill_roles: vec![],
@@ -109,6 +118,11 @@ fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
         submissions: 0,
         lose_reply: false,
         fail_before_execution: false,
+        catalog_requests: vec![],
+        reasons: vec![],
+        fail_catalog_completion: false,
+        snapshot_failures: 0,
+        next_outcome: None,
     })))
 }
 fn internal(fake: Arc<Mutex<Fake>>) -> Router {
@@ -144,7 +158,9 @@ fn internal(fake: Arc<Mutex<Fake>>) -> Router {
         .route(
             "/internal/snapshot",
             get(|State(fake): State<Arc<Mutex<Fake>>>| async move {
-                Json(fake.lock().await.snapshot.clone())
+                let mut fake = fake.lock().await;
+                if fake.snapshot_failures > 0 { fake.snapshot_failures -= 1; return StatusCode::SERVICE_UNAVAILABLE.into_response(); }
+                Json(fake.snapshot.clone()).into_response()
             }),
         )
         .route(
@@ -159,6 +175,18 @@ fn internal(fake: Arc<Mutex<Fake>>) -> Router {
                 },
             ),
         )
+        .route("/internal/catalog/skill-requests", get(|State(fake): State<Arc<Mutex<Fake>>>, axum::extract::Query(query): axum::extract::Query<BTreeMap<String,String>>| async move {
+            let fake=fake.lock().await;
+            let account=query.get("account").and_then(|v|v.parse::<AccountId32>().ok());
+            Json(fake.catalog_requests.iter().filter(|r|account==Some(fake.snapshot.info.root_account)||account==Some(r.requester)).cloned().collect::<Vec<_>>())
+        }))
+        .route("/internal/lifecycle-reasons", get(|State(fake): State<Arc<Mutex<Fake>>>, axum::extract::Query(query): axum::extract::Query<BTreeMap<String,String>>| async move {
+            let fake=fake.lock().await;
+            let after=query.get("after").and_then(|v|v.parse::<usize>().ok()).unwrap_or(0);
+            let limit=query.get("limit").and_then(|v|v.parse::<usize>().ok()).unwrap_or(256);
+            let reasons=fake.reasons.iter().skip(after).take(limit).cloned().collect::<Vec<_>>();
+            Json(generated_contracts::provider_core::ReasonPageV1{generation:fake.snapshot.info.provider_instance_id,start:after as u64,next:(after+reasons.len()) as u64,total:fake.reasons.len() as u64,reasons})
+        }))
         .route("/internal/signing-jobs", post(sign))
         .route(
             "/internal/signing-jobs/{operation}",
@@ -233,13 +261,22 @@ async fn submit(
     }
     assert_eq!(call.nonce, *fake.nonces.get(&call.origin).unwrap_or(&0));
     fake.nonces.insert(call.origin, call.nonce + 1);
+    let outcome = fake
+        .next_outcome
+        .take()
+        .unwrap_or(ExecutionOutcome::Success);
+    let entity = if outcome == ExecutionOutcome::Success {
+        catalog_documents::apply_fixture_facts(&mut fake, &call)
+    } else {
+        None
+    };
     let receipt = OperationReceipt {
         operation_id: call.operation_id,
         provider_instance_id: call.provider_instance_id,
         origin: call.origin,
         nonce: call.nonce,
-        outcome: ExecutionOutcome::Success,
-        created_entity_id: None,
+        outcome,
+        created_entity_id: entity,
         first_event_cursor: None,
         last_event_cursor: None,
         finalized_at: UnixSeconds::new(u64::try_from(now()?).map_err(|_| Error::Internal)?),

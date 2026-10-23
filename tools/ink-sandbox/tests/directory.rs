@@ -1,6 +1,8 @@
 //! Independent replay of native Directory traces against production ink WASM.
 //! Accounts/IDs are explicit fixtures; signed command routing remains pending.
-use generated_contracts::provider_core::WorkerCore;
+use generated_contracts::provider_core::{
+    CatalogEntryCore, SkillRequestCore, SkillRoleCore, WorkerCore,
+};
 use generated_contracts::*;
 use ink_v5_compatibility::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
@@ -15,16 +17,16 @@ use sp_core::{
 };
 
 type Projection = (
-    Vec<CatalogEntry>,
-    Vec<CatalogEntry>,
-    Vec<SkillRoleAssociation>,
+    Vec<CatalogEntryCore>,
+    Vec<CatalogEntryCore>,
+    Vec<SkillRoleCore>,
     Vec<WorkerCore>,
-    Vec<SkillRequestView>,
+    Vec<SkillRequestCore>,
 );
 type Catalog = (
-    Vec<CatalogEntry>,
-    Vec<CatalogEntry>,
-    Vec<SkillRoleAssociation>,
+    Vec<CatalogEntryCore>,
+    Vec<CatalogEntryCore>,
+    Vec<SkillRoleCore>,
 );
 #[derive(Debug, Encode, Decode, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
@@ -123,7 +125,12 @@ fn digest(state: &Projection) -> String {
     format!("{:x}", H256::from(sha2_256(&state.encode())))
 }
 fn command_input(command: ProviderCommand, id: EntityId, origin: AccountId32) -> Vec<u8> {
-    let command = if matches!(command, ProviderCommand::RegisterWorker(_)) {
+    let command = if matches!(
+        command,
+        ProviderCommand::RegisterWorker(_)
+            | ProviderCommand::UpsertCatalogEntry(_)
+            | ProviderCommand::CreateSkillRequest(_)
+    ) {
         let call = UnsignedContractCallV1::new(
             ProviderInstanceId::from_bytes([0; 16]),
             OperationId::from_bytes([0; 16]),
@@ -133,7 +140,9 @@ fn command_input(command: ProviderCommand, id: EntityId, origin: AccountId32) ->
             command,
         )
         .unwrap();
-        mock_provider::creation::compact_creation(&call).unwrap()
+        mock_provider::creation::compact_creation(&call)
+            .or_else(|| mock_provider::catalog_content::compact_catalog(&call))
+            .unwrap()
     } else {
         command
     };
@@ -145,10 +154,12 @@ fn command_input(command: ProviderCommand, id: EntityId, origin: AccountId32) ->
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
         ProviderCommand::PromoteCoordinator(request) => input("promote_coordinator", request),
-        ProviderCommand::UpsertCatalogEntry(request) => input("upsert_catalog_entry", request),
+        ProviderCommand::UpsertCatalogEntryCore { kind, id, content } => {
+            input("upsert_catalog_entry_core", (kind, id, content))
+        }
         ProviderCommand::DeleteCatalogEntry(request) => input("delete_catalog_entry", request),
-        ProviderCommand::CreateSkillRequest(request) => {
-            input("create_skill_request", (request, id))
+        ProviderCommand::CreateSkillRequestCore { role_ids, content } => {
+            input("create_skill_request_core", (role_ids, content, id))
         }
         ProviderCommand::DecideSkillRequest(request) => input("decide_skill_request", request),
         _ => panic!("incomplete Directory coverage"),
@@ -301,17 +312,17 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         write(
             &directory,
             2,
-            "create_skill_request",
-            ("First", vec![3_u32], [5_u8; 16]),
+            "create_skill_request_core",
+            (vec![3_u32], commitment(5), [5_u8; 16]),
         );
         write(
             &directory,
             3,
-            "create_skill_request",
-            ("Second", vec![2_u32], [6_u8; 16]),
+            "create_skill_request_core",
+            (vec![2_u32], commitment(6), [6_u8; 16]),
         );
         for (caller, expected) in [(1, 2), (2, 1), (3, 1), (4, 0)] {
-            let requests: Vec<SkillRequestView> = read(&directory, caller, "skill_requests", ());
+            let requests: Vec<SkillRequestCore> = read(&directory, caller, "skill_requests", ());
             assert_eq!(requests.len(), expected);
             assert!(
                 requests
@@ -322,14 +333,14 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         write(
             &directory,
             1,
-            "upsert_catalog_entry",
-            (CatalogKind::Role, 90_u32, "Custom role"),
+            "upsert_catalog_entry_core",
+            (CatalogKind::Role, 90_u32, commitment(90)),
         );
         write(
             &directory,
             1,
-            "upsert_catalog_entry",
-            (CatalogKind::Skill, 80_u32, "Custom skill"),
+            "upsert_catalog_entry_core",
+            (CatalogKind::Skill, 80_u32, commitment(80)),
         );
         let refs = Some(Qualifications {
             role_ids: vec![90],
@@ -494,4 +505,11 @@ fn parent_storage_failure_discards_tentative_child_instance() {
         assert_eq!(read::<Option<Account>>(&directory,1,"calendar_address",account(2)),None);
         assert_eq!(digest(&projection(&directory)),before);
     });
+}
+
+fn commitment(n: u8) -> generated_contracts::provider_core::MetadataCommitmentV1 {
+    generated_contracts::provider_core::MetadataCommitmentV1 {
+        operation_id: OperationId::from_bytes([n; 16]),
+        hash: PayloadHash::from_bytes([n; 32]),
+    }
 }
