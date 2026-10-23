@@ -409,20 +409,20 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
 }
 
 #[test]
-fn retained_large_profile_is_completely_importable_and_exportable() {
+fn retained_large_proposal_is_completely_importable_and_exportable() {
     run(async {
         let source: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/predecessor-migration.json"
+            "../../../services/mock-provider/src/domain/fixtures/proposal-predecessor.json"
         ))
         .unwrap();
-        let mut old: provider_execution::migration::ArchiveV1 =
+        let mut old: provider_execution::migration::CoreArchiveV2 =
             serde_json::from_str(source["archives"][1]["archive"].as_str().unwrap()).unwrap();
         old.checkpoint
-            .workers
+            .projects
             .values_mut()
-            .next()
+            .find_map(|project| project.proposals.first_mut())
             .unwrap()
-            .display_name = "n".repeat(MAX_SIGNABLE_BYTES - 200);
+            .description = "n".repeat(MAX_SIGNABLE_BYTES / 2);
         let original = serde_json::to_vec(&old).unwrap();
         let (archive, records) =
             mock_provider::migration::from_predecessor(&original, old.checkpoint.info.root_account)
