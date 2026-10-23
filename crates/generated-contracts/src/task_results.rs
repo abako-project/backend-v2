@@ -13,8 +13,19 @@ dto!(/// API task completion, without signing metadata or a provider event curso
 
 wire_enum!(/// Explicit API ownership; a generation ID alone does not establish it.
     TaskEventSource { AdapterTask });
-wire_enum!(/// Only tracking changes can be represented as API task notifications.
-    TaskEventKind { TaskCreated, TaskUpdated, TaskDeleted });
+/// Only tracking changes can be represented as API task notifications.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
+pub enum TaskEventKind {
+    /// Tracking task created.
+    #[serde(rename = "TaskCreated")]
+    Created,
+    /// Tracking task edited or progressed.
+    #[serde(rename = "TaskUpdated")]
+    Updated,
+    /// Tracking task deleted.
+    #[serde(rename = "TaskDeleted")]
+    Deleted,
+}
 dto!(/// Generation-scoped API task event. Notification IDs provide SSE ordering.
     AdapterTaskEvent { source: TaskEventSource, provider_instance_id: ProviderInstanceId, operation_id: OperationId, kind: TaskEventKind, project_id: EntityId, task_storage_id: EntityId, recipients: Vec<AccountId32>, occurred_at: UnixSeconds, origin: AccountId32 });
 
@@ -55,9 +66,9 @@ impl NotificationEvent {
         match self {
             Self::Provider(event) => event.kind,
             Self::Task(event) => match event.kind {
-                TaskEventKind::TaskCreated => DomainEventKind::TaskCreated,
-                TaskEventKind::TaskUpdated => DomainEventKind::TaskUpdated,
-                TaskEventKind::TaskDeleted => DomainEventKind::TaskDeleted,
+                TaskEventKind::Created => DomainEventKind::TaskCreated,
+                TaskEventKind::Updated => DomainEventKind::TaskUpdated,
+                TaskEventKind::Deleted => DomainEventKind::TaskDeleted,
             },
         }
     }

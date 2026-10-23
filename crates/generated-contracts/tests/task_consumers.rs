@@ -10,9 +10,7 @@ fn examples() -> Result<Value, serde_json::Error> {
 
 #[test]
 fn legacy_operation_and_provider_notification_shapes_are_preserved() -> TestResult {
-    let legacy = concat!(
-        r#"{"operationId":"0x01010101010101010101010101010101","status":"OutcomeUnknown","receipt":null,"errorCode":null}"#,
-    );
+    let legacy = r#"{"operationId":"0x01010101010101010101010101010101","status":"OutcomeUnknown","receipt":null,"errorCode":null}"#;
     let operation: OperationView = serde_json::from_str(legacy)?;
     assert!(operation.task_result.is_none());
     assert_eq!(serde_json::to_string(&operation)?, legacy);
