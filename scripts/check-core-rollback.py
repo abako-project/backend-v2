@@ -32,7 +32,12 @@ def cli(binary, args, environment):
     for name, marker in POC.Client.secret_markers:
         POC.require(marker not in result.stdout and marker not in result.stderr,
                     "owner CLI disclosed " + name)
-    POC.require(result.returncode == 0, f"owner CLI failed: {binary.name} {args[0]}; rollback not verified")
+    if result.returncode != 0:
+        # Test identities and secret markers were checked above. Preserve the
+        # actual CLI error without inferring a capacity threshold or fallback.
+        error = next((line for line in reversed(result.stderr.decode(errors="replace").splitlines())
+                      if line.startswith("Error:")), "no typed CLI error")[:200]
+        raise AssertionError(f"owner CLI failed: {binary.name} {args[0]} ({error}); rollback not verified")
 
 
 def proposal_rows(database_url):

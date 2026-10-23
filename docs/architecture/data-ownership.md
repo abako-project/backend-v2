@@ -2,9 +2,9 @@
 
 | Owner | Authoritative data | Storage |
 |---|---|---|
-| mock-provider | Catalogues, worker qualifications/calendars, Project core facts, numeric proposal terms, milestones/tasks, reservations, reputation, simulated Bramp holds and funds, nonces, receipts and events | Memory or its own SQLite database |
+| mock-provider | Catalog IDs/references and moderated request lifecycle, worker qualifications/calendars, Project core facts, numeric proposal terms, milestones/tasks, reservations, reputation, simulated Bramp holds and funds, nonces, receipts and events | Memory or its own SQLite database |
 | wallet | Principal/wallet binding, encrypted seeds, signing jobs, lifecycle and audit | Custody SQLite |
-| adapter-api | Credentials, sessions, descriptive profiles, immutable worker directory names, Project root text and proposal documents, queued operations, event ingestion cursors, recipient notifications and read state | Adapter PostgreSQL |
+| adapter-api | Credentials, sessions, descriptive profiles, immutable worker directory names, Project root/proposal documents, catalog/request narrative and normalized skill-name admission, lifecycle reason content, queued operations, event ingestion cursors, recipient notifications and read state | Adapter PostgreSQL |
 | Leptos | Browser presentation state | No authoritative business database |
 
 Services access each other's HTTP interfaces, not databases. Identifiers link records across boundaries without cross-service foreign keys. Browser DTOs are defined in generated-contracts; service storage models remain private.
@@ -27,22 +27,28 @@ volume or Compose project name as described in [deployment](../../infra/README.m
 No development SQLite-to-PostgreSQL backfill is supplied. Retention,
 personal-data deletion and production backup schedules are not implemented policies.
 
-SPEC-0015 R2a/R2b1 makes the API authoritative for immutable worker directory
-names, Project root title/description, proposal titles/descriptions, milestone
-titles and change-request explanations. Compact commands and exact preimages
-commit together in PostgreSQL. Core V3 snapshots/archives contain context-bound
-references plus actual numeric terms, captured compensation policy and revision.
+SPEC-0015 R2a/R2b1/R2b2 makes the API authoritative for immutable worker directory
+names, Project root and proposal text, milestone titles, change explanations,
+catalog labels/categories, skill-request narrative and lifecycle reasons. Compact
+commands and exact preimages commit together in PostgreSQL. Core V4 snapshots and
+archives retain context-bound references, numeric terms, captured compensation,
+revision and moderated request lifecycle. Current catalog label and actual skill
+origin are separate; renames preserve origin/category and role associations.
+The existing API operation queue serializes catalog admission, reserves normalized
+skill names before signing and publishes actual assigned IDs only with a known
+provider outcome. Uncertain submissions retain holds. These are explicit API
+rules and immutable owner documents, not caches of a second core engine.
+
 Public views verify selected content after visibility checks and use allocated
-core amounts. Authorization and financial operations use raw core facts.
+core amounts. Authorization and financial operations use raw core facts. R1 child
+copies contain tasks only pending R3. Historical rows and review snapshots remain;
+there is no text fallback. `adapter-api backfill-provider-content` verifies selected
+worker/Project views through provider HTTP without signing or submitting work.
+The paging helper remains until R4/R5.
 
-R1 child copies now contain tasks only, pending R3. Historical rows and immutable
-review-comment snapshots are retained; there is no text fallback or second writer.
-`adapter-api backfill-provider-content` verifies selected views through provider
-HTTP without signing or submitting work. Catalog names/moderation and cancellation
-or planning-dispute reasons remain R2b2; the paging helper remains until R4/R5.
-
-Migration and rollback require matching current core state **and** API-owned
-content. The [R2b1 operator procedure](../../specs/0015-adapter-core-boundary/r2b-proposals.md)
-documents the explicit V2↔V3 transition, queue reconciliation, protected metadata
-exchange and recovery of successful direct legacy calls. R2a creation references
-survive that transition unchanged. See [milestone evidence](../../progress/handoffs/SPEC-0015.md).
+Migration and rollback require matching current core state and API-owned content.
+The [R2b2 operator procedure](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md)
+documents the explicit V3↔V4 exchange, frozen paired predecessor, reconciliation,
+protected files and recovery limits. R2a/R2b1 refs survive unchanged. Earlier
+transitions remain documented in their historical notes. See
+[milestone evidence](../../progress/handoffs/SPEC-0015.md).

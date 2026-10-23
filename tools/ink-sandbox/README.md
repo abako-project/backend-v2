@@ -430,8 +430,8 @@ explicit compatibility tests, not a promotion of application authority.
 
 ### Offline cutover and current-state rollback
 
-These steps switch authorities within the current V3 cohort. For the explicit
-V2↔V3 binary/content transition, use the [R2b1 procedure](../../specs/0015-adapter-core-boundary/r2b-proposals.md).
+These steps switch authorities within the current V4 cohort. For the explicit
+V3↔V4 binary/content transition, use the [R2b2 procedure](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
 
 Pause business writes, drain the adapter/provider queue and resolve unknown
 outcomes before export. Keep the source stopped until comparison and routing

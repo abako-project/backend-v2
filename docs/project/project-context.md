@@ -1,6 +1,6 @@
 # Current implementation and limitations
 
-Application baseline: `608c70b`; current candidate includes SPEC-0015 R2b1,
+Application baseline: `608c70b`; current candidate includes SPEC-0015 R2b2,
 2026-10-23. This page describes implementation;
 [specifications](../../SPECS.md) define approved behavior. Dated handoffs record
 verification of their own revisions, not a fresh verification of every later commit.
@@ -17,7 +17,7 @@ verification of their own revisions, not a fresh verification of every later com
 | Planning and payments | No separate planning price or transfer. Execution approval reserves the full budget and team capacity upfront. Each accepted milestone pays its stored shares. |
 | Compensation | Configurable coordinator percentage, initially 10%; remaining budget allocated by planned worker minutes with exact integer totals |
 | Tracking | One task storage per proposal milestone, preserved through draft edits. Storages may remain empty through submission and execution. Tasks do not determine payouts. |
-| Descriptive data | Immutable directory names, Project root and proposal text, milestone titles, change explanations, client/worker profiles and images, briefs, proposal presentation, review comments and submission/rejection supporting content in adapter PostgreSQL |
+| Descriptive data | Immutable directory names, Project root and proposal text, milestone titles, change explanations, catalog/request narrative and lifecycle reasons, client/worker profiles and images, briefs, proposal presentation, review comments and submission/rejection supporting content in adapter PostgreSQL |
 | Evaluations | Final 1–5 ratings under approved party rules, separate from payments; minute-weighted reputation |
 | Disputes | Current rejection permits public opening and freezes the project. Append-only public arguments and a private case conversation are implemented. |
 | Events | Durable adapter operations, receipt reconciliation, event ingestion and recipient notifications over authenticated SSE |
@@ -53,14 +53,16 @@ dependency policy. It is not the deployed Kreivo contract cohort or a real-chain
 provider; changing an endpoint URL cannot supply compatible execution and
 reconciliation. ink! v6 remains outside scope.
 
-SPEC-0015 R2a/R2b1 moves immutable directory names, Project root and proposal
-text, milestone titles and change explanations into the adapter. Both cores keep
-fixed references and actual numeric proposal terms; public views stay unchanged.
-Existing V2 stores require the explicit [paired V2↔V3 migration and rollback procedure](../../specs/0015-adapter-core-boundary/r2b-proposals.md).
-Catalog names/moderation and cancellation/planning-dispute reasons remain R2b2;
-tasks remain R3 and removal of the paging helper R4/R5. Formal performance acceptance, promotion and two observed
-stable releases remain open. No image publication, deployment or onchain upgrade
-is authorized by this candidate.
+SPEC-0015 R2a/R2b1/R2b2 moves descriptive creation/proposal content, catalog labels,
+categories, request narrative and lifecycle reasons into the adapter. Core V4
+retains fixed refs, actual numeric terms, moderated request markers and separate
+current-label/skill-origin refs; public DTOs stay unchanged. Existing V3 stores
+require the explicit [paired V3↔V4 exchange and rollback](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
+The API uses the existing operation queue for normalized skill-name admission;
+core still assigns actual IDs and enforces permissions and role references.
+Tasks remain R3 and paging removal R4/R5. Formal performance acceptance,
+promotion and two observed stable releases remain open. No image publication,
+deployment or onchain upgrade is authorized by this candidate.
 
 ## Remaining limits
 
@@ -94,4 +96,4 @@ The [platform handoff](../../progress/handoffs/PLATFORM-001.md) and
 [porting review](porting-coverage.md) retain historical evidence for their original
 revisions. The [sandbox consolidation](../../progress/handoffs/SPEC-0013-CONSOLIDATION.md)
 records the embedded candidate; the [ownership handoff](../../progress/handoffs/SPEC-0015.md)
-records the current R2b1 source, exact checks, Astra review and later milestones.
+records current ownership source, exact checks, Astra review and later milestones.

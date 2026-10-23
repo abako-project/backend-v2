@@ -210,3 +210,22 @@ python3 scripts/check-core-rollback.py --case /tmp/r2b2-case --candidate-binarie
 
 These commands describe the intended verification; final observed results belong
 in the handoff/PR. They do not authorize a live cutover, release or deployment.
+
+## Observed predecessor limit
+
+The unchanged V4 execution regression accepts a200008-byte planning reason and a
+24008-byte catalog label in all three current authorities. Its complete V3
+rehydration imports/exports exactly with the frozen native predecessor. The frozen
+V3 whole-provider rejects that untouched case with `InvalidState` and leaves no
+committed candidate state. This does not establish an exact limit or allocator
+cause. Shortened diagnostic copies are not rollback evidence. A separate genuinely
+executed small-reason case retains the long label for the paired three-authority
+rehearsal; inputs are fixed before hashing/signing, never edited after execution.
+
+Successful target import, reopen and public checks are mandatory compatibility
+gates before routing or resuming writes. On failure preserve the complete current
+V4 source, API data and exports; retry only into a fresh destination. Report the
+actual import error. There is no source truncation, invented public length cutoff,
+limit increase, generic error remapping or automatic authority fallback. New
+compact content can exceed the frozen WASM cohort's representational capacity, so
+whole-provider rollback is conditional on verified target compatibility.

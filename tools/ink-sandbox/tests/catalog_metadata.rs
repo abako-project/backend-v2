@@ -246,6 +246,17 @@ fn export(run: &Run, path: &Path) {
 }
 #[test]
 fn compact_catalog_and_reasons_preserve_current_state_and_actual_receipts() {
+    scenario(
+        &[Authority::Rust, Authority::Shadow, Authority::Sandbox],
+        200_000,
+        false,
+    );
+}
+#[test]
+fn supported_frozen_rollback_case_executes_its_original_small_reason() {
+    scenario(&[Authority::Sandbox], 80, true);
+}
+fn scenario(authorities: &[Authority], reason_bytes: usize, owner_export: bool) {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -264,12 +275,11 @@ fn compact_catalog_and_reasons_preserve_current_state_and_actual_receipts() {
             let project = *initial.checkpoint.projects.first_key_value().unwrap().0;
             let client = actor(initial.checkpoint.projects[&project].client);
             let requester = actor(*initial.checkpoint.workers.first_key_value().unwrap().0);
-            for (index, authority) in [Authority::Rust, Authority::Shadow, Authority::Sandbox]
-                .into_iter()
-                .enumerate()
-            {
-                let path = std::env::temp_dir()
-                    .join(format!("catalog-v4-{}-{index}.sqlite", std::process::id()));
+            for (index, authority) in authorities.iter().copied().enumerate() {
+                let path = std::env::temp_dir().join(format!(
+                    "catalog-v4-{}-{reason_bytes}-{index}.sqlite",
+                    std::process::id()
+                ));
                 let config = WholeConfiguration {
                     root: account(1),
                     generation: initial.checkpoint.info.provider_instance_id,
@@ -445,7 +455,7 @@ fn compact_catalog_and_reasons_preserve_current_state_and_actual_receipts() {
                     ProviderCommand::DisputePlanning {
                         project_id: project,
                         request: ReasonRequest {
-                            reason: format!("Dispute\0{}", "x".repeat(200_000)),
+                            reason: format!("Dispute\0{}", "x".repeat(reason_bytes)),
                         },
                     },
                     ExecutionOutcome::Success,
@@ -519,9 +529,7 @@ fn compact_catalog_and_reasons_preserve_current_state_and_actual_receipts() {
                     .unwrap(),
                     before
                 );
-                if authority == Authority::Sandbox
-                    && let Some(output) = std::env::var_os("R2B2_ROLLBACK_OUTPUT_DIR")
-                {
+                if owner_export && let Some(output) = std::env::var_os("R2B2_ROLLBACK_OUTPUT_DIR") {
                     export(&run, Path::new(&output));
                 }
                 run.worker.shutdown().await.unwrap();
