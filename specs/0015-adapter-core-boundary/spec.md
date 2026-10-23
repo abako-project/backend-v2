@@ -58,7 +58,7 @@ Evidence: `services/mock-provider/src/domain/financial_parity.rs`,
 | Delivery constraints used by approval | Contracts | Compact typed values sufficient for current date/schedule checks; they cannot be moved merely because they look descriptive |
 | Execution, cancellation, submissions and disputes | Contracts | Authorization, current transition targets, freeze/settlement state and compact commitments; presentation/history in adapter |
 | Qualifications, worker mode, coordinator eligibility and reputation | Contracts | IDs/membership, exact accumulators and replay markers used by selection and voting |
-| Catalog labels and requests | Split after name-rule design | IDs, qualification relationships, fixed coordinator capability and normalized-name uniqueness must remain enforceable |
+| Catalog labels and requests | Adapter owns names, requests and normalized-name uniqueness under the approved policy below | Core owns IDs, qualification facts, skill-to-role references needed to prevent deleting a referenced role, fixed coordinator capability and admin authorization |
 | Calendar capacity and reservations | Contracts | Per-week/per-reservation records, checked totals and reservation identity |
 | Balances, escrow, issuance, deposits and withdrawals | Contracts/runtime | Exact amounts, authorization, status and replay protection |
 | Search/listing/history projections | Adapter | Retain core facts/markers needed for correctness and complete enumeration; avoid duplicated full view snapshots |

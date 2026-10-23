@@ -32,7 +32,7 @@ explicitly. These are fixtures, not live usage measurements.
 | Vector of 1,000 account IDs | 32,002 | IDs alone eventually break aggregate-cell storage |
 | Vector of 1,000 public IDs | 16,002 | Already close to the cell cap without useful entity data |
 
-Illustrative encoded header tuples are 159–175 bytes per Project, 98 per worker,
+Illustrative encoded header tuples are 159–181 bytes per Project, 98 per worker,
 60 per calendar, and 20 per requirement before separately keyed skill membership.
 These are feasibility sketches, not the final ABI or a claim that the complete
 replacement model is that small. Final core records/inputs are measured again
@@ -54,7 +54,7 @@ fix collection growth. Neither requires raising chain storage limits.
 | Task assignees in Project event recipients | Adapter notification composition must preserve these recipients. Existing notification IDs are the SSE resume sequence; never invent provider cursors or signing receipts for API-only work. |
 | Participant/contact/dispute-channel projections | Preserve their existing audience rules. Project visibility includes task assignees, while the participant list uses approved contractual assignments; do not merge those distinct sets. |
 | Submission/dispute state and evidence commitment | Core transition IDs/status, current review targets, author/permission/freeze facts and compact commitments. Narrative/history content stays API-owned. |
-| Role/skill labels, category, descriptive associations and moderated request content | Adapter catalog context; preserve current normalization, moderation audience and root-only approvals. Core still validates known role/skill IDs and required worker memberships. Role metadata continues not to filter matching. |
+| Role/skill labels, category and moderated request content | Adapter catalog context; preserve current normalization, moderation audience and root-only approvals. Core still validates known IDs and worker memberships. Skill-to-role membership also prevents deletion of a referenced role, so that compact guard stays core-owned even though matching ignores role labels. |
 | Fixed coordinator role | Core capability remains role ID 1 and cannot be renamed/deleted through the new core interface. API presents its fixed coordinator label. Do not derive authority from an arbitrary display name. |
 | Capacity overrides/reservations | Core mappings per week/reservation, checked totals. Moving calendars to profile JSON would weaken matching and oversubscription enforcement. |
 | Reputation/evaluation replay markers | Core exact accumulators and participant/contribution checks. Historical display detail can be projected, without reapplying votes. |
@@ -107,8 +107,8 @@ own ID for renames. Two pending
 requests may share a name, as today; approval/catalog upsert must resolve the
 conflict atomically. Do not make pending requests globally unique by accident.
 
-Contracts retain ID existence, privileged creation/approval and qualification
-facts, with role ID 1 fixed. A direct chain call cannot establish an API label
+Contracts retain ID existence, privileged creation/approval, qualification
+facts and skill-to-role references needed by role-deletion guards, with role ID 1 fixed. A direct chain call cannot establish an API label
 without the corresponding validated adapter record. Name validity/uniqueness is
 explicitly an API guarantee, not a property inferred from a supplied hash.
 Retain full historical labels without shortening them. No tighter public name
