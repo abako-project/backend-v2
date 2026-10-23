@@ -79,6 +79,9 @@ macro_rules! redacted_dto {
     };
 }
 
+mod task_results;
+pub use task_results::*;
+
 wire_enum!(/// Only one mode can be active; coordinator eligibility is separate.
     WorkerMode { Worker, Coordinator });
 wire_enum!(/// Proposal lifecycle, distinct from execution lifecycle.
@@ -896,7 +899,7 @@ dto!(/// Recoverable provider execution receipt; generated IDs are not inferred.
 dto!(/// Browser mutation acknowledgement, not a claim of business success.
     OperationRef { operation_id: OperationId, status: ProviderOperationStatus });
 dto!(/// Browser-pollable outcome, retained independently of an SSE connection.
-    OperationView { operation_id: OperationId, status: ProviderOperationStatus, receipt: Option<OperationReceipt>, error_code: Option<String> });
+    OperationView { operation_id: OperationId, status: ProviderOperationStatus, receipt: Option<OperationReceipt>, error_code: Option<String>, #[serde(default, skip_serializing_if = "Option::is_none")] task_result: Option<TaskOperationResult> });
 dto!(/// Stable sanitized HTTP error for internal and browser boundaries.
     ApiError { code: String, message: String });
 
@@ -971,7 +974,7 @@ dto!(/// Durable provider event with explicit recipients, no secret or raw paylo
 dto!(/// Cursor-based provider event page; cursor always refers to this instance.
     ProviderEvents { provider_instance_id: ProviderInstanceId, events: Vec<DomainEvent>, next_cursor: u64 });
 dto!(/// Session-owned persisted notification; SSE delivery never changes `read_at`.
-    NotificationView { notification_id: u64, event: DomainEvent, read_at: Option<UnixSeconds>, actor: Option<NotificationActorView>, project_title: Option<String> });
+    NotificationView { notification_id: u64, event: NotificationEvent, read_at: Option<UnixSeconds>, actor: Option<NotificationActorView>, project_title: Option<String> });
 dto!(/// Public identity of the verified account that caused an event.
     NotificationActorView { account_id: AccountId32, display_name: String, image_url: Option<String> });
 dto!(/// Public notification page, resumable by its monotonically increasing ID.

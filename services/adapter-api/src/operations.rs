@@ -349,6 +349,7 @@ pub(crate) async fn read(
             .map(serde_json::from_str)
             .transpose()?,
         error_code: row.try_get("error_code")?,
+        task_result: None,
     })
 }
 

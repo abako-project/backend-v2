@@ -640,8 +640,8 @@ fn Notifications() -> impl IntoView {
         <p class="muted">"Se muestran las últimas 500 notificaciones recibidas en esta vista."</p>
         {move || context.notifications.with(Vec::is_empty).then(|| view! { <p class="empty">"No hay notificaciones en esta vista."</p> })}
         <ul class="list">{move || context.notifications.get().into_iter().rev().map(|notification| view! {
-            <li><span class="badge">{format!("{:?}", notification.event.kind)}</span>" · "{if notification.read_at.is_some() { "Leída" } else { "Sin leer" }}
-                <p class="muted">"Referencia: "<code>{notification.event.operation_id.to_string()}</code></p>
+            <li><span class="badge">{format!("{:?}", notification.event.kind())}</span>" · "{if notification.read_at.is_some() { "Leída" } else { "Sin leer" }}
+                <p class="muted">"Referencia: "<code>{notification.event.operation_id().to_string()}</code></p>
                 {notification.read_at.is_none().then(|| view! { <Action label="Marcar como leída" on_click=Callback::new(move |()| context.ordinary::<Value>(format!("/notifications/{}/read", notification.notification_id), None, false))/> })}
             </li>
         }).collect_view()}</ul></section>

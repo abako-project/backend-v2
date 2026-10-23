@@ -228,3 +228,25 @@ failure 500, and unavailable dependency 503. Domain failures after enqueue appea
 in `OperationView`; they do not change the already returned HTTP 202.
 
 Coordinator execution share is provider-owned (initially 10%), read from GET /api/catalog and captured on draft create/update. Separate planning quote/accept commands are retired; planning delivery acceptance transfers no funds. Positive budgets require worker effort. Execution approval reserves the full budget and each accepted milestone settles its stored shares.
+
+### Preparing consumers for API-owned tasks (R3a)
+
+Task execution is still provider-owned in this release. Existing operation and
+notification JSON is unchanged. Before task ownership switches, both frontends
+must accept the additional forms documented in OpenAPI:
+
+- A finalized API task operation has `receipt: null` and a `taskResult` containing
+  `outcome`, `taskStorageId` and `finalizedAt`. Check `outcome` just as for a
+  receipt. `taskResult` is omitted for current provider operations. Finality
+  without either result, or with both, is unresolved; retain the operation ID.
+- `NotificationView.event` accepts either the existing provider event or a task
+  event with required `source: "AdapterTask"`. Task events carry generation,
+  operation, project/storage IDs, one of `TaskCreated`/`TaskUpdated`/`TaskDeleted`,
+  recipients, actor and time. Their generation scopes IDs; they have no provider
+  cursor, nonce or receipt. Branch on `source` before accessing provider fields.
+
+For either event source, SSE `id`, `Last-Event-ID`, pagination and deduplication
+continue to use the outer `notificationId`; read state changes only through the
+explicit read route. This reader milestone does not emit API task results or
+notifications and does not establish independent frontend readiness. See the
+[R3a scope and cutover gates](../../specs/0015-adapter-core-boundary/r3-task-compatibility.md).

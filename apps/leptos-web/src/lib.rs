@@ -47,7 +47,7 @@ pub fn parse_ids(value: &str) -> Result<Vec<u32>, String> {
 /// The UI must distinguish a successful receipt from mere finality.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OperationResult {
-    /// A provider receipt establishes successful execution.
+    /// Exactly one finalized provider receipt or API task result establishes success.
     Success,
     /// Non-execution or failed execution has been established.
     Failed(String),
@@ -59,13 +59,17 @@ pub enum OperationResult {
 #[must_use]
 pub fn operation_result(operation: &OperationView) -> OperationResult {
     match operation.status {
-        ProviderOperationStatus::Finalized => match &operation.receipt {
-            Some(receipt) => match &receipt.outcome {
+        ProviderOperationStatus::Finalized => {
+            let outcome = match (&operation.receipt, &operation.task_result) {
+                (Some(receipt), None) => &receipt.outcome,
+                (None, Some(result)) => &result.outcome,
+                _ => return OperationResult::Pending,
+            };
+            match outcome {
                 ExecutionOutcome::Success => OperationResult::Success,
                 ExecutionOutcome::Failed(code) => OperationResult::Failed(code.clone()),
-            },
-            None => OperationResult::Pending,
-        },
+            }
+        }
         ProviderOperationStatus::Rejected | ProviderOperationStatus::Expired => {
             OperationResult::Failed(
                 operation

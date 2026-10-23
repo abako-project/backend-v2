@@ -8457,9 +8457,20 @@
                 "type": "null"
               }
             ]
+          },
+          "taskResult": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaskOperationResult"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional API task completion; omitted by all current writers. Finalized success requires exactly one known result: receipt or taskResult. Missing/conflicting results remain unresolved."
           }
         },
-        "description": "Poll independently of SSE. Domain failure codes appear here or in receipt.outcome, after the original HTTP 202. Only owner can read.",
+        "description": "Poll independently of SSE. Domain failure codes appear here or in receipt.outcome, after the original HTTP 202. Only owner can read. Future API-owned task work uses taskResult instead of a provider receipt. This release prepares readers only; current emitted payloads are unchanged.",
         "examples": [
           {
             "operationId": "0x01010101010101010101010101010101",
@@ -8484,6 +8495,19 @@
               "finalizedAt": 1788912000
             },
             "errorCode": null
+          },
+          {
+            "operationId": "0x01010101010101010101010101010101",
+            "status": "Finalized",
+            "receipt": null,
+            "errorCode": null,
+            "taskResult": {
+              "outcome": {
+                "type": "Success"
+              },
+              "taskStorageId": "0x03030303030303030303030303030303",
+              "finalizedAt": 1788912000
+            }
           }
         ]
       },
@@ -8638,7 +8662,14 @@
             "description": "Unsigned 64-bit integer. Clients must preserve exact JSON integers; do not round values above JavaScript Number.MAX_SAFE_INTEGER."
           },
           "event": {
-            "$ref": "#/components/schemas/DomainEvent"
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DomainEvent"
+              },
+              {
+                "$ref": "#/components/schemas/AdapterTaskEvent"
+              }
+            ]
           },
           "readAt": {
             "oneOf": [
@@ -8653,7 +8684,7 @@
           "actor": null,
           "projectTitle": null
         },
-        "description": "Session-owned notification. Only explicit read mutation sets readAt; fetching or SSE delivery does not.",
+        "description": "Session-owned notification. Only explicit read mutation sets readAt; fetching or SSE delivery does not. Existing provider event JSON is unchanged. Consumers must also accept the distinct AdapterTask event before task ownership changes; resume/deduplicate both by the outer notificationId.",
         "examples": [
           {
             "notificationId": 1,
@@ -8669,6 +8700,25 @@
               ],
               "occurredAt": 1788912000,
               "origin": null
+            },
+            "readAt": null,
+            "actor": null,
+            "projectTitle": null
+          },
+          {
+            "notificationId": 2,
+            "event": {
+              "source": "AdapterTask",
+              "providerInstanceId": "0x01010101010101010101010101010101",
+              "operationId": "0x01010101010101010101010101010101",
+              "kind": "TaskUpdated",
+              "projectId": "0x02020202020202020202020202020202",
+              "taskStorageId": "0x03030303030303030303030303030303",
+              "recipients": [
+                "0x0202020202020202020202020202020202020202020202020202020202020202"
+              ],
+              "occurredAt": 1788912000,
+              "origin": "0x0202020202020202020202020202020202020202020202020202020202020202"
             },
             "readAt": null,
             "actor": null,
@@ -10872,6 +10922,113 @@
               "emptyStateWorkerText": "Projects will appear here once you are assigned as a consultant or developer.",
               "emptyStateClientText": "Create your first project proposal to get started with Abako."
             }
+          }
+        ]
+      },
+      "TaskOperationResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "outcome",
+          "taskStorageId",
+          "finalizedAt"
+        ],
+        "properties": {
+          "outcome": {
+            "$ref": "#/components/schemas/ExecutionOutcome"
+          },
+          "taskStorageId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "finalizedAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          }
+        },
+        "description": "Consumer preparation for future API-owned task work. No task writer emits this form yet. Contains no provider receipt, nonce or event cursor.",
+        "examples": [
+          {
+            "outcome": {
+              "type": "Success"
+            },
+            "taskStorageId": "0x03030303030303030303030303030303",
+            "finalizedAt": 1788912000
+          }
+        ]
+      },
+      "TaskEventSource": {
+        "type": "string",
+        "enum": [
+          "AdapterTask"
+        ]
+      },
+      "TaskEventKind": {
+        "type": "string",
+        "enum": [
+          "TaskCreated",
+          "TaskUpdated",
+          "TaskDeleted"
+        ]
+      },
+      "AdapterTaskEvent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "source",
+          "providerInstanceId",
+          "operationId",
+          "kind",
+          "projectId",
+          "taskStorageId",
+          "recipients",
+          "occurredAt",
+          "origin"
+        ],
+        "properties": {
+          "source": {
+            "$ref": "#/components/schemas/TaskEventSource"
+          },
+          "providerInstanceId": {
+            "$ref": "#/components/schemas/ProviderInstanceId"
+          },
+          "operationId": {
+            "$ref": "#/components/schemas/OperationId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TaskEventKind"
+          },
+          "projectId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "taskStorageId": {
+            "$ref": "#/components/schemas/EntityId"
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountId32"
+            }
+          },
+          "occurredAt": {
+            "$ref": "#/components/schemas/UnixSeconds"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/AccountId32"
+          }
+        },
+        "description": "Future API task notification, distinguished by required source=AdapterTask. The provider generation scopes IDs only; no provider transaction or cursor is asserted. Current writers do not emit this form.",
+        "examples": [
+          {
+            "source": "AdapterTask",
+            "providerInstanceId": "0x01010101010101010101010101010101",
+            "operationId": "0x01010101010101010101010101010101",
+            "kind": "TaskUpdated",
+            "projectId": "0x02020202020202020202020202020202",
+            "taskStorageId": "0x03030303030303030303030303030303",
+            "recipients": [
+              "0x0202020202020202020202020202020202020202020202020202020202020202"
+            ],
+            "occurredAt": 1788912000,
+            "origin": "0x0202020202020202020202020202020202020202020202020202020202020202"
           }
         ]
       }

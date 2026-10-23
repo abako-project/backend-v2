@@ -20,6 +20,7 @@ fn unknown_finality_is_never_success_or_rejection() {
         status: ProviderOperationStatus::OutcomeUnknown,
         receipt: None,
         error_code: None,
+        task_result: None,
     };
     assert_eq!(operation_result(&view), OperationResult::Pending);
     view.status = ProviderOperationStatus::Finalized;
@@ -61,4 +62,51 @@ fn reputation_display_keeps_money_out_of_score() {
         }),
         "5.00 (sin valoraciones)"
     );
+}
+
+#[test]
+fn api_task_completion_requires_finality_and_one_result_source()
+-> Result<(), Box<dyn std::error::Error>> {
+    let doc: serde_json::Value =
+        serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+    let mut view: OperationView = serde_json::from_value(
+        doc["components"]["schemas"]["OperationView"]["examples"][2].clone(),
+    )?;
+    assert!(view.receipt.is_none());
+    assert_eq!(operation_result(&view), OperationResult::Success);
+    for status in [
+        ProviderOperationStatus::AwaitingSignature,
+        ProviderOperationStatus::ReadyToSubmit,
+        ProviderOperationStatus::Submitted,
+        ProviderOperationStatus::OutcomeUnknown,
+    ] {
+        view.status = status;
+        assert_eq!(operation_result(&view), OperationResult::Pending);
+    }
+    view.status = ProviderOperationStatus::Finalized;
+    let task = view.task_result.as_mut().ok_or("missing task result")?;
+    task.outcome = ExecutionOutcome::Failed("project_frozen".into());
+    assert_eq!(
+        operation_result(&view),
+        OperationResult::Failed("project_frozen".into())
+    );
+    // Contradictory result sources never become success based on field precedence.
+    let provider: OperationView = serde_json::from_value(
+        doc["components"]["schemas"]["OperationView"]["examples"][1].clone(),
+    )?;
+    view.receipt = provider.receipt;
+    assert_eq!(operation_result(&view), OperationResult::Pending);
+    view.receipt = None;
+    view.error_code = Some("project_frozen".into());
+    for status in [
+        ProviderOperationStatus::Rejected,
+        ProviderOperationStatus::Expired,
+    ] {
+        view.status = status;
+        assert_eq!(
+            operation_result(&view),
+            OperationResult::Failed("project_frozen".into())
+        );
+    }
+    Ok(())
 }

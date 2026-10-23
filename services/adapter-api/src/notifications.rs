@@ -98,7 +98,7 @@ async fn enrich(
     notifications: &mut [NotificationView],
 ) -> Result<(), Error> {
     // Durable notifications remain readable while the provider is unavailable.
-    let snapshot = if notifications.iter().any(|n| n.event.project_id.is_some()) {
+    let snapshot = if notifications.iter().any(|n| n.event.project_id().is_some()) {
         match app.snapshot().await {
             Ok(snapshot) => Some(snapshot),
             Err(Error::Dependency | Error::NotFound) => None,
@@ -108,7 +108,7 @@ async fn enrich(
         None
     };
     for notification in notifications {
-        if let Some(origin) = notification.event.origin {
+        if let Some(origin) = notification.event.origin() {
             let row = sqlx::query("SELECT p.principal_id, p.display_name, w.name AS worker_name, c.name AS client_name, w.image_data IS NOT NULL AS worker_image, c.image_data IS NOT NULL AS client_image FROM principals p LEFT JOIN worker_profiles w USING(principal_id) LEFT JOIN client_profiles c USING(principal_id) WHERE p.account_id=$1")
                 .bind(origin.to_string()).fetch_optional(&app.db).await?;
             if let Some(row) = row {
@@ -131,9 +131,9 @@ async fn enrich(
             }
         }
         if let Some(snapshot) = &snapshot
-            && snapshot.info.provider_instance_id == notification.event.provider_instance_id
+            && snapshot.info.provider_instance_id == notification.event.provider_instance_id()
             && let Some(project) = snapshot.projects.iter().find(|p| {
-                Some(p.project_id) == notification.event.project_id
+                Some(p.project_id) == notification.event.project_id()
                     && crate::operations::visible(p, account)
             })
         {
