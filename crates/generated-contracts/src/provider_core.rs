@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 
 mod metadata;
 pub use metadata::*;
+mod models;
+pub use models::*;
 
 /// Fixed reference to an immutable adapter-owned creation record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
