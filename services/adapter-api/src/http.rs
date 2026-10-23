@@ -457,7 +457,10 @@ async fn catalog(State(app): State<Arc<App>>) -> Result<Json<CatalogView>, Error
 }
 async fn workers(State(app): State<Arc<App>>) -> Result<Json<Vec<WorkerSummaryView>>, Error> {
     let mut workers = Vec::new();
-    for worker in app.snapshot().await?.workers {
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    for mut worker in snapshot.workers {
+        crate::profiles::directory::compose(&app, generation, &mut worker).await?;
         let mut committed = BTreeMap::<Week, Minutes>::new();
         for reservation in &worker.calendar.reservations {
             let total = committed.entry(reservation.week).or_insert(Minutes::ZERO);
@@ -492,15 +495,18 @@ async fn projects(
 ) -> Result<Json<Vec<ProjectView>>, Error> {
     let snapshot = app.snapshot().await?;
     let generation = snapshot.info.provider_instance_id;
-    let mut projects: Vec<_> = snapshot
+    let projects: Vec<_> = snapshot
         .projects
         .into_iter()
         .filter(|p| operations::visible(p, session.view.account_id))
         .collect();
-    for project in &mut projects {
-        crate::evidence::project(&app, generation, project).await?;
+    let mut composed = Vec::with_capacity(projects.len());
+    for project in projects {
+        let mut project = crate::project_content::compose(&app, generation, project).await?;
+        crate::evidence::project(&app, generation, &mut project).await?;
+        composed.push(project);
     }
-    Ok(Json(projects))
+    Ok(Json(composed))
 }
 async fn project(
     State(app): State<Arc<App>>,
@@ -510,11 +516,12 @@ async fn project(
     let id = parse::<EntityId>(&id)?;
     let snapshot = app.snapshot().await?;
     let generation = snapshot.info.provider_instance_id;
-    let mut project = snapshot
+    let project = snapshot
         .projects
         .into_iter()
         .find(|p| p.project_id == id && operations::visible(p, session.view.account_id))
         .ok_or(Error::NotFound)?;
+    let mut project = crate::project_content::compose(&app, generation, project).await?;
     crate::evidence::project(&app, generation, &mut project).await?;
     Ok(Json(project))
 }
@@ -524,20 +531,30 @@ async fn visible_storage(
     session: &Session,
     storage_id: EntityId,
 ) -> Result<(EntityId, TaskStorageView), Error> {
-    app.snapshot()
-        .await?
+    let snapshot = app.snapshot().await?;
+    let project = snapshot
         .projects
         .into_iter()
-        .filter(|project| operations::visible(project, session.view.account_id))
-        .find_map(|project| {
-            project
-                .proposals
-                .into_iter()
-                .flat_map(|proposal| proposal.milestones)
-                .find(|milestone| milestone.task_storage.task_storage_id == storage_id)
-                .map(|milestone| (project.project_id, milestone.task_storage))
+        .find(|project| {
+            operations::visible(project, session.view.account_id)
+                && project
+                    .proposals
+                    .iter()
+                    .flat_map(|p| &p.milestones)
+                    .any(|m| m.task_storage.task_storage_id == storage_id)
         })
-        .ok_or(Error::NotFound)
+        .ok_or(Error::NotFound)?;
+    let project =
+        crate::project_content::compose(app, snapshot.info.provider_instance_id, project).await?;
+    let project_id = project.project_id;
+    let storage = project
+        .proposals
+        .into_iter()
+        .flat_map(|p| p.milestones)
+        .find(|m| m.task_storage.task_storage_id == storage_id)
+        .ok_or(Error::Dependency)?
+        .task_storage;
+    Ok((project_id, storage))
 }
 
 async fn task_storage(

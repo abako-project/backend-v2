@@ -97,7 +97,8 @@ Names, request moderation content and duplicate-name validation become adapter
 facts. Normalize with the existing Rust implementation: split Unicode whitespace,
 join with one ASCII space, then Rust Unicode lowercase. Do not replace it with
 PostgreSQL `lower`, locale-dependent collation or a different case-fold algorithm.
-Keep the complete normalized text and use the existing SHA-256 implementation
+Keep the complete normalized UTF-8 bytes (including accepted control characters)
+and use the existing SHA-256 implementation
 for a fixed-size, generation-scoped unique index key. An unbounded PostgreSQL
 text B-tree key would itself fail for the retained long names. Compare full
 normalized text on an occupied key; mismatched/colliding content fails explicitly.

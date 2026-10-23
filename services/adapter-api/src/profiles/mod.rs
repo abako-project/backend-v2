@@ -1,5 +1,6 @@
 //! Adapter-owned descriptive profiles; provider-owned qualifications stay elsewhere.
 
+pub(crate) mod directory;
 mod http;
 mod media;
 pub(crate) mod models;

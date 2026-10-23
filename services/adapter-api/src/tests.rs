@@ -1388,3 +1388,6 @@ mod platform;
 
 #[path = "evidence_tests.rs"]
 mod evidence_commitments;
+
+#[path = "content_copy_tests.rs"]
+mod content_copies;

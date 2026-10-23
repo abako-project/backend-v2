@@ -10,6 +10,7 @@ mod operations;
 mod platform;
 mod profiles;
 mod project_briefs;
+mod project_content;
 mod project_participants;
 mod proposal_reviews;
 mod state;
@@ -30,6 +31,17 @@ async fn main() -> Result<(), Error> {
     let config = tokio::task::spawn_blocking(Config::from_env).await??;
     let bind_addr = config.bind_addr.clone();
     let app = Arc::new(App::new(config).await?);
+    let arguments: Vec<_> = std::env::args().skip(1).collect();
+    match arguments.as_slice() {
+        [] => {}
+        [command] if command == "backfill-provider-content" => {
+            let (workers, projects) = backfill_content(&app).await?;
+            tracing::info!(workers, projects, "Provider content copies verified");
+            app.db.close().await;
+            return Ok(());
+        }
+        _ => return Err(Error::Config),
+    }
     auth::bootstrap(&app).await?;
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
     let (stop, stopping) = watch::channel(false);
@@ -94,3 +106,17 @@ async fn shutdown() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests;
+
+/// Explicit operator command; reads the owner-provided snapshot over HTTP only.
+async fn backfill_content(app: &App) -> Result<(usize, usize), Error> {
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    let counts = (snapshot.workers.len(), snapshot.projects.len());
+    for mut worker in snapshot.workers {
+        profiles::directory::compose(app, generation, &mut worker).await?;
+    }
+    for project in snapshot.projects {
+        project_content::compose(app, generation, project).await?;
+    }
+    Ok(counts)
+}
