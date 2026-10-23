@@ -97,3 +97,10 @@ derivation remains outside the linked production graph. The four advisory IDs,
 thirteen exact license exceptions and December 1 expiry remain unchanged. This
 renews only the fingerprint; the normal policy scan must still pass without extra
 waivers. No complete M8, release or authority-promotion approval is implied.
+
+
+R2b1's reviewed security patch changes only Tokio 1.53.1→1.53.3 in the app and SDK
+locks, with identical resolved features, to address RUSTSEC-2026-0386. Current SDK
+fingerprint: `c03e9b652133062cbdf55dc8e5002cad3c245f5830dd6ece63ccb59c93b3099f`.
+No ignore or expiry changes. See the [patch review](../dependencies.md#r2b1-advisory-fixing-patch-2026-10-23)
+and [gate/review record](../../../progress/handoffs/SPEC-0015.md).

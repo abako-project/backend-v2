@@ -219,3 +219,34 @@ Primary references: [axum0.8.9](https://docs.rs/axum/0.8.9/axum/),
 [Tokio](https://docs.rs/tokio/1.53.1/tokio/) and exact registry manifests/checksums
 in both lockfiles. The normal SDK policy scan remains required after fingerprint renewal;
 additional findings are not silently waived.
+
+
+## R2b1 advisory-fixing patch (2026-10-23)
+
+A fresh policy scan found RUSTSEC-2026-0386 in the unchanged Tokio 1.53.1 lock.
+Update the existing Tokio dependency to 1.53.3 in both workspaces, retaining every
+feature. Both lock diffs change exactly one package version/checksum; complete
+resolved package/feature comparisons confirm no other delta. No new dependency,
+unsafe application code, native library, crypto family or advisory/license ignore.
+The existing four advisory IDs, thirteen license exceptions and December 1 expiry
+remain unchanged. The SDK lock fingerprint is now
+`c03e9b652133062cbdf55dc8e5002cad3c245f5830dd6ece63ccb59c93b3099f`.
+
+Primary published metadata checked: 1.53.3 is not yanked, MIT, Rust 1.71, checksum
+`ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e`.
+Published 1.53.1→1.53.3 manifests retain dependencies/features/license/MSRV; only
+version and test declarations differ. Existing upstream OS/unsafe implications
+remain. The patch adds explicit unsafe AsyncFd registration methods and deprecates
+the old constructors; it does not erase their ownership requirements. Neither
+project source nor another resolved package's src tree references AsyncFd.
+Alternative: suppressing this new finding would expand the approved exceptions;
+a compatible existing-dependency patch is narrower. Frozen predecessor binaries
+remain offline development-transition fixtures, not deployment candidates.
+
+References: [registry metadata](https://crates.io/api/v1/crates/tokio/1.53.3),
+[upstream release](https://github.com/tokio-rs/tokio/releases/tag/tokio-1.53.3),
+[upstream fix](https://github.com/tokio-rs/tokio/pull/8587),
+[RustSec advisory](https://rustsec.org/advisories/RUSTSEC-2026-0386).
+Astra xhigh preflight accepted this narrow scope; exact diff review and fresh
+app/SDK/policy gates are recorded in the SPEC-0015 handoff. Root policy findings
+remain unwaived.
