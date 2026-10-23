@@ -1141,15 +1141,20 @@ async fn postgres_restart_preserves_queue_and_unread_notifications() -> TestResu
 #[tokio::test]
 async fn signup_catalog_is_public_and_contact_email_is_private() -> TestResult {
     let state = fake()?;
-    state
-        .lock()
-        .await
-        .snapshot
-        .catalog
-        .roles
-        .push(serde_json::from_value(
-            serde_json::json!({"id":2,"name":"frontend","fixed":true}),
-        )?);
+    let seed = generated_contracts::provider_core::catalog_seed_v1()
+        .into_iter()
+        .find(|entry| entry.kind == CatalogKind::Role && entry.id == 2)
+        .ok_or("role seed")?;
+    let record = seed.record(info().provider_instance_id);
+    state.lock().await.snapshot.catalog.roles.push(
+        generated_contracts::provider_core::CatalogEntryCore {
+            id: 2,
+            fixed: false,
+            content: generated_contracts::provider_core::CatalogReferenceV1::Seed(
+                PayloadHash::from_bytes(hash(&record.hash_input())),
+            ),
+        },
+    );
     let internal = Server::start(internal(state)).await?;
     let app = app(&internal).await?;
     let adapter = Server::start(http::router(app.clone())).await?;
