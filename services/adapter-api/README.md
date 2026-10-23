@@ -1,7 +1,8 @@
 # REST adapter
 
 The adapter owns credentials, sessions, descriptive profiles, durable transport
-operations, and notification read state in PostgreSQL. Business state remains
+operations, immutable worker directory names and Project root text, and
+notification read state in PostgreSQL. Enforceable business facts remain
 in the signed provider. Frontends use the same
 REST routes and authenticated SSE; no frontend assets or arbitrary signing API are
 served here. See `crates/generated-contracts/API.md` and `contracts/openapi.json`.

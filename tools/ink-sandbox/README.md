@@ -13,12 +13,12 @@ promotion and two observed release cycles remain open. Earlier milestone section
 below describe the retained compatibility tests; historical acceptance records
 live in `progress/handoffs/SPEC-0013*.md`.
 
-SPEC-0015 R2a now uses CoreArchiveV2/engineVersion2 and CoreSnapshotV2. Worker
+SPEC-0015 R2a now uses CoreArchiveV2 / engine version 2 and CoreSnapshotV2. Worker
 names and Project root text are API-owned preimages; native/WASM creation carries
 fixed references. Existing data needs an explicit paired transition, not an
 implicit startup conversion. See the [current ownership, migration and rollback
 guide](../../specs/0015-adapter-core-boundary/r2a-creation.md) before changing a
-retained cohort. Directory and Project are189,484 and163,316 bytes. The code,
+retained cohort. Directory and Project are 189,484 and 163,316 bytes. The code,
 value and memory limits are unchanged. The paging helper remains for later
 R2b/R3 content moves and R4/R5 storage simplification.
 
@@ -242,7 +242,9 @@ Schnorrkel primitive and context without importing key derivation into the SDK.
 The candidate SQLite schema distinguishes raw, legacy Calendar and Directory signed fixture modes.
 Earlier proof/candidate SQLite files without the mode column reject startup;
 these were never application provider data. Runtime/lock identity changes also
-reject old candidate checkpoints. Existing app SQLite/JSON opens unchanged.
+reject old candidate checkpoints. At this earlier milestone, app SQLite/JSON
+was unchanged; the current R2a cohort instead requires the explicit transition
+linked at the start of this guide.
 
 `NoRandomness` is still unused v5 host scaffolding, not matching entropy.
 Host-call weights are conservative finite proof limits, not production
