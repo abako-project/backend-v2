@@ -1,10 +1,11 @@
 # SPEC-0015: Simplify adapter and contract ownership
 
-Status: DRAFT — planning only; implementation is not approved.
+Status: APPROVED.
+Approval: owner approved the staged plan in the current conversation, 2026-10-23.
 Task: SPEC-0015. Owner requested a simplification plan on 2026-10-23 after
 identifying custom storage paging as a symptom of inappropriate provider data.
 
-## Decision proposed
+## Decision
 
 The adapter owns application content and workflow that does not determine
 funds, capacity, reputation or contractual lifecycle. Contracts retain the
@@ -20,7 +21,8 @@ or cross-database transaction coordinator.
 This proposal changes internal ownership and compatibility requirements from
 SPEC-0003/0006/0013. Their approved business rules remain authoritative until
 explicit amendments are approved. SPEC-0014's evidence commitments remain valid.
-Planning does not approve permission changes, tighter public limits, historical
+Plan approval does not settle the stage-0 policy decisions below or approve
+unrelated permission changes, tighter public limits, historical
 record deletion, release publication or deployment.
 
 ## What caused the current complexity
@@ -191,3 +193,22 @@ Do not represent prior paging-candidate timing as evidence for this design.
 The final shape is the existing adapter for app content/workflow, wallet for
 signing and a small contract-backed core for enforceable business facts, with
 three operational contract types and no custom storage system.
+
+## Stage-0 policy decisions approved 2026-10-23
+
+Owner selected API snapshot and edit hold. Task policy: the adapter captures an immutable snapshot of confirmed task data
+when accepting a dispute request. Subsequent task operations wait while that
+freeze/cancellation is pending; successful freeze rejects them under the existing
+frozen-project rule, failed freeze releases the hold. Ordinary task edits need
+no onchain transaction. Authorization uses confirmed core facts, preserving the
+existing actor matrix. This defines an API consistency boundary, not atomicity
+with arbitrary concurrent direct contract calls. The owner explicitly approved the changed ordering relative to the
+old single-provider transaction.
+
+Owner selected adapter-owned names and uniqueness. Catalog policy: adapter PostgreSQL owns names, requests and name uniqueness,
+using exactly the current Rust whitespace-collapse/Unicode lowercase semantics
+and a transactional unique key (fixed-size digest plus full normalized-text
+comparison, retaining long names without oversized B-tree keys). Contracts own catalog IDs, qualification facts
+and admin authority; coordinator role ID 1 remains fixed. Label validity and
+uniqueness become adapter guarantees, not independently checked chain properties.
+No arbitrary shortened-name rule is introduced. The owner explicitly approved this boundary.

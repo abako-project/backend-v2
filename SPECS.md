@@ -27,4 +27,4 @@ The [repository simplification plan](docs/project/repository-simplification.md)
 is approved as SIMPLIFY-001. It preserves application behavior and contracts.
 Historical acceptance reports remain under `progress/handoffs/`.
 
-Draft under discussion: [0015: adapter/core ownership simplification](specs/0015-adapter-core-boundary/spec.md). This is a plan, not implementation approval.
+Approved staged plan: [0015: adapter/core ownership simplification](specs/0015-adapter-core-boundary/spec.md). Stage-0 policy details remain explicit gates before affected implementation.
