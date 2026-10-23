@@ -1,6 +1,6 @@
 # Specification index
 
-Reviewed 2026-10-21. The linked specifications define approved requirements;
+Updated 2026-10-23. The linked specifications define approved requirements;
 approval does not establish verification of every later commit. See
 [current implementation and limits](docs/project/project-context.md) for product
 status and each feature's recorded evidence for observed results.
@@ -27,4 +27,4 @@ The [repository simplification plan](docs/project/repository-simplification.md)
 is approved as SIMPLIFY-001. It preserves application behavior and contracts.
 Historical acceptance reports remain under `progress/handoffs/`.
 
-Approved staged plan: [0015: adapter/core ownership simplification](specs/0015-adapter-core-boundary/spec.md). Stage-0 policy details remain explicit gates before affected implementation.
+Approved staged plan: [0015: adapter/core ownership simplification](specs/0015-adapter-core-boundary/spec.md). Stage 0 and R1 are independently accepted; [current evidence and remaining milestones](progress/handoffs/SPEC-0015.md) record the boundary.
