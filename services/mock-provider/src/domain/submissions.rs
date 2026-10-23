@@ -1,8 +1,9 @@
+use generated_contracts::provider_core::ProjectCore;
 use std::collections::BTreeSet;
 
 use generated_contracts::{
     AccountId32, CompletionSubmission, EntityId, EvidenceRecordReferenceV1, MilestoneStatus,
-    MilestoneView, ProjectView, SubmissionReview, UnixSeconds, WorkerRating,
+    MilestoneView, SubmissionReview, UnixSeconds, WorkerRating,
 };
 
 use super::project::milestone_mut;
@@ -10,7 +11,7 @@ use crate::{Error, Result, require};
 
 pub(super) fn submit(
     context: &super::execution::EngineContext,
-    project: &mut ProjectView,
+    project: &mut ProjectCore,
     origin: AccountId32,
     milestone_id: EntityId,
     deliverable: Option<EvidenceRecordReferenceV1>,
@@ -73,7 +74,7 @@ pub(super) fn pending(
 }
 
 pub(super) fn reject(
-    project: &mut ProjectView,
+    project: &mut ProjectCore,
     origin: AccountId32,
     milestone_id: EntityId,
     submission_id: EntityId,

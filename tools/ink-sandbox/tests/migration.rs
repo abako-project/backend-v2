@@ -5,7 +5,7 @@ use ink_v5_compatibility::{
     worker::{Error, WholeConfiguration, Worker},
 };
 use parity_scale_codec::{DecodeAll, Encode};
-use provider_execution::migration::ArchiveV1;
+use provider_execution::migration::CoreArchiveV2;
 use serde::Deserialize;
 use sp_core::{H256, hashing::sha2_256};
 use std::{
@@ -33,7 +33,7 @@ fn reference() -> Reference {
     ))
     .unwrap()
 }
-fn config(archive: &ArchiveV1) -> WholeConfiguration {
+fn config(archive: &CoreArchiveV2) -> WholeConfiguration {
     WholeConfiguration {
         root: archive.checkpoint.info.root_account,
         generation: archive.checkpoint.info.provider_instance_id,
@@ -81,7 +81,7 @@ fn run(future: impl std::future::Future<Output = ()>) {
 fn retained_archives_import_exactly_restart_and_never_replace_populated_stores() {
     run(async {
         for retained in reference().archives {
-            let archive: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+            let archive: CoreArchiveV2 = serde_json::from_str(&retained.archive).unwrap();
             let configuration = config(&archive);
             let db = Database::new();
             let worker =
@@ -123,7 +123,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
             .iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let archive: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let archive: CoreArchiveV2 = serde_json::from_str(&retained.archive).unwrap();
         let db = Database::new();
         let configuration = config(&archive);
         let worker = Worker::import_archive(db.0.clone(), archive, configuration.clone())
@@ -184,7 +184,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
             .result()
             .await
             .unwrap();
-        let expected: ArchiveV1 =
+        let expected: CoreArchiveV2 =
             serde_json::from_str(&reference.archives.last().unwrap().archive).unwrap();
         use ink_v5_compatibility::worker::comparison::*;
         let last: SignedContractCallV1 = serde_json::from_value(
@@ -224,7 +224,8 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
 #[test]
 fn missing_incompatible_and_failed_imports_never_regenerate_state() {
     run(async {
-        let original: ArchiveV1 = serde_json::from_str(&reference().archives[0].archive).unwrap();
+        let original: CoreArchiveV2 =
+            serde_json::from_str(&reference().archives[0].archive).unwrap();
         let configuration = config(&original);
         let db = Database::new();
         assert!(
@@ -233,7 +234,7 @@ fn missing_incompatible_and_failed_imports_never_regenerate_state() {
                 .is_err()
         );
         let mut invalid = original.clone();
-        invalid.version = 2;
+        invalid.version = 3;
         assert!(
             Worker::import_archive(db.0.clone(), invalid, configuration.clone())
                 .await
@@ -259,7 +260,7 @@ fn missing_incompatible_and_failed_imports_never_regenerate_state() {
 fn retained_score_overflow_precedes_missing_modern_worker_ratings() {
     run(async {
         for case in reference().priority_cases {
-            let archive: ArchiveV1 =
+            let archive: CoreArchiveV2 =
                 serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
             let configuration = config(&archive);
             let db = Database::new();
@@ -296,7 +297,7 @@ fn retained_score_overflow_precedes_missing_modern_worker_ratings() {
     })
 }
 
-fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &ArchiveV1) {
+fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV2) {
     use frame_support::traits::fungibles::Inspect;
     use ink_v5_compatibility::{Account, Assets, Contracts, checkpoint::Checkpoint};
     let shell: serde_json::Value = serde_json::from_slice(&stored.2).unwrap();
@@ -349,7 +350,8 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
             Account,
             worker::{Action, Invocation, Status},
         };
-        let archive: ArchiveV1 = serde_json::from_str(&reference().archives[0].archive).unwrap();
+        let archive: CoreArchiveV2 =
+            serde_json::from_str(&reference().archives[0].archive).unwrap();
         let configuration = config(&archive);
         let db = Database::new();
         let worker = Worker::import_archive(db.0.clone(), archive, configuration.clone())
@@ -409,15 +411,26 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
 #[test]
 fn retained_large_profile_is_completely_importable_and_exportable() {
     run(async {
-        let mut archive: ArchiveV1 =
-            serde_json::from_str(&reference().archives[1].archive).unwrap();
-        archive
-            .checkpoint
+        let source: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../services/mock-provider/src/domain/fixtures/predecessor-migration.json"
+        ))
+        .unwrap();
+        let mut old: provider_execution::migration::ArchiveV1 =
+            serde_json::from_str(source["archives"][1]["archive"].as_str().unwrap()).unwrap();
+        old.checkpoint
             .workers
             .values_mut()
             .next()
             .unwrap()
             .display_name = "n".repeat(MAX_SIGNABLE_BYTES - 200);
+        let original = serde_json::to_vec(&old).unwrap();
+        let (archive, records) =
+            mock_provider::migration::from_predecessor(&original, old.checkpoint.info.root_account)
+                .unwrap();
+        let records = records
+            .into_iter()
+            .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
+            .collect();
         let configuration = config(&archive);
         let db = Database::new();
         let worker = Worker::import_archive(db.0.clone(), archive.clone(), configuration)
@@ -425,10 +438,13 @@ fn retained_large_profile_is_completely_importable_and_exportable() {
             .unwrap();
         let current = worker.client().export_archive().unwrap().result().await;
         worker.shutdown().await.unwrap();
+        let current = current.unwrap();
         assert_eq!(
-            serde_json::to_vec(&current.unwrap()).unwrap(),
+            serde_json::to_vec(&current).unwrap(),
             serde_json::to_vec(&archive).unwrap()
         );
+        let restored = mock_provider::migration::to_predecessor(current, &records).unwrap();
+        assert_eq!(serde_json::to_vec(&restored).unwrap(), original);
     })
 }
 
@@ -440,7 +456,7 @@ async fn retained_case_with_gas(
     output: Option<&str>,
     gas: frame_support::weights::Weight,
 ) {
-    let archive: ArchiveV1 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
+    let archive: CoreArchiveV2 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
     let mut configuration = config(&archive);
     configuration.gas_limit = gas;
     let db = Database::new();
@@ -514,7 +530,8 @@ fn retained_positive_planning_escrow_pays_and_freezes_with_complete_backing() {
 fn ordinary_retained_qualification_capacity_matches_native() {
     run(async {
         let source = reference().aggregate_cases.remove(2);
-        let archive: ArchiveV1 = serde_json::from_str(source["archive"].as_str().unwrap()).unwrap();
+        let archive: CoreArchiveV2 =
+            serde_json::from_str(source["archive"].as_str().unwrap()).unwrap();
         let mut configuration = config(&archive);
         configuration.gas_limit = ink_v5_compatibility::WHOLE_GAS;
         let db = Database::new();
@@ -564,7 +581,8 @@ fn ordinary_retained_qualification_capacity_matches_native() {
 #[test]
 fn whole_resource_failure_preserves_runtime_shell_and_retry_after_restart() {
     run(async {
-        let archive: ArchiveV1 = serde_json::from_str(&reference().archives[0].archive).unwrap();
+        let archive: CoreArchiveV2 =
+            serde_json::from_str(&reference().archives[0].archive).unwrap();
         let mut configuration = config(&archive);
         configuration.gas_limit = frame_support::weights::Weight::from_parts(1, 1);
         let trace: serde_json::Value = serde_json::from_str(include_str!(
@@ -632,7 +650,7 @@ fn whole_modes_serialize_primary_reference_replay_and_restart() {
             .iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV2 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
             "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
         ))
@@ -773,7 +791,7 @@ fn whole_reference_storage_failure_competition_and_incomplete_shadow_are_explici
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV2 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
             "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
         ))
@@ -917,7 +935,7 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV2 = serde_json::from_str(&retained.archive).unwrap();
         let configuration = config(&initial);
         let unsupported = Database::new();
         let mut disabled = configuration.clone();
@@ -1060,7 +1078,7 @@ fn whole_differences_persist_without_substituting_either_primary() {
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: ArchiveV1 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV2 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
             "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
         ))
@@ -1192,7 +1210,7 @@ fn whole_differences_persist_without_substituting_either_primary() {
 fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback() {
     run(async {
         use ink_v5_compatibility::worker::Authority;
-        let initial: ArchiveV1 = serde_json::from_str(
+        let initial: CoreArchiveV2 = serde_json::from_str(
             &reference()
                 .archives
                 .into_iter()
@@ -1354,118 +1372,5 @@ fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback()
                 .await
                 .is_err()
         );
-    });
-}
-
-#[test]
-fn predecessor_sandbox_restores_and_replays_compact_command_history_without_executing_it() {
-    run(async {
-        use generated_contracts::provider_core::MetadataCommitmentV1;
-        use ink_v5_compatibility::worker::Authority;
-        use provider_execution::{Admission, VerifiedCall};
-        use sp_core::{Pair, sr25519};
-        let mut archive: ArchiveV1 =
-            serde_json::from_str(&reference().archives[0].archive).unwrap();
-        let key = sr25519::Pair::from_seed(&[1; 32]);
-        let root = AccountId32::from_bytes(key.public().0);
-        assert_eq!(root, archive.checkpoint.info.root_account);
-        let operation = OperationId::from_bytes([71; 16]);
-        let call = UnsignedContractCallV1::new(
-            archive.checkpoint.info.provider_instance_id,
-            operation,
-            root,
-            0,
-            UnixSeconds::new(200),
-            ProviderCommand::CreateProjectCore(MetadataCommitmentV1 {
-                operation_id: operation,
-                hash: PayloadHash::from_bytes([72; 32]),
-            }),
-        )
-        .unwrap();
-        let signed = SignedContractCallV1 {
-            signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes().unwrap()).0),
-            call,
-        };
-        let mut shell = archive.checkpoint.shell();
-        let Admission::Execute(pending) = shell
-            .prepare(
-                VerifiedCall::verify(signed.clone()).unwrap(),
-                UnixSeconds::new(100),
-            )
-            .unwrap()
-        else {
-            panic!("expected fresh shell admission")
-        };
-        let receipt = shell
-            .complete(*pending, Err("no_available_coordinator"))
-            .unwrap();
-        archive.checkpoint.nonces = shell.nonces;
-        archive.checkpoint.receipts = shell.receipts;
-        archive.checkpoint.events = shell.events;
-        let configuration = config(&archive);
-        let db = Database::new();
-        let worker = Worker::import_whole(
-            db.0.clone(),
-            archive.clone(),
-            configuration.clone(),
-            Authority::Sandbox,
-        )
-        .await
-        .unwrap();
-        let before = whole_rows(&db).await;
-        assert_eq!(
-            worker
-                .client()
-                .execute_directory_with_inputs(
-                    signed.clone(),
-                    provider_execution::ExecutionInputs {
-                        version: 1,
-                        now: UnixSeconds::new(1000),
-                        seed: [9; 32]
-                    }
-                )
-                .unwrap()
-                .result()
-                .await
-                .unwrap(),
-            receipt
-        );
-        assert_eq!(whole_rows(&db).await, before);
-        assert_eq!(
-            serde_json::to_vec(
-                &worker
-                    .client()
-                    .export_archive()
-                    .unwrap()
-                    .result()
-                    .await
-                    .unwrap()
-            )
-            .unwrap(),
-            serde_json::to_vec(&archive).unwrap()
-        );
-        worker.shutdown().await.unwrap();
-        let worker = Worker::reopen_whole(db.0.clone(), configuration, Authority::Sandbox)
-            .await
-            .unwrap();
-        assert_eq!(
-            worker
-                .client()
-                .execute_directory_with_inputs(
-                    signed,
-                    provider_execution::ExecutionInputs {
-                        version: 1,
-                        now: UnixSeconds::new(1000),
-                        seed: [8; 32]
-                    }
-                )
-                .unwrap()
-                .result()
-                .await
-                .unwrap(),
-            receipt
-        );
-        assert_eq!(whole_rows(&db).await, before);
-        worker.shutdown().await.unwrap();
     });
 }

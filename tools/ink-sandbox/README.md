@@ -3,7 +3,7 @@
 This candidate follows [SPEC-0013](../../specs/0013-ink-v5-sandbox/spec.md).
 It runs production WASM in a native FRAME runtime without starting a node. It
 is deliberately a separate Cargo workspace and lockfile: the application keeps
-its current dependencies, authoritative Rust engine and startup behavior.
+its current dependency graph and default Rust authority.
 
 The complete candidate supports explicit Rust, Shadow and Sandbox authority,
 current-state import/rollback and the existing private HTTP API. Start with the
@@ -12,6 +12,15 @@ The default application still uses Rust. Formal performance acceptance, approved
 promotion and two observed release cycles remain open. Earlier milestone sections
 below describe the retained compatibility tests; historical acceptance records
 live in `progress/handoffs/SPEC-0013*.md`.
+
+SPEC-0015 R2a now uses CoreArchiveV2/engineVersion2 and CoreSnapshotV2. Worker
+names and Project root text are API-owned preimages; native/WASM creation carries
+fixed references. Existing data needs an explicit paired transition, not an
+implicit startup conversion. See the [current ownership, migration and rollback
+guide](../../specs/0015-adapter-core-boundary/r2a-creation.md) before changing a
+retained cohort. Directory and Project are189,484 and163,316 bytes. The code,
+value and memory limits are unchanged. The paging helper remains for later
+R2b/R3 content moves and R4/R5 storage simplification.
 
 ```sh
 bash scripts/verify.sh ink-sandbox
@@ -315,7 +324,7 @@ frontend flow or application storage format. See [M6 evidence](../../progress/ha
 ## Complete retained-state migration candidate (M7)
 
 `Worker::import_archive` creates a fresh candidate store from the private typed
-`ArchiveV1`. Its caller must first validate the archive with the native bridge,
+`CoreArchiveV2`. Its caller must first validate the archive with the native bridge,
 pause writes, drain pending operations and reconcile uncertain outcomes. There is
 no HTTP import endpoint. `Worker::reopen` requires an existing sealed store;
 imports reject populated destinations and never regenerate incompatible state.
@@ -334,15 +343,17 @@ ordered 8 KiB migration pages. Directory stages records in a separate temporary
 namespace, applies each complete decoded record atomically, then clears its pages.
 An unfinished record blocks sealing. Derived worker skill indexes rebuild in fixed
 batches of at most 32 entries; sealing also requires every index complete. The
-native-authored capacity trace combines a near-limit worker name with 512 skills added by later valid calls, as well as
-large accumulated catalogs, calendars and Project descriptions. Paging removes
+native-authored capacity trace retains 512 skills added by later valid calls,
+large catalogs, calendars and proposal descriptions. R2a worker/Project root text
+now stays offchain; the immediate-predecessor corpus preserves the old stress
+inputs for explicit conversion tests. Paging removes
 the single-call import ceiling; finite WASM gas/memory and archive/checkpoint
 admission still apply and fail without committing a destination.
 
 `worker::archive` decodes the pinned storage-v5 cells using pallet-contracts'
 read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
-8 KiB pages and streaming contract storage admit near-256 KiB signed profiles
-without relaxing Kreivo's 16 memory pages or 192 KiB code limit. Complete reads
+legacy signed creation profiles are lowered before WASM; bounded core records
+retain their commitments without relaxing Kreivo's 16 memory pages or 192 KiB code limit. Complete reads
 have a cumulative 64 MiB cell budget and a 64 MiB archive limit. The existing
 runtime checkpoint and shell have separate 64 MiB caps. Admission/serialization
 failure commits no candidate state; it never truncates data or claims agreement.

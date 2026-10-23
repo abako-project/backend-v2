@@ -26,6 +26,11 @@ fn worker(state: &mut State, account: AccountId32) -> Result<()> {
         }),
         NOW,
     )?;
+    // Imported fixture worker has no historical creation receipt.
+    state.engine.worker_mut(account)?.content =
+        generated_contracts::provider_core::MetadataReferenceV1::Migration(
+            generated_contracts::PayloadHash::from_bytes([88; 32]),
+        );
     Ok(())
 }
 

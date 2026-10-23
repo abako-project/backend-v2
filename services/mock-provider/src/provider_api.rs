@@ -1,9 +1,10 @@
 //! Transport effect boundary shared by native and whole-provider candidates.
 use crate::{Provider, Result};
+use generated_contracts::provider_core::CoreSnapshotV2;
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, DisputeView, EntityId, OperationId, OperationReceipt,
-    ProviderEvents, ProviderInfo, ProviderSnapshot, SignedContractCallV1, SkillRequestView,
-    UnixSeconds, WithdrawalView,
+    ProviderEvents, ProviderInfo, SignedContractCallV1, SkillRequestView, UnixSeconds,
+    WithdrawalView,
 };
 use std::future::Future;
 
@@ -14,7 +15,7 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
     /// Next nonce for a new account operation.
     fn nonce(&self, account: AccountId32) -> impl Future<Output = Result<AccountNonce>> + Send;
     /// Internal read model; the adapter still filters project visibility.
-    fn snapshot(&self) -> impl Future<Output = Result<ProviderSnapshot>> + Send;
+    fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshotV2>> + Send;
     /// Recorded finality independent of the original transport response.
     fn receipt(
         &self,
@@ -59,7 +60,7 @@ impl ProviderApi for Provider {
     async fn nonce(&self, account: AccountId32) -> Result<AccountNonce> {
         Self::nonce(self, account).await
     }
-    async fn snapshot(&self) -> Result<ProviderSnapshot> {
+    async fn snapshot(&self) -> Result<CoreSnapshotV2> {
         Self::snapshot(self).await
     }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {

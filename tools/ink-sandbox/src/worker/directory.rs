@@ -1,9 +1,9 @@
 //! M3 ABI bridge. Domain permissions and rules run only in the pinned contracts.
 use super::*;
+use generated_contracts::provider_core::{ProjectCore, WorkerCore};
 use generated_contracts::{
-    CatalogEntry, CatalogView, CompensationPolicy, DomainEventKind, EntityId, ProjectView,
-    ProviderCommand, ProviderInstanceId, ScorePolicy, SkillRequestView, SkillRoleAssociation,
-    WorkerView,
+    CatalogEntry, CatalogView, CompensationPolicy, DomainEventKind, EntityId, ProviderCommand,
+    ProviderInstanceId, ScorePolicy, SkillRequestView, SkillRoleAssociation,
 };
 use parity_scale_codec::DecodeAll;
 use provider_execution::{Admission, Effect, ExecutionInputs, VerifiedCall};
@@ -20,15 +20,15 @@ pub type DirectoryProjection = (
     Vec<CatalogEntry>,
     Vec<CatalogEntry>,
     Vec<SkillRoleAssociation>,
-    Vec<WorkerView>,
+    Vec<WorkerCore>,
     Vec<SkillRequestView>,
 );
 
 pub type MarketplaceProjection = (
     CatalogView,
-    Vec<WorkerView>,
+    Vec<WorkerCore>,
     Vec<SkillRequestView>,
-    Vec<ProjectView>,
+    Vec<ProjectCore>,
     Vec<(
         EntityId,
         Option<EntityId>,
@@ -354,7 +354,9 @@ fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<
             input("cancel_withdrawal", withdrawal_id)
         }
 
-        ProviderCommand::RegisterWorker(request) => input("register_worker", (request, id())),
+        ProviderCommand::RegisterWorkerCore(request) => {
+            input("register_worker_core", (request, id()))
+        }
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
         ProviderCommand::SetScorePolicy(policy) => input("set_score_policy", policy),
@@ -512,7 +514,7 @@ pub(super) struct Applied {
     pub(super) state: State,
     pub(super) receipt: OperationReceipt,
     pub(super) outcome: Outcome,
-    pub(super) archive: Option<provider_execution::migration::ArchiveV1>,
+    pub(super) archive: Option<provider_execution::migration::CoreArchiveV2>,
 }
 pub(super) enum Evaluation {
     Replay(OperationReceipt),
@@ -570,7 +572,9 @@ pub(super) fn evaluate(
     }
     let prior_references = state.legacy_references.clone();
     let event_cursor = state.shell.events.last().map_or(0, |event| event.cursor);
-    let outcome = match command_input(&pending.call().command, pending.inputs()) {
+    let compact = mock_provider::creation::compact_creation(pending.call());
+    let command = compact.as_ref().unwrap_or(&pending.call().command);
+    let outcome = match command_input(command, pending.inputs()) {
         Ok(data) => {
             let invocation = Invocation {
                 caller: account(pending.call().origin),
@@ -728,7 +732,7 @@ pub(super) fn read_workers(
     bundles: &Bundles,
     state: &State,
     origin: AccountId32,
-) -> Result<Vec<WorkerView>, Error> {
+) -> Result<Vec<WorkerCore>, Error> {
     let _ = (bundles, origin);
     super::archive::workers(ext, state)
 }

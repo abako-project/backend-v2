@@ -80,12 +80,12 @@ enum InitialState {
     Calendar(CalendarFixture),
     Directory(DirectoryFixture),
     Import {
-        archive: Box<provider_execution::migration::ArchiveV1>,
+        archive: Box<provider_execution::migration::CoreArchiveV2>,
         configuration: WholeConfiguration,
     },
     Reopen(WholeConfiguration),
     WholeImport {
-        archive: Box<provider_execution::migration::ArchiveV1>,
+        archive: Box<provider_execution::migration::CoreArchiveV2>,
         configuration: WholeConfiguration,
         authority: Authority,
     },
@@ -254,7 +254,7 @@ enum Job {
         reply: oneshot::Sender<Result<OperationReceipt, Error>>,
     },
     Shell(oneshot::Sender<Result<Shell, Error>>),
-    Archive(oneshot::Sender<Result<provider_execution::migration::ArchiveV1, Error>>),
+    Archive(oneshot::Sender<Result<provider_execution::migration::CoreArchiveV2, Error>>),
     FinancialProjection {
         origin: AccountId32,
         reply: oneshot::Sender<Result<FinancialProjection, Error>>,
@@ -405,7 +405,7 @@ impl Client {
     /// Complete selected-primary archive for a drained administrative cutover.
     pub fn export_archive(
         &self,
-    ) -> Result<Ticket<provider_execution::migration::ArchiveV1>, Error> {
+    ) -> Result<Ticket<provider_execution::migration::CoreArchiveV2>, Error> {
         if !matches!(self.mode, Mode::Directory { whole: true, .. }) {
             return Err(Error::IncompleteCoverage);
         }
@@ -493,7 +493,7 @@ impl Worker {
     /// Fresh whole-provider store. Authority is fixed for its lifetime.
     pub async fn import_whole(
         path: PathBuf,
-        archive: provider_execution::migration::ArchiveV1,
+        archive: provider_execution::migration::CoreArchiveV2,
         configuration: WholeConfiguration,
         authority: Authority,
     ) -> Result<Self, Error> {
@@ -565,7 +565,7 @@ impl Worker {
     /// The bridge compares every field; it does not replace native admission validation.
     pub async fn import_archive(
         path: PathBuf,
-        archive: provider_execution::migration::ArchiveV1,
+        archive: provider_execution::migration::CoreArchiveV2,
         configuration: WholeConfiguration,
     ) -> Result<Self, Error> {
         configuration.validate()?;

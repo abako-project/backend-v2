@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use generated_contracts::{ApiError, PayloadHash, ProviderSnapshot};
+use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshotV2};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -305,9 +305,14 @@ impl App {
             .map_err(|_| Error::Dependency)?;
         decode_response(response).await
     }
-    pub(crate) async fn snapshot(&self) -> Result<ProviderSnapshot, Error> {
-        self.get(&self.config.provider_url, "/internal/snapshot")
-            .await
+    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshotV2, Error> {
+        let snapshot: CoreSnapshotV2 = self
+            .get(&self.config.provider_url, "/internal/snapshot")
+            .await?;
+        if snapshot.schema_version != 2 {
+            return Err(Error::Dependency);
+        }
+        Ok(snapshot)
     }
     pub(crate) async fn audit(
         &self,

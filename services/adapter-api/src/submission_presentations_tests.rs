@@ -24,7 +24,11 @@ async fn submission_links_are_private_immutable_retryable_and_persistent() -> Te
         worker_ratings: vec![],
         review: SubmissionReview::PendingReview,
     }];
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let server = Server::start(http::router(app.clone())).await?;
     let url = format!(
         "{}/api/completion-submissions/{submission_id}/presentation",
@@ -131,7 +135,10 @@ async fn submission_links_are_private_immutable_retryable_and_persistent() -> Te
             .await?,
         saved
     );
-    assert_eq!(fake.lock().await.snapshot.projects, [project]);
+    assert_eq!(
+        fake.lock().await.snapshot.projects,
+        [core_project(&project, info().provider_instance_id)?.0]
+    );
     assert_eq!(fake.lock().await.submissions, 0);
     server.finish().await?;
     let restarted =

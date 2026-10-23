@@ -55,7 +55,11 @@ async fn project_briefs_are_private_persistent_and_do_not_change_provider_state(
         .tasks
         .push(task);
     let project_id = project.project_id;
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let server = Server::start(http::router(app.clone())).await?;
     let url = format!("{}/api/projects/{project_id}/brief", server.url);
     let client = reqwest::Client::new();
@@ -207,7 +211,10 @@ async fn project_briefs_are_private_persistent_and_do_not_change_provider_state(
     );
     {
         let provider = fake.lock().await;
-        assert_eq!(provider.snapshot.projects, [project]);
+        assert_eq!(
+            provider.snapshot.projects,
+            [core_project(&project, info().provider_instance_id)?.0]
+        );
         assert!(provider.snapshot.balances.is_empty());
     }
     // Restart the adapter and reapply migrations; stored rows and sessions survive.

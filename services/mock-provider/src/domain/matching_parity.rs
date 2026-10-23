@@ -450,14 +450,15 @@ fn project_fixture(
     project_id: EntityId,
     client: AccountId32,
     coordinator: AccountId32,
-) -> ProjectView {
-    ProjectView {
+) -> ProjectCore {
+    ProjectCore {
         project_id,
         created_at: None,
         client,
         coordinator,
-        title: String::new(),
-        description: String::new(),
+        content: generated_contracts::provider_core::MetadataReferenceV1::Migration(
+            PayloadHash::from_bytes([0; 32]),
+        ),
         planning: PlanningView {
             revision: 0,
             status: PlanningStatus::Accepted,

@@ -69,6 +69,14 @@ fn valid_large_worker_profile_matches_native_success() {
                     command,
                 )
                 .unwrap();
+                let ProviderCommand::RegisterWorkerCore(compact) =
+                    mock_provider::creation::compact_creation(&call).unwrap()
+                else {
+                    panic!("expected compact registration");
+                };
+                let expected = generated_contracts::provider_core::MetadataReferenceV1::Creation(
+                    compact.content,
+                );
                 let signature = Sr25519Signature::from_bytes(
                     sr25519::Pair::from_seed(&[2; 32])
                         .sign(&call.signable_bytes().unwrap())
@@ -97,7 +105,8 @@ fn valid_large_worker_profile_matches_native_success() {
                 std::fs::remove_file(path).unwrap();
                 let projected = projection.unwrap();
                 assert_eq!(projected.3.len(), 1);
-                assert_eq!(projected.3[0].display_name.len(), length);
+                assert_eq!(projected.3[0].content, expected);
+                assert!(parity_scale_codec::Encode::encoded_size(&projected.3[0]) < 16 * 1024);
                 let result = result.unwrap();
                 assert!(
                     matches!(result.outcome, ExecutionOutcome::Success),

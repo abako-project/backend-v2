@@ -1,14 +1,14 @@
 //! R1 project-content copies. Provider facts still select and verify the version.
 use crate::state::{App, Error, hash};
-use generated_contracts::{EntityId, ProjectView, ProviderInstanceId, TaskStorageView};
+use generated_contracts::{
+    EntityId, ProjectView, ProviderInstanceId, TaskStorageView, provider_core::ProjectCore,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct Content {
-    title: String,
-    description: String,
     proposals: Vec<Proposal>,
 }
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -29,10 +29,8 @@ struct Milestone {
     task_storage: TaskStorageView,
 }
 impl Content {
-    fn source(project: &ProjectView) -> Self {
+    fn source(project: &ProjectCore) -> Self {
         Self {
-            title: project.title.clone(),
-            description: project.description.clone(),
             proposals: project
                 .proposals
                 .iter()
@@ -56,9 +54,7 @@ impl Content {
         }
     }
     /// Called only after exact equality against the provider-selected source.
-    fn apply(self, project: &mut ProjectView) {
-        project.title = self.title;
-        project.description = self.description;
+    fn apply(self, project: &mut ProjectCore) {
         for (source, target) in self.proposals.into_iter().zip(&mut project.proposals) {
             target.title = source.title;
             target.description = source.description;
@@ -74,18 +70,18 @@ impl Content {
 /// Backfill one authorized view and compose its descriptive fields from the copy.
 /// Immutable fingerprints allow concurrent older/newer reads without a last-writer
 /// pointer. This is a temporary R1 copy, not an onchain content commitment.
-pub(crate) async fn compose(
+pub(crate) async fn children(
     app: &App,
     generation: ProviderInstanceId,
-    project: ProjectView,
-) -> Result<ProjectView, Error> {
+    project: ProjectCore,
+) -> Result<ProjectCore, Error> {
     // Large retained text must not occupy a Tokio core during copying/encoding.
     let (project, expected, payload, fingerprint) = tokio::task::spawn_blocking(move || {
         let expected = Content::source(&project);
         let payload = serde_json::to_string(&expected)?;
         let fingerprint = hash(
             &[
-                b"abako/project-content-copy/v1\0".as_slice(),
+                b"abako/project-children-copy/v2\0".as_slice(),
                 generation.as_bytes(),
                 project.project_id.as_bytes(),
                 payload.as_bytes(),
@@ -111,4 +107,22 @@ pub(crate) async fn compose(
         Ok(project)
     })
     .await?
+}
+
+/// Caller has already applied the public visibility rule to this core entity.
+pub(crate) async fn compose(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: ProjectCore,
+) -> Result<ProjectView, Error> {
+    let project = children(app, generation, project).await?;
+    let (title, description) = crate::creation_metadata::project_text(
+        app,
+        generation,
+        project.project_id,
+        project.client,
+        &project.content,
+    )
+    .await?;
+    Ok(project.into_view(title, description))
 }

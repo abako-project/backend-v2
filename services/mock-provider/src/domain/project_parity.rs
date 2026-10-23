@@ -16,9 +16,9 @@ type Reason = (
 );
 pub(super) type Projection = (
     CatalogView,
-    Vec<WorkerView>,
+    Vec<WorkerCore>,
     Vec<SkillRequestView>,
-    Vec<ProjectView>,
+    Vec<ProjectCore>,
     Vec<Reason>,
 );
 pub(super) fn projection(state: &State) -> Projection {
@@ -120,7 +120,7 @@ impl Fixture {
         self.steps.push(json!({"signed":signed,"inputs":inputs,"outcome":outcome,"stateDigest":digest(&self.state),"shellDigest":shell_digest(&self.state.shell)?}));
         Ok(entity)
     }
-    fn project(&self, id: EntityId) -> TestResult<&ProjectView> {
+    fn project(&self, id: EntityId) -> TestResult<&ProjectCore> {
         self.state
             .engine
             .projects

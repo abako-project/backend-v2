@@ -1,7 +1,7 @@
 //! M5 ABI routing only. Project contracts own authorization and transitions.
 use super::evidence_wire::{LegacyReferences, Reference};
 use super::*;
-use generated_contracts::{ProviderCommand, UnsignedContractCallV1};
+use generated_contracts::ProviderCommand;
 use parity_scale_codec::DecodeAll;
 use provider_execution::PreparedExecution;
 fn input(name: &str, args: impl Encode) -> Vec<u8> {
@@ -10,12 +10,12 @@ fn input(name: &str, args: impl Encode) -> Vec<u8> {
     data
 }
 fn command_input(
-    call: &UnsignedContractCallV1,
+    command: &ProviderCommand,
     seed: [u8; 32],
     event_cursor: u64,
     refs: &mut LegacyReferences,
 ) -> Result<Vec<u8>, Error> {
-    Ok(match &call.command {
+    Ok(match command {
         ProviderCommand::ApproveExecution {
             proposal_id,
             expected_revision,
@@ -190,10 +190,9 @@ fn command_input(
             (dispute_id, Reference::Committed(evidence.clone())),
         ),
 
-        ProviderCommand::CreateProject(request) => input(
-            "create_project",
-            (&request.title, &request.description, seed),
-        ),
+        ProviderCommand::CreateProjectCore(content) => {
+            input("create_project_core", (content, seed))
+        }
         ProviderCommand::SetCompensationPolicy(policy) => input("set_compensation_policy", policy),
         ProviderCommand::CreateProposal { proposal, .. } => {
             input("create_proposal", (proposal, seed))
@@ -291,7 +290,9 @@ pub(super) fn execute(
     let directory = &state.directory;
     let refs = &mut state.legacy_references;
     let call = pending.call();
-    let data = command_input(call, pending.inputs().seed, event_cursor, refs)?;
+    let compact = mock_provider::creation::compact_creation(call);
+    let command = compact.as_ref().unwrap_or(&call.command);
+    let data = command_input(command, pending.inputs().seed, event_cursor, refs)?;
     let mut invocation = Invocation {
         caller: Account::new(call.origin.into_bytes()),
         action: Action::Call {
@@ -304,8 +305,8 @@ pub(super) fn execute(
     invocation.validate_with_budget(crate::WHOLE_GAS)?;
     let mut resolution_gas = Weight::zero();
     if !matches!(
-        call.command,
-        ProviderCommand::CreateProject(_) | ProviderCommand::SetCompensationPolicy(_)
+        command,
+        ProviderCommand::CreateProjectCore(_) | ProviderCommand::SetCompensationPolicy(_)
     ) {
         let id = call.command.project_id().ok_or(Error::IncompleteCoverage)?;
         let resolved = run(

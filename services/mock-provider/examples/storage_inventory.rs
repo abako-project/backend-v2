@@ -227,8 +227,9 @@ fn worker_sizes(sizes: &mut Sizes, worker: &WorkerView) {
     }
 }
 fn main() -> Result<()> {
-    let fixture: Value =
-        serde_json::from_str(include_str!("../src/domain/fixtures/migration-signed.json"))?;
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../src/domain/fixtures/predecessor-migration.json"
+    ))?;
     let mut records = Vec::new();
     for (group, items) in fixture.as_object().ok_or("fixture object")? {
         if group == "digests" {

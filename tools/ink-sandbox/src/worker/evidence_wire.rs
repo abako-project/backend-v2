@@ -307,8 +307,7 @@ pub(super) struct Project {
     pub(super) created_at: Option<g::UnixSeconds>,
     pub(super) client: g::AccountId32,
     pub(super) coordinator: g::AccountId32,
-    pub(super) title: String,
-    pub(super) description: String,
+    pub(super) content: g::provider_core::MetadataReferenceV1,
     pub(super) planning: g::PlanningView,
     pub(super) proposals: Vec<Proposal>,
     pub(super) execution_escrow: g::Money,
@@ -319,7 +318,7 @@ pub(super) struct Project {
 }
 impl Project {
     pub(super) fn from_domain(
-        value: g::ProjectView,
+        value: g::provider_core::ProjectCore,
         refs: &mut LegacyReferences,
     ) -> Result<Self, Error> {
         Ok(Self {
@@ -327,8 +326,7 @@ impl Project {
             created_at: value.created_at,
             client: value.client,
             coordinator: value.coordinator,
-            title: value.title,
-            description: value.description,
+            content: value.content,
             planning: value.planning,
             proposals: value
                 .proposals
@@ -342,14 +340,16 @@ impl Project {
             active_dispute_id: value.active_dispute_id,
         })
     }
-    pub(super) fn into_domain(self, refs: &LegacyReferences) -> Result<g::ProjectView, Error> {
-        Ok(g::ProjectView {
+    pub(super) fn into_domain(
+        self,
+        refs: &LegacyReferences,
+    ) -> Result<g::provider_core::ProjectCore, Error> {
+        Ok(g::provider_core::ProjectCore {
             project_id: self.project_id,
             created_at: self.created_at,
             client: self.client,
             coordinator: self.coordinator,
-            title: self.title,
-            description: self.description,
+            content: self.content,
             planning: self.planning,
             proposals: self
                 .proposals

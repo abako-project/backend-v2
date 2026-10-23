@@ -68,7 +68,11 @@ async fn briefs_accept_configured_types_preserve_legacy_and_read_retired_types()
         serde_json::from_value(doc["components"]["schemas"]["ProjectView"]["examples"][0].clone())?;
     project.client = owner.view.account_id;
     let id = project.project_id;
-    fake.lock().await.snapshot.projects.push(project);
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project).await?);
     let mut config = test_config(app.config.database_url.clone(), &dependency)?;
     config.platform.project_types = vec!["Building Design".into()];
     let configured = Arc::new(App::new(config).await?);

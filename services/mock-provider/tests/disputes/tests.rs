@@ -1,4 +1,5 @@
 use super::*;
+use generated_contracts::provider_core::CoreSnapshotV2;
 
 async fn submit(
     provider: &Provider,
@@ -179,7 +180,7 @@ async fn assert_response(
     responder: &Keypair,
     project_id: EntityId,
     dispute_id: EntityId,
-    frozen: &ProviderSnapshot,
+    frozen: &CoreSnapshotV2,
 ) -> TestResult {
     let response = ProviderCommand::RespondDispute {
         project_id,

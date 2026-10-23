@@ -1,10 +1,11 @@
 //! Temporary native reference and read models for the whole-provider rollout.
 use crate::{Error, Result, domain::State};
+use generated_contracts::provider_core::CoreSnapshotV2;
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, DisputeView, EntityId, OperationId, OperationReceipt,
-    ProviderEvents, ProviderInfo, ProviderSnapshot, SkillRequestView, WithdrawalView,
+    ProviderEvents, ProviderInfo, SkillRequestView, WithdrawalView,
 };
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::ArchiveV1};
+use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV2};
 
 /// Private-engine bridge; construction validates a complete retained archive.
 /// These synchronous methods belong on a dedicated worker or blocking pool.
@@ -12,7 +13,7 @@ use provider_execution::{ExecutionInputs, VerifiedCall, migration::ArchiveV1};
 pub struct ReferenceState(State);
 impl ReferenceState {
     /// Validate domain and retained shell before creating the reference.
-    pub fn from_archive(root: AccountId32, archive: ArchiveV1) -> Result<Self> {
+    pub fn from_archive(root: AccountId32, archive: CoreArchiveV2) -> Result<Self> {
         State::from_archive(archive, root).map(Self)
     }
     /// Apply one verified call with captured inputs; no storage commit occurs here.
@@ -26,7 +27,7 @@ impl ReferenceState {
             .map(|(state, receipt)| (Self(state), receipt))
     }
     /// Export complete current domain and shell state.
-    pub fn archive(&self) -> Result<ArchiveV1> {
+    pub fn archive(&self) -> Result<CoreArchiveV2> {
         self.0.archive()
     }
     /// Generation and root identity used for signing.
@@ -41,7 +42,7 @@ impl ReferenceState {
     }
     /// Internal read model; the adapter still filters project visibility.
     #[must_use]
-    pub fn snapshot(&self) -> ProviderSnapshot {
+    pub fn snapshot(&self) -> CoreSnapshotV2 {
         self.0.snapshot()
     }
     /// Recorded finality independent of the original transport response.

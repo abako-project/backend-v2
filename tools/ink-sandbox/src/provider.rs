@@ -1,5 +1,6 @@
 //! Existing private HTTP provider contract over the bounded runtime worker.
 use crate::worker::{Client, Error, Ticket};
+use generated_contracts::provider_core::CoreSnapshotV2;
 use generated_contracts::*;
 use mock_provider::{ProviderApi, ReferenceState, Result};
 
@@ -28,7 +29,7 @@ impl ProviderApi for Client {
     async fn nonce(&self, account: AccountId32) -> Result<AccountNonce> {
         self.read(move |state| Ok(state.nonce(account))).await
     }
-    async fn snapshot(&self) -> Result<ProviderSnapshot> {
+    async fn snapshot(&self) -> Result<CoreSnapshotV2> {
         self.read(|state| Ok(state.snapshot())).await
     }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
