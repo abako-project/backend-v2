@@ -833,8 +833,8 @@ impl UnsignedContractCallV1 {
         self.command.validate()?;
         let metadata_operation = match &self.command {
             ProviderCommand::RegisterWorkerCore(request) => Some(request.content.operation_id),
-            ProviderCommand::CreateProjectCore(content) => Some(content.operation_id),
-            ProviderCommand::CreateProposalCore { content, .. }
+            ProviderCommand::CreateProjectCore(content)
+            | ProviderCommand::CreateProposalCore { content, .. }
             | ProviderCommand::UpdateProposalCore { content, .. }
             | ProviderCommand::RequestProposalChangesCore { content, .. }
             | ProviderCommand::UpsertCatalogEntryCore { content, .. }
