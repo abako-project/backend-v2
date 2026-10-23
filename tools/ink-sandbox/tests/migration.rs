@@ -1356,3 +1356,116 @@ fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback()
         );
     });
 }
+
+#[test]
+fn predecessor_sandbox_restores_and_replays_compact_command_history_without_executing_it() {
+    run(async {
+        use generated_contracts::provider_core::MetadataCommitmentV1;
+        use ink_v5_compatibility::worker::Authority;
+        use provider_execution::{Admission, VerifiedCall};
+        use sp_core::{Pair, sr25519};
+        let mut archive: ArchiveV1 =
+            serde_json::from_str(&reference().archives[0].archive).unwrap();
+        let key = sr25519::Pair::from_seed(&[1; 32]);
+        let root = AccountId32::from_bytes(key.public().0);
+        assert_eq!(root, archive.checkpoint.info.root_account);
+        let operation = OperationId::from_bytes([71; 16]);
+        let call = UnsignedContractCallV1::new(
+            archive.checkpoint.info.provider_instance_id,
+            operation,
+            root,
+            0,
+            UnixSeconds::new(200),
+            ProviderCommand::CreateProjectCore(MetadataCommitmentV1 {
+                operation_id: operation,
+                hash: PayloadHash::from_bytes([72; 32]),
+            }),
+        )
+        .unwrap();
+        let signed = SignedContractCallV1 {
+            signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes().unwrap()).0),
+            call,
+        };
+        let mut shell = archive.checkpoint.shell();
+        let Admission::Execute(pending) = shell
+            .prepare(
+                VerifiedCall::verify(signed.clone()).unwrap(),
+                UnixSeconds::new(100),
+            )
+            .unwrap()
+        else {
+            panic!("expected fresh shell admission")
+        };
+        let receipt = shell
+            .complete(*pending, Err("no_available_coordinator"))
+            .unwrap();
+        archive.checkpoint.nonces = shell.nonces;
+        archive.checkpoint.receipts = shell.receipts;
+        archive.checkpoint.events = shell.events;
+        let configuration = config(&archive);
+        let db = Database::new();
+        let worker = Worker::import_whole(
+            db.0.clone(),
+            archive.clone(),
+            configuration.clone(),
+            Authority::Sandbox,
+        )
+        .await
+        .unwrap();
+        let before = whole_rows(&db).await;
+        assert_eq!(
+            worker
+                .client()
+                .execute_directory_with_inputs(
+                    signed.clone(),
+                    provider_execution::ExecutionInputs {
+                        version: 1,
+                        now: UnixSeconds::new(1000),
+                        seed: [9; 32]
+                    }
+                )
+                .unwrap()
+                .result()
+                .await
+                .unwrap(),
+            receipt
+        );
+        assert_eq!(whole_rows(&db).await, before);
+        assert_eq!(
+            serde_json::to_vec(
+                &worker
+                    .client()
+                    .export_archive()
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap()
+            )
+            .unwrap(),
+            serde_json::to_vec(&archive).unwrap()
+        );
+        worker.shutdown().await.unwrap();
+        let worker = Worker::reopen_whole(db.0.clone(), configuration, Authority::Sandbox)
+            .await
+            .unwrap();
+        assert_eq!(
+            worker
+                .client()
+                .execute_directory_with_inputs(
+                    signed,
+                    provider_execution::ExecutionInputs {
+                        version: 1,
+                        now: UnixSeconds::new(1000),
+                        seed: [8; 32]
+                    }
+                )
+                .unwrap()
+                .result()
+                .await
+                .unwrap(),
+            receipt
+        );
+        assert_eq!(whole_rows(&db).await, before);
+        worker.shutdown().await.unwrap();
+    });
+}

@@ -355,3 +355,48 @@ fn compensation_uses_provider_percentage_and_worker_minutes()
     assert!(serde_json::from_str::<CompensationPolicy>(r#"{"coordinatorPercent":1.5}"#).is_err());
     Ok(())
 }
+
+#[test]
+fn compact_creation_bridge_is_append_only_and_binds_the_existing_operation()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::{MetadataCommitmentV1, RegisterWorkerCoreRequest};
+    let mut call = sample_call()?;
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([4; 32]),
+    };
+    assert_eq!(call.command.encode()[0], 9, "legacy Project-creation index");
+    let commands = [
+        ProviderCommand::RegisterWorkerCore(RegisterWorkerCoreRequest {
+            content: content.clone(),
+            qualifications: Qualifications {
+                role_ids: vec![],
+                skill_ids: vec![],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        }),
+        ProviderCommand::CreateProjectCore(content),
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 49 + index);
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+    }
+    assert_eq!(
+        call.command.encoded_size(),
+        49,
+        "Project creation carries no title/description"
+    );
+    call.operation_id = OperationId::from_bytes([9; 16]);
+    assert!(
+        call.signable_bytes().is_err(),
+        "metadata must not reuse another operation's scope"
+    );
+    Ok(())
+}

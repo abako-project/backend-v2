@@ -15,6 +15,7 @@ pub use disputes::*;
 mod bramp;
 pub use bramp::*;
 mod platform;
+pub mod provider_core;
 use parity_scale_codec::{Decode, Encode};
 pub use platform::*;
 use serde::{Deserialize, Serialize};
@@ -328,7 +329,7 @@ dto!(/// Accept completion and settle its quoted payments and scores atomically.
     rename_all_fields = "camelCase",
     deny_unknown_fields
 )]
-#[allow(missing_docs, clippy::cast_possible_truncation)] // SCALE derive indexes 27 variants.
+#[allow(missing_docs, clippy::cast_possible_truncation)] // Signed command discriminants are append-only.
 pub enum ProviderCommand {
     RegisterWorker(RegisterWorkerRequest),
     UpdateQualifications(UpdateQualificationsRequest),
@@ -504,6 +505,11 @@ pub enum ProviderCommand {
         dispute_id: EntityId,
         evidence: EvidenceCommitmentV1,
     },
+    // Predecessor bridge: decode/replay these before the ownership cutover.
+    #[codec(index = 49)]
+    RegisterWorkerCore(provider_core::RegisterWorkerCoreRequest),
+    #[codec(index = 50)]
+    CreateProjectCore(provider_core::MetadataCommitmentV1),
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -679,6 +685,10 @@ impl ProviderCommand {
     /// invariants must still be enforced in the provider transaction.
     pub fn validate(&self) -> Result<(), ContractError> {
         match self {
+            Self::RegisterWorkerCore(request) => {
+                request.qualifications.validate()?;
+                request.calendar.validate()
+            }
             Self::RegisterWorker(request) => {
                 nonempty(&request.display_name, "worker display name")?;
                 request.qualifications.validate()?;
@@ -821,6 +831,14 @@ impl UnsignedContractCallV1 {
             return Err(ContractError::InvalidPayload);
         }
         self.command.validate()?;
+        let metadata_operation = match &self.command {
+            ProviderCommand::RegisterWorkerCore(request) => Some(request.content.operation_id),
+            ProviderCommand::CreateProjectCore(content) => Some(content.operation_id),
+            _ => None,
+        };
+        if metadata_operation.is_some_and(|id| id != self.operation_id) {
+            return Err(ContractError::InvalidPayload);
+        }
         if self.encoded_size() > MAX_SIGNABLE_BYTES {
             return Err(ContractError::InvalidPayload);
         }

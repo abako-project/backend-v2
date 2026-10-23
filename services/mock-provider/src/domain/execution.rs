@@ -69,6 +69,18 @@ impl State {
         }
     }
     fn execute_prepared(mut self, pending: PreparedExecution) -> Result<(Self, OperationReceipt)> {
+        // Admission already handled replay. This predecessor can restore future
+        // receipts but cannot execute compact creation before the core cutover.
+        if matches!(
+            pending.call().command,
+            generated_contracts::ProviderCommand::RegisterWorkerCore(_)
+                | generated_contracts::ProviderCommand::CreateProjectCore(_)
+        ) {
+            return Err(Error {
+                code: "metadata_cutover_required",
+                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            });
+        }
         let mut tentative = self.engine.clone();
         tentative.context.reset(pending.inputs());
         let call = pending.call();
