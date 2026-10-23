@@ -107,7 +107,7 @@ wire_enum!(/// Key lifecycle; only Active may sign.
 wire_enum!(/// Durable custody job stage.
     SigningJobStatus { Pending, Signed, Rejected });
 wire_enum!(/// Unknown submission outcome is explicitly not a rejection.
-    ProviderOperationStatus { AwaitingSignature, ReadyToSubmit, Submitted, OutcomeUnknown, Finalized, Rejected, Expired });
+    ProviderOperationStatus { AwaitingSignature, ReadyToSubmit, Submitted, OutcomeUnknown, Finalized, Rejected, Expired, Queued });
 
 dto!(/// Qualification metadata; team matching requires every skill, not the role.
     Qualifications { role_ids: Vec<u32>, skill_ids: Vec<u32> });

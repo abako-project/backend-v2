@@ -76,3 +76,31 @@ fn api_task_events_are_distinct_and_contain_no_provider_execution_claim() -> Tes
     assert!(serde_json::from_value::<NotificationEvent>(mixed_provider).is_err());
     Ok(())
 }
+
+#[test]
+fn queued_is_append_only_and_does_not_change_existing_status_bytes() -> TestResult {
+    use parity_scale_codec::{Decode, Encode};
+    let existing = [
+        ProviderOperationStatus::AwaitingSignature,
+        ProviderOperationStatus::ReadyToSubmit,
+        ProviderOperationStatus::Submitted,
+        ProviderOperationStatus::OutcomeUnknown,
+        ProviderOperationStatus::Finalized,
+        ProviderOperationStatus::Rejected,
+        ProviderOperationStatus::Expired,
+        ProviderOperationStatus::Queued,
+    ];
+    for (index, status) in existing.into_iter().enumerate() {
+        let bytes = vec![u8::try_from(index)?];
+        assert_eq!(status.encode(), bytes);
+        assert_eq!(
+            ProviderOperationStatus::decode(&mut bytes.as_slice())?,
+            status
+        );
+    }
+    assert_eq!(
+        serde_json::to_string(&ProviderOperationStatus::Queued)?,
+        "\"Queued\""
+    );
+    Ok(())
+}

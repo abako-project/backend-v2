@@ -332,6 +332,7 @@ fn name(status: ProviderOperationStatus) -> &'static str {
         ProviderOperationStatus::Finalized => "Finalized",
         ProviderOperationStatus::Rejected => "Rejected",
         ProviderOperationStatus::Expired => "Expired",
+        ProviderOperationStatus::Queued => "Queued",
     }
 }
 pub(crate) async fn read(

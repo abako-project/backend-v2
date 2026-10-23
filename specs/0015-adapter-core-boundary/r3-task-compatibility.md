@@ -15,6 +15,11 @@ these forms; elapsed time or this implementation does not establish readiness.
 
 ## Consumer contract
 
+- Append dormant `Queued` to the operation status vocabulary. It means durably
+  accepted API work waiting for execution, including edit holds, and implies no
+  signing or provider submission. Existing status SCALE indices stay unchanged.
+  Current writers and their PostgreSQL status constraint are unchanged.
+
 - `OperationView` accepts an optional `taskResult`, omitted for all current
   operations. The result contains the execution outcome, task storage ID and
   completion time. It contains no nonce, signature or provider event cursor.

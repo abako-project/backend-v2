@@ -75,6 +75,7 @@ fn api_task_completion_requires_finality_and_one_result_source()
     assert!(view.receipt.is_none());
     assert_eq!(operation_result(&view), OperationResult::Success);
     for status in [
+        ProviderOperationStatus::Queued,
         ProviderOperationStatus::AwaitingSignature,
         ProviderOperationStatus::ReadyToSubmit,
         ProviderOperationStatus::Submitted,

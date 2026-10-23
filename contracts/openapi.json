@@ -2151,7 +2151,7 @@
           "Operations"
         ],
         "summary": "Read the caller's asynchronous operation",
-        "description": "Another principal's operation returns 404. OutcomeUnknown is unresolved, not rejected. Inspect receipt.outcome for finalized execution success/failure before updating the UI.",
+        "description": "Another principal's operation returns 404. Poll independently of SSE. OutcomeUnknown is unresolved, not rejected. Finalized requires exactly one receipt or taskResult, whose outcome establishes success or failure. Missing or conflicting results remain unresolved. Queued prepares consumers for future API tasks and does not imply signing or provider submission. Current writers remain provider-owned.",
         "security": [
           {
             "sessionCookie": []
@@ -7040,9 +7040,10 @@
           "OutcomeUnknown",
           "Finalized",
           "Rejected",
-          "Expired"
+          "Expired",
+          "Queued"
         ],
-        "description": "202 is durable acceptance, not execution success. OutcomeUnknown is unresolved submission, never evidence of rejection. Finalized must be interpreted with receipt.outcome."
+        "description": "202 is durable acceptance, not execution success. OutcomeUnknown is unresolved submission, never evidence of rejection. Queued is reserved for future API task work awaiting execution or an edit hold and asserts no signing or provider submission; current writers do not emit it. Submitted retains its possible signed provider submission meaning. Finalized requires exactly one receipt or taskResult; check that result outcome. Missing or conflicting results remain unresolved."
       },
       "Qualifications": {
         "type": "object",
@@ -8419,6 +8420,10 @@
           {
             "operationId": "0x01010101010101010101010101010101",
             "status": "AwaitingSignature"
+          },
+          {
+            "operationId": "0x01010101010101010101010101010101",
+            "status": "Queued"
           }
         ]
       },
@@ -8508,6 +8513,12 @@
               "taskStorageId": "0x03030303030303030303030303030303",
               "finalizedAt": 1788912000
             }
+          },
+          {
+            "operationId": "0x01010101010101010101010101010101",
+            "status": "Queued",
+            "receipt": null,
+            "errorCode": null
           }
         ]
       },

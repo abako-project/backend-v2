@@ -235,6 +235,10 @@ Task execution is still provider-owned in this release. Existing operation and
 notification JSON is unchanged. Before task ownership switches, both frontends
 must accept the additional forms documented in OpenAPI:
 
+- Accept the future `Queued` status as pending. It means accepted API work
+  waiting for execution (including edit holds), without signing or provider
+  submission. Existing `Submitted` keeps its possible signed provider submission
+  meaning. Current writers do not emit `Queued`.
 - A finalized API task operation has `receipt: null` and a `taskResult` containing
   `outcome`, `taskStorageId` and `finalizedAt`. Check `outcome` just as for a
   receipt. `taskResult` is omitted for current provider operations. Finality
