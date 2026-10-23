@@ -400,3 +400,61 @@ fn compact_creation_bridge_is_append_only_and_binds_the_existing_operation()
     );
     Ok(())
 }
+
+#[test]
+fn proposal_bridge_preserves_indexes_numeric_validation_and_operation_binding()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::{MetadataCommitmentV1, MilestoneTerms, ProposalTerms};
+    let mut call = sample_call()?;
+    let week = Week::new(2026, 40)?;
+    let terms = ProposalTerms {
+        milestones: vec![MilestoneTerms {
+            key: 1,
+            window: WeekWindow::new(week, week)?,
+            coordinator_fee: Money::ZERO,
+            coordinator_minutes: Minutes::new(0),
+            requirements: vec![],
+        }],
+    };
+    let project_id = EntityId::from_bytes([1; 16]);
+    let proposal_id = EntityId::from_bytes([2; 16]);
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([3; 32]),
+    };
+    let commands = [
+        ProviderCommand::CreateProposalCore {
+            project_id,
+            proposal: terms.clone(),
+            content: content.clone(),
+        },
+        ProviderCommand::UpdateProposalCore {
+            project_id,
+            proposal_id,
+            proposal: terms.clone(),
+            content: content.clone(),
+        },
+        ProviderCommand::RequestProposalChangesCore {
+            project_id,
+            proposal_id,
+            content,
+        },
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 51 + index);
+        assert_eq!(command.project_id(), Some(project_id));
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+        let mut other = call.clone();
+        other.operation_id = OperationId::from_bytes([99; 16]);
+        assert!(other.signable_bytes().is_err());
+    }
+    let mut duplicate = terms;
+    duplicate.milestones.push(duplicate.milestones[0].clone());
+    assert!(duplicate.validate().is_err());
+    assert!(ProposalTerms { milestones: vec![] }.validate().is_err());
+    Ok(())
+}

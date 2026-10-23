@@ -69,6 +69,19 @@ impl State {
         }
     }
     fn execute_prepared(mut self, pending: PreparedExecution) -> Result<(Self, OperationReceipt)> {
+        // The supported predecessor must replay these exact future bytes, but
+        // fresh execution waits for the paired API/core ownership transition.
+        if matches!(
+            pending.call().command,
+            generated_contracts::ProviderCommand::CreateProposalCore { .. }
+                | generated_contracts::ProviderCommand::UpdateProposalCore { .. }
+                | generated_contracts::ProviderCommand::RequestProposalChangesCore { .. }
+        ) {
+            return Err(Error {
+                code: "metadata_cutover_required",
+                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            });
+        }
         let mut tentative = self.engine.clone();
         tentative.context.reset(pending.inputs());
         let call = pending.call();

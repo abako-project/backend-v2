@@ -510,6 +510,26 @@ pub enum ProviderCommand {
     RegisterWorkerCore(provider_core::RegisterWorkerCoreRequest),
     #[codec(index = 50)]
     CreateProjectCore(provider_core::MetadataCommitmentV1),
+    // Decode/replay bridge for the paired proposal-content cutover.
+    #[codec(index = 51)]
+    CreateProposalCore {
+        project_id: EntityId,
+        proposal: provider_core::ProposalTerms,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 52)]
+    UpdateProposalCore {
+        project_id: EntityId,
+        proposal_id: EntityId,
+        proposal: provider_core::ProposalTerms,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 53)]
+    RequestProposalChangesCore {
+        project_id: EntityId,
+        proposal_id: EntityId,
+        content: provider_core::MetadataCommitmentV1,
+    },
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -685,6 +705,8 @@ impl ProviderCommand {
     /// invariants must still be enforced in the provider transaction.
     pub fn validate(&self) -> Result<(), ContractError> {
         match self {
+            Self::CreateProposalCore { proposal, .. }
+            | Self::UpdateProposalCore { proposal, .. } => proposal.validate(),
             Self::RegisterWorkerCore(request) => {
                 request.qualifications.validate()?;
                 request.calendar.validate()
@@ -773,6 +795,9 @@ impl ProviderCommand {
             | Self::DeleteTask { project_id, .. }
             | Self::WithdrawProposal { project_id, .. }
             | Self::CreateProposal { project_id, .. }
+            | Self::CreateProposalCore { project_id, .. }
+            | Self::UpdateProposalCore { project_id, .. }
+            | Self::RequestProposalChangesCore { project_id, .. }
             | Self::UpdateProposal { project_id, .. }
             | Self::DeleteProposal { project_id, .. }
             | Self::SubmitProposal { project_id, .. }
@@ -834,6 +859,11 @@ impl UnsignedContractCallV1 {
         let metadata_operation = match &self.command {
             ProviderCommand::RegisterWorkerCore(request) => Some(request.content.operation_id),
             ProviderCommand::CreateProjectCore(content) => Some(content.operation_id),
+            ProviderCommand::CreateProposalCore { content, .. }
+            | ProviderCommand::UpdateProposalCore { content, .. }
+            | ProviderCommand::RequestProposalChangesCore { content, .. } => {
+                Some(content.operation_id)
+            }
             _ => None,
         };
         if metadata_operation.is_some_and(|id| id != self.operation_id) {

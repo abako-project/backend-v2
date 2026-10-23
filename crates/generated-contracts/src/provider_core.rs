@@ -7,6 +7,8 @@ mod metadata;
 pub use metadata::*;
 mod models;
 pub use models::*;
+mod proposal;
+pub use proposal::*;
 
 /// Fixed reference to an immutable adapter-owned creation record.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
