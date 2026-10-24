@@ -32,6 +32,9 @@ impl ProviderApi for Client {
     async fn snapshot(&self) -> Result<CoreSnapshotV4> {
         self.read(|state| Ok(state.snapshot())).await
     }
+    async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskStateV1> {
+        self.read(|state| Ok(state.task_state())).await
+    }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
         self.read(move |state| Ok(state.receipt(operation))).await
     }

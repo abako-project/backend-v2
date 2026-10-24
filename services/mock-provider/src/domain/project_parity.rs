@@ -68,6 +68,19 @@ fn canonical_signed_project_trace() -> TestResult {
             step["outcome"],
             "step {index}"
         );
+        let inventory = state.task_state();
+        inventory.validate()?;
+        assert_eq!(inventory.next_task_id, state.engine.next_task_id);
+        if index == 25 {
+            assert_eq!(inventory.next_task_id, 2);
+            assert!(!inventory.storages.is_empty());
+            assert!(
+                inventory
+                    .storages
+                    .iter()
+                    .all(|record| record.storage.tasks.is_empty())
+            );
+        }
         assert_eq!(digest(&state), step["stateDigest"], "step {index}");
         assert_eq!(
             shell_digest(&state.shell)?,

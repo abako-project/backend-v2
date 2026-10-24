@@ -17,6 +17,10 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
     fn nonce(&self, account: AccountId32) -> impl Future<Output = Result<AccountNonce>> + Send;
     /// Internal read model; the adapter still filters project visibility.
     fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshotV4>> + Send;
+    /// Atomic task graph and retained next key from the selected authority.
+    fn task_state(
+        &self,
+    ) -> impl Future<Output = Result<generated_contracts::provider_core::TaskStateV1>> + Send;
     /// Recorded finality independent of the original transport response.
     fn receipt(
         &self,
@@ -69,6 +73,9 @@ impl ProviderApi for Provider {
     }
     async fn snapshot(&self) -> Result<CoreSnapshotV4> {
         Self::snapshot(self).await
+    }
+    async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskStateV1> {
+        Self::task_state(self).await
     }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
         Self::receipt(self, operation).await

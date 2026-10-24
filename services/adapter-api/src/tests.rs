@@ -46,6 +46,8 @@ mod proposal_documents;
 mod reason_documents;
 #[path = "task_history_tests.rs"]
 mod task_history;
+#[path = "task_state_tests.rs"]
+mod task_state;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";

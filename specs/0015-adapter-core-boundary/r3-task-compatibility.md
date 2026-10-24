@@ -115,3 +115,45 @@ polling, both task-route replay forms without signing, mixed-source SSE resume,
 explicit read state, context corruption and SQL source constraints. Existing
 application gates must pass. External frontend adoption, actual task execution,
 freezes, migration and current-state rollback remain R3b exit gates.
+
+## R3b2: verified task state and retained allocator preparation
+
+The provider exports one selected `TaskStateV1` over authenticated private HTTP.
+Its generation, actual next task key, storage contexts and task data come from
+one native state or one SDK `read_reference` invocation. No counter is inferred
+from live IDs. No signed command, core artifact or public route changes.
+
+`adapter-api backfill-task-state` prepares three final-purpose tables: generation
+counter/provenance/counts, storage context, and task rows. The provider remains
+authoritative; existing R1 composition and all public task routes are unchanged.
+Storages use deterministic storage-ID order; each original task vector uses an
+ordinal. Empty storages, deleted-ID gaps, authors, all u64 revisions/timestamps,
+Unicode/NUL content and assignee order survive exactly. Narrative stays JSON text;
+the separate assignee array comes from the same typed task and is checked on read.
+The exhausted u32::MAX counter is retained; it is not an allocatable/wrapping key.
+
+One backfill lock is acquired before fetching, preventing an older capture from
+committing after a newer one. Replacement is generation-scoped and transactional;
+reconstruction must equal the captured graph before commit. Identical input is
+idempotent. Counter regression, inconsistent/corrupt staging, invalid graph or
+failed insertion leaves the preceding graph intact. The existing admission lock
+fences the check for API-owned operation history: any such history blocks reseeding
+that generation. This command must not overwrite API-owned task truth later.
+
+The existing 32 MiB private response bound applies; oversized responses fail
+without partial writes or public content truncation. New large-data decoding,
+encoding and equality checks run away from Tokio cores. No second executor,
+registry, service, authority switch or dependency is introduced.
+
+`adapter-api export-prepared-tasks <generation> <new-path>` writes the verified
+prepared graph to a create-new, mode-0600 JSON file. This is a preparation export,
+not a complete application backup or an old onchain approval/commitment. It does
+not include operation queues, notifications, freezes, money or other owner data.
+
+A prepared snapshot may become stale immediately while provider task writes
+continue. Fingerprint/generation equality is not a freshness or cutover proof.
+Final activation still requires frontend adoption, paused ingress, reconciled
+queued/possibly-submitted work, a fresh verified capture, task workflow/holds and
+actual paired task-state rollback. Notification audience timing for other core
+Project events also needs the pending explicit owner choice before ingestion
+changes or activation. This slice changes neither behavior.

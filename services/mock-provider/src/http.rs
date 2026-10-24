@@ -49,6 +49,7 @@ pub fn router_with_provider<P: ProviderApi>(provider: P, service_token: &str) ->
         .route("/internal/receipts/{operation_id}", get(receipt::<P>))
         .route("/internal/events", get(events::<P>))
         .route("/internal/snapshot", get(snapshot::<P>))
+        .route("/internal/task-state", get(task_state::<P>))
         .route("/internal/catalog/skill-requests", get(skill_requests::<P>))
         .route("/internal/lifecycle-reasons", get(lifecycle_reasons::<P>))
         .route("/internal/disputes/{dispute_id}", get(dispute::<P>))
@@ -107,6 +108,15 @@ async fn info<P: ProviderApi>(State(state): State<App<P>>) -> Result<impl IntoRe
 }
 async fn snapshot<P: ProviderApi>(State(state): State<App<P>>) -> Result<impl IntoResponse> {
     Ok(Json(state.provider.snapshot().await?))
+}
+
+async fn task_state<P: ProviderApi>(State(state): State<App<P>>) -> Result<impl IntoResponse> {
+    let inventory = state.provider.task_state().await?;
+    let bytes = tokio::task::spawn_blocking(move || serde_json::to_vec(&inventory))
+        .await
+        .map_err(|_| Error::internal())?
+        .map_err(|_| Error::internal())?;
+    Ok(([("content-type", "application/json")], bytes))
 }
 
 #[derive(Deserialize)]

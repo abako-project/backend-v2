@@ -1376,3 +1376,45 @@ fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback()
         );
     });
 }
+
+#[test]
+fn task_state_exports_actual_selected_counter_and_preserves_exhaustion() {
+    run(async {
+        use ink_v5_compatibility::worker::Authority;
+        use mock_provider::ProviderApi;
+        let reference = reference();
+        let retained = reference
+            .archives
+            .iter()
+            .find(|a| a.before_step == 70)
+            .unwrap();
+        for counter in [99, u32::MAX] {
+            let mut archive: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+            archive.checkpoint.next_task_id = counter;
+            let configuration = config(&archive);
+            let expected =
+                mock_provider::ReferenceState::from_archive(configuration.root, archive.clone())
+                    .unwrap()
+                    .task_state();
+            expected.validate().unwrap();
+            assert_eq!(expected.next_task_id, counter);
+            assert!(expected.storages.iter().any(|r| r.storage.tasks.is_empty()));
+            for authority in [Authority::Rust, Authority::Shadow, Authority::Sandbox] {
+                let db = Database::new();
+                let worker = Worker::import_whole(
+                    db.0.clone(),
+                    archive.clone(),
+                    configuration.clone(),
+                    authority,
+                )
+                .await
+                .unwrap();
+                let before = db.stored().await;
+                let observed = worker.client().task_state().await.unwrap();
+                assert_eq!(observed, expected, "{authority:?} counter {counter}");
+                assert_eq!(db.stored().await, before, "read must not commit");
+                worker.shutdown().await.unwrap();
+            }
+        }
+    });
+}

@@ -282,6 +282,13 @@ impl Provider {
     pub async fn snapshot(&self) -> Result<CoreSnapshotV4> {
         Ok(self.read().await?.snapshot())
     }
+    /// Atomic task inventory and retained global allocator from one owned state.
+    pub async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskStateV1> {
+        let state = self.read().await?;
+        tokio::task::spawn_blocking(move || state.task_state())
+            .await
+            .map_err(|_| Error::internal())
+    }
     /// A recorded result proves finality independently of its business outcome.
     pub async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
         Ok(self.read().await?.receipt(operation))

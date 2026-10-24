@@ -185,6 +185,36 @@ impl State {
             .get(&operation)
             .map(|record| record.receipt.clone())
     }
+    pub(crate) fn task_state(&self) -> generated_contracts::provider_core::TaskStateV1 {
+        use generated_contracts::provider_core::{TaskStateV1, TaskStorageRecordV1};
+        let mut state = TaskStateV1 {
+            schema_version: 1,
+            generation: self.info().provider_instance_id,
+            next_task_id: self.engine.next_task_id,
+            storages: self
+                .engine
+                .projects
+                .values()
+                .flat_map(|project| {
+                    project.proposals.iter().flat_map(move |proposal| {
+                        proposal
+                            .milestones
+                            .iter()
+                            .map(move |milestone| TaskStorageRecordV1 {
+                                project_id: project.project_id,
+                                proposal_id: proposal.proposal_id,
+                                proposal_revision: proposal.revision,
+                                storage: milestone.task_storage.clone(),
+                            })
+                    })
+                })
+                .collect(),
+        };
+        state
+            .storages
+            .sort_by_key(|record| record.storage.task_storage_id);
+        state
+    }
     pub(crate) fn snapshot(&self) -> CoreSnapshotV4 {
         CoreSnapshotV4 {
             schema_version: 4,

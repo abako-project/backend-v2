@@ -47,6 +47,11 @@ impl ReferenceState {
     pub fn snapshot(&self) -> CoreSnapshotV4 {
         self.0.snapshot()
     }
+    /// One selected task graph and its retained allocator; never derived from live keys.
+    #[must_use]
+    pub fn task_state(&self) -> generated_contracts::provider_core::TaskStateV1 {
+        self.0.task_state()
+    }
     /// Recorded finality independent of the original transport response.
     #[must_use]
     pub fn receipt(&self, operation: OperationId) -> Option<OperationReceipt> {

@@ -265,6 +265,9 @@ impl App {
         sqlx::raw_sql(include_str!("../migrations/0018_task_history.sql"))
             .execute(&mut *migration)
             .await?;
+        sqlx::raw_sql(include_str!("../migrations/0019_task_state.sql"))
+            .execute(&mut *migration)
+            .await?;
         migration.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
@@ -338,8 +341,13 @@ impl App {
     }
 }
 pub(crate) async fn decode_response<T: DeserializeOwned>(
-    mut response: reqwest::Response,
+    response: reqwest::Response,
 ) -> Result<T, Error> {
+    let bytes = bounded_response(response).await?;
+    serde_json::from_slice(&bytes).map_err(|_| Error::Dependency)
+}
+/// Existing transport bound shared by ordinary reads and the serialized task backfill.
+pub(crate) async fn bounded_response(mut response: reqwest::Response) -> Result<Vec<u8>, Error> {
     const RESPONSE_LIMIT: usize = 32 * 1024 * 1024;
     if response.status() == StatusCode::NOT_FOUND {
         return Err(Error::NotFound);
@@ -362,7 +370,7 @@ pub(crate) async fn decode_response<T: DeserializeOwned>(
         }
         bytes.extend_from_slice(&chunk);
     }
-    serde_json::from_slice(&bytes).map_err(|_| Error::Dependency)
+    Ok(bytes)
 }
 pub(crate) fn now() -> Result<i64, Error> {
     i64::try_from(

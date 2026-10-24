@@ -26,6 +26,7 @@ mod state;
 mod submission_comments;
 mod submission_presentations;
 mod task_history;
+mod task_state;
 
 use state::{App, Config, Error};
 use std::{sync::Arc, time::Duration};
@@ -147,6 +148,22 @@ async fn owner_command(app: &App, arguments: &[String]) -> Result<bool, Error> {
         [command, path] if command == "export-creation-metadata" => {
             let records = creation_metadata_io::export(app, path.into()).await?;
             tracing::info!(records, "Creation metadata exported and verified");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command] if command == "backfill-task-state" => {
+            let (storages, tasks) = task_state::backfill(app).await?;
+            tracing::info!(
+                storages,
+                tasks,
+                "Provider task state copied and verified; ownership unchanged"
+            );
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, generation, path] if command == "export-prepared-tasks" => {
+            task_state::export(app, state::parse(generation)?, path.into()).await?;
+            tracing::info!("Prepared task state exported; no ownership or signature asserted");
             app.db.close().await;
             Ok(true)
         }
