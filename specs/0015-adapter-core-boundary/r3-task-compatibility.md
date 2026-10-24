@@ -66,3 +66,52 @@ run existing adapter notification privacy/replay/read-state tests and the app
 verification gate. No canonical build is needed because canonical code and signed
 commands are unchanged. Record actual results and the external frontend limit in
 the milestone handoff and draft PR.
+
+## R3b1: persist and read future task history
+
+This next compatible milestone fills the persistence gap in R3a. It introduces
+no task writer or authority switch. Current task routes still enqueue signed
+provider commands and return the existing responses. No canonical artifact,
+public DTO or dependency changes.
+
+The existing operations table gains `task_operation` (default false) and
+`task_result_json`. API task records retain their generation, admit only
+Queued/Finalized/Rejected/Expired and forbid signing payloads, signed calls,
+provider receipts, possible submission and catalog-lane ownership. Finalized
+requires a task result only for API task rows; provider finality keeps its old
+semantics. Polling reads validate retained task command context and the result's
+storage ID without consulting current provider state.
+
+Notifications retain their existing sequence and provider uniqueness key. An API
+operation key and nullable provider cursor identify exactly one source. A task
+notification binds to a retained successful finalized task operation: generation,
+operation, project, storage, actor, kind and time must match, and the recipient
+must occur in the captured audience. Historical provider events do not require
+an adapter operation row. Optional title enrichment retains its old availability
+and visibility rules. Bounded pages with potentially large retained commands
+are decoded away from the Tokio reactor.
+
+The provider claimer excludes API task candidates; construction, execution and
+save also defend that boundary. Earlier same-wallet API work remains a FIFO
+blocker. This reader cannot run, expire or reject future queued API work. The
+supported future downgrade must drain/reconcile that work first and retain its
+actual outcomes. Do not select R3a as a rollback target for task-owned history:
+it cannot read durable task results and its provider claimer lacks this guard.
+
+This is still not a full R3 rollback target. The later paired converter must
+restore actual current tasks and their allocator into the predecessor core,
+preserve API result/notification history, and prove further public work. Seeded
+future-history tests prove this reader/schema seam, not API task execution or
+such a conversion. No live database is migrated by the development checks.
+
+The active writer also needs an explicit scheduling rule under the approved
+snapshot/edit-hold policy: a task queued before a later same-wallet freeze must
+not wait for a hold whose freeze is itself blocked by ordinary wallet FIFO.
+The bridge deliberately leaves unexpected API work unresolved; it adds no
+speculative bypass, scheduler or second queue to solve the active-writer race.
+
+R3b1 acceptance covers predecessor-schema upgrade and repeat startup, owner-only
+polling, both task-route replay forms without signing, mixed-source SSE resume,
+explicit read state, context corruption and SQL source constraints. Existing
+application gates must pass. External frontend adoption, actual task execution,
+freezes, migration and current-state rollback remain R3b exit gates.

@@ -25,6 +25,7 @@ mod reason_metadata_io;
 mod state;
 mod submission_comments;
 mod submission_presentations;
+mod task_history;
 
 use state::{App, Config, Error};
 use std::{sync::Arc, time::Duration};

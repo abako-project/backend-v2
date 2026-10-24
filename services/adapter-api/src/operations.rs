@@ -340,18 +340,31 @@ pub(crate) async fn read(
     session: &Session,
     id: OperationId,
 ) -> Result<OperationView, Error> {
-    let row = sqlx::query("SELECT status, receipt_json, error_code FROM operations WHERE operation_id = $1 AND principal_id = $2")
+    let row = sqlx::query("SELECT operation_id, status, receipt_json, error_code, task_operation, task_result_json, command_json, provider_instance_id AS operation_instance, account_id AS operation_account FROM operations WHERE operation_id = $1 AND principal_id = $2")
         .bind(id.to_string()).bind(session.view.principal_id.to_string()).fetch_optional(&app.db).await?.ok_or(Error::NotFound)?;
-    Ok(OperationView {
-        operation_id: id,
-        status: status(row.try_get("status")?)?,
-        receipt: row
-            .try_get::<Option<&str>, _>("receipt_json")?
-            .map(serde_json::from_str)
-            .transpose()?,
-        error_code: row.try_get("error_code")?,
-        task_result: None,
-    })
+    let task_operation: bool = row.try_get("task_operation")?;
+    let decode = move || {
+        Ok(OperationView {
+            operation_id: id,
+            status: status(row.try_get("status")?)?,
+            receipt: row
+                .try_get::<Option<&str>, _>("receipt_json")?
+                .map(serde_json::from_str)
+                .transpose()?,
+            error_code: row.try_get("error_code")?,
+            task_result: if row.try_get("task_operation")? {
+                crate::task_history::TaskOperation::read(&row)?.result
+            } else {
+                None
+            },
+        })
+    };
+    if task_operation {
+        // Historical task commands can contain retained large descriptions.
+        tokio::task::spawn_blocking(decode).await?
+    } else {
+        decode()
+    }
 }
 
 pub(crate) struct Job {
@@ -373,6 +386,9 @@ pub(crate) struct Job {
 }
 impl Job {
     fn from_row(row: &PgRow, lease: String) -> Result<Self, Error> {
+        if row.try_get::<bool, _>("task_operation")? {
+            return Err(Error::Dependency);
+        }
         Ok(Self {
             id: parse(row.try_get("operation_id")?)?,
             wallet: parse(row.try_get("wallet_id")?)?,
@@ -411,7 +427,7 @@ pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
     let time = now()?;
     let lease = token()?.to_string();
     let mut tx = app.db.begin().await?;
-    let row = sqlx::query("SELECT * FROM operations o WHERE o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE (previous.wallet_id = o.wallet_id OR (o.catalog_operation AND previous.catalog_operation)) AND previous.creation_sequence < o.creation_sequence AND (previous.status NOT IN ('Finalized', 'Rejected', 'Expired') OR (o.catalog_operation AND previous.catalog_operation AND previous.status='Expired' AND previous.possibly_submitted))) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
+    let row = sqlx::query("SELECT * FROM operations o WHERE NOT o.task_operation AND o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE (previous.wallet_id = o.wallet_id OR (o.catalog_operation AND previous.catalog_operation)) AND previous.creation_sequence < o.creation_sequence AND (previous.status NOT IN ('Finalized', 'Rejected', 'Expired') OR (o.catalog_operation AND previous.catalog_operation AND previous.status='Expired' AND previous.possibly_submitted))) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
         .bind(time).fetch_optional(&mut *tx).await?;
     let Some(row) = row else {
         tx.commit().await?;
@@ -439,7 +455,7 @@ async fn save(
 ) -> Result<(), Error> {
     let time = now()?;
     let mut tx = app.db.begin().await?;
-    let result = sqlx::query("UPDATE operations SET status = $1, signable_payload = $2, signed_json = $3, provider_instance_id = $4, receipt_json = $5, error_code = $6, possibly_submitted = $7, attempt_count = $8, next_attempt_at = $9, lease_token = CASE WHEN $10 THEN NULL ELSE lease_token END, lease_until = CASE WHEN $11 THEN NULL ELSE lease_until END WHERE operation_id = $12 AND lease_token = $13 AND lease_until > $14")
+    let result = sqlx::query("UPDATE operations SET status = $1, signable_payload = $2, signed_json = $3, provider_instance_id = $4, receipt_json = $5, error_code = $6, possibly_submitted = $7, attempt_count = $8, next_attempt_at = $9, lease_token = CASE WHEN $10 THEN NULL ELSE lease_token END, lease_until = CASE WHEN $11 THEN NULL ELSE lease_until END WHERE operation_id = $12 AND NOT task_operation AND lease_token = $13 AND lease_until > $14")
         .bind(name(job.status)).bind(&job.payload).bind(&job.signed).bind(&job.instance).bind(&job.receipt).bind(&job.error)
         .bind(job.submitted).bind(job.attempts).bind(job.next).bind(release).bind(release).bind(job.id.to_string()).bind(&job.lease).bind(time).execute(&mut *tx).await?;
     if result.rows_affected() != 1 {
@@ -455,6 +471,16 @@ async fn save(
 }
 
 pub(crate) async fn process(app: &App, mut job: Job) -> Result<(), Error> {
+    // A stale/incorrect dispatch must not sign API-owned work. The supported
+    // downgrade drains task work first; this bridge deliberately cannot run it.
+    let provider_owned: Option<bool> =
+        sqlx::query_scalar("SELECT NOT task_operation FROM operations WHERE operation_id=$1")
+            .bind(job.id.to_string())
+            .fetch_optional(&app.db)
+            .await?;
+    if provider_owned != Some(true) {
+        return Err(Error::Dependency);
+    }
     let time = now()?;
     let outcome = async {
         advance(app, &mut job, time).await?;

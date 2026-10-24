@@ -44,6 +44,8 @@ mod creation_metadata;
 mod proposal_documents;
 #[path = "reason_metadata_tests.rs"]
 mod reason_documents;
+#[path = "task_history_tests.rs"]
+mod task_history;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
