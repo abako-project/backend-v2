@@ -1,7 +1,7 @@
 # Current implementation and limitations
 
-Application baseline: `608c70b`; current candidate includes SPEC-0015 R2b2 and
-R3a consumer compatibility plus the R3b1 history bridge, 2026-10-24. This page describes implementation;
+Application baseline: `608c70b`; current candidate includes SPEC-0015 metadata
+ownership and task migration preparation through R3b2, 2026-10-24. This page describes implementation;
 [specifications](../../SPECS.md) define approved behavior. Dated handoffs record
 verification of their own revisions, not a fresh verification of every later commit.
 
@@ -63,12 +63,19 @@ core still assigns actual IDs and enforces permissions and role references.
 The [R3a reader contract](../../specs/0015-adapter-core-boundary/r3-task-compatibility.md)
 adds dormant Queued/taskResult/AdapterTask forms and updates built-in consumers;
 current task writes and emitted provider payloads are unchanged. Independent
-frontend compatibility must precede task-shaped emission. R3b1 adds durable API task result/notification readers in the existing tables,
+frontend compatibility must precede task-shaped emission. R3b1 adds durable API
+task result/notification readers in the existing tables,
 with source/context checks and a provider signing guard. Current task writes
 remain provider-owned. Unexpected pending API work stays unresolved and blocks
 later same-wallet provider work until reconciled; this is not the active task
-scheduler. Task state, allocator, edit holds and actual paired task-data rollback
-remain R3b; paging removal remains R4/R5. Formal performance acceptance,
+scheduler. R3b2 copies actual tasks and the retained allocator into three adapter
+tables
+through one authenticated selected-provider export. Ordering, empty storages,
+deleted-ID gaps and original data are verified before commit; public task reads
+still use the provider. Preparation can become stale and does not activate task
+ownership. Active allocation/workflow, edit holds, audience timing and actual
+paired task-data rollback remain R3b; paging removal remains R4/R5. Formal
+performance acceptance,
 promotion and two observed stable releases remain open. No image publication,
 deployment or onchain upgrade is authorized by this candidate.
 

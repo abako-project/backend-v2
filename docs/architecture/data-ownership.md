@@ -60,3 +60,11 @@ state and execution are still provider-owned. This is preparation for a compatib
 predecessor, not an API task writer or proof of paired task-state rollback. Future
 downgrades must reconcile pending API work and restore actual current task data
 before resuming predecessor task writes; do not silently sign API-owned history.
+
+R3b2 adds explicit task-state preparation: the selected provider exports actual
+storage contexts, task vectors and its retained next key atomically; the adapter
+backfills its eventual task tables and verifies a complete roundtrip before
+commit. These are staged copies, not a second authority. They cannot overwrite
+a generation with API-owned task operation history. Provider writes can make a
+copy stale; final cutover requires a fresh capture with paused/reconciled work.
+Current public composition and execution remain unchanged.

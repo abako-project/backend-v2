@@ -250,3 +250,35 @@ References: [registry metadata](https://crates.io/api/v1/crates/tokio/1.53.3),
 Astra xhigh preflight accepted this narrow scope; exact diff review and fresh
 app/SDK/policy gates are recorded in the SPEC-0015 handoff. Root policy findings
 remain unwaived.
+
+## New unwaived SDK advisory (2026-10-24)
+
+The preceding draft `cf1af9e` passed app CI but SDK CI stopped at dependency policy:
+[RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387.html) now flags
+unchanged `crypto-bigint 0.5.5` for variable-time operations intended to handle
+secret integers in constant time. The primary advisory lists patched versions
+`>=0.7.6`; exploitability depends on downstream usage, compiler/CPU and observation.
+No project reachability/exploitability conclusion has been established.
+
+The locked SDK path is `crypto-bigint 0.5.5 <- elliptic-curve 0.13.8 <-
+ecdsa 0.16.9 / k256 0.13.4`. The published `elliptic-curve 0.13.8` manifest requires
+`crypto-bigint = "0.5"`; upgrading the leaf to 0.7.6 is not a compatible lockfile
+patch. The root application lock does not resolve crypto-bigint. Existing root
+policy findings remain separate and unwaived.
+
+No lock, exception, cryptographic implementation or dependency feature changed in
+R3b2. App/SDK functional verification passing does not make this policy pass.
+Prepare an upstream-compatible dependency remediation/review before promotion;
+do not vendor cryptographic fixes or suppress the advisory as part of task-state
+work. The existing exact-lock exceptions and expiry do not cover this advisory.
+
+Primary evidence: [RustSec source](https://github.com/RustSec/advisory-db/blob/main/crates/crypto-bigint/RUSTSEC-2026-0387.md),
+[upstream fix](https://github.com/RustCrypto/crypto-bigint/pull/1365), the exact
+registry manifest pinned by the SDK lock, and the failed [SDK policy job](https://github.com/abako-project/backend-v2/actions/runs/40076423826/job/120820620541).
+Local diagnostic log: main workspace `target/dev-artifacts/task-state-preceding-sdk-ci-failure.log`.
+
+Fresh local confirmation on R3b2 source `6e8bf45`:
+`bash scripts/verify.sh ink-sandbox-dependencies` returned exit 1: advisories
+FAILED, bans/licenses/sources passed. Log: main workspace
+`target/dev-artifacts/task-state-sdk-policy.log`. The failure is retained; no
+policy fingerprint, lock or exception was changed.
