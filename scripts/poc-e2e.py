@@ -781,13 +781,16 @@ def run(storage, binaries, scenario=exercise, provider_binary=None, authority="r
         )
         require(all(len(marker) >= 12 for _, marker in Client.secret_markers),
                 "secret marker too short for reliable scanning")
-        wallet_port, provider_port, adapter_port = [available_port() for _ in range(3)]
         common = {"INTERNAL_SERVICE_TOKEN_FILE": str(secret_dir / "service-token")}
+        # These are candidates, not reservations. Let each service bind before
+        # choosing the next port; choose the adapter port after the proxy binds.
+        wallet_port = available_port()
         wallet = launch(stack, binaries / "wallet", wallet_port, {
             **common, "CUSTODY_DATABASE_URL": f"sqlite://{directory}/custody.sqlite?mode=rwc",
             "CUSTODY_MASTER_KEY_FILE": str(secret_dir / "master-key.hex"),
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
         }, logs)
+        provider_port = available_port()
         launch(stack, provider_binary or binaries / "mock-provider", provider_port, {
             **common, "MOCK_DATABASE_URL": f"sqlite://{directory}/mock.sqlite?mode=rwc",
             "WHOLE_DATABASE_PATH": str(directory / "whole.sqlite"),
@@ -799,6 +802,7 @@ def run(storage, binaries, scenario=exercise, provider_binary=None, authority="r
         proxy_thread.start()
         stack.callback(proxy.server_close)
         stack.callback(proxy.shutdown)
+        adapter_port = available_port()
         adapter = launch(stack, binaries / "adapter-api", adapter_port, {
             **common, "ADAPTER_DATABASE_URL": adapter_database_url,
             "CUSTODY_URL": f"http://127.0.0.1:{wallet_port}",
