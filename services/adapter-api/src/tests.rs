@@ -44,6 +44,8 @@ mod creation_metadata;
 mod proposal_documents;
 #[path = "reason_metadata_tests.rs"]
 mod reason_documents;
+#[path = "task_execution_tests.rs"]
+mod task_execution;
 #[path = "task_history_tests.rs"]
 mod task_history;
 #[path = "task_state_tests.rs"]

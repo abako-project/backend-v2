@@ -423,12 +423,39 @@ impl Job {
     }
 }
 
+pub(crate) enum Work {
+    Provider(Box<Job>),
+    Task(crate::task_execution::Job),
+}
+
+#[cfg(test)]
 pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
+    claim_row(app, false)
+        .await?
+        .map(|(row, lease)| Job::from_row(&row, lease))
+        .transpose()
+}
+
+pub(crate) async fn claim_work(app: &App) -> Result<Option<Work>, Error> {
+    let Some((row, lease)) = claim_row(app, true).await? else {
+        return Ok(None);
+    };
+    if row.try_get::<bool, _>("task_operation")? {
+        Ok(Some(Work::Task(crate::task_execution::Job::new(
+            parse(row.try_get("operation_id")?)?,
+            lease,
+        ))))
+    } else {
+        Ok(Some(Work::Provider(Box::new(Job::from_row(&row, lease)?))))
+    }
+}
+
+async fn claim_row(app: &App, include_tasks: bool) -> Result<Option<(PgRow, String)>, Error> {
     let time = now()?;
     let lease = token()?.to_string();
     let mut tx = app.db.begin().await?;
-    let row = sqlx::query("SELECT * FROM operations o WHERE NOT o.task_operation AND o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE (previous.wallet_id = o.wallet_id OR (o.catalog_operation AND previous.catalog_operation)) AND previous.creation_sequence < o.creation_sequence AND (previous.status NOT IN ('Finalized', 'Rejected', 'Expired') OR (o.catalog_operation AND previous.catalog_operation AND previous.status='Expired' AND previous.possibly_submitted))) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
-        .bind(time).fetch_optional(&mut *tx).await?;
+    let row = sqlx::query("SELECT * FROM operations o WHERE (NOT o.task_operation OR ($2 AND EXISTS(SELECT 1 FROM task_generations g WHERE g.provider_instance_id=o.provider_instance_id AND g.api_owned))) AND o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE (previous.wallet_id = o.wallet_id OR (o.catalog_operation AND previous.catalog_operation)) AND previous.creation_sequence < o.creation_sequence AND (previous.status NOT IN ('Finalized', 'Rejected', 'Expired') OR (o.catalog_operation AND previous.catalog_operation AND previous.status='Expired' AND previous.possibly_submitted))) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
+        .bind(time).bind(include_tasks).fetch_optional(&mut *tx).await?;
     let Some(row) = row else {
         tx.commit().await?;
         return Ok(None);
@@ -437,16 +464,16 @@ pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
         sqlx::query("INSERT INTO audit_records(operation_id, event_kind, result_code, occurred_at) VALUES ($1, 'lease_recovery', 'expired', $2)")
             .bind(row.try_get::<&str, _>("operation_id")?).bind(time).execute(&mut *tx).await?;
     }
-    let job = Job::from_row(&row, lease)?;
     sqlx::query("UPDATE operations SET lease_token = $1, lease_until = $2 WHERE operation_id = $3")
-        .bind(&job.lease)
+        .bind(&lease)
         .bind(time + 30)
-        .bind(job.id.to_string())
+        .bind(row.try_get::<&str, _>("operation_id")?)
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    Ok(Some(job))
+    Ok(Some((row, lease)))
 }
+
 async fn save(
     app: &App,
     job: &Job,
@@ -747,10 +774,15 @@ pub(crate) async fn run(app: Arc<App>, mut stop: watch::Receiver<bool>) -> Resul
             break;
         }
         while tasks.len() < 8 {
-            match claim(&app).await? {
+            match claim_work(&app).await? {
                 Some(job) => {
                     let worker = app.clone();
-                    tasks.spawn(async move { process(&worker, job).await });
+                    tasks.spawn(async move {
+                        match job {
+                            Work::Provider(job) => process(&worker, *job).await,
+                            Work::Task(job) => crate::task_execution::process(&worker, job).await,
+                        }
+                    });
                 }
                 None => break,
             }

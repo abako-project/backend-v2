@@ -73,8 +73,11 @@ tables
 through one authenticated selected-provider export. Ordering, empty storages,
 deleted-ID gaps and original data are verified before commit; public task reads
 still use the provider. Preparation can become stale and does not activate task
-ownership. Active allocation/workflow, edit holds, audience timing and actual
-paired task-data rollback remain R3b; paging removal remains R4/R5. Formal
+ownership. R3b3a prepares a transactional task executor in the existing bounded
+worker, guarded by a per-generation ownership fact that defaults to provider.
+Current public writes remain provider-owned and no activation procedure is
+exposed. Snapshot/edit holds, freeze scheduling, active admission/composition,
+audience timing and actual paired task-data rollback remain R3b; paging removal remains R4/R5. Formal
 performance acceptance,
 promotion and two observed stable releases remain open. No image publication,
 deployment or onchain upgrade is authorized by this candidate.

@@ -68,3 +68,12 @@ commit. These are staged copies, not a second authority. They cannot overwrite
 a generation with API-owned task operation history. Provider writes can make a
 copy stale; final cutover requires a fresh capture with paused/reconciled work.
 Current public composition and execution remain unchanged.
+
+R3b3a prepares task execution in the existing bounded operation worker. Only an
+explicit adapter-owned generation can execute queued API tasks; prepared
+existing generations default to provider ownership. No activation command or
+public admission/composition switch is supplied. The candidate commits task
+changes, checked keys, results and validated post-change task notification
+audiences in one PostgreSQL transaction. The original preparation hash remains
+source provenance, and preparation exports refuse API-owned state. Edit holds,
+freeze scheduling and actual paired rollback remain required before activation.

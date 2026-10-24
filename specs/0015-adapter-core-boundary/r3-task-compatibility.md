@@ -157,3 +157,45 @@ queued/possibly-submitted work, a fresh verified capture, task workflow/holds an
 actual paired task-state rollback. Notification audience timing for other core
 Project events also needs the pending explicit owner choice before ingestion
 changes or activation. This slice changes neither behavior.
+
+## R3b3a: task executor preparation, with activation withheld
+
+The existing eight-job operation worker can now dispatch the four retained task
+commands to a PostgreSQL transaction. A single `task_generations.api_owned` fact
+must establish adapter ownership. Its default is false, including upgrades of
+prepared generations. Staging rows and `task_operation` history do not activate
+execution. No activation command, public admission switch, extra worker pool,
+service, queue, dependency or canonical artifact is added. Current public writes
+still enqueue provider operations and current public composition stays unchanged.
+
+The executor rechecks operation identity, exact retained request/command bytes,
+lease, generation and ownership. It serializes on a project task row, then on the
+retained global counter using a non-key lock compatible with foreign-key readers.
+The later freeze admission transaction must use that same project row. The four
+handlers retain native permission/error ordering, known-worker checks, checked
+keys, immutable reporter/creation time and draft/revision deletion rules. A new
+empty core storage may be materialized; an obsolete core target is rejected and
+missing preparation for a nonempty provider storage fails closed.
+
+Successful task changes, allocator/counts, result, audit and task notifications
+commit together. Failed domain execution retains a failed task result without
+consuming an ID or sending a notification. Transient failures roll back business
+effects and retry the same operation; expired unexecuted work has no task result.
+A stale lease cannot commit. Notifications use existing lock 621008 through commit
+and the post-change project audience: client, coordinator, contractual assignees
+and current task assignees. Every contributing task payload/assignee projection is
+validated, including sibling storages. Provider event ingestion remains unchanged;
+its separate audience-timing question is unresolved.
+
+Each edited storage retains contiguous task ordinals and vector order. The
+original preparation fingerprint remains source provenance, not a hash of mutable
+API state. Backfill and `export-prepared-tasks` refuse API-owned generations; the
+latter must not present an edited graph as the original prepared capture.
+
+This is deliberately a worker preparation milestone, **not R3 completion or a
+supported active cohort**. Tests establish isolated adapter-owned fixtures only.
+Do not activate by editing the database. Complete snapshot/edit holds and their
+freeze/FIFO ordering, public admission and visibility composition, independent
+frontend adoption, actual paired current-task rollback and the audience decision
+before exposing an activation procedure. A boolean ownership change cannot
+perform that migration or reverse task changes. No live cutover is authorized.

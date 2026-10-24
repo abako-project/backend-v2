@@ -157,7 +157,7 @@ pub(crate) async fn backfill(app: &App) -> Result<(usize, usize), Error> {
         .execute(&mut *tx)
         .await?;
     let api_owned: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM operations WHERE task_operation AND provider_instance_id=$1)",
+        "SELECT EXISTS(SELECT 1 FROM operations WHERE task_operation AND provider_instance_id=$1) OR EXISTS(SELECT 1 FROM task_generations WHERE provider_instance_id=$1 AND api_owned)",
     )
     .bind(generation.to_string())
     .fetch_one(&mut *tx)
@@ -223,6 +223,15 @@ pub(crate) async fn export(
     sqlx::query("SELECT pg_advisory_xact_lock(621009)")
         .execute(&mut *tx)
         .await?;
+    let owned: Option<bool> = sqlx::query_scalar(
+        "SELECT api_owned FROM task_generations WHERE provider_instance_id=$1 FOR UPDATE",
+    )
+    .bind(generation.to_string())
+    .fetch_optional(&mut *tx)
+    .await?;
+    if owned == Some(true) {
+        return Err(Error::Conflict("task_state_api_owned"));
+    }
     let stored = read(&mut tx, generation).await?.ok_or(Error::NotFound)?;
     let state = tokio::task::spawn_blocking(move || {
         if fingerprint(&stored.state)? != stored.fingerprint.as_slice() {
