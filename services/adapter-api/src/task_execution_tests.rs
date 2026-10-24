@@ -96,9 +96,9 @@ impl Cohort {
     async fn queue(&self, actor: &Session, command: ProviderCommand) -> Result<OperationId, Error> {
         let id = OperationId::from_bytes(crate::state::random()?);
         let time = now()?;
-        sqlx::query("INSERT INTO operations(operation_id,principal_id,wallet_id,account_id,command_json,command_bytes,request_command_bytes,status,next_attempt_at,expires_at,created_at,provider_instance_id,task_operation) VALUES($1,$2,$3,$4,$5,$6,$6,'Queued',0,$7,$8,$9,TRUE)")
+        sqlx::query("INSERT INTO operations(operation_id,principal_id,wallet_id,account_id,command_json,command_bytes,request_command_bytes,status,next_attempt_at,expires_at,created_at,provider_instance_id,task_operation,task_project_id) VALUES($1,$2,$3,$4,$5,$6,$6,'Queued',0,$7,$8,$9,TRUE,$10)")
             .bind(id.to_string()).bind(actor.view.principal_id.to_string()).bind(actor.wallet.to_string()).bind(actor.view.account_id.to_string())
-            .bind(serde_json::to_string(&command)?).bind(command.encode()).bind(time+300).bind(time).bind(info().provider_instance_id.to_string()).execute(&self.app.db).await?;
+            .bind(serde_json::to_string(&command)?).bind(command.encode()).bind(time+300).bind(time).bind(info().provider_instance_id.to_string()).bind(command.project_id().map(|id| id.to_string())).execute(&self.app.db).await?;
         Ok(id)
     }
     async fn step(&self) -> Result<(), Error> {
@@ -745,3 +745,6 @@ async fn task_executor_rechecks_ownership_generation_and_retained_request_before
     c.internal.finish().await?;
     Ok(())
 }
+
+#[path = "task_freeze_tests.rs"]
+mod freezes;

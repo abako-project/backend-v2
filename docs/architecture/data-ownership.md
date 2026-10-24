@@ -75,5 +75,15 @@ existing generations default to provider ownership. No activation command or
 public admission/composition switch is supplied. The candidate commits task
 changes, checked keys, results and validated post-change task notification
 audiences in one PostgreSQL transaction. The original preparation hash remains
-source provenance, and preparation exports refuse API-owned state. Edit holds,
-freeze scheduling and actual paired rollback remain required before activation.
+source provenance, and preparation exports refuse API-owned state. Activation, historical-case reconciliation and actual paired rollback remain
+required. The following R3b3b step supplies the candidate edit holds and freeze
+scheduling.
+
+R3b3b adds operation-scoped immutable task snapshots and edit holds for milestone
+disputes/cancellations in candidate API-owned generations. Admission shares the
+task project lock; receipt finality and hold transition share a fenced transaction.
+Uncertain outcomes retain the hold. Held API tasks suspend their FIFO blocking
+role while all remaining work keeps its order, including across wallet cycles.
+Current provider-owned cohorts and planning-dispute behavior are unchanged. No
+activation/public task switch is exposed; historical-case reconciliation and
+actual paired rollback remain required.

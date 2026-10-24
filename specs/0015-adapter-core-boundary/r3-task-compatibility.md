@@ -199,3 +199,57 @@ freeze/FIFO ordering, public admission and visibility composition, independent
 frontend adoption, actual paired current-task rollback and the audience decision
 before exposing an activation procedure. A boolean ownership change cannot
 perform that migration or reverse task changes. No live cutover is authorized.
+
+## R3b3b: immutable snapshots, edit holds and queue recovery
+
+For an adapter-owned generation, accepting a milestone dispute or cancellation
+captures the current confirmed API task graph and a Pending hold in the same
+transaction as the provider operation and its immutable evidence/reason. The
+operation row is locked before the existing project task row, then the non-key
+allocator lock. Current core storage associations/revisions and typed task data
+are verified before capture. Empty storages and complete retained task values
+survive; queued edits are not confirmed data. Identical retries reuse the original
+operation/snapshot, conflicting retries fail, and a failed admission rolls back
+all of these records together. Snapshot JSON is never changed by completion.
+
+Each operation owns its own hold. A fenced provider save confirms that hold only
+with a matching successful receipt. A failed receipt, definitely unsent expiry or
+rejection releases it. The existing definitive first `provider_rejected` response
+also releases despite its conservative submission marker. Unknown outcomes retain
+Pending across expiry and restart; missing receipts or elapsed time do not prove
+failure. Operation finality and the hold transition commit atomically. Another
+pending or confirmed attempt is unaffected by releasing one hold.
+
+Task execution checks holds before its ordinary expiry: confirmed cancellation
+or dispute records the corresponding failed task result; Pending defers the
+operation without changing tasks, allocating IDs or manufacturing a receipt.
+After release, the original expiry and current permissions apply; waiting does
+not grant a fresh lifetime. Confirmed holds take precedence over Pending ones.
+
+Pending-held API tasks are suspended as FIFO blockers across wallets. Remaining
+operations preserve their relative order; provider work is never skipped to run
+a later freeze. This handles both `task(P) -> other work -> freeze(P)` and the
+cross-wallet cycle `A: task(P) -> freeze(Q), B: task(Q) -> freeze(P)`.
+Confirmed/released holds stop suspension. An uncertain terminal freeze remains a
+wallet blocker rather than being treated as known failure. There is no new
+scheduler service or worker pool.
+
+One nullable `operations.task_project_id` is the queue lookup projection. It is
+checked against the retained typed command before execution. Startup fills missing
+projections only for Queued API-owned work in bounded 64-row Rust decoding pages;
+provider-owned future history remains untouched. PostgreSQL JSON extraction was
+experimentally rejected because it fails on retained NUL narrative. No SQL JSON
+parser, generated column, trigger framework or dependency is introduced.
+
+Planning disputes currently freeze planning funds/status while leaving task edits
+available. That behavior is unchanged; the owner question about extending project
+holds to planning disputes is still pending. This slice covers cancellation and
+all milestone-dispute opening forms, not a silent new planning rule.
+
+Current public task admission/composition and provider-event ingestion remain
+unchanged. There is still no activation command. Existing confirmed cases must
+be reconciled during the eventual migration without inventing acceptance-time
+snapshots. Independent frontend adoption, public task-only visibility and frozen
+view composition, notification audience timing and actual paired task rollback
+remain activation gates. The holds here are adapter records, not onchain task
+approvals or fabricated historical signatures. No live cutover is authorized.

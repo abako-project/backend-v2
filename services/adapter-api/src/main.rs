@@ -26,6 +26,7 @@ mod state;
 mod submission_comments;
 mod submission_presentations;
 mod task_execution;
+mod task_freezes;
 mod task_history;
 mod task_state;
 

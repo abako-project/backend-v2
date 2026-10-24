@@ -89,6 +89,7 @@ struct Fake {
     submissions: usize,
     lose_reply: bool,
     fail_before_execution: bool,
+    rejection_status: Option<StatusCode>,
     catalog_requests: Vec<generated_contracts::provider_core::SkillRequestCore>,
     reasons: Vec<generated_contracts::provider_core::ReasonCore>,
     fail_catalog_completion: bool,
@@ -124,6 +125,7 @@ fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
         submissions: 0,
         lose_reply: false,
         fail_before_execution: false,
+        rejection_status: None,
         catalog_requests: vec![],
         reasons: vec![],
         fail_catalog_completion: false,
@@ -259,6 +261,9 @@ async fn submit(
     let mut fake = fake.lock().await;
     let call = signed.call;
     fake.submissions += 1;
+    if let Some(status) = fake.rejection_status {
+        return Ok(status.into_response());
+    }
     if fake.fail_before_execution {
         return Ok(StatusCode::INTERNAL_SERVER_ERROR.into_response());
     }

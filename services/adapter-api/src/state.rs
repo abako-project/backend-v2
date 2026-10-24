@@ -271,6 +271,10 @@ impl App {
         sqlx::raw_sql(include_str!("../migrations/0020_task_execution.sql"))
             .execute(&mut *migration)
             .await?;
+        sqlx::raw_sql(include_str!("../migrations/0021_task_freezes.sql"))
+            .execute(&mut *migration)
+            .await?;
+        crate::task_freezes::backfill_context(&mut migration).await?;
         migration.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))

@@ -157,7 +157,7 @@ pub(crate) async fn backfill(app: &App) -> Result<(usize, usize), Error> {
         .execute(&mut *tx)
         .await?;
     let api_owned: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM operations WHERE task_operation AND provider_instance_id=$1) OR EXISTS(SELECT 1 FROM task_generations WHERE provider_instance_id=$1 AND api_owned)",
+        "SELECT EXISTS(SELECT 1 FROM operations WHERE task_operation AND provider_instance_id=$1) OR EXISTS(SELECT 1 FROM task_generations WHERE provider_instance_id=$1 AND api_owned) OR EXISTS(SELECT 1 FROM task_freezes WHERE provider_instance_id=$1)",
     )
     .bind(generation.to_string())
     .fetch_one(&mut *tx)

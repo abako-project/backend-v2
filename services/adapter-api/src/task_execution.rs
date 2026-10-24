@@ -54,7 +54,8 @@ impl Request {
             _ => return Err(Error::Dependency),
         };
         let bytes = command.encode();
-        if bytes != row.try_get::<Vec<u8>, _>("command_bytes")?
+        if row.try_get::<Option<&str>, _>("task_project_id")? != Some(project.to_string().as_str())
+            || bytes != row.try_get::<Vec<u8>, _>("command_bytes")?
             || Some(bytes) != row.try_get::<Option<Vec<u8>>, _>("request_command_bytes")?
         {
             return Err(Error::Dependency);
@@ -102,21 +103,33 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
         .ok_or(Error::Conflict("lease_lost"))?;
     let expires: i64 = row.try_get("expires_at")?;
     let request = tokio::task::spawn_blocking(move || Request::read(&row)).await??;
-    sqlx::query("INSERT INTO task_projects(provider_instance_id,project_id) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM task_generations WHERE provider_instance_id=$1 AND api_owned) ON CONFLICT DO NOTHING")
-        .bind(request.generation.to_string()).bind(request.project.to_string()).execute(&mut *tx).await?;
-    let project_lock: Option<String> = sqlx::query_scalar("SELECT project_id FROM task_projects WHERE provider_instance_id=$1 AND project_id=$2 FOR UPDATE")
-        .bind(request.generation.to_string()).bind(request.project.to_string()).fetch_optional(&mut *tx).await?;
-    let header = sqlx::query("SELECT next_task_id,api_owned FROM task_generations WHERE provider_instance_id=$1 FOR NO KEY UPDATE")
-        .bind(request.generation.to_string()).fetch_optional(&mut *tx).await?;
-    let Some(header) = header else {
+    let Some(next) =
+        crate::task_freezes::lock_project(&mut tx, request.generation, request.project).await?
+    else {
         return Err(Error::Conflict("task_state_provider_owned"));
     };
-    if !header.try_get::<bool, _>("api_owned")? {
-        // Staged data or future history alone never establishes task authority.
-        return Err(Error::Conflict("task_state_provider_owned"));
-    }
-    if project_lock.is_none() {
-        return Err(Error::Dependency);
+    match crate::task_freezes::hold(&mut tx, request.generation, request.project).await? {
+        crate::task_freezes::Hold::Clear => {}
+        crate::task_freezes::Hold::Confirmed(code) => {
+            return finish(
+                tx,
+                job,
+                &request,
+                ExecutionOutcome::Failed(code.into()),
+                None,
+            )
+            .await;
+        }
+        crate::task_freezes::Hold::Pending => {
+            let time = now()?;
+            let changed=sqlx::query("UPDATE operations SET next_attempt_at=$3+1,lease_token=NULL,lease_until=NULL WHERE operation_id=$1 AND task_operation AND status='Queued' AND lease_token=$2 AND lease_until>$3")
+                .bind(job.id.to_string()).bind(&job.lease).bind(time).execute(&mut *tx).await?;
+            if changed.rows_affected() != 1 {
+                return Err(Error::Conflict("lease_lost"));
+            }
+            tx.commit().await?;
+            return Ok(());
+        }
     }
     let time = now()?;
     if expires <= time {
@@ -146,8 +159,6 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
         )
         .await;
     };
-    let next =
-        u32::try_from(header.try_get::<i64, _>("next_task_id")?).map_err(|_| Error::Dependency)?;
     let workers = snapshot.workers;
     let (project, request, permission) = tokio::task::spawn_blocking(move || {
         let known = workers.iter().map(|w| w.account).collect();
@@ -325,7 +336,7 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
     finish(tx, job, &request, ExecutionOutcome::Success, Some(event)).await
 }
 
-fn decode_tasks(rows: Vec<PgRow>, next: u32) -> Result<Vec<TaskView>, Error> {
+pub(crate) fn decode_tasks(rows: Vec<PgRow>, next: u32) -> Result<Vec<TaskView>, Error> {
     rows.into_iter()
         .enumerate()
         .map(|(ordinal, row)| {

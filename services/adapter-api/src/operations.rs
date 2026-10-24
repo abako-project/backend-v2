@@ -241,6 +241,7 @@ pub(crate) async fn enqueue(
         || crate::proposal_metadata::needs_record(&command)
         || crate::reason_metadata::needs_record(&command)
         || crate::catalog_metadata::operation(&command)
+        || crate::task_freezes::kind(&command).is_some()
     {
         Some(app.snapshot().await?.info.provider_instance_id)
     } else {
@@ -291,6 +292,9 @@ pub(crate) async fn enqueue(
     sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes, provider_instance_id, catalog_operation) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10, $11, $12)")
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
         .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).bind(catalog_operation).execute(&mut *tx).await?;
+    if let Some(generation) = generation {
+        crate::task_freezes::capture(app, &mut tx, generation, operation_id, &command).await?;
+    }
     sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, 'operation_authorized', 'ok', $3)")
         .bind(session.view.principal_id.to_string()).bind(operation_id.to_string()).bind(time).execute(&mut *tx).await?;
     tx.commit().await?;
@@ -454,8 +458,11 @@ async fn claim_row(app: &App, include_tasks: bool) -> Result<Option<(PgRow, Stri
     let time = now()?;
     let lease = token()?.to_string();
     let mut tx = app.db.begin().await?;
-    let row = sqlx::query("SELECT * FROM operations o WHERE (NOT o.task_operation OR ($2 AND EXISTS(SELECT 1 FROM task_generations g WHERE g.provider_instance_id=o.provider_instance_id AND g.api_owned))) AND o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE (previous.wallet_id = o.wallet_id OR (o.catalog_operation AND previous.catalog_operation)) AND previous.creation_sequence < o.creation_sequence AND (previous.status NOT IN ('Finalized', 'Rejected', 'Expired') OR (o.catalog_operation AND previous.catalog_operation AND previous.status='Expired' AND previous.possibly_submitted))) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
-        .bind(time).bind(include_tasks).fetch_optional(&mut *tx).await?;
+    let row = sqlx::query(include_str!("operation_claim.sql"))
+        .bind(time)
+        .bind(include_tasks)
+        .fetch_optional(&mut *tx)
+        .await?;
     let Some(row) = row else {
         tx.commit().await?;
         return Ok(None);
@@ -488,6 +495,7 @@ async fn save(
     if result.rows_affected() != 1 {
         return Err(Error::Conflict("lease_lost"));
     }
+    crate::task_freezes::complete(&mut tx, job.id).await?;
     if let Some(completion) = completion {
         crate::catalog_claims::publish(&mut tx, job.id, completion).await?;
     }
