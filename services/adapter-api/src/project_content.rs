@@ -63,6 +63,9 @@ pub(crate) async fn children(
     generation: ProviderInstanceId,
     project: ProjectCore,
 ) -> Result<ProjectCore, Error> {
+    if crate::task_views::owned(app, generation).await? {
+        return Ok(project);
+    }
     // Large retained text must not occupy a Tokio core during copying/encoding.
     let (project, expected, payload, fingerprint) = tokio::task::spawn_blocking(move || {
         let expected = Content::source(&project);

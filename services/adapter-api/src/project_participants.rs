@@ -1,6 +1,6 @@
 use crate::{
     auth::Session,
-    operations, profiles,
+    profiles,
     profiles::models::PublicProfilesView,
     state::{App, Error, parse},
 };
@@ -74,9 +74,17 @@ pub(crate) async fn get(
     let snapshot = app.snapshot().await?;
     let project = snapshot
         .projects
-        .iter()
-        .find(|p| p.project_id == id && operations::visible(p, session.view.account_id))
+        .into_iter()
+        .find(|p| p.project_id == id)
         .ok_or(Error::NotFound)?;
+    let (project, _) = crate::task_views::project(
+        &app,
+        snapshot.info.provider_instance_id,
+        project,
+        session.view.account_id,
+    )
+    .await?;
+    let project = project.ok_or(Error::NotFound)?;
     let (client, coordinator) = tokio::try_join!(
         participant(&app, project.client, true),
         participant(&app, project.coordinator, false)

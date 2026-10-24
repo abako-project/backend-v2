@@ -72,10 +72,18 @@ pub(crate) async fn authorize(
     if let Some(id) = command.project_id() {
         let project = snapshot
             .projects
-            .iter()
+            .into_iter()
             .find(|p| p.project_id == id)
             .ok_or(Error::NotFound)?;
-        return authorize_project(app, project, account, command).await;
+        let (project, api_tasks) = if matches!(command, ProviderCommand::UpdateTaskProgress { .. })
+        {
+            crate::task_views::project(app, snapshot.info.provider_instance_id, project, account)
+                .await?
+        } else {
+            (Some(project), false)
+        };
+        let project = project.ok_or(Error::Forbidden)?;
+        return authorize_project(app, &project, account, command, api_tasks).await;
     }
     match command {
         ProviderCommand::RegisterWorker(_) | ProviderCommand::CreateProject(_) => Ok(()),
@@ -107,6 +115,7 @@ async fn authorize_project(
     project: &ProjectCore,
     account: AccountId32,
     command: &ProviderCommand,
+    api_tasks: bool,
 ) -> Result<(), Error> {
     let allowed = match command {
         ProviderCommand::QuotePlanning { .. }
@@ -155,7 +164,10 @@ async fn authorize_project(
                     .flat_map(|p| &p.milestones)
                     .find(|m| m.task_storage.task_storage_id == *task_storage_id)
                     .and_then(|m| m.task_storage.tasks.iter().find(|t| t.task_id == *task_id))
-                    .is_some_and(|task| task.task.assignees.contains(&account))
+                    .is_some_and(|task| {
+                        task.task.assignees.contains(&account)
+                            || (api_tasks && project.coordinator == account)
+                    })
         }
         ProviderCommand::CancelProject { .. }
         | ProviderCommand::DisputePlanning { .. }

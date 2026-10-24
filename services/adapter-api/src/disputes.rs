@@ -68,6 +68,8 @@ pub(crate) async fn present(
         .find(|m| m.key == view.milestone.definition.key)
         .ok_or(Error::Dependency)?
         .title;
+    let view =
+        crate::task_freezes::compose_case(app, generation, proposal.proposal_id, view).await?;
     Ok((
         generation,
         DisputeView {

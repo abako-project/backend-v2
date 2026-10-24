@@ -129,7 +129,32 @@ async fn enrich(
     // Durable notifications remain readable while the provider is unavailable.
     let snapshot = if notifications.iter().any(|n| n.event.project_id().is_some()) {
         match app.snapshot().await {
-            Ok(snapshot) => Some(snapshot),
+            Ok(mut snapshot) => {
+                let selected = snapshot
+                    .projects
+                    .into_iter()
+                    .filter(|p| {
+                        notifications
+                            .iter()
+                            .any(|n| n.event.project_id() == Some(p.project_id))
+                    })
+                    .collect();
+                match crate::task_views::visible(
+                    app,
+                    snapshot.info.provider_instance_id,
+                    selected,
+                    account,
+                )
+                .await
+                {
+                    Ok(projects) => {
+                        snapshot.projects = projects;
+                        Some(snapshot)
+                    }
+                    Err(Error::Dependency | Error::NotFound) => None,
+                    Err(error) => return Err(error),
+                }
+            }
             Err(Error::Dependency | Error::NotFound) => None,
             Err(error) => return Err(error),
         }

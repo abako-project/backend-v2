@@ -79,8 +79,11 @@ Current public writes remain provider-owned and no activation procedure is
 exposed. R3b3b adds immutable accepted task snapshots, per-operation edit holds and
 uncertainty recovery for milestone disputes/cancellations, with held tasks
 suspended as FIFO blockers across wallets. Planning-dispute behavior is preserved
-pending its owner decision. Active admission/composition, historical-case
-reconciliation, audience timing and actual paired task-data rollback remain R3b; paging removal remains R4/R5. Formal
+pending its owner decision. R3b3c prepares API-owned task membership and public/frozen view composition
+without activating a generation. Raw core authorization and contractual audiences
+remain separate; missing frozen history fails closed pending migration. Active
+admission, historical-case reconciliation, audience timing and actual paired
+task-data rollback remain R3b; paging removal remains R4/R5. Formal
 performance acceptance,
 promotion and two observed stable releases remain open. No image publication,
 deployment or onchain upgrade is authorized by this candidate.

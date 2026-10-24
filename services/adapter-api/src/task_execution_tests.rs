@@ -4,21 +4,32 @@ use generated_contracts::provider_core::{TaskStateV1, TaskStorageRecordV1};
 use parity_scale_codec::Encode;
 use serde_json::Value;
 
+type CaseSlot = Arc<Mutex<Option<generated_contracts::provider_core::CoreDisputeView>>>;
+
 struct Cohort {
     app: Arc<App>,
     internal: Server,
     fake: Arc<Mutex<Fake>>,
     owner: Session,
+    owner_cookie: String,
     worker: Session,
+    worker_cookie: String,
     client: Session,
+    client_cookie: String,
     project: ProjectView,
     definition: TaskDefinition,
 }
 impl Cohort {
     async fn new(api_owned: bool) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::with_case(api_owned, None).await
+    }
+    async fn with_case(
+        api_owned: bool,
+        case: Option<CaseSlot>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let fake = fake()?;
         let task_source = Arc::new(Mutex::new(None::<TaskStateV1>));
-        let internal = Server::start(internal(fake.clone()).route(
+        let router = internal(fake.clone()).route(
             "/internal/task-state",
             get({
                 let source = task_source.clone();
@@ -27,12 +38,29 @@ impl Cohort {
                     async move { Json(source.lock().await.clone()) }
                 }
             }),
-        ))
-        .await?;
+        );
+        let router = if let Some(case) = case {
+            router.route(
+                "/internal/disputes/{id}",
+                get(move |Path(id): Path<String>| {
+                    let case = case.clone();
+                    async move {
+                        let view = case.lock().await.clone().ok_or(Error::NotFound)?;
+                        if view.dispute.dispute_id.to_string() != id {
+                            return Err(Error::NotFound);
+                        }
+                        Ok::<_, Error>(Json(view))
+                    }
+                }),
+            )
+        } else {
+            router
+        };
+        let internal = Server::start(router).await?;
         let app = app(&internal).await?;
-        let (owner, _) = register(&app, "executor_owner").await?;
-        let (worker, _) = register(&app, "executor_worker").await?;
-        let (client, _) = register(&app, "executor_client").await?;
+        let (owner, owner_cookie) = register(&app, "executor_owner").await?;
+        let (worker, worker_cookie) = register(&app, "executor_worker").await?;
+        let (client, client_cookie) = register(&app, "executor_client").await?;
         let doc: Value = serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
         let mut project: ProjectView = serde_json::from_value(
             doc["components"]["schemas"]["ProjectView"]["examples"][0].clone(),
@@ -75,8 +103,11 @@ impl Cohort {
             internal,
             fake,
             owner,
+            owner_cookie,
             worker,
+            worker_cookie,
             client,
+            client_cookie,
             project,
             definition,
         })
@@ -748,3 +779,6 @@ async fn task_executor_rechecks_ownership_generation_and_retained_request_before
 
 #[path = "task_freeze_tests.rs"]
 mod freezes;
+
+#[path = "task_view_tests.rs"]
+mod views;

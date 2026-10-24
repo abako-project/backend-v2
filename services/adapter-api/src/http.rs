@@ -506,11 +506,9 @@ async fn projects(
 ) -> Result<Json<Vec<ProjectView>>, Error> {
     let snapshot = app.snapshot().await?;
     let generation = snapshot.info.provider_instance_id;
-    let projects: Vec<_> = snapshot
-        .projects
-        .into_iter()
-        .filter(|p| operations::visible(p, session.view.account_id))
-        .collect();
+    let projects =
+        crate::task_views::visible(&app, generation, snapshot.projects, session.view.account_id)
+            .await?;
     let mut composed = Vec::with_capacity(projects.len());
     for project in projects {
         let mut project = crate::project_content::compose(&app, generation, project).await?;
@@ -530,8 +528,11 @@ async fn project(
     let project = snapshot
         .projects
         .into_iter()
-        .find(|p| p.project_id == id && operations::visible(p, session.view.account_id))
+        .find(|p| p.project_id == id)
         .ok_or(Error::NotFound)?;
+    let (project, _) =
+        crate::task_views::project(&app, generation, project, session.view.account_id).await?;
+    let project = project.ok_or(Error::NotFound)?;
     let mut project = crate::project_content::compose(&app, generation, project).await?;
     crate::evidence::project(&app, generation, &mut project).await?;
     Ok(Json(project))
@@ -547,14 +548,21 @@ async fn visible_storage_project(
         .projects
         .into_iter()
         .find(|project| {
-            operations::visible(project, session.view.account_id)
-                && project
-                    .proposals
-                    .iter()
-                    .flat_map(|p| &p.milestones)
-                    .any(|m| m.task_storage.task_storage_id == storage_id)
+            project
+                .proposals
+                .iter()
+                .flat_map(|p| &p.milestones)
+                .any(|m| m.task_storage.task_storage_id == storage_id)
         })
         .ok_or(Error::NotFound)?;
+    let (project, _) = crate::task_views::project(
+        app,
+        snapshot.info.provider_instance_id,
+        project,
+        session.view.account_id,
+    )
+    .await?;
+    let project = project.ok_or(Error::NotFound)?;
     Ok((snapshot.info.provider_instance_id, project))
 }
 fn storage_from_project(
@@ -571,7 +579,7 @@ fn storage_from_project(
         .task_storage;
     Ok((id, storage))
 }
-/// Command resolution uses raw authoritative facts, never presentation copies.
+/// Task aliases use selected API task membership; IDs still come from core facts.
 async fn visible_storage(
     app: &App,
     session: &Session,

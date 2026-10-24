@@ -3,7 +3,6 @@ pub(crate) mod store;
 
 use crate::{
     auth::Session,
-    operations,
     state::{App, Error, parse},
 };
 use axum::{
@@ -25,11 +24,17 @@ async fn context(
     let snapshot = app.snapshot().await?;
     let project = snapshot
         .projects
-        .iter()
-        .find(|project| {
-            project.project_id == id && operations::visible(project, session.view.account_id)
-        })
+        .into_iter()
+        .find(|project| project.project_id == id)
         .ok_or(Error::NotFound)?;
+    let (project, _) = crate::task_views::project(
+        app,
+        snapshot.info.provider_instance_id,
+        project,
+        session.view.account_id,
+    )
+    .await?;
+    let project = project.ok_or(Error::NotFound)?;
     if writing && project.client != session.view.account_id {
         return Err(Error::Forbidden);
     }

@@ -253,3 +253,56 @@ snapshots. Independent frontend adoption, public task-only visibility and frozen
 view composition, notification audience timing and actual paired task rollback
 remain activation gates. The holds here are adapter records, not onchain task
 approvals or fabricated historical signatures. No live cutover is authorized.
+
+## R3b3c: task membership and frozen-view composition
+
+Provider-owned generations keep the existing task views and R1 copy path. For a
+candidate API-owned generation, public readers now substitute only the task
+vectors from authoritative PostgreSQL data; core IDs, terms, assignments, status,
+capacity, reputation and funds stay unchanged. No generation is activated and
+public task admission still uses the provider. There is no activation command.
+
+Ownership, counter, candidate membership, storage contexts and task rows are read
+from one short read-only repeatable-read transaction. Current core associations,
+IDs, ordinals, retained payloads/assignee arrays and allocator bounds are validated
+off the reactor. The staging fingerprint remains provenance, not a checksum of
+mutable task state. New empty core storages can render without inserting API rows;
+a missing context for nonempty provider tasks fails closed. Another generation's
+tasks or stale provider tasks cannot substitute for API-owned truth.
+
+Composition precedes task-based access checks for project/list and task GETs,
+task aliases, project briefs, proposal presentation/comments and participant
+endpoint access. Detail reads touch only the selected project. Membership arrays
+select candidates; typed task payloads must validate before granting access.
+Unrelated unauthorized corrupt task content is not decoded or presented. Only
+task progress command authorization uses the task overlay, preserving the approved
+coordinator-or-assignee rule and client restriction. Other financial/lifecycle
+authorization and private dispute reads stay raw. Contractual participant lists,
+private channel membership and evaluation voters do not gain task-only members.
+Notification title enrichment remains optional and uses current composed
+visibility; provider-event ingestion and its unresolved audience timing do not
+change. API-owned views bypass R1 task copies rather than writing a new immutable
+copy of each task edit. Provider-owned copies are retained until their later
+migration/removal.
+
+Public frozen dispute presentation first validates raw core milestone/revision
+facts. It then requires exactly one Confirmed opening hold with a matching
+Finalized/Success provider receipt, created dispute ID, generation, origin, nonce,
+time, retained signed call/command and project/milestone/submission/evidence
+context. The captured task graph/context/revision is validated and only the
+selected task vector is overlaid. Current API tasks never replace the immutable
+accepted snapshot. Pending, released, corrupt or ambiguous evidence fails closed.
+
+For an API-owned generation, a missing accepted snapshot cannot distinguish an
+old case from a new direct case with stale provider tasks. The selected public
+frozen view therefore fails closed until the explicit migration reconciles that
+case. There is no guessed fallback to current, empty or provider task data and no
+fabricated historical API acceptance. Provider-owned frozen views and raw private
+channel/response authorization remain unchanged.
+
+This is bounded composition preparation, not task activation or R3 completion.
+External frontend adoption, active task admission, existing-case reconciliation,
+actual paired current-task rollback and the pending planning-dispute/notification
+policy choices remain before activation. The subsequent rollback step must restore
+actual current tasks and allocator while retaining truthful API operation and
+notification history; the prepared-export fingerprint cannot do that conversion.

@@ -95,6 +95,7 @@ struct Fake {
     fail_catalog_completion: bool,
     snapshot_failures: usize,
     next_outcome: Option<ExecutionOutcome>,
+    next_entity: Option<EntityId>,
 }
 pub(crate) fn info() -> ProviderInfo {
     ProviderInfo {
@@ -131,6 +132,7 @@ fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
         fail_catalog_completion: false,
         snapshot_failures: 0,
         next_outcome: None,
+        next_entity: None,
     })))
 }
 fn internal(fake: Arc<Mutex<Fake>>) -> Router {
@@ -277,7 +279,9 @@ async fn submit(
         .take()
         .unwrap_or(ExecutionOutcome::Success);
     let entity = if outcome == ExecutionOutcome::Success {
-        catalog_documents::apply_fixture_facts(&mut fake, &call)
+        fake.next_entity
+            .take()
+            .or_else(|| catalog_documents::apply_fixture_facts(&mut fake, &call))
     } else {
         None
     };

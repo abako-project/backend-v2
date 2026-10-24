@@ -87,3 +87,13 @@ role while all remaining work keeps its order, including across wallet cycles.
 Current provider-owned cohorts and planning-dispute behavior are unchanged. No
 activation/public task switch is exposed; historical-case reconciliation and
 actual paired rollback remain required.
+
+R3b3c composes candidate API-owned task vectors before task-based visibility and
+progress checks. One read-only consistent database snapshot validates the selected
+rows; raw core financial/lifecycle reads remain separate. Task-only membership
+does not add contractual participants or private-channel access. API-owned reads
+bypass redundant R1 copies, while provider-owned views keep that path. Frozen
+public case views require the immutable accepted task snapshot and its matching
+opening receipt/call; missing historical context fails closed until migration.
+Current generations remain provider-owned; activation and paired rollback are
+still open.

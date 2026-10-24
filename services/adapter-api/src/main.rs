@@ -29,6 +29,7 @@ mod task_execution;
 mod task_freezes;
 mod task_history;
 mod task_state;
+mod task_views;
 
 use state::{App, Config, Error};
 use std::{sync::Arc, time::Duration};

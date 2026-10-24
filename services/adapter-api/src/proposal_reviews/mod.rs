@@ -3,7 +3,6 @@ mod store;
 
 use crate::{
     auth::Session,
-    operations,
     state::{App, Error, parse},
 };
 use axum::{
@@ -41,9 +40,17 @@ async fn context(
     let account = session.view.account_id;
     let project = snapshot
         .projects
-        .iter()
-        .find(|p| p.project_id == project_id && operations::visible(p, account))
+        .into_iter()
+        .find(|p| p.project_id == project_id)
         .ok_or(Error::NotFound)?;
+    let (project, _) = crate::task_views::project(
+        app,
+        snapshot.info.provider_instance_id,
+        project,
+        session.view.account_id,
+    )
+    .await?;
+    let project = project.ok_or(Error::NotFound)?;
     let proposal = project
         .proposals
         .iter()

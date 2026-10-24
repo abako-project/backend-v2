@@ -278,3 +278,139 @@ pub(crate) async fn complete(
         .await?;
     Ok(())
 }
+
+/// Public frozen presentation only. Raw private-case authorization remains core
+/// owned. API-owned cases require proved acceptance data; absence is not evidence
+/// that a case predates cutover or that current/provider task text is historical.
+pub(crate) async fn compose_case(
+    app: &App,
+    generation: ProviderInstanceId,
+    proposal: EntityId,
+    view: generated_contracts::provider_core::CoreDisputeView,
+) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
+    let mut tx = app.db.begin().await?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await?;
+    let Some(next) = crate::task_views::counter(&mut tx, generation).await? else {
+        tx.commit().await?;
+        return Ok(view);
+    };
+    // Core currently permits one permanent milestone dispute per project. Two
+    // confirmed opening records are ambiguous and cannot establish frozen text.
+    let rows=sqlx::query("SELECT f.operation_id,f.snapshot_json,o.command_json,o.command_bytes,o.provider_instance_id,o.account_id,o.signable_payload,o.signed_json,o.receipt_json FROM task_freezes f JOIN operations o USING(operation_id) WHERE f.provider_instance_id=$1 AND f.project_id=$2 AND f.kind='Dispute' AND f.state='Confirmed' AND o.status='Finalized' AND NOT o.task_operation ORDER BY o.creation_sequence LIMIT 2")
+        .bind(generation.to_string()).bind(view.dispute.project_id.to_string()).fetch_all(&mut *tx).await?;
+    let view = tokio::task::spawn_blocking(move || {
+        frozen(generation, proposal, next, view, rows).map_err(|_| Error::Dependency)
+    })
+    .await??;
+    tx.commit().await?;
+    Ok(view)
+}
+fn frozen(
+    generation: ProviderInstanceId,
+    proposal: EntityId,
+    next: u32,
+    mut view: generated_contracts::provider_core::CoreDisputeView,
+    mut rows: Vec<PgRow>,
+) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
+    use generated_contracts::{
+        EvidenceRecordReferenceV1, SignedContractCallV1, UnsignedContractCallV1,
+    };
+    if rows.len() != 1 {
+        return Err(Error::Dependency);
+    }
+    let row = rows.pop().ok_or(Error::Dependency)?;
+    let operation: OperationId = parse(row.try_get("operation_id")?)?;
+    let command: ProviderCommand = serde_json::from_str(row.try_get("command_json")?)?;
+    let receipt: OperationReceipt = serde_json::from_str(row.try_get("receipt_json")?)?;
+    let call = UnsignedContractCallV1::decode_signable(row.try_get("signable_payload")?)
+        .map_err(|_| Error::Dependency)?;
+    let signed: SignedContractCallV1 = serde_json::from_str(row.try_get("signed_json")?)?;
+    let case = &view.dispute;
+    if row.try_get::<Option<&str>, _>("provider_instance_id")?
+        != Some(generation.to_string().as_str())
+        || receipt.operation_id != operation
+        || receipt.provider_instance_id != generation
+        || receipt.outcome != ExecutionOutcome::Success
+        || receipt.created_entity_id != Some(case.dispute_id)
+        || receipt.origin != case.opened_by
+        || receipt.finalized_at != case.opened_at
+        || receipt.origin.to_string() != row.try_get::<&str, _>("account_id")?
+        || call.operation_id != operation
+        || call.provider_instance_id != generation
+        || call.origin != receipt.origin
+        || call.nonce != receipt.nonce
+        || call.command != command
+        || signed.call != call
+        || command.encode() != row.try_get::<Vec<u8>, _>("command_bytes")?
+    {
+        return Err(Error::Dependency);
+    }
+    let (project, milestone, submission) = match &command {
+        ProviderCommand::OpenDisputeCommitted {
+            project_id,
+            milestone_id,
+            rejected_submission_id,
+            evidence,
+        } => {
+            if case.evidence != Some(EvidenceRecordReferenceV1::Committed(evidence.clone())) {
+                return Err(Error::Dependency);
+            }
+            (*project_id, *milestone_id, *rejected_submission_id)
+        }
+        ProviderCommand::OpenDispute(request) => {
+            if case.evidence != Some(request.evidence.clone().into()) {
+                return Err(Error::Dependency);
+            }
+            (
+                request.project_id,
+                request.milestone_id,
+                request.rejected_submission_id,
+            )
+        }
+        ProviderCommand::OpenDisputeWithComment(request) => {
+            if case.opening_comment_id != Some(request.comment_id) {
+                return Err(Error::Dependency);
+            }
+            (
+                request.project_id,
+                request.milestone_id,
+                request.rejected_submission_id,
+            )
+        }
+        _ => return Err(Error::Dependency),
+    };
+    if (project, milestone, submission)
+        != (
+            case.project_id,
+            case.milestone_id,
+            case.rejected_submission_id,
+        )
+    {
+        return Err(Error::Dependency);
+    }
+    let state = TaskStateV1 {
+        schema_version: 1,
+        generation,
+        next_task_id: next,
+        storages: serde_json::from_str(row.try_get("snapshot_json")?)?,
+    };
+    state.validate().map_err(|_| Error::Dependency)?;
+    if state.storages.iter().any(|r| r.project_id != project) {
+        return Err(Error::Dependency);
+    }
+    let record = state
+        .storages
+        .into_iter()
+        .find(|r| r.proposal_id == proposal && r.storage.milestone_id == milestone)
+        .ok_or(Error::Dependency)?;
+    if record.proposal_revision != case.proposal_revision
+        || record.storage.task_storage_id != view.milestone.task_storage.task_storage_id
+        || view.milestone.task_storage.milestone_id != milestone
+    {
+        return Err(Error::Dependency);
+    }
+    view.milestone.task_storage.tasks = record.storage.tasks;
+    Ok(view)
+}
