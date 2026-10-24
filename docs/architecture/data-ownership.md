@@ -52,3 +52,11 @@ documents the explicit V3↔V4 exchange, frozen paired predecessor, reconciliati
 protected files and recovery limits. R2a/R2b1 refs survive unchanged. Earlier
 transitions remain documented in their historical notes. See
 [milestone evidence](../../progress/handoffs/SPEC-0015.md).
+
+The R3b1 bridge can retain and read future API task operation results and
+notifications in the adapter's existing tables. API-owned work has no provider
+receipt/signing payload/cursor and cannot enter the provider worker. Current task
+state and execution are still provider-owned. This is preparation for a compatible
+predecessor, not an API task writer or proof of paired task-state rollback. Future
+downgrades must reconcile pending API work and restore actual current task data
+before resuming predecessor task writes; do not silently sign API-owned history.
