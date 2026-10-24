@@ -12,9 +12,12 @@ provides deployment-specific DAO branding and terminology; the bundled profile
 is Abako for software projects.
 
 **Funds and contract execution are simulated.** The mock verifies real sr25519
-signatures and executes Rust business logic. It does not execute the deployed
-ink! contracts or submit transactions to Kreivo. A compatible ink! v5 contract
-runtime and real-chain provider remain future work. See the
+signatures and uses Rust business logic by default. The explicit
+[ink! v5 provider candidate](tools/ink-sandbox/README.md) runs source-pinned
+Directory, Calendar and Project WASM locally, with Shadow comparison and
+current-state migration/rollback. Neither provider submits transactions to
+Kreivo or uses real funds. Existing data needs the paired
+[current ownership transition](specs/0015-adapter-core-boundary/r2b-proposals.md). See the
 [current status and limitations](docs/project/project-context.md).
 
 ## Architecture
@@ -31,7 +34,8 @@ flowchart LR
 ```
 
 Only the adapter is exposed through the API gateway. The wallet owns signing
-keys; the mock owns authoritative business state. Contract instances are objects
+keys; the provider owns enforceable business facts. The adapter owns profiles,
+immutable creation text and other application content. Contract instances are objects
 inside one atomic mock runtime, rather than separate nodes or services.
 See [data ownership](docs/architecture/data-ownership.md) and the
 [architecture decision](docs/architecture/adr/0001-rest-and-independent-frontends.md).
@@ -96,6 +100,7 @@ dependency-policy checks. Historical results describe the revisions they tested.
 | `crates/` | Domain primitives, wire contracts and standalone Bloque client |
 | `apps/leptos-web/` | Independent browser frontend consuming the public API |
 | `contracts/` | Public OpenAPI and contract governance |
+| `tools/ink-sandbox/` | Isolated v5 WASM compatibility proof and pinned artifacts |
 | `infra/` | Local Compose, images, gateway and server-preview tooling |
 | `specs/` | Approved behavior; see the [specification index](SPECS.md) |
 | `docs/` | Architecture, development, operations and security guidance |

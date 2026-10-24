@@ -1,4 +1,4 @@
-//! Catalog requests remain provider-owned; adapter only scopes their reads.
+//! Core request facts and API-owned text, under the existing audience rules.
 
 use std::sync::Arc;
 
@@ -32,9 +32,11 @@ pub(crate) async fn all(
 }
 
 async fn read(app: &App, account: AccountId32) -> Result<Vec<SkillRequestView>, Error> {
-    app.get(
-        &app.config.provider_url,
-        &format!("/internal/catalog/skill-requests?account={account}"),
-    )
-    .await
+    let generation = app.snapshot().await?.info.provider_instance_id;
+    let core = crate::catalog_metadata::requests(app, account).await?;
+    let mut requests = Vec::new();
+    for request in core {
+        requests.push(crate::catalog_metadata::request_view(app, generation, request).await?);
+    }
+    Ok(requests)
 }

@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use generated_contracts::{ApiError, PayloadHash, ProviderSnapshot};
+use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshotV4};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -243,6 +243,34 @@ impl App {
         ))
         .execute(&mut *migration)
         .await?;
+        sqlx::raw_sql(include_str!("../migrations/0013_evidence_commitments.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!(
+            "../migrations/0014_provider_content_copies.sql"
+        ))
+        .execute(&mut *migration)
+        .await?;
+        sqlx::raw_sql(include_str!("../migrations/0015_creation_metadata.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!("../migrations/0016_proposal_documents.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!(
+            "../migrations/0017_catalog_reason_documents.sql"
+        ))
+        .execute(&mut *migration)
+        .await?;
+        sqlx::raw_sql(include_str!("../migrations/0018_task_history.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!("../migrations/0019_task_state.sql"))
+            .execute(&mut *migration)
+            .await?;
+        sqlx::raw_sql(include_str!("../migrations/0020_task_execution.sql"))
+            .execute(&mut *migration)
+            .await?;
         migration.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
@@ -294,9 +322,14 @@ impl App {
             .map_err(|_| Error::Dependency)?;
         decode_response(response).await
     }
-    pub(crate) async fn snapshot(&self) -> Result<ProviderSnapshot, Error> {
-        self.get(&self.config.provider_url, "/internal/snapshot")
-            .await
+    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshotV4, Error> {
+        let snapshot: CoreSnapshotV4 = self
+            .get(&self.config.provider_url, "/internal/snapshot")
+            .await?;
+        if snapshot.schema_version != 4 {
+            return Err(Error::Dependency);
+        }
+        Ok(snapshot)
     }
     pub(crate) async fn audit(
         &self,
@@ -311,8 +344,13 @@ impl App {
     }
 }
 pub(crate) async fn decode_response<T: DeserializeOwned>(
-    mut response: reqwest::Response,
+    response: reqwest::Response,
 ) -> Result<T, Error> {
+    let bytes = bounded_response(response).await?;
+    serde_json::from_slice(&bytes).map_err(|_| Error::Dependency)
+}
+/// Existing transport bound shared by ordinary reads and the serialized task backfill.
+pub(crate) async fn bounded_response(mut response: reqwest::Response) -> Result<Vec<u8>, Error> {
     const RESPONSE_LIMIT: usize = 32 * 1024 * 1024;
     if response.status() == StatusCode::NOT_FOUND {
         return Err(Error::NotFound);
@@ -335,7 +373,7 @@ pub(crate) async fn decode_response<T: DeserializeOwned>(
         }
         bytes.extend_from_slice(&chunk);
     }
-    serde_json::from_slice(&bytes).map_err(|_| Error::Dependency)
+    Ok(bytes)
 }
 pub(crate) fn now() -> Result<i64, Error> {
     i64::try_from(

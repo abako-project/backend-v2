@@ -40,6 +40,22 @@ python3 scripts/poc-e2e.py
 These are API checks. Browser behavior and the external frontend require a
 separate walkthrough.
 
+## ink! v5 compatibility proof
+
+```sh
+bash scripts/verify.sh ink-sandbox
+```
+
+This separate native workspace checks the pinned v5 WASM against the proposed
+FRAME runtime. It runs formatting, check, strict Clippy, tests and build with its
+own lockfile. It also exercises the shared signed-operation shell against real
+WASM fixtures. It needs neither PostgreSQL nor a node nor cargo-contract at test
+runtime. The path-filtered `ink! v5 compatibility` workflow runs it only when the
+proof or its verification command changes; normal app builds keep their current
+dependency graph. It does not establish application parity or enable a provider
+switch. Source rebuilds use the pinned contract toolchain separately; see the
+[proof guide](../tools/ink-sandbox/README.md).
+
 ## Container and gateway checks
 
 With a running Docker daemon accessible to your user:
@@ -93,3 +109,23 @@ not silently included in the PR application gate.
 Record the tested commit, commands, results and limitations when reporting
 verification. Signed images, SBOMs and production promotion are not established
 by these workflows.
+
+SDK integration has a separate owner-approved, exact-lock dependency check:
+
+```sh
+bash scripts/verify.sh ink-sandbox-dependencies
+```
+
+The SDK policy expires on 2026-12-01 and accepts only its recorded package/version
+licenses and advisory IDs. A changed SDK lock requires a new review. The root
+application policy and its existing findings remain unchanged.
+
+The SDK workflow runs for changes anywhere in `services/mock-provider/`, because
+its manifest, HTTP boundary, reference and storage/read models are linked by the
+candidate. It installs the already reviewed cargo-deny 0.20.2 with its locked
+tool dependencies and runs the policy wrapper before compatibility tests. This
+checks the exact SDK lock, review expiry, current advisories, licenses and sources;
+it does not grant exceptions to the root application policy. The tool's published
+metadata declares Rust 1.88.0 and MIT OR Apache-2.0; it is a CI checker and adds no
+application or SDK dependency. Direct cargo-deny without the wrapper would skip
+the approved fingerprint and expiry checks.

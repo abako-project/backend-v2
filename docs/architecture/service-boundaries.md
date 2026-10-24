@@ -6,7 +6,7 @@ See accepted ADR-0001. Adapter, custody, and mock provider are backend deploymen
 
 ## Ownership Matrix
 
-Adapter owns credentials, sessions, pending transport operations, and notification read state. Custody owns signing keys and jobs. Mock owns catalogs, worker modes and qualifications, calendars and reservations, projects, proposals, task storages, scores, funds, execution receipts, and provider events.
+Adapter owns credentials, sessions, descriptive documents, catalog/request narrative, normalized skill-name admission, lifecycle reason content, pending transport operations and notification read state. Custody owns signing keys and jobs. Provider owns catalog IDs/qualification facts, compact request lifecycle, worker modes, calendars/reservations, Project and numeric proposal facts, task storages, scores, funds, receipts and events. See the [ownership details](data-ownership.md).
 
 ## Boundary Signals
 

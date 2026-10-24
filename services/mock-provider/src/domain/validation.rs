@@ -1,27 +1,25 @@
 use std::collections::BTreeSet;
 
-use generated_contracts::{
-    EntityId, MilestoneStatus, Money, PlanningStatus, UnsignedContractCallV1, WorkerMode,
-};
+use generated_contracts::{EntityId, MilestoneStatus, Money, PlanningStatus, WorkerMode};
 
-use super::{State, project::proposal_definition, validate_score};
+use super::{RustEngine, project::proposal_definition, validate_score};
 use crate::{Error, Result, calendar, require};
 
-impl State {
+impl RustEngine {
     /// Validate the complete persisted aggregate at its serialization boundary.
     pub(super) fn validate(&self) -> Result<()> {
         self.validate_catalog()?;
         let mut identities = self.validate_workers()?;
         self.validate_projects(&mut identities)?;
         self.validate_disputes(&mut identities)?;
-        self.validate_history()
+        Ok(())
     }
 
     fn validate_workers(&self) -> Result<BTreeSet<EntityId>> {
         require(
             self.roles
                 .get(&1)
-                .is_some_and(|role| role.name == "coordinator" && role.fixed),
+                .is_some_and(|role| role.id == 1 && role.fixed),
             "invalid_catalog_state",
         )?;
         let mut identities = BTreeSet::new();
@@ -146,32 +144,11 @@ impl State {
         require(total == self.minted_units, "supply_mismatch")?;
         Ok(())
     }
-
-    fn validate_history(&self) -> Result<()> {
-        for (index, event) in self.events.iter().enumerate() {
-            require(
-                event.provider_instance_id == self.info.provider_instance_id
-                    && event.cursor == u64::try_from(index).map_err(|_| Error::internal())? + 1,
-                "invalid_event_state",
-            )?;
-        }
-        for (operation_id, recorded) in &self.receipts {
-            let call = UnsignedContractCallV1::decode_signable(&recorded.bytes)?;
-            require(
-                call.operation_id == *operation_id
-                    && recorded.receipt.operation_id == *operation_id
-                    && call.provider_instance_id == self.info.provider_instance_id
-                    && recorded.receipt.origin == call.origin
-                    && recorded.receipt.nonce == call.nonce
-                    && self.nonce(call.origin).nonce > call.nonce,
-                "invalid_receipt_state",
-            )?;
-        }
-        Ok(())
-    }
 }
 
-fn validate_execution_sequence(project: &generated_contracts::ProjectView) -> Result<()> {
+fn validate_execution_sequence(
+    project: &generated_contracts::provider_core::ProjectCore,
+) -> Result<()> {
     let mut executed = project.proposals.iter().filter(|proposal| {
         proposal
             .milestones

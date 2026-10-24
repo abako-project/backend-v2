@@ -1,11 +1,13 @@
+use generated_contracts::provider_core::CoreDisputeView;
+use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
-    AccountId32, Dispute, DisputeResponse, DisputeStatus, DisputeView, EntityId, EvidenceReference,
-    EvidenceRequest, MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest,
-    ProjectView, SubmissionReview, UnixSeconds,
+    AccountId32, Dispute, DisputeResponse, DisputeStatus, EntityId, EvidenceRecordReferenceV1,
+    MilestoneStatus, OpenDisputeRequest, OpenDisputeWithCommentRequest, SubmissionReview,
+    UnixSeconds,
 };
 
-use super::{State, project::milestone_mut};
-use crate::{Error, Result, random_id, require};
+use super::{RustEngine, project::milestone_mut};
+use crate::{Error, Result, require};
 
 #[derive(Debug, thiserror::Error)]
 pub(super) enum DisputeError {
@@ -34,10 +36,10 @@ impl From<DisputeError> for Error {
     }
 }
 
-impl State {
+impl RustEngine {
     pub(super) fn open_dispute(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         request: &OpenDisputeRequest,
         now: UnixSeconds,
@@ -47,7 +49,7 @@ impl State {
             origin,
             request.milestone_id,
             request.rejected_submission_id,
-            Some(request.evidence.clone()),
+            Some(request.evidence.clone().into()),
             None,
             now,
         )
@@ -55,7 +57,7 @@ impl State {
 
     pub(super) fn open_dispute_with_comment(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         request: &OpenDisputeWithCommentRequest,
         now: UnixSeconds,
@@ -72,13 +74,13 @@ impl State {
     }
 
     #[allow(clippy::too_many_arguments)]
-    fn open_case(
+    pub(super) fn open_case(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         milestone_id: EntityId,
         rejected_submission_id: EntityId,
-        evidence: Option<EvidenceReference>,
+        evidence: Option<EvidenceRecordReferenceV1>,
         opening_comment_id: Option<EntityId>,
         now: UnixSeconds,
     ) -> Result<EntityId> {
@@ -114,7 +116,7 @@ impl State {
             ),
             "submission_not_rejected",
         )?;
-        let id = random_id()?;
+        let id = self.context.random_id();
         milestone.status = Some(MilestoneStatus::Disputed);
         milestone.frozen = true;
         self.disputes.insert(
@@ -136,8 +138,7 @@ impl State {
                 opening_comment_id,
                 response: None,
                 proposal_revision: revision,
-                context_event_cursor: u64::try_from(self.events.len())
-                    .map_err(|_| Error::internal())?,
+                context_event_cursor: self.context.event_cursor,
             },
         );
         project.active_dispute_id = Some(id);
@@ -146,10 +147,10 @@ impl State {
 
     pub(super) fn respond_dispute(
         &mut self,
-        project: &ProjectView,
+        project: &ProjectCore,
         origin: AccountId32,
         id: EntityId,
-        request: &EvidenceRequest,
+        evidence: EvidenceRecordReferenceV1,
         now: UnixSeconds,
     ) -> Result<()> {
         let dispute = self
@@ -167,14 +168,14 @@ impl State {
             return Err(DisputeError::AlreadyAnswered.into());
         }
         dispute.response = Some(DisputeResponse {
-            evidence: request.evidence.clone(),
+            evidence,
             author: origin,
             occurred_at: now,
         });
         Ok(())
     }
 
-    pub(crate) fn dispute_view(&self, id: EntityId) -> Result<DisputeView> {
+    pub(crate) fn dispute_view(&self, id: EntityId) -> Result<CoreDisputeView> {
         let dispute = self
             .disputes
             .get(&id)
@@ -189,7 +190,7 @@ impl State {
                     .find(|m| m.milestone_id == dispute.milestone_id)
             })
             .ok_or_else(Error::internal)?;
-        Ok(DisputeView {
+        Ok(CoreDisputeView {
             dispute: dispute.clone(),
             milestone: milestone.clone(),
         })

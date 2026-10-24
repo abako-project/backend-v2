@@ -1,75 +1,72 @@
-use std::collections::BTreeSet;
-
+use super::{Effect, RustEngine};
+use crate::{Error, Result, require};
 use generated_contracts::{
-    AccountId32, CatalogEntry, CatalogKind, CreateSkillRequest, DecideSkillRequest,
-    DomainEventKind, ProviderCommand, SkillRequestDecision, SkillRequestStatus, SkillRequestView,
-    UpsertCatalogEntryRequest,
+    AccountId32, CatalogKind, DecideSkillRequest, DomainEventKind, SkillRequestDecision,
+    SkillRequestStatus,
+    provider_core::{
+        CatalogEntryCore, CatalogReferenceV1, MetadataCommitmentV1, SkillMetadataCore,
+        SkillRequestCore,
+    },
 };
-
-use super::{Effect, State};
-use crate::{Error, Result, random_id, require, seed::SkillMetadata};
-
 #[cfg(test)]
 mod tests;
 
-pub(super) fn normalized(name: &str) -> String {
-    name.split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ")
-        .to_lowercase()
-}
-
-impl State {
+impl RustEngine {
     pub(super) fn upsert_catalog_entry(
         &mut self,
         origin: AccountId32,
-        request: &UpsertCatalogEntryRequest,
+        kind: CatalogKind,
+        id: u32,
+        content: &MetadataCommitmentV1,
     ) -> Result<Effect> {
         self.root(origin)?;
         require(
-            !(request.kind == CatalogKind::Role && request.id == 1),
+            !(kind == CatalogKind::Role && id == 1),
             "fixed_coordinator_role",
         )?;
-        if request.kind == CatalogKind::Skill {
-            self.unique_skill_name(&request.name, Some(request.id))?;
-        }
-        let catalog = if request.kind == CatalogKind::Role {
+        let reference = CatalogReferenceV1::Write(content.clone());
+        let catalog = if kind == CatalogKind::Role {
             &mut self.roles
         } else {
             &mut self.skills
         };
         catalog.insert(
-            request.id,
-            CatalogEntry {
-                id: request.id,
-                name: request.name.clone(),
+            id,
+            CatalogEntryCore {
+                id,
                 fixed: false,
+                content: reference.clone(),
             },
         );
-        if request.kind == CatalogKind::Skill {
-            self.skill_metadata
-                .entry(request.id)
-                .or_insert_with(|| SkillMetadata::requested(Vec::new()));
+        if kind == CatalogKind::Skill {
+            self.skill_metadata.entry(id).or_insert(SkillMetadataCore {
+                role_ids: Vec::new(),
+                origin: reference,
+            });
         }
         Ok(Effect::new(DomainEventKind::CatalogUpdated, None, origin))
     }
-
     pub(super) fn validate_catalog(&self) -> Result<()> {
-        let mut names = BTreeSet::new();
-        for skill in self.skills.values() {
+        for (id, entry) in &self.roles {
             require(
-                names.insert(normalized(&skill.name)),
+                *id != 0 && entry.id == *id && entry.fixed == (*id == 1),
+                "invalid_catalog_state",
+            )?;
+        }
+        for (id, entry) in &self.skills {
+            require(
+                *id != 0 && entry.id == *id && !entry.fixed,
                 "invalid_catalog_state",
             )?;
             let metadata = self
                 .skill_metadata
-                .get(&skill.id)
+                .get(id)
                 .ok_or_else(|| Error::domain("invalid_catalog_state"))?;
             require(
                 metadata
                     .role_ids
                     .iter()
-                    .all(|id| self.roles.contains_key(id)),
+                    .all(|role| self.roles.contains_key(role)),
                 "invalid_catalog_state",
             )?;
         }
@@ -84,12 +81,8 @@ impl State {
                 *id == request.request_id && self.workers.contains_key(&request.requester),
                 "invalid_skill_request_state",
             )?;
-            ProviderCommand::CreateSkillRequest(CreateSkillRequest {
-                name: request.name.clone(),
-                role_ids: request.role_ids.clone(),
-            })
-            .validate()
-            .map_err(|_| Error::domain("invalid_skill_request_state"))?;
+            generated_contracts::provider_core::validate_skill_request_roles(&request.role_ids)
+                .map_err(|_| Error::domain("invalid_skill_request_state"))?;
             require(
                 (request.status == SkillRequestStatus::Approved) == request.skill_id.is_some(),
                 "invalid_skill_request_state",
@@ -97,61 +90,44 @@ impl State {
         }
         Ok(())
     }
-
-    pub(crate) fn skill_requests(&self, origin: AccountId32) -> Vec<SkillRequestView> {
+    pub(crate) fn skill_requests(&self, origin: AccountId32) -> Vec<SkillRequestCore> {
         self.skill_requests
             .values()
-            .filter(|request| origin == self.info.root_account || request.requester == origin)
+            .filter(|request| origin == self.context.root_account || request.requester == origin)
             .cloned()
             .collect()
     }
-
-    pub(super) fn unique_skill_name(&self, name: &str, except_id: Option<u32>) -> Result<()> {
-        let name = normalized(name);
-        require(
-            !self
-                .skills
-                .values()
-                .any(|skill| Some(skill.id) != except_id && normalized(&skill.name) == name),
-            "skill_name_exists",
-        )
-    }
-
     pub(super) fn create_skill_request(
         &mut self,
         origin: AccountId32,
-        request: &CreateSkillRequest,
+        role_ids: &[u32],
+        content: &MetadataCommitmentV1,
     ) -> Result<Effect> {
         require(self.workers.contains_key(&origin), "worker_not_found")?;
-        self.unique_skill_name(&request.name, None)?;
         require(
-            request
-                .role_ids
-                .iter()
-                .all(|id| self.roles.contains_key(id)),
+            role_ids.iter().all(|id| self.roles.contains_key(id)),
             "unknown_role",
         )?;
-        let id = random_id()?;
+        let id = self.context.random_id();
         require(
             !self.skill_requests.contains_key(&id),
             "request_id_collision",
         )?;
         self.skill_requests.insert(
             id,
-            SkillRequestView {
+            SkillRequestCore {
                 request_id: id,
                 requester: origin,
-                name: request.name.trim().to_owned(),
-                role_ids: request.role_ids.clone(),
+                content: CatalogReferenceV1::Write(content.clone()),
+                role_ids: role_ids.to_vec(),
                 status: SkillRequestStatus::Pending,
                 skill_id: None,
             },
         );
         let mut effect = Effect::new(DomainEventKind::SkillRequested, Some(id), origin);
-        effect.recipients.insert(self.info.root_account);
+        effect.recipients.insert(self.context.root_account);
         Ok(effect)
     }
-
     pub(super) fn decide_skill_request(
         &mut self,
         origin: AccountId32,
@@ -169,7 +145,6 @@ impl State {
         let requester = request.requester;
         let (kind, skill_id) = match decision.decision {
             SkillRequestDecision::Approve => {
-                self.unique_skill_name(&request.name, None)?;
                 require(
                     request
                         .role_ids
@@ -184,14 +159,19 @@ impl State {
                     .ok_or_else(|| Error::domain("catalog_id_exhausted"))?;
                 self.skills.insert(
                     id,
-                    CatalogEntry {
+                    CatalogEntryCore {
                         id,
-                        name: request.name.clone(),
                         fixed: false,
+                        content: request.content.clone(),
                     },
                 );
-                self.skill_metadata
-                    .insert(id, SkillMetadata::requested(request.role_ids.clone()));
+                self.skill_metadata.insert(
+                    id,
+                    SkillMetadataCore {
+                        role_ids: request.role_ids.clone(),
+                        origin: request.content.clone(),
+                    },
+                );
                 (DomainEventKind::SkillRequestApproved, Some(id))
             }
             SkillRequestDecision::Reject => (DomainEventKind::SkillRequestRejected, None),

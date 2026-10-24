@@ -7,7 +7,9 @@ use generated_contracts::{
     RegisterWorkerRequest, ReputationView, UnixSeconds, WorkerMode,
 };
 
-use super::{State, add_rating, add_weighted_rating, compare_scores, empty_score};
+#[cfg(feature = "storage-sqlite")]
+use super::State;
+use super::{RustEngine, add_rating, add_weighted_rating, compare_scores, empty_score};
 #[cfg(feature = "storage-sqlite")]
 use crate::Error;
 use crate::Result;
@@ -44,7 +46,10 @@ fn exact_scores_do_not_round_or_overflow() -> Result<()> {
 
 #[test]
 fn selection_uses_only_the_reputation_for_the_requested_mode() -> Result<()> {
-    let mut state = State::new(AccountId32::from_bytes([1; 32]))?;
+    let mut state = RustEngine::new(
+        AccountId32::from_bytes([1; 32]),
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     let first = AccountId32::from_bytes([2; 32]);
     let second = AccountId32::from_bytes([3; 32]);
     for account in [first, second] {
@@ -97,10 +102,15 @@ fn persisted_state_cannot_bypass_catalog_or_supply_invariants() -> Result<()> {
         State::restore(b"{}", root).err(),
         Some(Error::domain("state_configuration_mismatch"))
     );
-    state.roles.get_mut(&1).ok_or_else(Error::internal)?.name = "replacement".into();
+    state
+        .engine
+        .roles
+        .get_mut(&1)
+        .ok_or_else(Error::internal)?
+        .fixed = false;
     assert!(State::restore(&state.encode()?, root).is_err());
     let mut state = State::new(root)?;
-    state.balances.insert(root, Money::new(1));
+    state.engine.balances.insert(root, Money::new(1));
     assert!(State::restore(&state.encode()?, root).is_err());
     Ok(())
 }
@@ -113,7 +123,7 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
     let root = AccountId32::from_bytes([1; 32]);
     let coordinator = AccountId32::from_bytes([2; 32]);
     let mut state = State::new(root)?;
-    state.apply(
+    state.engine.apply(
         coordinator,
         &ProviderCommand::RegisterWorker(RegisterWorkerRequest {
             display_name: "Coordinator".into(),
@@ -128,11 +138,14 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
         }),
         UnixSeconds::new(100),
     )?;
-    let worker = state.worker_mut(coordinator)?;
+    let worker = state.engine.worker_mut(coordinator)?;
+    worker.content = generated_contracts::provider_core::MetadataReferenceV1::Migration(
+        generated_contracts::PayloadHash::from_bytes([88; 32]),
+    );
     worker.mode = WorkerMode::Coordinator;
     worker.coordinator_eligible = true;
     let created_at = UnixSeconds::new(500);
-    let effect = state.apply(
+    let effect = state.engine.apply(
         root,
         &ProviderCommand::CreateProject(CreateProjectRequest {
             title: "Dated request".into(),
@@ -141,9 +154,17 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
         created_at,
     )?;
     let id = effect.entity_id.ok_or_else(Error::internal)?;
-    assert_eq!(state.projects[&id].created_at, Some(created_at));
-    state.events.push(DomainEvent {
-        provider_instance_id: state.info.provider_instance_id,
+    state
+        .engine
+        .projects
+        .get_mut(&id)
+        .ok_or_else(Error::internal)?
+        .content = generated_contracts::provider_core::MetadataReferenceV1::Migration(
+        generated_contracts::PayloadHash::from_bytes([89; 32]),
+    );
+    assert_eq!(state.engine.projects[&id].created_at, Some(created_at));
+    state.shell.events.push(DomainEvent {
+        provider_instance_id: state.shell.info.provider_instance_id,
         cursor: 1,
         operation_id: OperationId::from_bytes([1; 16]),
         kind: DomainEventKind::ProjectCreated,
@@ -161,9 +182,9 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
         .remove("createdAt");
     let bytes = serde_json::to_vec(&old).map_err(|_| Error::internal())?;
     let restored = State::restore(&bytes, root)?;
-    assert_eq!(restored.projects[&id].created_at, Some(created_at));
+    assert_eq!(restored.engine.projects[&id].created_at, Some(created_at));
     assert_eq!(
-        State::restore(&restored.encode()?, root)?.projects[&id].created_at,
+        State::restore(&restored.encode()?, root)?.engine.projects[&id].created_at,
         Some(created_at)
     );
     old["events"] = serde_json::json!([]);
@@ -172,6 +193,7 @@ fn project_dates_are_recorded_and_recovered_from_legacy_events() -> Result<()> {
             &serde_json::to_vec(&old).map_err(|_| Error::internal())?,
             root
         )?
+        .engine
         .projects[&id]
             .created_at,
         None

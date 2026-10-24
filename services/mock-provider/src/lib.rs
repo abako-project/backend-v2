@@ -2,12 +2,19 @@
 #![allow(clippy::missing_errors_doc)]
 
 mod calendar;
+pub mod creation;
 mod domain;
 mod http;
+pub mod migration;
+pub mod proposal;
+mod provider_api;
+mod reference;
 mod seed;
 mod storage;
 
-pub use http::router;
+pub use http::{router, router_with_provider};
+pub use provider_api::ProviderApi;
+pub use reference::ReferenceState;
 pub use storage::Provider;
 
 use axum::{
@@ -48,6 +55,17 @@ impl Error {
         }
     }
 
+    /// Sanitized failure for a provider effect boundary.
+    #[must_use]
+    pub const fn unavailable() -> Self {
+        Self::internal()
+    }
+    #[must_use]
+    /// Whether the failure represents an unavailable provider effect.
+    pub fn is_infrastructure(&self) -> bool {
+        self.status == StatusCode::SERVICE_UNAVAILABLE
+    }
+
     /// Stable machine-readable reason, without request content or secrets.
     #[must_use]
     pub const fn code(&self) -> &'static str {
@@ -55,6 +73,17 @@ impl Error {
     }
 }
 
+impl From<provider_execution::Error> for Error {
+    fn from(error: provider_execution::Error) -> Self {
+        if error.is_infrastructure() {
+            Self::internal()
+        } else if error.code() == "invalid_contract" {
+            Self::bad(error.code())
+        } else {
+            Self::domain(error.code())
+        }
+    }
+}
 impl From<generated_contracts::ValidationError> for Error {
     fn from(_: generated_contracts::ValidationError) -> Self {
         Self::domain("arithmetic_or_calendar_error")
@@ -78,7 +107,8 @@ impl IntoResponse for Error {
     }
 }
 
-pub(crate) type Result<T> = std::result::Result<T, Error>;
+/// Sanitized provider domain or infrastructure failure.
+pub type Result<T> = std::result::Result<T, Error>;
 
 pub(crate) fn require(condition: bool, code: &'static str) -> Result<()> {
     if condition {
@@ -88,8 +118,5 @@ pub(crate) fn require(condition: bool, code: &'static str) -> Result<()> {
     }
 }
 
-pub(crate) fn random_id() -> Result<generated_contracts::EntityId> {
-    let mut bytes = [0; 16];
-    getrandom::fill(&mut bytes).map_err(|_| Error::internal())?;
-    Ok(generated_contracts::EntityId::from_bytes(bytes))
-}
+/// Explicit compact catalog/reason legacy conversion. No preimages are stored.
+pub mod catalog_content;

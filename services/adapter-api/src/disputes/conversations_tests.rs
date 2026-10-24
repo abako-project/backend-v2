@@ -18,7 +18,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
                 if id != c.dispute.dispute_id.to_string() {
                     return Err(Error::NotFound);
                 }
-                Ok::<_, Error>(Json(c))
+                Ok::<_, Error>(Json(core_case(c)?))
             }
         }),
     );
@@ -55,7 +55,11 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
             reviewed_at: UnixSeconds::new(101),
         },
     }];
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let server = Server::start(http::router(app.clone())).await?;
     let client = reqwest::Client::new();
     let opening_key = EntityId::from_bytes([64; 16]);
@@ -101,7 +105,7 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
             .try_get::<String, _>("command_json")?,
     )?;
     assert!(
-        matches!(action,ProviderCommand::OpenDisputeWithComment(ref r) if r.comment_id==opening_key)
+        matches!(action,ProviderCommand::OpenDisputeCommitted{ref evidence,..} if evidence.record_id==opening_key)
     );
     project.active_dispute_id = Some(case_id);
     project.proposals[0].milestones[0].frozen = true;
@@ -125,7 +129,8 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
         milestone: project.proposals[0].milestones[0].clone(),
     };
     *case_slot.lock().await = Some(case);
-    fake.lock().await.snapshot.projects = vec![project.clone()];
+    fake.lock().await.snapshot.projects =
+        vec![stage_project(&app, info().provider_instance_id, project.clone()).await?];
     sqlx::query("INSERT INTO submission_comments(provider_instance_id,submission_id,comment_id,author_account,created_at,message,kind) VALUES($1,$2,$3,$4,101,'Correct the keyboard navigation.','Rejection')").bind(info().provider_instance_id.to_string()).bind(submission_id.to_string()).bind(comment_id.to_string()).bind(project.client.to_string()).execute(&app.db).await?;
     sqlx::query("INSERT INTO submission_comments(provider_instance_id,submission_id,comment_id,author_account,created_at,message,kind) VALUES($1,$2,$3,$4,101,'PRIVATE DELIVERY DISCUSSION','Comment')").bind(info().provider_instance_id.to_string()).bind(submission_id.to_string()).bind(EntityId::from_bytes([65;16]).to_string()).bind(project.coordinator.to_string()).execute(&app.db).await?;
     sqlx::query("INSERT INTO submission_presentations(provider_instance_id,submission_id,documentation,links) VALUES($1,$2,'ipfs://docs','sftp://server/notes')").bind(info().provider_instance_id.to_string()).bind(submission_id.to_string()).execute(&app.db).await?;
@@ -465,7 +470,10 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
             .status(),
         StatusCode::METHOD_NOT_ALLOWED
     );
-    assert_eq!(fake.lock().await.snapshot.projects, [project]);
+    assert_eq!(
+        fake.lock().await.snapshot.projects,
+        [core_project(&project, info().provider_instance_id)?.0]
+    );
     assert_eq!(fake.lock().await.submissions, 0);
     server.finish().await?;
     let restarted =

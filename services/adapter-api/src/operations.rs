@@ -2,19 +2,19 @@ use crate::{
     auth::Session,
     state::{App, Error, now, parse, payload_hash, random, token},
 };
+use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
     AccountId32, AccountNonce, CreateSigningJobRequest, MAX_SIGNABLE_BYTES, OperationId,
-    OperationReceipt, OperationRef, OperationView, PAYLOAD_VERSION, PreparedCall, ProjectView,
-    ProviderCommand, ProviderInfo, ProviderOperationStatus, SignedContractCallV1, SigningJobStatus,
-    SigningJobView, UnixSeconds, UnsignedContractCallV1, WalletId, WalletLifecycle, WalletView,
-    WorkerMode,
+    OperationReceipt, OperationRef, OperationView, PAYLOAD_VERSION, PreparedCall, ProviderCommand,
+    ProviderInfo, ProviderOperationStatus, SignedContractCallV1, SigningJobStatus, SigningJobView,
+    UnixSeconds, UnsignedContractCallV1, WalletId, WalletLifecycle, WalletView, WorkerMode,
 };
 use parity_scale_codec::Encode;
 use sqlx::{Row, postgres::PgRow};
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::watch, task::JoinSet};
 
-pub(crate) fn visible(project: &ProjectView, account: AccountId32) -> bool {
+pub(crate) fn visible(project: &ProjectCore, account: AccountId32) -> bool {
     project.client == account
         || project.coordinator == account
         || project
@@ -104,7 +104,7 @@ pub(crate) async fn authorize(
 
 async fn authorize_project(
     app: &App,
-    project: &ProjectView,
+    project: &ProjectCore,
     account: AccountId32,
     command: &ProviderCommand,
 ) -> Result<(), Error> {
@@ -121,7 +121,8 @@ async fn authorize_project(
         | ProviderCommand::EditTask { .. }
         | ProviderCommand::RequestMilestoneCompletionWithoutDeliverable { .. }
         | ProviderCommand::RequestMilestoneCompletion { .. }
-        | ProviderCommand::SubmitMilestoneDelivery { .. } => project.coordinator == account,
+        | ProviderCommand::SubmitMilestoneDelivery { .. }
+        | ProviderCommand::SubmitMilestoneCommitted { .. } => project.coordinator == account,
         ProviderCommand::AcceptPlanningQuote { .. }
         | ProviderCommand::AcceptPlanningDelivery { .. }
         | ProviderCommand::ApproveExecution { .. }
@@ -129,7 +130,8 @@ async fn authorize_project(
         | ProviderCommand::AcceptMilestoneCompletion { .. }
         | ProviderCommand::AcceptMilestoneDelivery { .. }
         | ProviderCommand::RejectMilestoneCompletion { .. }
-        | ProviderCommand::RejectMilestoneDelivery { .. } => project.client == account,
+        | ProviderCommand::RejectMilestoneDelivery { .. }
+        | ProviderCommand::RejectMilestoneCommitted { .. } => project.client == account,
         ProviderCommand::EvaluateProject { .. } => {
             project.client == account
                 || project.coordinator == account
@@ -158,10 +160,12 @@ async fn authorize_project(
         ProviderCommand::CancelProject { .. }
         | ProviderCommand::DisputePlanning { .. }
         | ProviderCommand::OpenDispute(_)
-        | ProviderCommand::OpenDisputeWithComment(_) => {
+        | ProviderCommand::OpenDisputeWithComment(_)
+        | ProviderCommand::OpenDisputeCommitted { .. } => {
             project.client == account || project.coordinator == account
         }
-        ProviderCommand::RespondDispute { dispute_id, .. } => {
+        ProviderCommand::RespondDispute { dispute_id, .. }
+        | ProviderCommand::RespondDisputeCommitted { dispute_id, .. } => {
             crate::disputes::read(app, *dispute_id)
                 .await?
                 .dispute
@@ -177,6 +181,10 @@ async fn authorize_project(
     }
 }
 
+#[allow(
+    clippy::too_many_lines,
+    reason = "Keep admission, immutable metadata staging and queue insertion in one explicit transaction."
+)]
 pub(crate) async fn enqueue(
     app: &App,
     session: &Session,
@@ -184,8 +192,8 @@ pub(crate) async fn enqueue(
     key: Option<OperationId>,
 ) -> Result<OperationRef, Error> {
     command.validate().map_err(|_| Error::Invalid)?;
-    let command_bytes = command.encode();
-    if command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
+    let request_command_bytes = command.encode();
+    if request_command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
         return Err(Error::Invalid);
     }
     let operation_id = match key {
@@ -193,13 +201,13 @@ pub(crate) async fn enqueue(
         None => OperationId::from_bytes(random()?),
     };
     if let Some(row) = sqlx::query(
-        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = $1",
+        "SELECT principal_id, command_bytes, request_command_bytes, status FROM operations WHERE operation_id = $1",
     )
     .bind(operation_id.to_string())
     .fetch_optional(&app.db)
     .await?
     {
-        return existing(&row, session, &command_bytes, operation_id);
+        return existing(&row, session, &request_command_bytes, operation_id);
     }
     if let Err(error) = authorize(app, session, &command).await {
         app.audit(
@@ -228,6 +236,17 @@ pub(crate) async fn enqueue(
     } else {
         (session.wallet, session.view.account_id)
     };
+    let generation = if crate::evidence::needs_commitment(&command)
+        || crate::creation_metadata::needs_record(&command)
+        || crate::proposal_metadata::needs_record(&command)
+        || crate::reason_metadata::needs_record(&command)
+        || crate::catalog_metadata::operation(&command)
+    {
+        Some(app.snapshot().await?.info.provider_instance_id)
+    } else {
+        None
+    };
+    let catalog_operation = crate::catalog_metadata::operation(&command);
     let time = now()?;
     let mut tx = app.db.begin().await?;
     // One database-wide enqueue lock preserves both queue limits across replicas.
@@ -235,22 +254,43 @@ pub(crate) async fn enqueue(
         .execute(&mut *tx)
         .await?;
     if let Some(row) = sqlx::query(
-        "SELECT principal_id, command_bytes, status FROM operations WHERE operation_id = $1",
+        "SELECT principal_id, command_bytes, request_command_bytes, status FROM operations WHERE operation_id = $1",
     )
     .bind(operation_id.to_string())
     .fetch_optional(&mut *tx)
     .await?
     {
-        return existing(&row, session, &command_bytes, operation_id);
+        return existing(&row, session, &request_command_bytes, operation_id);
     }
     let count = sqlx::query("SELECT count(*) AS total, count(*) FILTER (WHERE wallet_id = $1) AS wallet FROM operations WHERE status NOT IN ('Finalized', 'Rejected', 'Expired')")
         .bind(wallet.to_string()).fetch_one(&mut *tx).await?;
     if count.try_get::<i64, _>("total")? >= 10_000 || count.try_get::<i64, _>("wallet")? >= 32 {
         return Err(Error::Capacity);
     }
-    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9)")
+    let command = if let Some(generation) = generation {
+        let command =
+            crate::catalog_metadata::capture(&mut tx, generation, account, operation_id, command)
+                .await?;
+        let command =
+            crate::reason_metadata::capture(&mut tx, generation, account, operation_id, command)
+                .await?;
+        let command =
+            crate::creation_metadata::capture(&mut tx, generation, account, operation_id, command)
+                .await?;
+        let command =
+            crate::proposal_metadata::capture(&mut tx, generation, account, operation_id, command)
+                .await?;
+        crate::evidence::prepare(&mut tx, session, generation, operation_id, command).await?
+    } else {
+        command
+    };
+    let command_bytes = command.encode();
+    if command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
+        return Err(Error::Invalid);
+    }
+    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes, provider_instance_id, catalog_operation) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10, $11, $12)")
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
-        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).execute(&mut *tx).await?;
+        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).bind(catalog_operation).execute(&mut *tx).await?;
     sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, 'operation_authorized', 'ok', $3)")
         .bind(session.view.principal_id.to_string()).bind(operation_id.to_string()).bind(time).execute(&mut *tx).await?;
     tx.commit().await?;
@@ -266,7 +306,10 @@ fn existing(
     operation_id: OperationId,
 ) -> Result<OperationRef, Error> {
     if row.try_get::<&str, _>("principal_id")? != session.view.principal_id.to_string()
-        || row.try_get::<Vec<u8>, _>("command_bytes")? != command
+        || row
+            .try_get::<Option<Vec<u8>>, _>("request_command_bytes")?
+            .unwrap_or(row.try_get("command_bytes")?)
+            != command
     {
         return Err(Error::Conflict("idempotency_conflict"));
     }
@@ -289,6 +332,7 @@ fn name(status: ProviderOperationStatus) -> &'static str {
         ProviderOperationStatus::Finalized => "Finalized",
         ProviderOperationStatus::Rejected => "Rejected",
         ProviderOperationStatus::Expired => "Expired",
+        ProviderOperationStatus::Queued => "Queued",
     }
 }
 pub(crate) async fn read(
@@ -296,17 +340,31 @@ pub(crate) async fn read(
     session: &Session,
     id: OperationId,
 ) -> Result<OperationView, Error> {
-    let row = sqlx::query("SELECT status, receipt_json, error_code FROM operations WHERE operation_id = $1 AND principal_id = $2")
+    let row = sqlx::query("SELECT operation_id, status, receipt_json, error_code, task_operation, task_result_json, command_json, provider_instance_id AS operation_instance, account_id AS operation_account FROM operations WHERE operation_id = $1 AND principal_id = $2")
         .bind(id.to_string()).bind(session.view.principal_id.to_string()).fetch_optional(&app.db).await?.ok_or(Error::NotFound)?;
-    Ok(OperationView {
-        operation_id: id,
-        status: status(row.try_get("status")?)?,
-        receipt: row
-            .try_get::<Option<&str>, _>("receipt_json")?
-            .map(serde_json::from_str)
-            .transpose()?,
-        error_code: row.try_get("error_code")?,
-    })
+    let task_operation: bool = row.try_get("task_operation")?;
+    let decode = move || {
+        Ok(OperationView {
+            operation_id: id,
+            status: status(row.try_get("status")?)?,
+            receipt: row
+                .try_get::<Option<&str>, _>("receipt_json")?
+                .map(serde_json::from_str)
+                .transpose()?,
+            error_code: row.try_get("error_code")?,
+            task_result: if row.try_get("task_operation")? {
+                crate::task_history::TaskOperation::read(&row)?.result
+            } else {
+                None
+            },
+        })
+    };
+    if task_operation {
+        // Historical task commands can contain retained large descriptions.
+        tokio::task::spawn_blocking(decode).await?
+    } else {
+        decode()
+    }
 }
 
 pub(crate) struct Job {
@@ -328,6 +386,9 @@ pub(crate) struct Job {
 }
 impl Job {
     fn from_row(row: &PgRow, lease: String) -> Result<Self, Error> {
+        if row.try_get::<bool, _>("task_operation")? {
+            return Err(Error::Dependency);
+        }
         Ok(Self {
             id: parse(row.try_get("operation_id")?)?,
             wallet: parse(row.try_get("wallet_id")?)?,
@@ -362,12 +423,39 @@ impl Job {
     }
 }
 
+pub(crate) enum Work {
+    Provider(Box<Job>),
+    Task(crate::task_execution::Job),
+}
+
+#[cfg(test)]
 pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
+    claim_row(app, false)
+        .await?
+        .map(|(row, lease)| Job::from_row(&row, lease))
+        .transpose()
+}
+
+pub(crate) async fn claim_work(app: &App) -> Result<Option<Work>, Error> {
+    let Some((row, lease)) = claim_row(app, true).await? else {
+        return Ok(None);
+    };
+    if row.try_get::<bool, _>("task_operation")? {
+        Ok(Some(Work::Task(crate::task_execution::Job::new(
+            parse(row.try_get("operation_id")?)?,
+            lease,
+        ))))
+    } else {
+        Ok(Some(Work::Provider(Box::new(Job::from_row(&row, lease)?))))
+    }
+}
+
+async fn claim_row(app: &App, include_tasks: bool) -> Result<Option<(PgRow, String)>, Error> {
     let time = now()?;
     let lease = token()?.to_string();
     let mut tx = app.db.begin().await?;
-    let row = sqlx::query("SELECT * FROM operations o WHERE o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE previous.wallet_id = o.wallet_id AND previous.creation_sequence < o.creation_sequence AND previous.status NOT IN ('Finalized', 'Rejected', 'Expired')) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
-        .bind(time).fetch_optional(&mut *tx).await?;
+    let row = sqlx::query("SELECT * FROM operations o WHERE (NOT o.task_operation OR ($2 AND EXISTS(SELECT 1 FROM task_generations g WHERE g.provider_instance_id=o.provider_instance_id AND g.api_owned))) AND o.status NOT IN ('Finalized', 'Rejected', 'Expired') AND (o.lease_token IS NULL OR o.lease_until <= $1) AND o.next_attempt_at <= $1 AND NOT EXISTS (SELECT 1 FROM operations previous WHERE (previous.wallet_id = o.wallet_id OR (o.catalog_operation AND previous.catalog_operation)) AND previous.creation_sequence < o.creation_sequence AND (previous.status NOT IN ('Finalized', 'Rejected', 'Expired') OR (o.catalog_operation AND previous.catalog_operation AND previous.status='Expired' AND previous.possibly_submitted))) ORDER BY o.creation_sequence LIMIT 1 FOR UPDATE OF o SKIP LOCKED")
+        .bind(time).bind(include_tasks).fetch_optional(&mut *tx).await?;
     let Some(row) = row else {
         tx.commit().await?;
         return Ok(None);
@@ -376,24 +464,32 @@ pub(crate) async fn claim(app: &App) -> Result<Option<Job>, Error> {
         sqlx::query("INSERT INTO audit_records(operation_id, event_kind, result_code, occurred_at) VALUES ($1, 'lease_recovery', 'expired', $2)")
             .bind(row.try_get::<&str, _>("operation_id")?).bind(time).execute(&mut *tx).await?;
     }
-    let job = Job::from_row(&row, lease)?;
     sqlx::query("UPDATE operations SET lease_token = $1, lease_until = $2 WHERE operation_id = $3")
-        .bind(&job.lease)
+        .bind(&lease)
         .bind(time + 30)
-        .bind(job.id.to_string())
+        .bind(row.try_get::<&str, _>("operation_id")?)
         .execute(&mut *tx)
         .await?;
     tx.commit().await?;
-    Ok(Some(job))
+    Ok(Some((row, lease)))
 }
-async fn save(app: &App, job: &Job, release: bool) -> Result<(), Error> {
+
+async fn save(
+    app: &App,
+    job: &Job,
+    release: bool,
+    completion: Option<crate::catalog_claims::Completion>,
+) -> Result<(), Error> {
     let time = now()?;
     let mut tx = app.db.begin().await?;
-    let result = sqlx::query("UPDATE operations SET status = $1, signable_payload = $2, signed_json = $3, provider_instance_id = $4, receipt_json = $5, error_code = $6, possibly_submitted = $7, attempt_count = $8, next_attempt_at = $9, lease_token = CASE WHEN $10 THEN NULL ELSE lease_token END, lease_until = CASE WHEN $11 THEN NULL ELSE lease_until END WHERE operation_id = $12 AND lease_token = $13 AND lease_until > $14")
+    let result = sqlx::query("UPDATE operations SET status = $1, signable_payload = $2, signed_json = $3, provider_instance_id = $4, receipt_json = $5, error_code = $6, possibly_submitted = $7, attempt_count = $8, next_attempt_at = $9, lease_token = CASE WHEN $10 THEN NULL ELSE lease_token END, lease_until = CASE WHEN $11 THEN NULL ELSE lease_until END WHERE operation_id = $12 AND NOT task_operation AND lease_token = $13 AND lease_until > $14")
         .bind(name(job.status)).bind(&job.payload).bind(&job.signed).bind(&job.instance).bind(&job.receipt).bind(&job.error)
         .bind(job.submitted).bind(job.attempts).bind(job.next).bind(release).bind(release).bind(job.id.to_string()).bind(&job.lease).bind(time).execute(&mut *tx).await?;
     if result.rows_affected() != 1 {
         return Err(Error::Conflict("lease_lost"));
+    }
+    if let Some(completion) = completion {
+        crate::catalog_claims::publish(&mut tx, job.id, completion).await?;
     }
     sqlx::query("INSERT INTO audit_records(operation_id, event_kind, result_code, occurred_at) VALUES ($1, 'operation_stage', $2, $3)")
         .bind(job.id.to_string()).bind(name(job.status)).bind(time).execute(&mut *tx).await?;
@@ -402,16 +498,43 @@ async fn save(app: &App, job: &Job, release: bool) -> Result<(), Error> {
 }
 
 pub(crate) async fn process(app: &App, mut job: Job) -> Result<(), Error> {
-    let time = now()?;
-    let outcome = advance(app, &mut job, time).await;
-    if let Err(error) = outcome {
-        if matches!(error, Error::Conflict("lease_lost")) {
-            return Ok(());
-        }
-        tracing::warn!(operation_id = %job.id, stage = ?job.status, code = error.status_code().1, "operation stage failed");
-        job.retry(time, error.status_code().1);
+    // A stale/incorrect dispatch must not sign API-owned work. The supported
+    // downgrade drains task work first; this bridge deliberately cannot run it.
+    let provider_owned: Option<bool> =
+        sqlx::query_scalar("SELECT NOT task_operation FROM operations WHERE operation_id=$1")
+            .bind(job.id.to_string())
+            .fetch_optional(&app.db)
+            .await?;
+    if provider_owned != Some(true) {
+        return Err(Error::Dependency);
     }
-    match save(app, &job, true).await {
+    let time = now()?;
+    let outcome = async {
+        advance(app, &mut job, time).await?;
+        crate::catalog_claims::completion(
+            app,
+            &job.command,
+            job.instance.as_deref(),
+            job.status,
+            job.submitted,
+            job.error.as_deref(),
+            job.receipt.as_deref(),
+        )
+        .await
+    }
+    .await;
+    let completion = match outcome {
+        Ok(completion) => completion,
+        Err(error) => {
+            if matches!(error, Error::Conflict("lease_lost")) {
+                return Ok(());
+            }
+            tracing::warn!(operation_id = %job.id, stage = ?job.status, code = error.status_code().1, "operation stage failed");
+            job.retry(now()?, error.status_code().1);
+            None
+        }
+    };
+    match save(app, &job, true, completion).await {
         Err(Error::Conflict("lease_lost")) => Ok(()),
         result => result,
     }
@@ -424,9 +547,42 @@ async fn advance(app: &App, job: &mut Job, time: i64) -> Result<(), Error> {
             return Ok(());
         }
         let info: ProviderInfo = app.get(&app.config.provider_url, "/internal/info").await?;
+        if job
+            .instance
+            .as_ref()
+            .is_some_and(|bound| *bound != info.provider_instance_id.to_string())
+        {
+            job.terminal(
+                ProviderOperationStatus::Rejected,
+                "provider_instance_changed",
+            );
+            return Ok(());
+        }
         if info.payload_version != PAYLOAD_VERSION {
             job.terminal(ProviderOperationStatus::Rejected, "unsupported_provider");
             return Ok(());
+        }
+        if crate::catalog_metadata::operation(&job.command) {
+            match crate::catalog_claims::prepare(
+                app,
+                job.id,
+                job.account,
+                &job.command,
+                &info,
+                &job.lease,
+            )
+            .await?
+            {
+                crate::catalog_claims::Admission::Ready => {}
+                crate::catalog_claims::Admission::Duplicate => {
+                    job.terminal(ProviderOperationStatus::Rejected, "skill_name_exists");
+                    return Ok(());
+                }
+                crate::catalog_claims::Admission::Wait => {
+                    job.next = time + 1;
+                    return Ok(());
+                }
+            }
         }
         let nonce: AccountNonce = app
             .get(
@@ -568,7 +724,7 @@ async fn advance(app: &App, job: &mut Job, time: i64) -> Result<(), Error> {
     // This durable marker precedes sending any bytes. A crash here is uncertain, never rejected.
     job.submitted = true;
     job.status = ProviderOperationStatus::Submitted;
-    save(app, job, false).await?;
+    save(app, job, false, None).await?;
     let response = app
         .internal(
             reqwest::Method::POST,
@@ -618,10 +774,15 @@ pub(crate) async fn run(app: Arc<App>, mut stop: watch::Receiver<bool>) -> Resul
             break;
         }
         while tasks.len() < 8 {
-            match claim(&app).await? {
+            match claim_work(&app).await? {
                 Some(job) => {
                     let worker = app.clone();
-                    tasks.spawn(async move { process(&worker, job).await });
+                    tasks.spawn(async move {
+                        match job {
+                            Work::Provider(job) => process(&worker, *job).await,
+                            Work::Task(job) => crate::task_execution::process(&worker, job).await,
+                        }
+                    });
                 }
                 None => break,
             }

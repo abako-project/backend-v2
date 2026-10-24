@@ -4,7 +4,7 @@ use generated_contracts::{
 };
 use parity_scale_codec::{Decode, Encode};
 
-use super::State;
+use super::RustEngine;
 use crate::Result;
 
 const NOW: UnixSeconds = UnixSeconds::new(100);
@@ -18,7 +18,10 @@ fn a_deposit_is_immutable_and_can_only_credit_once() -> Result<()> {
     let root = account(1);
     let owner = account(2);
     let stranger = account(3);
-    let mut state = State::new(root)?;
+    let mut state = RustEngine::new(
+        root,
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     let amount = generated_contracts::KvnAmount::new(Money::new(25))?;
     let effect = state.bramp_command(
         owner,
@@ -72,7 +75,10 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
     let root = account(1);
     let owner = account(2);
     let stranger = account(3);
-    let mut state = State::new(root)?;
+    let mut state = RustEngine::new(
+        root,
+        generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+    )?;
     let deposit = state.bramp_command(
         owner,
         &ProviderCommand::CreateDeposit(CreateDepositRequest {

@@ -1,18 +1,22 @@
+use generated_contracts::provider_core::{MilestoneCore, ProposalTerms};
+use generated_contracts::provider_core::{ProjectCore, WorkerCore};
 use std::{cmp::Ordering, collections::BTreeSet};
 
 use generated_contracts::{
-    AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, MilestoneView,
-    Minutes, Money, PlanningStatus, PlanningView, ProjectView, ProviderCommand, Qualifications,
-    ReputationView, ReservationView, TaskDefinition, UnixSeconds, WorkerMode, WorkerView,
+    AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, Minutes, Money,
+    PlanningStatus, PlanningView, ProviderCommand, Qualifications, ReputationView, ReservationView,
+    TaskDefinition, UnixSeconds, WorkerMode,
 };
-use rand::RngExt;
 
-use super::{Effect, State, compare_scores, empty_score};
-use crate::{Error, Result, calendar, random_id, require};
+use super::{Effect, RustEngine, compare_scores, empty_score};
+use crate::{Error, Result, calendar, require};
 
-impl State {
+impl RustEngine {
     pub(super) fn root(&self, origin: AccountId32) -> Result<()> {
-        require(origin == self.info.root_account, "system_origin_required")
+        require(
+            origin == self.context.root_account,
+            "system_origin_required",
+        )
     }
 
     pub(super) fn qualifications(&self, qualifications: &Qualifications) -> Result<()> {
@@ -30,10 +34,7 @@ impl State {
         )
     }
 
-    pub(super) fn proposal_qualifications(
-        &self,
-        proposal: &generated_contracts::ProposalDefinition,
-    ) -> Result<()> {
+    pub(super) fn proposal_qualifications(&self, proposal: &ProposalTerms) -> Result<()> {
         for milestone in &proposal.milestones {
             for requirement in &milestone.requirements {
                 self.qualifications(&Qualifications {
@@ -45,7 +46,7 @@ impl State {
         Ok(())
     }
 
-    pub(super) fn worker_mut(&mut self, account: AccountId32) -> Result<&mut WorkerView> {
+    pub(super) fn worker_mut(&mut self, account: AccountId32) -> Result<&mut WorkerCore> {
         self.workers
             .get_mut(&account)
             .ok_or_else(|| Error::domain("worker_not_found"))
@@ -64,22 +65,63 @@ impl State {
         Ok(())
     }
 
+    #[cfg(test)]
     pub(super) fn apply(
         &mut self,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
     ) -> Result<Effect> {
+        // Component fixtures have no signed shell. Only this test path supplies
+        // a fixed context; production lowers the real verified envelope.
+        let compact = if matches!(
+            command,
+            ProviderCommand::RegisterWorker(_)
+                | ProviderCommand::CreateProject(_)
+                | ProviderCommand::CreateProposal { .. }
+                | ProviderCommand::UpdateProposal { .. }
+                | ProviderCommand::RequestProposalChanges { .. }
+                | ProviderCommand::UpsertCatalogEntry(_)
+                | ProviderCommand::CreateSkillRequest(_)
+                | ProviderCommand::CancelProject { .. }
+                | ProviderCommand::DisputePlanning { .. }
+        ) {
+            let call = generated_contracts::UnsignedContractCallV1::new(
+                generated_contracts::ProviderInstanceId::from_bytes([0; 16]),
+                generated_contracts::OperationId::from_bytes([0; 16]),
+                origin,
+                0,
+                generated_contracts::UnixSeconds::new(u64::MAX),
+                command.clone(),
+            )?;
+            crate::creation::compact_creation(&call)
+                .or_else(|| crate::proposal::compact_proposal(&call))
+                .or_else(|| crate::catalog_content::compact_catalog(&call))
+                .or_else(|| crate::catalog_content::compact_reason(&call))
+        } else {
+            None
+        };
+        self.apply_core(origin, compact.as_ref().unwrap_or(command), now)
+    }
+
+    pub(super) fn apply_core(
+        &mut self,
+        origin: AccountId32,
+        command: &ProviderCommand,
+        now: UnixSeconds,
+    ) -> Result<Effect> {
         let effect = match command {
-            ProviderCommand::RegisterWorker(request) => {
+            ProviderCommand::RegisterWorkerCore(request) => {
                 require(!self.workers.contains_key(&origin), "worker_exists")?;
                 self.qualifications(&request.qualifications)?;
-                let calendar_id = random_id()?;
+                let calendar_id = self.context.random_id();
                 self.workers.insert(
                     origin,
-                    WorkerView {
+                    WorkerCore {
                         account: origin,
-                        display_name: request.display_name.clone(),
+                        content: generated_contracts::provider_core::MetadataReferenceV1::Creation(
+                            request.content.clone(),
+                        ),
                         qualifications: request.qualifications.clone(),
                         mode: WorkerMode::Worker,
                         coordinator_eligible: false,
@@ -126,14 +168,14 @@ impl State {
                 self.worker_mut(request.account)?.coordinator_eligible = true;
                 Effect::new(DomainEventKind::CoordinatorPromoted, None, request.account)
             }
-            ProviderCommand::UpsertCatalogEntry(request) => {
-                self.upsert_catalog_entry(origin, request)?
+            ProviderCommand::UpsertCatalogEntryCore { kind, id, content } => {
+                self.upsert_catalog_entry(origin, *kind, *id, content)?
             }
             ProviderCommand::DeleteCatalogEntry(request) => {
                 self.delete_catalog_entry(request.kind, request.id, origin)?
             }
-            ProviderCommand::CreateSkillRequest(request) => {
-                self.create_skill_request(origin, request)?
+            ProviderCommand::CreateSkillRequestCore { role_ids, content } => {
+                self.create_skill_request(origin, role_ids, content)?
             }
             ProviderCommand::DecideSkillRequest(request) => {
                 self.decide_skill_request(origin, request)?
@@ -155,8 +197,8 @@ impl State {
                 self.compensation_policy = policy.clone();
                 Effect::new(DomainEventKind::CompensationPolicyUpdated, None, origin)
             }
-            ProviderCommand::CreateProject(request) => {
-                self.create_project(origin, &request.title, &request.description, now)?
+            ProviderCommand::CreateProjectCore(content) => {
+                self.create_project(origin, content.clone(), now)?
             }
             ProviderCommand::CreateDeposit(_)
             | ProviderCommand::ConfirmDeposit { .. }
@@ -228,8 +270,7 @@ impl State {
     fn create_project(
         &mut self,
         origin: AccountId32,
-        title: &str,
-        description: &str,
+        content: generated_contracts::provider_core::MetadataCommitmentV1,
         now: UnixSeconds,
     ) -> Result<Effect> {
         // Selection uses current capacity; approved execution reserves milestone coordination.
@@ -245,16 +286,23 @@ impl State {
             }
         }
         let coordinator = self.select(&candidates, WorkerMode::Coordinator)?;
-        let project_id = random_id()?;
+        let project_id = self.context.random_id();
+        // A generated-ID collision is infrastructure failure, never permission
+        // to replace an existing project or consume this operation's nonce.
+        if self.projects.contains_key(&project_id) {
+            return Err(Error {
+                code: "invalid_project_state",
+                status: axum::http::StatusCode::SERVICE_UNAVAILABLE,
+            });
+        }
         self.projects.insert(
             project_id,
-            ProjectView {
+            ProjectCore {
                 project_id,
                 created_at: Some(now),
                 client: origin,
                 coordinator,
-                title: title.into(),
-                description: description.into(),
+                content: generated_contracts::provider_core::MetadataReferenceV1::Creation(content),
                 planning: PlanningView {
                     revision: 0,
                     status: PlanningStatus::Accepted,
@@ -291,8 +339,11 @@ impl State {
         require(!project.cancelled, "project_cancelled")?;
         if project.active_dispute_id.is_some() {
             match command {
-                ProviderCommand::RespondDispute { .. } => {}
-                ProviderCommand::OpenDispute(_) | ProviderCommand::OpenDisputeWithComment(_) => {
+                ProviderCommand::RespondDispute { .. }
+                | ProviderCommand::RespondDisputeCommitted { .. } => {}
+                ProviderCommand::OpenDispute(_)
+                | ProviderCommand::OpenDisputeWithComment(_)
+                | ProviderCommand::OpenDisputeCommitted { .. } => {
                     return Err(super::disputes::DisputeError::AlreadyOpen.into());
                 }
                 _ => return Err(super::disputes::DisputeError::ProjectFrozen.into()),
@@ -353,15 +404,15 @@ impl State {
         let index = if winners.len() == 1 {
             0
         } else {
-            rand::rng().random_range(0..winners.len())
+            self.context.choose(winners.len())
         };
         Ok(winners[index])
     }
 
     pub(super) fn assign(
         &mut self,
-        project: &ProjectView,
-        milestone: &mut MilestoneView,
+        project: &ProjectCore,
+        milestone: &mut MilestoneCore,
         earlier_team: &BTreeSet<AccountId32>,
     ) -> Result<()> {
         let window = milestone.definition.window;

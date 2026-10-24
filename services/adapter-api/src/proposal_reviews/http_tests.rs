@@ -44,7 +44,11 @@ async fn proposal_reviews_persist_versions_comments_and_permissions_without_prov
     let proposal_id = proposal.proposal_id;
     let revision = proposal.revision;
     let request = json!({"expectedProposalRevision":revision,"expectedPresentationRevision":0,"milestones":[{"key":proposal.milestones[0].definition.key,"description":"Figma outcomes","requirements":[]} ]});
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     let server = Server::start(http::router(app.clone())).await?;
     let client = reqwest::Client::new();
     let url = format!(
@@ -240,7 +244,10 @@ async fn proposal_reviews_persist_versions_comments_and_permissions_without_prov
     );
     {
         let provider = fake.lock().await;
-        assert_eq!(provider.snapshot.projects, [project.clone()]);
+        assert_eq!(
+            provider.snapshot.projects,
+            [core_project(&project.clone(), info().provider_instance_id)?.0]
+        );
         assert_eq!(provider.submissions, 0);
         assert!(provider.snapshot.balances.is_empty());
     }
@@ -273,7 +280,11 @@ async fn proposal_reviews_persist_versions_comments_and_permissions_without_prov
     assert_eq!(retry.json::<ReviewComment>().await?, a);
     assert_eq!(write(&client,reqwest::Method::POST,&messages,&owner,&owner_cookie).json(&json!({"expectedProposalRevision":revision,"requestId":EntityId::from_bytes([44;16]),"message":"stale review"})).send().await?.status(),StatusCode::CONFLICT);
     {
-        fake.lock().await.snapshot.projects[0].proposals[0].title = "New definition".into();
+        let mut changed = project.clone();
+        changed.proposals[0].title = "New definition".into();
+        let updated = stage_project(&app, info().provider_instance_id, changed).await?;
+        fake.lock().await.snapshot.projects[0].proposals[0].content =
+            updated.proposals[0].content.clone();
     }
     assert!(
         !client
@@ -305,6 +316,35 @@ async fn proposal_reviews_persist_versions_comments_and_permissions_without_prov
             .items[0],
         a
     );
+    // Historical reads/retries require their stored snapshots, not today's text.
+    sqlx::query("DELETE FROM proposal_documents")
+        .execute(&restarted.db)
+        .await?;
+    assert_eq!(
+        client
+            .get(&messages)
+            .header(header::COOKIE, &owner_cookie)
+            .send()
+            .await?
+            .json::<CommentsPage>()
+            .await?
+            .items[0],
+        a
+    );
+    let retried = write(
+        &client,
+        reqwest::Method::POST,
+        &messages,
+        &owner,
+        &owner_cookie,
+    )
+    .json(&message)
+    .send()
+    .await?;
+    assert_eq!(retried.status(), StatusCode::OK);
+    assert_eq!(retried.json::<ReviewComment>().await?, a);
+    let current_revision = fake.lock().await.snapshot.projects[0].proposals[0].revision;
+    assert_eq!(write(&client,reqwest::Method::POST,&messages,&owner,&owner_cookie).json(&json!({"expectedProposalRevision":current_revision,"requestId":EntityId::from_bytes([95;16]),"message":"Needs current text"})).send().await?.status(),StatusCode::SERVICE_UNAVAILABLE);
     fake.lock().await.snapshot.info.provider_instance_id = ProviderInstanceId::from_bytes([99; 16]);
     assert!(
         client

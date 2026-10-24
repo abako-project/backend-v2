@@ -18,11 +18,11 @@ use generated_contracts::{AccountId32, EntityId, OperationId, SignedContractCall
 use serde::Deserialize;
 use tokio::sync::Semaphore;
 
-use crate::{Error, Provider, Result};
+use crate::{Error, Provider, ProviderApi, Result};
 
 #[derive(Clone)]
-struct App {
-    provider: Provider,
+struct App<P> {
+    provider: P,
     authorization: Arc<str>,
     permits: Arc<Semaphore>,
 }
@@ -30,6 +30,10 @@ struct App {
 /// Private HTTP router. Health is not privileged; all data and command routes
 /// require the service credential and must never be exposed by the public proxy.
 pub fn router(provider: Provider, service_token: &str) -> Result<Router> {
+    router_with_provider(provider, service_token)
+}
+/// Compose a whole-provider implementation behind the unchanged private API.
+pub fn router_with_provider<P: ProviderApi>(provider: P, service_token: &str) -> Result<Router> {
     if service_token.trim().len() < 32 || service_token.contains(['\r', '\n']) {
         return Err(Error::bad("invalid_service_token"));
     }
@@ -39,28 +43,37 @@ pub fn router(provider: Provider, service_token: &str) -> Result<Router> {
         permits: Arc::new(Semaphore::new(64)),
     };
     let private = Router::new()
-        .route("/internal/info", get(info))
-        .route("/internal/accounts/{account}/nonce", get(nonce))
-        .route("/internal/contracts/call", post(call))
-        .route("/internal/receipts/{operation_id}", get(receipt))
-        .route("/internal/events", get(events))
-        .route("/internal/snapshot", get(snapshot))
-        .route("/internal/catalog/skill-requests", get(skill_requests))
-        .route("/internal/disputes/{dispute_id}", get(dispute))
-        .route("/internal/bramp/deposits/{deposit_id}", get(deposit))
+        .route("/internal/info", get(info::<P>))
+        .route("/internal/accounts/{account}/nonce", get(nonce::<P>))
+        .route("/internal/contracts/call", post(call::<P>))
+        .route("/internal/receipts/{operation_id}", get(receipt::<P>))
+        .route("/internal/events", get(events::<P>))
+        .route("/internal/snapshot", get(snapshot::<P>))
+        .route("/internal/task-state", get(task_state::<P>))
+        .route("/internal/catalog/skill-requests", get(skill_requests::<P>))
+        .route("/internal/lifecycle-reasons", get(lifecycle_reasons::<P>))
+        .route("/internal/disputes/{dispute_id}", get(dispute::<P>))
+        .route("/internal/bramp/deposits/{deposit_id}", get(deposit::<P>))
         .route(
             "/internal/bramp/withdrawals/{withdrawal_id}",
-            get(withdrawal),
+            get(withdrawal::<P>),
         )
-        .route_layer(middleware::from_fn_with_state(state.clone(), authenticate));
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            authenticate::<P>,
+        ));
     Ok(private
         .route("/health", get(|| async { StatusCode::OK }))
-        .route("/ready", get(ready))
+        .route("/ready", get(ready::<P>))
         .layer(DefaultBodyLimit::max(1024 * 1024))
         .with_state(state))
 }
 
-async fn authenticate(State(state): State<App>, request: Request, next: Next) -> Response {
+async fn authenticate<P: ProviderApi>(
+    State(state): State<App<P>>,
+    request: Request,
+    next: Next,
+) -> Response {
     if request
         .headers()
         .get("authorization")
@@ -86,15 +99,24 @@ async fn authenticate(State(state): State<App>, request: Request, next: Next) ->
         .unwrap_or_else(|_| Error::internal().into_response())
 }
 
-async fn ready(State(state): State<App>) -> Result<StatusCode> {
+async fn ready<P: ProviderApi>(State(state): State<App<P>>) -> Result<StatusCode> {
     state.provider.info().await?;
     Ok(StatusCode::OK)
 }
-async fn info(State(state): State<App>) -> Result<impl IntoResponse> {
+async fn info<P: ProviderApi>(State(state): State<App<P>>) -> Result<impl IntoResponse> {
     Ok(Json(state.provider.info().await?))
 }
-async fn snapshot(State(state): State<App>) -> Result<impl IntoResponse> {
+async fn snapshot<P: ProviderApi>(State(state): State<App<P>>) -> Result<impl IntoResponse> {
     Ok(Json(state.provider.snapshot().await?))
+}
+
+async fn task_state<P: ProviderApi>(State(state): State<App<P>>) -> Result<impl IntoResponse> {
+    let inventory = state.provider.task_state().await?;
+    let bytes = tokio::task::spawn_blocking(move || serde_json::to_vec(&inventory))
+        .await
+        .map_err(|_| Error::internal())?
+        .map_err(|_| Error::internal())?;
+    Ok(([("content-type", "application/json")], bytes))
 }
 
 #[derive(Deserialize)]
@@ -103,16 +125,35 @@ struct SkillRequestsQuery {
     account: AccountId32,
 }
 
-async fn skill_requests(
-    State(state): State<App>,
+async fn skill_requests<P: ProviderApi>(
+    State(state): State<App<P>>,
     query: std::result::Result<Query<SkillRequestsQuery>, QueryRejection>,
 ) -> Result<impl IntoResponse> {
     let Query(query) = query.map_err(|_| Error::bad("invalid_skill_requests_query"))?;
     Ok(Json(state.provider.skill_requests(query.account).await?))
 }
 
-async fn dispute(
-    State(state): State<App>,
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ReasonQuery {
+    after: u64,
+    limit: usize,
+}
+async fn lifecycle_reasons<P: ProviderApi>(
+    State(state): State<App<P>>,
+    query: std::result::Result<Query<ReasonQuery>, QueryRejection>,
+) -> Result<impl IntoResponse> {
+    let Query(query) = query.map_err(|_| Error::bad("invalid_reason_query"))?;
+    Ok(Json(
+        state
+            .provider
+            .lifecycle_reasons(query.after, query.limit)
+            .await?,
+    ))
+}
+
+async fn dispute<P: ProviderApi>(
+    State(state): State<App<P>>,
     Path(id): Path<generated_contracts::EntityId>,
 ) -> Result<impl IntoResponse> {
     state.provider.dispute(id).await.map(Json).map_err(|error| {
@@ -133,8 +174,8 @@ struct BrampReadQuery {
     account: AccountId32,
 }
 
-async fn deposit(
-    State(state): State<App>,
+async fn deposit<P: ProviderApi>(
+    State(state): State<App<P>>,
     Path(id): Path<EntityId>,
     Query(query): Query<BrampReadQuery>,
 ) -> Result<impl IntoResponse> {
@@ -147,8 +188,8 @@ async fn deposit(
     ))
 }
 
-async fn withdrawal(
-    State(state): State<App>,
+async fn withdrawal<P: ProviderApi>(
+    State(state): State<App<P>>,
     Path(id): Path<EntityId>,
     Query(query): Query<BrampReadQuery>,
 ) -> Result<impl IntoResponse> {
@@ -173,15 +214,15 @@ fn bramp_read_error(error: Error) -> Error {
         _ => error,
     }
 }
-async fn nonce(
-    State(state): State<App>,
+async fn nonce<P: ProviderApi>(
+    State(state): State<App<P>>,
     path: std::result::Result<Path<AccountId32>, PathRejection>,
 ) -> Result<impl IntoResponse> {
     let Path(account) = path.map_err(|_| Error::bad("invalid_account_id"))?;
     Ok(Json(state.provider.nonce(account).await?))
 }
-async fn receipt(
-    State(state): State<App>,
+async fn receipt<P: ProviderApi>(
+    State(state): State<App<P>>,
     path: std::result::Result<Path<OperationId>, PathRejection>,
 ) -> Result<impl IntoResponse> {
     let Path(operation) = path.map_err(|_| Error::bad("invalid_operation_id"))?;
@@ -206,15 +247,15 @@ struct EventsQuery {
 fn page_size() -> usize {
     100
 }
-async fn events(
-    State(state): State<App>,
+async fn events<P: ProviderApi>(
+    State(state): State<App<P>>,
     query: std::result::Result<Query<EventsQuery>, QueryRejection>,
 ) -> Result<impl IntoResponse> {
     let Query(query) = query.map_err(|_| Error::bad("invalid_events_query"))?;
     Ok(Json(state.provider.events(query.after, query.limit).await?))
 }
-async fn call(
-    State(state): State<App>,
+async fn call<P: ProviderApi>(
+    State(state): State<App<P>>,
     call: std::result::Result<Json<SignedContractCallV1>, JsonRejection>,
 ) -> Result<impl IntoResponse> {
     let Json(call) = call.map_err(|_| Error::bad("invalid_contract_json"))?;

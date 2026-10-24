@@ -355,3 +355,172 @@ fn compensation_uses_provider_percentage_and_worker_minutes()
     assert!(serde_json::from_str::<CompensationPolicy>(r#"{"coordinatorPercent":1.5}"#).is_err());
     Ok(())
 }
+
+#[test]
+fn compact_creation_bridge_is_append_only_and_binds_the_existing_operation()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::{MetadataCommitmentV1, RegisterWorkerCoreRequest};
+    let mut call = sample_call()?;
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([4; 32]),
+    };
+    assert_eq!(call.command.encode()[0], 9, "legacy Project-creation index");
+    let commands = [
+        ProviderCommand::RegisterWorkerCore(RegisterWorkerCoreRequest {
+            content: content.clone(),
+            qualifications: Qualifications {
+                role_ids: vec![],
+                skill_ids: vec![],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        }),
+        ProviderCommand::CreateProjectCore(content),
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 49 + index);
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+    }
+    assert_eq!(
+        call.command.encoded_size(),
+        49,
+        "Project creation carries no title/description"
+    );
+    call.operation_id = OperationId::from_bytes([9; 16]);
+    assert!(
+        call.signable_bytes().is_err(),
+        "metadata must not reuse another operation's scope"
+    );
+    Ok(())
+}
+
+#[test]
+fn proposal_bridge_preserves_indexes_numeric_validation_and_operation_binding()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::{MetadataCommitmentV1, MilestoneTerms, ProposalTerms};
+    let mut call = sample_call()?;
+    let week = Week::new(2026, 40)?;
+    let terms = ProposalTerms {
+        milestones: vec![MilestoneTerms {
+            key: 1,
+            window: WeekWindow::new(week, week)?,
+            coordinator_fee: Money::ZERO,
+            coordinator_minutes: Minutes::new(0),
+            requirements: vec![],
+        }],
+    };
+    let project_id = EntityId::from_bytes([1; 16]);
+    let proposal_id = EntityId::from_bytes([2; 16]);
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([3; 32]),
+    };
+    let commands = [
+        ProviderCommand::CreateProposalCore {
+            project_id,
+            proposal: terms.clone(),
+            content: content.clone(),
+        },
+        ProviderCommand::UpdateProposalCore {
+            project_id,
+            proposal_id,
+            proposal: terms.clone(),
+            content: content.clone(),
+        },
+        ProviderCommand::RequestProposalChangesCore {
+            project_id,
+            proposal_id,
+            content,
+        },
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 51 + index);
+        assert_eq!(command.project_id(), Some(project_id));
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+        let mut other = call.clone();
+        other.operation_id = OperationId::from_bytes([99; 16]);
+        assert!(other.signable_bytes().is_err());
+    }
+    let mut duplicate = terms;
+    duplicate.milestones.push(duplicate.milestones[0].clone());
+    assert!(duplicate.validate().is_err());
+    assert!(ProposalTerms { milestones: vec![] }.validate().is_err());
+    Ok(())
+}
+
+#[test]
+fn catalog_reason_bridge_preserves_indexes_validation_and_operation_binding()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::MetadataCommitmentV1;
+    let mut call = sample_call()?;
+    let project_id = EntityId::from_bytes([1; 16]);
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([3; 32]),
+    };
+    let commands = [
+        ProviderCommand::UpsertCatalogEntryCore {
+            kind: CatalogKind::Skill,
+            id: 99,
+            content: content.clone(),
+        },
+        ProviderCommand::CreateSkillRequestCore {
+            role_ids: vec![1],
+            content: content.clone(),
+        },
+        ProviderCommand::CancelProjectCore {
+            project_id,
+            content: content.clone(),
+        },
+        ProviderCommand::DisputePlanningCore {
+            project_id,
+            content: content.clone(),
+        },
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 54 + index);
+        assert_eq!(
+            command.project_id(),
+            if index >= 2 { Some(project_id) } else { None }
+        );
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+        let mut other = call.clone();
+        other.operation_id = OperationId::from_bytes([99; 16]);
+        assert!(other.signable_bytes().is_err());
+    }
+    assert!(
+        ProviderCommand::UpsertCatalogEntryCore {
+            kind: CatalogKind::Skill,
+            id: 0,
+            content: content.clone()
+        }
+        .validate()
+        .is_err()
+    );
+    for role_ids in [vec![], vec![0], vec![1, 1]] {
+        assert!(
+            ProviderCommand::CreateSkillRequestCore {
+                role_ids,
+                content: content.clone()
+            }
+            .validate()
+            .is_err()
+        );
+    }
+    Ok(())
+}

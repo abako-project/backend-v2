@@ -36,6 +36,21 @@ mod proposal_reviews;
 #[path = "submission_presentations_tests.rs"]
 mod submission_presentations;
 
+#[path = "catalog_metadata_tests.rs"]
+mod catalog_documents;
+#[path = "creation_metadata_tests.rs"]
+mod creation_metadata;
+#[path = "proposal_metadata_tests.rs"]
+mod proposal_documents;
+#[path = "reason_metadata_tests.rs"]
+mod reason_documents;
+#[path = "task_execution_tests.rs"]
+mod task_execution;
+#[path = "task_history_tests.rs"]
+mod task_history;
+#[path = "task_state_tests.rs"]
+mod task_state;
+
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
 
@@ -67,15 +82,20 @@ impl Server {
     }
 }
 struct Fake {
-    snapshot: ProviderSnapshot,
+    snapshot: generated_contracts::provider_core::CoreSnapshotV4,
     jobs: BTreeMap<OperationId, SigningJobView>,
     receipts: BTreeMap<OperationId, OperationReceipt>,
     nonces: BTreeMap<AccountId32, u64>,
     submissions: usize,
     lose_reply: bool,
     fail_before_execution: bool,
+    catalog_requests: Vec<generated_contracts::provider_core::SkillRequestCore>,
+    reasons: Vec<generated_contracts::provider_core::ReasonCore>,
+    fail_catalog_completion: bool,
+    snapshot_failures: usize,
+    next_outcome: Option<ExecutionOutcome>,
 }
-fn info() -> ProviderInfo {
+pub(crate) fn info() -> ProviderInfo {
     ProviderInfo {
         provider_instance_id: ProviderInstanceId::from_bytes([1; 16]),
         root_account: AccountId32::from_bytes([9; 32]),
@@ -84,9 +104,10 @@ fn info() -> ProviderInfo {
 }
 fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
     Ok(Arc::new(Mutex::new(Fake {
-        snapshot: ProviderSnapshot {
+        snapshot: generated_contracts::provider_core::CoreSnapshotV4 {
+            schema_version: 4,
             info: info(),
-            catalog: CatalogView {
+            catalog: generated_contracts::provider_core::CatalogCore {
                 roles: vec![],
                 skills: vec![],
                 skill_roles: vec![],
@@ -103,6 +124,11 @@ fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
         submissions: 0,
         lose_reply: false,
         fail_before_execution: false,
+        catalog_requests: vec![],
+        reasons: vec![],
+        fail_catalog_completion: false,
+        snapshot_failures: 0,
+        next_outcome: None,
     })))
 }
 fn internal(fake: Arc<Mutex<Fake>>) -> Router {
@@ -138,7 +164,9 @@ fn internal(fake: Arc<Mutex<Fake>>) -> Router {
         .route(
             "/internal/snapshot",
             get(|State(fake): State<Arc<Mutex<Fake>>>| async move {
-                Json(fake.lock().await.snapshot.clone())
+                let mut fake = fake.lock().await;
+                if fake.snapshot_failures > 0 { fake.snapshot_failures -= 1; return StatusCode::SERVICE_UNAVAILABLE.into_response(); }
+                Json(fake.snapshot.clone()).into_response()
             }),
         )
         .route(
@@ -153,6 +181,18 @@ fn internal(fake: Arc<Mutex<Fake>>) -> Router {
                 },
             ),
         )
+        .route("/internal/catalog/skill-requests", get(|State(fake): State<Arc<Mutex<Fake>>>, axum::extract::Query(query): axum::extract::Query<BTreeMap<String,String>>| async move {
+            let fake=fake.lock().await;
+            let account=query.get("account").and_then(|v|v.parse::<AccountId32>().ok());
+            Json(fake.catalog_requests.iter().filter(|r|account==Some(fake.snapshot.info.root_account)||account==Some(r.requester)).cloned().collect::<Vec<_>>())
+        }))
+        .route("/internal/lifecycle-reasons", get(|State(fake): State<Arc<Mutex<Fake>>>, axum::extract::Query(query): axum::extract::Query<BTreeMap<String,String>>| async move {
+            let fake=fake.lock().await;
+            let after=query.get("after").and_then(|v|v.parse::<usize>().ok()).unwrap_or(0);
+            let limit=query.get("limit").and_then(|v|v.parse::<usize>().ok()).unwrap_or(256);
+            let reasons=fake.reasons.iter().skip(after).take(limit).cloned().collect::<Vec<_>>();
+            Json(generated_contracts::provider_core::ReasonPageV1{generation:fake.snapshot.info.provider_instance_id,start:after as u64,next:(after+reasons.len()) as u64,total:fake.reasons.len() as u64,reasons})
+        }))
         .route("/internal/signing-jobs", post(sign))
         .route(
             "/internal/signing-jobs/{operation}",
@@ -227,13 +267,22 @@ async fn submit(
     }
     assert_eq!(call.nonce, *fake.nonces.get(&call.origin).unwrap_or(&0));
     fake.nonces.insert(call.origin, call.nonce + 1);
+    let outcome = fake
+        .next_outcome
+        .take()
+        .unwrap_or(ExecutionOutcome::Success);
+    let entity = if outcome == ExecutionOutcome::Success {
+        catalog_documents::apply_fixture_facts(&mut fake, &call)
+    } else {
+        None
+    };
     let receipt = OperationReceipt {
         operation_id: call.operation_id,
         provider_instance_id: call.provider_instance_id,
         origin: call.origin,
         nonce: call.nonce,
-        outcome: ExecutionOutcome::Success,
-        created_entity_id: None,
+        outcome,
+        created_entity_id: entity,
         first_event_cursor: None,
         last_event_cursor: None,
         finalized_at: UnixSeconds::new(u64::try_from(now()?).map_err(|_| Error::Internal)?),
@@ -883,27 +932,34 @@ async fn only_client_and_assigned_coordinator_can_cancel_or_dispute() -> TestRes
     let (coordinator, _) = register(&app, "coordinator").await?;
     let (outsider, _) = register(&app, "outsider").await?;
     let project_id = EntityId::from_bytes([8; 16]);
-    fake.lock().await.snapshot.projects.push(ProjectView {
-        completed: false,
-        evaluations: Vec::new(),
-        project_id,
-        client: client.view.account_id,
-        coordinator: coordinator.view.account_id,
-        created_at: Some(UnixSeconds::new(1_788_912_000)),
-        title: "Permission boundary".into(),
-        description: String::new(),
-        planning: PlanningView {
-            revision: 0,
-            status: PlanningStatus::AwaitingQuote,
-            quote: None,
-            escrow: Money::ZERO,
-            frozen: false,
-        },
-        proposals: vec![],
-        execution_escrow: Money::ZERO,
-        cancelled: false,
-        active_dispute_id: None,
-    });
+    fake.lock().await.snapshot.projects.push(
+        stage_project(
+            &app,
+            info().provider_instance_id,
+            ProjectView {
+                completed: false,
+                evaluations: Vec::new(),
+                project_id,
+                client: client.view.account_id,
+                coordinator: coordinator.view.account_id,
+                created_at: Some(UnixSeconds::new(1_788_912_000)),
+                title: "Permission boundary".into(),
+                description: String::new(),
+                planning: PlanningView {
+                    revision: 0,
+                    status: PlanningStatus::AwaitingQuote,
+                    quote: None,
+                    escrow: Money::ZERO,
+                    frozen: false,
+                },
+                proposals: vec![],
+                execution_escrow: Money::ZERO,
+                cancelled: false,
+                active_dispute_id: None,
+            },
+        )
+        .await?,
+    );
     let request = ReasonRequest {
         reason: "Review required".into(),
     };
@@ -1091,15 +1147,20 @@ async fn postgres_restart_preserves_queue_and_unread_notifications() -> TestResu
 #[tokio::test]
 async fn signup_catalog_is_public_and_contact_email_is_private() -> TestResult {
     let state = fake()?;
-    state
-        .lock()
-        .await
-        .snapshot
-        .catalog
-        .roles
-        .push(serde_json::from_value(
-            serde_json::json!({"id":2,"name":"frontend","fixed":true}),
-        )?);
+    let seed = generated_contracts::provider_core::catalog_seed_v1()
+        .into_iter()
+        .find(|entry| entry.kind == CatalogKind::Role && entry.id == 2)
+        .ok_or("role seed")?;
+    let record = seed.record(info().provider_instance_id);
+    state.lock().await.snapshot.catalog.roles.push(
+        generated_contracts::provider_core::CatalogEntryCore {
+            id: 2,
+            fixed: false,
+            content: generated_contracts::provider_core::CatalogReferenceV1::Seed(
+                PayloadHash::from_bytes(hash(&record.hash_input())),
+            ),
+        },
+    );
     let internal = Server::start(internal(state)).await?;
     let app = app(&internal).await?;
     let adapter = Server::start(http::router(app.clone())).await?;
@@ -1314,7 +1375,11 @@ async fn notifications_enrich_verified_author_and_visible_project_without_privat
     project.client = owner.view.account_id;
     project.coordinator = coordinator.view.account_id;
     project.title = "Real project title".into();
-    fake.lock().await.snapshot.projects.push(project.clone());
+    fake.lock()
+        .await
+        .snapshot
+        .projects
+        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
     sqlx::query("INSERT INTO worker_profiles(principal_id,name,contact_email,languages,image_data,image_mime_type,updated_at) VALUES($1,'Real coordinator','private@example.test',ARRAY[]::text[],$2,'image/png',1)")
         .bind(coordinator.view.principal_id.to_string()).bind(vec![1_u8,2,3]).execute(&app.db).await?;
     let event = DomainEvent {
@@ -1385,3 +1450,216 @@ mod dispute_conversations;
 
 #[path = "platform/http_tests.rs"]
 mod platform;
+
+#[path = "evidence_tests.rs"]
+mod evidence_commitments;
+
+#[path = "content_copy_tests.rs"]
+mod content_copies;
+
+// Synthetic retained-entity fixtures explicitly stage API-owned preimages.
+// They do not invent old signed creation operations.
+pub(crate) fn core_project(
+    project: &ProjectView,
+    generation: ProviderInstanceId,
+) -> Result<
+    (
+        generated_contracts::provider_core::ProjectCore,
+        generated_contracts::provider_core::CreationMetadataRecordV1,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    use generated_contracts::provider_core::*;
+    let record = CreationMetadataRecordV1 {
+        generation,
+        provenance: MetadataProvenanceV1::Migration {
+            source_archive_hash: PayloadHash::from_bytes([88; 32]),
+            entity: MetadataEntityV1::Project(project.project_id),
+        },
+        content: CreationContentV1::ProjectText {
+            title: project.title.clone(),
+            description: project.description.clone(),
+        },
+    };
+    let mut value = serde_json::to_value(project)?;
+    let object = value.as_object_mut().ok_or("project fixture object")?;
+    object.remove("title");
+    object.remove("description");
+    object.insert(
+        "proposals".into(),
+        serde_json::to_value(core_proposals(project, generation)?.0)?,
+    );
+    object.insert(
+        "content".into(),
+        serde_json::to_value(MetadataReferenceV1::Migration(PayloadHash::from_bytes(
+            hash(&record.hash_input()),
+        )))?,
+    );
+    Ok((serde_json::from_value(value)?, record))
+}
+async fn stage_project(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: ProjectView,
+) -> Result<generated_contracts::provider_core::ProjectCore, Box<dyn std::error::Error>> {
+    let (core, record) = core_project(&project, generation)?;
+    let mut tx = app.db.begin().await?;
+    crate::creation_metadata::insert(
+        &mut tx,
+        generation,
+        false,
+        hash(&record.hash_input()),
+        &serde_json::to_string(&record)?,
+    )
+    .await?;
+    for record in core_proposals(&project, generation)?.1 {
+        crate::proposal_metadata::insert(
+            &mut tx,
+            generation,
+            hash(&record.hash_input()),
+            &serde_json::to_string(&record)?,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(core)
+}
+async fn stage_worker(
+    app: &App,
+    generation: ProviderInstanceId,
+    worker: WorkerView,
+) -> Result<generated_contracts::provider_core::WorkerCore, Box<dyn std::error::Error>> {
+    use generated_contracts::provider_core::*;
+    let record = CreationMetadataRecordV1 {
+        generation,
+        provenance: MetadataProvenanceV1::Migration {
+            source_archive_hash: PayloadHash::from_bytes([88; 32]),
+            entity: MetadataEntityV1::Worker(worker.account),
+        },
+        content: CreationContentV1::WorkerName {
+            display_name: worker.display_name.clone(),
+        },
+    };
+    let mut value = serde_json::to_value(worker)?;
+    let object = value.as_object_mut().ok_or("worker fixture object")?;
+    object.remove("displayName");
+    object.insert(
+        "content".into(),
+        serde_json::to_value(MetadataReferenceV1::Migration(PayloadHash::from_bytes(
+            hash(&record.hash_input()),
+        )))?,
+    );
+    let mut tx = app.db.begin().await?;
+    crate::creation_metadata::insert(
+        &mut tx,
+        generation,
+        true,
+        hash(&record.hash_input()),
+        &serde_json::to_string(&record)?,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(serde_json::from_value(value)?)
+}
+
+fn core_proposals(
+    project: &ProjectView,
+    generation: ProviderInstanceId,
+) -> Result<
+    (
+        Vec<generated_contracts::provider_core::ProposalCore>,
+        Vec<generated_contracts::provider_core::ProposalMetadataRecordV1>,
+    ),
+    Box<dyn std::error::Error>,
+> {
+    use generated_contracts::provider_core::*;
+    let mut records = Vec::new();
+    let mut proposals = Vec::new();
+    for proposal in &project.proposals {
+        let definition = ProposalDefinition {
+            title: proposal.title.clone(),
+            description: proposal.description.clone(),
+            milestones: proposal
+                .milestones
+                .iter()
+                .map(|m| m.definition.clone())
+                .collect(),
+        };
+        let record = ProposalMetadataRecordV1 {
+            generation,
+            project_id: project.project_id,
+            provenance: ProposalProvenanceV1::Migration {
+                source_archive_hash: PayloadHash::from_bytes([88; 32]),
+                proposal_id: proposal.proposal_id,
+            },
+            content: ProposalContentV1::Definition(definition),
+        };
+        let content = ProposalContentReferenceV1::Migration(PayloadHash::from_bytes(hash(
+            &record.hash_input(),
+        )));
+        records.push(record);
+        let change = proposal.change_request.as_ref().map(|text| {
+            let record = ProposalMetadataRecordV1 {
+                generation,
+                project_id: project.project_id,
+                provenance: ProposalProvenanceV1::Migration {
+                    source_archive_hash: PayloadHash::from_bytes([88; 32]),
+                    proposal_id: proposal.proposal_id,
+                },
+                content: ProposalContentV1::ChangeRequest(text.clone()),
+            };
+            let reference = ProposalContentReferenceV1::Migration(PayloadHash::from_bytes(hash(
+                &record.hash_input(),
+            )));
+            records.push(record);
+            reference
+        });
+        let mut value = serde_json::to_value(proposal)?;
+        let object = value.as_object_mut().ok_or("proposal fixture")?;
+        object.remove("title");
+        object.remove("description");
+        object.insert("content".into(), serde_json::to_value(content)?);
+        object.insert("changeRequest".into(), serde_json::to_value(change)?);
+        for milestone in object
+            .get_mut("milestones")
+            .and_then(serde_json::Value::as_array_mut)
+            .ok_or("milestones fixture")?
+        {
+            milestone["definition"]
+                .as_object_mut()
+                .ok_or("definition fixture")?
+                .remove("title");
+        }
+        proposals.push(serde_json::from_value(value)?);
+    }
+    Ok((proposals, records))
+}
+fn core_case(
+    case: DisputeView,
+) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
+    let mut value = serde_json::to_value(case)?;
+    value["milestone"]["definition"]
+        .as_object_mut()
+        .ok_or(Error::Internal)?
+        .remove("title");
+    Ok(serde_json::from_value(value)?)
+}
+
+async fn stage_proposal_documents(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: &ProjectView,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let mut tx = app.db.begin().await?;
+    for record in core_proposals(project, generation)?.1 {
+        crate::proposal_metadata::insert(
+            &mut tx,
+            generation,
+            hash(&record.hash_input()),
+            &serde_json::to_string(&record)?,
+        )
+        .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}

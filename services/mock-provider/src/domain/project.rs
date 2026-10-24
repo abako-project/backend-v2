@@ -1,31 +1,107 @@
+use generated_contracts::provider_core::ProjectCore;
+use generated_contracts::provider_core::{
+    MilestoneCore, ProposalContentReferenceV1, ProposalCore, ProposalTerms,
+};
 use std::collections::BTreeSet;
 
 use chrono::{Duration, NaiveDate, Weekday};
 
 use generated_contracts::{
-    AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, MilestoneView,
-    Money, PlanningStatus, ProjectView, ProposalDefinition, ProposalStatus, ProposalView,
-    ProviderCommand, TaskStorageView, TaskView, TeamRating, UnixSeconds,
+    AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, Money,
+    PlanningStatus, ProposalStatus, ProviderCommand, TaskStorageView, TaskView, TeamRating,
+    UnixSeconds,
 };
 
-use super::{Effect, RecordedReason, State, add_rating};
-use crate::{Error, Result, random_id, require};
+use super::{Effect, RecordedReason, RustEngine, add_rating};
+use crate::{Error, Result, require};
 
 type Transition = (DomainEventKind, Option<EntityId>);
 
-impl State {
+impl RustEngine {
     #[allow(
         clippy::too_many_lines,
         reason = "Keep explicit command dispatch together; business logic remains in domain handlers."
     )]
     pub(super) fn project_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
     ) -> Result<Effect> {
         let transition = match command {
+            ProviderCommand::SubmitMilestoneCommitted {
+                milestone_id,
+                evidence,
+                worker_ratings,
+                ..
+            } => {
+                let id = super::submissions::submit(
+                    &self.context,
+                    project,
+                    origin,
+                    *milestone_id,
+                    Some(generated_contracts::EvidenceRecordReferenceV1::Committed(
+                        evidence.clone(),
+                    )),
+                    worker_ratings.as_deref(),
+                    now,
+                )?;
+                Ok((DomainEventKind::MilestoneCompletionRequested, Some(id)))
+            }
+            ProviderCommand::RejectMilestoneCommitted {
+                milestone_id,
+                submission_id,
+                evidence,
+                ..
+            } => {
+                super::submissions::reject(
+                    project,
+                    origin,
+                    *milestone_id,
+                    *submission_id,
+                    generated_contracts::EvidenceRecordReferenceV1::Committed(evidence.clone()),
+                    now,
+                )?;
+                Ok((
+                    DomainEventKind::MilestoneCompletionRejected,
+                    Some(*submission_id),
+                ))
+            }
+            ProviderCommand::OpenDisputeCommitted {
+                milestone_id,
+                rejected_submission_id,
+                evidence,
+                ..
+            } => {
+                let id = self.open_case(
+                    project,
+                    origin,
+                    *milestone_id,
+                    *rejected_submission_id,
+                    Some(generated_contracts::EvidenceRecordReferenceV1::Committed(
+                        evidence.clone(),
+                    )),
+                    None,
+                    now,
+                )?;
+                Ok((DomainEventKind::DisputeOpened, Some(id)))
+            }
+            ProviderCommand::RespondDisputeCommitted {
+                dispute_id,
+                evidence,
+                ..
+            } => {
+                self.respond_dispute(
+                    project,
+                    origin,
+                    *dispute_id,
+                    generated_contracts::EvidenceRecordReferenceV1::Committed(evidence.clone()),
+                    now,
+                )?;
+                Ok((DomainEventKind::DisputeResponseAdded, Some(*dispute_id)))
+            }
+
             ProviderCommand::EvaluateProject { request, .. } => {
                 self.evaluate_project(project, origin, request, now)?;
                 Ok((DomainEventKind::ProjectEvaluated, Some(project.project_id)))
@@ -66,7 +142,7 @@ impl State {
                     origin,
                     *milestone_id,
                     *submission_id,
-                    request,
+                    request.evidence.clone().into(),
                     now,
                 )?;
                 Ok((
@@ -87,7 +163,13 @@ impl State {
                 request,
                 ..
             } => {
-                self.respond_dispute(project, origin, *dispute_id, request, now)?;
+                self.respond_dispute(
+                    project,
+                    origin,
+                    *dispute_id,
+                    request.evidence.clone().into(),
+                    now,
+                )?;
                 Ok((DomainEventKind::DisputeResponseAdded, Some(*dispute_id)))
             }
             ProviderCommand::QuotePlanning { .. }
@@ -95,19 +177,20 @@ impl State {
             | ProviderCommand::AcceptPlanningDelivery { .. } => {
                 self.planning_command(project, origin, command)
             }
-            ProviderCommand::CreateProposal { .. }
-            | ProviderCommand::UpdateProposal { .. }
+            ProviderCommand::CreateProposalCore { .. }
+            | ProviderCommand::UpdateProposalCore { .. }
             | ProviderCommand::DeleteProposal { .. }
             | ProviderCommand::SetProposalDelivery { .. } => {
                 self.draft_proposal_command(project, origin, command)
             }
             ProviderCommand::SubmitProposal { .. }
             | ProviderCommand::ApproveExecution { .. }
-            | ProviderCommand::RequestProposalChanges { .. }
+            | ProviderCommand::RequestProposalChangesCore { .. }
             | ProviderCommand::WithdrawProposal { .. } => {
                 self.proposal_review_command(project, origin, command)
             }
-            ProviderCommand::CancelProject { .. } | ProviderCommand::DisputePlanning { .. } => {
+            ProviderCommand::CancelProjectCore { .. }
+            | ProviderCommand::DisputePlanningCore { .. } => {
                 self.lifecycle_command(project, origin, command, now)
             }
             ProviderCommand::CreateTask { .. }
@@ -130,7 +213,7 @@ impl State {
 
     fn planning_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
     ) -> Result<Transition> {
@@ -161,12 +244,14 @@ impl State {
 
     fn draft_proposal_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
     ) -> Result<Transition> {
         let (kind, proposal_id) = match command {
-            ProviderCommand::CreateProposal { proposal, .. } => {
+            ProviderCommand::CreateProposalCore {
+                proposal, content, ..
+            } => {
                 coordinator(project, origin)?;
                 planning_active(project)?;
                 self.proposal_qualifications(proposal)?;
@@ -174,23 +259,23 @@ impl State {
                 for milestone in &mut proposal.milestones {
                     milestone.allocate_budget(&self.compensation_policy)?;
                 }
-                let proposal_id = random_id()?;
-                project.proposals.push(ProposalView {
+                let proposal_id = self.context.random_id();
+                project.proposals.push(ProposalCore {
                     proposal_id,
                     revision: 0,
-                    title: proposal.title.clone(),
-                    description: proposal.description.clone(),
+                    content: ProposalContentReferenceV1::Signed(content.clone()),
                     status: ProposalStatus::Draft,
-                    milestones: make_milestones(&proposal, &[])?,
+                    milestones: make_milestones(&self.context, &proposal, &[])?,
                     change_request: None,
                     delivery: None,
                     compensation_policy: Some(self.compensation_policy.clone()),
                 });
                 (DomainEventKind::ProposalCreated, proposal_id)
             }
-            ProviderCommand::UpdateProposal {
+            ProviderCommand::UpdateProposalCore {
                 proposal_id,
                 proposal,
+                content,
                 ..
             } => {
                 coordinator(project, origin)?;
@@ -205,10 +290,10 @@ impl State {
                     current.status == ProposalStatus::Draft,
                     "proposal_not_draft",
                 )?;
-                current.milestones = make_milestones(&proposal, &current.milestones)?;
+                current.milestones =
+                    make_milestones(&self.context, &proposal, &current.milestones)?;
                 current.compensation_policy = Some(self.compensation_policy.clone());
-                current.title.clone_from(&proposal.title);
-                current.description.clone_from(&proposal.description);
+                current.content = ProposalContentReferenceV1::Signed(content.clone());
                 bump(&mut current.revision)?;
                 (DomainEventKind::ProposalUpdated, *proposal_id)
             }
@@ -247,7 +332,7 @@ impl State {
 
     fn proposal_review_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
     ) -> Result<Transition> {
@@ -305,9 +390,9 @@ impl State {
                 self.approve_execution(project, origin, *proposal_id, *expected_revision)?;
                 (DomainEventKind::ExecutionApproved, *proposal_id)
             }
-            ProviderCommand::RequestProposalChanges {
+            ProviderCommand::RequestProposalChangesCore {
                 proposal_id,
-                request,
+                content,
                 ..
             } => {
                 client(project, origin)?;
@@ -317,7 +402,7 @@ impl State {
                     "proposal_not_pending",
                 )?;
                 proposal.status = ProposalStatus::Draft;
-                proposal.change_request = Some(request.reference.clone());
+                proposal.change_request = Some(ProposalContentReferenceV1::Signed(content.clone()));
                 bump(&mut proposal.revision)?;
                 if project.planning.status == PlanningStatus::Delivered {
                     project.planning.status = PlanningStatus::Accepted;
@@ -332,7 +417,7 @@ impl State {
 
     fn approve_execution(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         proposal_id: EntityId,
         expected_revision: u64,
@@ -386,20 +471,20 @@ impl State {
 
     fn lifecycle_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
     ) -> Result<Transition> {
         match command {
-            ProviderCommand::CancelProject { request, .. } => {
+            ProviderCommand::CancelProjectCore { content, .. } => {
                 participant(project, origin)?;
                 require(!project.completed, "project_completed")?;
                 self.record_reason(
                     project.project_id,
                     None,
                     origin,
-                    request.reason.clone(),
+                    content.clone(),
                     now,
                     DomainEventKind::ProjectCancelled,
                 );
@@ -415,7 +500,7 @@ impl State {
                 }
                 Ok((DomainEventKind::ProjectCancelled, Some(project.project_id)))
             }
-            ProviderCommand::DisputePlanning { request, .. } => {
+            ProviderCommand::DisputePlanningCore { content, .. } => {
                 participant(project, origin)?;
                 require(
                     matches!(
@@ -430,7 +515,7 @@ impl State {
                     project.project_id,
                     None,
                     origin,
-                    request.reason.clone(),
+                    content.clone(),
                     now,
                     DomainEventKind::PlanningDisputed,
                 );
@@ -446,7 +531,7 @@ impl State {
         project_id: EntityId,
         milestone_id: Option<EntityId>,
         origin: AccountId32,
-        reason: String,
+        content: generated_contracts::provider_core::MetadataCommitmentV1,
         occurred_at: UnixSeconds,
         kind: DomainEventKind,
     ) {
@@ -454,7 +539,7 @@ impl State {
             project_id,
             milestone_id,
             origin,
-            reason,
+            content: generated_contracts::provider_core::ReasonReferenceV1::Write(content),
             occurred_at,
             kind,
         });
@@ -462,7 +547,7 @@ impl State {
 
     fn task_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
@@ -562,7 +647,7 @@ impl State {
 
     fn milestone_command(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
         now: UnixSeconds,
@@ -574,10 +659,11 @@ impl State {
                 ..
             } => {
                 let id = super::submissions::submit(
+                    &self.context,
                     project,
                     origin,
                     *milestone_id,
-                    request.deliverable.clone(),
+                    request.deliverable.clone().map(Into::into),
                     None,
                     now,
                 )?;
@@ -594,10 +680,11 @@ impl State {
                 ..
             } => {
                 let id = super::submissions::submit(
+                    &self.context,
                     project,
                     origin,
                     *milestone_id,
-                    Some(request.deliverable.clone()),
+                    Some(request.deliverable.clone().into()),
                     Some(&request.worker_ratings),
                     now,
                 )?;
@@ -609,6 +696,7 @@ impl State {
                 ..
             } => {
                 let id = super::submissions::submit(
+                    &self.context,
                     project,
                     origin,
                     *milestone_id,
@@ -667,7 +755,7 @@ impl State {
     }
     fn settle_delivery(
         &mut self,
-        project: &mut ProjectView,
+        project: &mut ProjectCore,
         origin: AccountId32,
         milestone_id: EntityId,
         submission_id: EntityId,
@@ -703,7 +791,7 @@ impl State {
     }
 }
 
-fn activate_next_milestone(project: &mut ProjectView, completed_id: EntityId) -> Result<()> {
+fn activate_next_milestone(project: &mut ProjectCore, completed_id: EntityId) -> Result<()> {
     let proposal = project
         .proposals
         .iter_mut()
@@ -732,22 +820,22 @@ fn activate_next_milestone(project: &mut ProjectView, completed_id: EntityId) ->
     Ok(())
 }
 
-fn client(project: &ProjectView, origin: AccountId32) -> Result<()> {
+fn client(project: &ProjectCore, origin: AccountId32) -> Result<()> {
     require(project.client == origin, "client_required")
 }
 
-fn coordinator(project: &ProjectView, origin: AccountId32) -> Result<()> {
+fn coordinator(project: &ProjectCore, origin: AccountId32) -> Result<()> {
     require(project.coordinator == origin, "coordinator_required")
 }
 
-fn participant(project: &ProjectView, origin: AccountId32) -> Result<()> {
+fn participant(project: &ProjectCore, origin: AccountId32) -> Result<()> {
     require(
         project.client == origin || project.coordinator == origin,
         "project_party_required",
     )
 }
 
-fn planning_active(project: &ProjectView) -> Result<()> {
+fn planning_active(project: &ProjectCore) -> Result<()> {
     require(
         matches!(
             project.planning.status,
@@ -768,7 +856,7 @@ fn bump(value: &mut u64) -> Result<()> {
     Ok(())
 }
 
-fn proposal_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut ProposalView> {
+fn proposal_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut ProposalCore> {
     project
         .proposals
         .iter_mut()
@@ -776,7 +864,7 @@ fn proposal_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut Proposal
         .ok_or_else(|| Error::domain("proposal_not_found"))
 }
 
-pub(super) fn milestone_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut MilestoneView> {
+pub(super) fn milestone_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut MilestoneCore> {
     project
         .proposals
         .iter_mut()
@@ -785,7 +873,7 @@ pub(super) fn milestone_mut(project: &mut ProjectView, id: EntityId) -> Result<&
         .ok_or_else(|| Error::domain("milestone_not_found"))
 }
 
-fn storage_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut TaskStorageView> {
+fn storage_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut TaskStorageView> {
     project
         .proposals
         .iter_mut()
@@ -795,7 +883,7 @@ fn storage_mut(project: &mut ProjectView, id: EntityId) -> Result<&mut TaskStora
         .ok_or_else(|| Error::domain("task_storage_not_found"))
 }
 
-fn task_mut(project: &mut ProjectView, storage: EntityId, id: u32) -> Result<&mut TaskView> {
+fn task_mut(project: &mut ProjectCore, storage: EntityId, id: u32) -> Result<&mut TaskView> {
     storage_mut(project, storage)?
         .tasks
         .iter_mut()
@@ -803,22 +891,21 @@ fn task_mut(project: &mut ProjectView, storage: EntityId, id: u32) -> Result<&mu
         .ok_or_else(|| Error::domain("task_not_found"))
 }
 
-pub(super) fn proposal_definition(proposal: &ProposalView) -> ProposalDefinition {
-    ProposalDefinition {
-        title: proposal.title.clone(),
-        description: proposal.description.clone(),
+pub(super) fn proposal_definition(proposal: &ProposalCore) -> ProposalTerms {
+    ProposalTerms {
         milestones: proposal
             .milestones
             .iter()
-            .map(|milestone| milestone.definition.clone())
+            .map(|m| m.definition.clone())
             .collect(),
     }
 }
 
 fn make_milestones(
-    proposal: &ProposalDefinition,
-    previous: &[MilestoneView],
-) -> Result<Vec<MilestoneView>> {
+    context: &super::execution::EngineContext,
+    proposal: &ProposalTerms,
+    previous: &[MilestoneCore],
+) -> Result<Vec<MilestoneCore>> {
     proposal
         .milestones
         .iter()
@@ -831,8 +918,8 @@ fn make_milestones(
                 milestone.definition = definition.clone();
                 Ok(milestone)
             } else {
-                let milestone_id = random_id()?;
-                Ok(MilestoneView {
+                let milestone_id = context.random_id();
+                Ok(MilestoneCore {
                     milestone_id,
                     definition: definition.clone(),
                     status: None,
@@ -840,7 +927,7 @@ fn make_milestones(
                     worker_ratings: Vec::new(),
                     submissions: Vec::new(),
                     task_storage: TaskStorageView {
-                        task_storage_id: random_id()?,
+                        task_storage_id: context.random_id(),
                         milestone_id,
                         tasks: Vec::new(),
                     },
@@ -851,7 +938,7 @@ fn make_milestones(
         .collect()
 }
 
-fn validate_delivery_estimate(proposal: &ProposalView) -> Result<()> {
+fn validate_delivery_estimate(proposal: &ProposalCore) -> Result<()> {
     let Some(DeliveryPreference::SpecificDate { date }) = &proposal.delivery else {
         return Ok(());
     };

@@ -169,6 +169,8 @@ fn documented_examples_roundtrip_through_the_frozen_rust_dtos()
     check_examples::<ProjectView>(&doc, "ProjectView")?;
     check_examples::<OperationRef>(&doc, "OperationRef")?;
     check_examples::<OperationView>(&doc, "OperationView")?;
+    check_examples::<TaskOperationResult>(&doc, "TaskOperationResult")?;
+    check_examples::<AdapterTaskEvent>(&doc, "AdapterTaskEvent")?;
     check_examples::<NotificationView>(&doc, "NotificationView")?;
     check_examples::<NotificationsPage>(&doc, "NotificationsPage")?;
     Ok(())

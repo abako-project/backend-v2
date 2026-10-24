@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "sourceRepository": "git@github.com:abako-dev/contracts.git",
+  "sourceCommit": "610b5d2acefb0ced4eab2c3725cd40b526f0b3cf",
+  "contractToolchain": {
+    "ink": "5.1.1",
+    "rust": "1.88.0",
+    "cargoContract": "5.0.3"
+  },
+  "runtime": "pallet-contracts-43.0.0-frame-43.0.0",
+  "contracts": {
+    "projects": {
+      "artifactSha256": "5926fc4a02bbf5c65e7d345705d769eb5980cc6be3027dea633de57fce8bf48d",
+      "wasmBlake2b256": "0x046a1b6a63ca93f87c2d1f94a73af2b7f9dbdd8d04c4b63d7ffc8acdd38a7887",
+      "lockSha256": "01ffbbf90067db4ab50d8ffda03fb718a3d2e82a961f0cefd4a220df81f4c831"
+    },
+    "calendar": {
+      "artifactSha256": "56a6c16179625a7365a8328c32415eccc3ea36085895b8689904e46322a05924",
+      "wasmBlake2b256": "0xddb15dba23b3d751adc1a4f9e8e0c0e181e27d92cedc5bd98c38293df43280ca",
+      "lockSha256": "c4614e5458c3edfec9dd4f2f9b79a307371871e9070d8174a3946ee19cb03c04"
+    },
+    "ratings": {
+      "artifactSha256": "3d332ccaadfedf097254e2f0ee652e56e239d4ec482e9bf880f9860706082ec8",
+      "wasmBlake2b256": "0x222331fc2bb931b6c9ead5ab249778b963e83b7ce7bf1aa6f088b7d7cffa2d76",
+      "lockSha256": "11a850a22c35a783709dad45fc9f16282691c5986fd1605d88a0b4e7bbf7ae7f"
+    },
+    "sandbox-probe": {
+      "artifactSha256": "f136055b350fce61482561df6a5a7ae7e31bb06e1952785700f4d4e1d6022090",
+      "wasmBlake2b256": "0x6b64ec4b3b73cfacb6e36bfcb6efa12754e1bc7dfe9cf0b5bdbcff22c215c2bf",
+      "lockSha256": "1193ede85e8cdf2564b030f3e648e6f8fbd2561e226968f39db9a3ae98ad9c42"
+    },
+    "calendar-v5": {
+      "artifactSha256": "6870754b5e65f9e0368918d79a9aea29bdeb58fbd37888ec14c4c9b3c3101033",
+      "wasmBlake2b256": "0x2b27681f3c843c9f1caa5d1d8d0b0c98ef5f0704619cdb890cc75191818c5135",
+      "lockSha256": "18d65be4d9daff11eda26174212bf028e2476b61dcc4411d73c666069f38cb49",
+      "staticBufferBytes": 294912
+    },
+    "directory-v5": {
+      "artifactSha256": "d908c46799c095031d848a93523a3e2894044bfed0c63f76d43fc07e0b16e105",
+      "wasmBlake2b256": "0x3be03fa1ea92d9fc269a2c1ed097bc1374e4ee95e7dea0056d39155378045912",
+      "lockSha256": "c0e529d3336ddfca715f4703e903bae083de267f0b2ca092095d06bbcb616a5c",
+      "staticBufferBytes": 294912
+    },
+    "projects-v5": {
+      "artifactSha256": "bb1050fc13db7b913507fdee105b122f76d4b9a8b5a056efd756139f481a7043",
+      "wasmBlake2b256": "0x9495912feef4514238083ec9cd2797d65176a10beb8e3e23d87c19b3782ddbd5",
+      "lockSha256": "587d133e0ba3e8743f36efb3947cfee03a5f627e001de94e803e8f5e3cde325d",
+      "staticBufferBytes": 294912
+    }
+  }
+}

@@ -5,13 +5,13 @@ use generated_contracts::{
     UpsertCatalogEntryRequest,
 };
 
-use super::{super::VerifiedCall, State};
+use super::super::{State, VerifiedCall};
 use crate::Result;
 
 const NOW: UnixSeconds = UnixSeconds::new(100);
 
 fn worker(state: &mut State, account: AccountId32) -> Result<()> {
-    state.apply(
+    state.engine.apply(
         account,
         &ProviderCommand::RegisterWorker(RegisterWorkerRequest {
             display_name: "Worker".into(),
@@ -26,6 +26,11 @@ fn worker(state: &mut State, account: AccountId32) -> Result<()> {
         }),
         NOW,
     )?;
+    // Imported fixture worker has no historical creation receipt.
+    state.engine.worker_mut(account)?.content =
+        generated_contracts::provider_core::MetadataReferenceV1::Migration(
+            generated_contracts::PayloadHash::from_bytes([88; 32]),
+        );
     Ok(())
 }
 
@@ -36,8 +41,8 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
     let stranger = AccountId32::from_bytes([3; 32]);
     let mut state = State::new(root)?;
     worker(&mut state, owner)?;
-    let initial_skills = state.skills.len();
-    let effect = state.apply(
+    let initial_skills = state.engine.skills.len();
+    let effect = state.engine.apply(
         owner,
         &ProviderCommand::CreateSkillRequest(CreateSkillRequest {
             name: "  New  Skill  ".into(),
@@ -48,13 +53,21 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
     let id = effect.entity_id.ok_or_else(crate::Error::internal)?;
     assert!(effect.recipients.contains(&owner));
     assert!(effect.recipients.contains(&root));
-    assert_eq!(state.skills.len(), initial_skills);
-    assert!(state.worker_mut(owner)?.qualifications.skill_ids.is_empty());
+    assert_eq!(state.engine.skills.len(), initial_skills);
+    assert!(
+        state
+            .engine
+            .worker_mut(owner)?
+            .qualifications
+            .skill_ids
+            .is_empty()
+    );
     assert!(state.skill_requests(stranger).is_empty());
     assert_eq!(state.skill_requests(owner).len(), 1);
     assert_eq!(state.skill_requests(root).len(), 1);
     assert!(
         state
+            .engine
             .apply(
                 stranger,
                 &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
@@ -66,7 +79,7 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
             .is_err()
     );
 
-    state.apply(
+    state.engine.apply(
         root,
         &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
             request_id: id,
@@ -77,8 +90,8 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
     let request = &state.skill_requests(owner)[0];
     assert_eq!(request.status, SkillRequestStatus::Approved);
     let skill_id = request.skill_id.ok_or_else(crate::Error::internal)?;
-    assert_eq!(state.skills.len(), initial_skills + 1);
-    assert_eq!(state.skill_metadata[&skill_id].role_ids, vec![1]);
+    assert_eq!(state.engine.skills.len(), initial_skills + 1);
+    assert_eq!(state.engine.skill_metadata[&skill_id].role_ids, vec![1]);
     assert!(
         state
             .snapshot()
@@ -87,9 +100,18 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
             .iter()
             .any(|association| association.skill_id == skill_id && association.role_ids == [1])
     );
-    assert!(state.worker_mut(owner)?.qualifications.skill_ids.is_empty());
     assert!(
         state
+            .engine
+            .worker_mut(owner)?
+            .qualifications
+            .skill_ids
+            .is_empty()
+    );
+    // Name uniqueness is an adapter admission rule; core retains numeric facts.
+    assert!(
+        state
+            .engine
             .apply(
                 root,
                 &ProviderCommand::UpsertCatalogEntry(UpsertCatalogEntryRequest {
@@ -99,9 +121,9 @@ fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
                 }),
                 NOW,
             )
-            .is_err()
+            .is_ok()
     );
-    state.validate()?;
+    state.engine.validate()?;
     Ok(())
 }
 
@@ -111,8 +133,8 @@ fn rejected_request_does_not_change_catalog() -> Result<()> {
     let owner = AccountId32::from_bytes([2; 32]);
     let mut state = State::new(root)?;
     worker(&mut state, owner)?;
-    let initial_skills = state.skills.len();
-    let effect = state.apply(
+    let initial_skills = state.engine.skills.len();
+    let effect = state.engine.apply(
         owner,
         &ProviderCommand::CreateSkillRequest(CreateSkillRequest {
             name: "Unneeded Skill".into(),
@@ -121,7 +143,7 @@ fn rejected_request_does_not_change_catalog() -> Result<()> {
         NOW,
     )?;
     let id = effect.entity_id.ok_or_else(crate::Error::internal)?;
-    state.apply(
+    state.engine.apply(
         root,
         &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
             request_id: id,
@@ -129,13 +151,14 @@ fn rejected_request_does_not_change_catalog() -> Result<()> {
         }),
         NOW,
     )?;
-    assert_eq!(state.skills.len(), initial_skills);
+    assert_eq!(state.engine.skills.len(), initial_skills);
     assert_eq!(
         state.skill_requests(owner)[0].status,
         SkillRequestStatus::Rejected
     );
     assert!(
         state
+            .engine
             .apply(
                 root,
                 &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
@@ -146,14 +169,16 @@ fn rejected_request_does_not_change_catalog() -> Result<()> {
             )
             .is_err()
     );
-    state.validate()?;
+    state.engine.validate()?;
     Ok(())
 }
 
 #[test]
 fn transition_records_a_durable_request_event() -> Result<()> {
     let root = AccountId32::from_bytes([1; 32]);
-    let owner = AccountId32::from_bytes([2; 32]);
+    let key = subxt_signer::sr25519::Keypair::from_secret_key([2; 32])
+        .map_err(|_| crate::Error::internal())?;
+    let owner = AccountId32::from_bytes(key.public_key().0);
     let mut state = State::new(root)?;
     worker(&mut state, owner)?;
     let call = UnsignedContractCallV1::new(
@@ -167,8 +192,11 @@ fn transition_records_a_durable_request_event() -> Result<()> {
             role_ids: vec![1],
         }),
     )?;
-    let bytes = call.signable_bytes()?;
-    let (state, receipt) = state.execute(VerifiedCall { call, bytes }, NOW)?;
+    let signature =
+        generated_contracts::Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0);
+    let verified =
+        VerifiedCall::verify(generated_contracts::SignedContractCallV1 { call, signature })?;
+    let (state, receipt) = state.execute(verified, NOW)?;
     assert_eq!(receipt.outcome, ExecutionOutcome::Success);
     assert_eq!(state.events(0, 10).events.len(), 1);
     assert_eq!(state.events(0, 10).events[0].recipients.len(), 2);

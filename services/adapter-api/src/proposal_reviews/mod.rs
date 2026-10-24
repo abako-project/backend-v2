@@ -11,17 +11,16 @@ use axum::{
     extract::{Extension, Path, Query, State},
     http::StatusCode,
 };
-use generated_contracts::{
-    AccountId32, EntityId, ProposalStatus, ProposalView, ProviderInstanceId,
-};
+use generated_contracts::{AccountId32, EntityId, ProposalStatus, ProviderInstanceId};
 use models::{CommentsPage, Cursor, PostComment, PresentationView, PutPresentation, ReviewComment};
 use std::sync::Arc;
 
 pub(super) struct Context {
     instance: ProviderInstanceId,
     project_id: EntityId,
-    proposal: ProposalView,
+    proposal: generated_contracts::provider_core::ProposalCore,
     account: AccountId32,
+    coordinator: AccountId32,
 }
 #[derive(Clone, Copy)]
 enum Access {
@@ -76,6 +75,7 @@ async fn context(
         project_id,
         proposal: proposal.clone(),
         account,
+        coordinator: project.coordinator,
     })
 }
 pub(crate) async fn get_presentation(
@@ -84,7 +84,17 @@ pub(crate) async fn get_presentation(
     Path(ids): Path<(String, String)>,
 ) -> Result<Json<Option<PresentationView>>, Error> {
     let context = context(&app, &session, &ids, Access::Participant, false).await?;
-    Ok(Json(store::presentation(&app.db, &context).await?))
+    let definition = crate::proposal_metadata::definition(
+        &app,
+        context.instance,
+        context.project_id,
+        context.coordinator,
+        context.proposal.clone(),
+    )
+    .await?;
+    Ok(Json(
+        store::presentation(&app.db, &context, &definition).await?,
+    ))
 }
 pub(crate) async fn put_presentation(
     State(app): State<Arc<App>>,
@@ -93,7 +103,20 @@ pub(crate) async fn put_presentation(
     Json(request): Json<PutPresentation>,
 ) -> Result<(StatusCode, Json<PresentationView>), Error> {
     let context = context(&app, &session, &ids, Access::Coordinator, true).await?;
-    let (created, result) = store::put_presentation(&app.db, &context, &request).await?;
+    let (created, result) = store::put_presentation(
+        &app.db,
+        &context,
+        &request,
+        &crate::proposal_metadata::definition(
+            &app,
+            context.instance,
+            context.project_id,
+            context.coordinator,
+            context.proposal.clone(),
+        )
+        .await?,
+    )
+    .await?;
     Ok((
         if created {
             StatusCode::CREATED
@@ -124,7 +147,26 @@ pub(crate) async fn post_comment(
     Json(request): Json<PostComment>,
 ) -> Result<(StatusCode, Json<ReviewComment>), Error> {
     let context = context(&app, &session, &ids, Access::Review, true).await?;
-    let (created, result) = store::post_comment(&app.db, &context, &request).await?;
+    if let Some(saved) = store::replay(&app.db, &context, &request).await? {
+        return Ok((StatusCode::OK, Json(saved)));
+    }
+    if context.proposal.revision != request.expected_proposal_revision {
+        return Err(Error::Conflict("proposal_revision_conflict"));
+    }
+    let (created, result) = store::post_comment(
+        &app.db,
+        &context,
+        &request,
+        &crate::proposal_metadata::definition(
+            &app,
+            context.instance,
+            context.project_id,
+            context.coordinator,
+            context.proposal.clone(),
+        )
+        .await?,
+    )
+    .await?;
     Ok((
         if created {
             StatusCode::CREATED

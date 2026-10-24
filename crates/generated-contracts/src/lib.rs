@@ -15,6 +15,7 @@ pub use disputes::*;
 mod bramp;
 pub use bramp::*;
 mod platform;
+pub mod provider_core;
 use parity_scale_codec::{Decode, Encode};
 pub use platform::*;
 use serde::{Deserialize, Serialize};
@@ -78,6 +79,9 @@ macro_rules! redacted_dto {
     };
 }
 
+mod task_results;
+pub use task_results::*;
+
 wire_enum!(/// Only one mode can be active; coordinator eligibility is separate.
     WorkerMode { Worker, Coordinator });
 wire_enum!(/// Proposal lifecycle, distinct from execution lifecycle.
@@ -103,7 +107,7 @@ wire_enum!(/// Key lifecycle; only Active may sign.
 wire_enum!(/// Durable custody job stage.
     SigningJobStatus { Pending, Signed, Rejected });
 wire_enum!(/// Unknown submission outcome is explicitly not a rejection.
-    ProviderOperationStatus { AwaitingSignature, ReadyToSubmit, Submitted, OutcomeUnknown, Finalized, Rejected, Expired });
+    ProviderOperationStatus { AwaitingSignature, ReadyToSubmit, Submitted, OutcomeUnknown, Finalized, Rejected, Expired, Queued });
 
 dto!(/// Qualification metadata; team matching requires every skill, not the role.
     Qualifications { role_ids: Vec<u32>, skill_ids: Vec<u32> });
@@ -328,7 +332,7 @@ dto!(/// Accept completion and settle its quoted payments and scores atomically.
     rename_all_fields = "camelCase",
     deny_unknown_fields
 )]
-#[allow(missing_docs, clippy::cast_possible_truncation)] // SCALE derive indexes 27 variants.
+#[allow(missing_docs, clippy::cast_possible_truncation)] // Signed command discriminants are append-only.
 pub enum ProviderCommand {
     RegisterWorker(RegisterWorkerRequest),
     UpdateQualifications(UpdateQualificationsRequest),
@@ -480,6 +484,77 @@ pub enum ProviderCommand {
     },
     OpenDisputeWithComment(OpenDisputeWithCommentRequest),
     SetCompensationPolicy(CompensationPolicy),
+    // Append only: existing signed command discriminants remain unchanged.
+    SubmitMilestoneCommitted {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+        worker_ratings: Option<Vec<WorkerRating>>,
+    },
+    RejectMilestoneCommitted {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        submission_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+    },
+    OpenDisputeCommitted {
+        project_id: EntityId,
+        milestone_id: EntityId,
+        rejected_submission_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+    },
+    RespondDisputeCommitted {
+        project_id: EntityId,
+        dispute_id: EntityId,
+        evidence: EvidenceCommitmentV1,
+    },
+    // Predecessor bridge: decode/replay these before the ownership cutover.
+    #[codec(index = 49)]
+    RegisterWorkerCore(provider_core::RegisterWorkerCoreRequest),
+    #[codec(index = 50)]
+    CreateProjectCore(provider_core::MetadataCommitmentV1),
+    // Decode/replay bridge for the paired proposal-content cutover.
+    #[codec(index = 51)]
+    CreateProposalCore {
+        project_id: EntityId,
+        proposal: provider_core::ProposalTerms,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 52)]
+    UpdateProposalCore {
+        project_id: EntityId,
+        proposal_id: EntityId,
+        proposal: provider_core::ProposalTerms,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 53)]
+    RequestProposalChangesCore {
+        project_id: EntityId,
+        proposal_id: EntityId,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    // V3 decoder/replay bridge for catalog and lifecycle content ownership.
+    #[codec(index = 54)]
+    UpsertCatalogEntryCore {
+        kind: CatalogKind,
+        id: u32,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 55)]
+    CreateSkillRequestCore {
+        role_ids: Vec<u32>,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 56)]
+    CancelProjectCore {
+        project_id: EntityId,
+        content: provider_core::MetadataCommitmentV1,
+    },
+    #[codec(index = 57)]
+    DisputePlanningCore {
+        project_id: EntityId,
+        content: provider_core::MetadataCommitmentV1,
+    },
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -571,66 +646,10 @@ impl MilestoneDefinition {
     /// and the remainder to workers by planned minutes. Largest fractions receive
     /// residual units; ties keep coordinator then declared requirement order.
     pub fn allocate_budget(&mut self, policy: &CompensationPolicy) -> Result<(), ContractError> {
-        let total = u128::from(self.total()?.units());
-        let effort: u128 = self.requirements.iter().try_fold(0_u128, |sum, r| {
-            sum.checked_add(u128::from(r.minutes.get()))
-                .ok_or(ContractError::Invalid("budget overflow"))
-        })?;
-        if total > 0 && effort == 0 {
-            return Err(ContractError::Invalid(
-                "positive budget requires worker hours",
-            ));
-        }
-        let percent = u128::from(policy.coordinator_percent.get());
-        let denominator = effort
-            .checked_mul(100)
-            .ok_or(ContractError::Invalid("budget overflow"))?;
-        let weights: Vec<_> = std::iter::once(percent * effort)
-            .chain(
-                self.requirements
-                    .iter()
-                    .map(|r| (100 - percent) * u128::from(r.minutes.get())),
-            )
-            .collect();
-        let numerators: Vec<_> = weights
-            .iter()
-            .map(|weight| {
-                total
-                    .checked_mul(*weight)
-                    .ok_or(ContractError::Invalid("budget overflow"))
-            })
-            .collect::<Result<_, _>>()?;
-        let mut shares: Vec<_> = numerators
-            .iter()
-            .map(|amount| amount.checked_div(denominator).unwrap_or(0))
-            .collect();
-        let mut remainder = total - shares.iter().sum::<u128>();
-        let mut order: Vec<_> = (0..shares.len()).collect();
-        order.sort_by(|a, b| {
-            let fraction = |index: usize| {
-                if denominator == 0 {
-                    0
-                } else {
-                    numerators[index] % denominator
-                }
-            };
-            fraction(*b).cmp(&fraction(*a)).then_with(|| a.cmp(b))
-        });
-        for index in order {
-            if remainder == 0 {
-                break;
-            }
-            shares[index] += 1;
-            remainder -= 1;
-        }
-        self.coordinator_fee = Money::new(
-            u64::try_from(shares[0]).map_err(|_| ContractError::Invalid("budget overflow"))?,
-        );
-        for (requirement, share) in self.requirements.iter_mut().zip(shares.into_iter().skip(1)) {
-            requirement.budget = Money::new(
-                u64::try_from(share).map_err(|_| ContractError::Invalid("budget overflow"))?,
-            );
-        }
+        let mut terms = provider_core::MilestoneTerms::from(&*self);
+        terms.allocate_budget(policy)?;
+        self.coordinator_fee = terms.coordinator_fee;
+        self.requirements = terms.requirements;
         Ok(())
     }
 
@@ -655,6 +674,16 @@ impl ProviderCommand {
     /// invariants must still be enforced in the provider transaction.
     pub fn validate(&self) -> Result<(), ContractError> {
         match self {
+            Self::UpsertCatalogEntryCore { id: 0, .. } => Err(ContractError::Invalid("catalog ID")),
+            Self::CreateSkillRequestCore { role_ids, .. } => {
+                provider_core::validate_skill_request_roles(role_ids)
+            }
+            Self::CreateProposalCore { proposal, .. }
+            | Self::UpdateProposalCore { proposal, .. } => proposal.validate(),
+            Self::RegisterWorkerCore(request) => {
+                request.qualifications.validate()?;
+                request.calendar.validate()
+            }
             Self::RegisterWorker(request) => {
                 nonempty(&request.display_name, "worker display name")?;
                 request.qualifications.validate()?;
@@ -701,7 +730,11 @@ impl ProviderCommand {
                 nonempty(&request.reason, "reason")
             }
             Self::CreateTask { task, .. } | Self::EditTask { task, .. } => task.validate(),
-            Self::RequestMilestoneCompletionWithoutDeliverable { worker_ratings, .. } => unique(
+            Self::SubmitMilestoneCommitted {
+                worker_ratings: Some(worker_ratings),
+                ..
+            }
+            | Self::RequestMilestoneCompletionWithoutDeliverable { worker_ratings, .. } => unique(
                 &worker_ratings
                     .iter()
                     .map(|item| item.worker)
@@ -725,18 +758,27 @@ impl ProviderCommand {
         match self {
             Self::OpenDispute(request) => Some(request.project_id),
             Self::OpenDisputeWithComment(request) => Some(request.project_id),
-            Self::QuotePlanning { project_id, .. }
+            Self::SubmitMilestoneCommitted { project_id, .. }
+            | Self::RejectMilestoneCommitted { project_id, .. }
+            | Self::OpenDisputeCommitted { project_id, .. }
+            | Self::RespondDisputeCommitted { project_id, .. }
+            | Self::QuotePlanning { project_id, .. }
             | Self::AcceptPlanningQuote { project_id, .. }
             | Self::SetProposalDelivery { project_id, .. }
             | Self::DeleteTask { project_id, .. }
             | Self::WithdrawProposal { project_id, .. }
             | Self::CreateProposal { project_id, .. }
+            | Self::CreateProposalCore { project_id, .. }
+            | Self::UpdateProposalCore { project_id, .. }
+            | Self::RequestProposalChangesCore { project_id, .. }
             | Self::UpdateProposal { project_id, .. }
             | Self::DeleteProposal { project_id, .. }
             | Self::SubmitProposal { project_id, .. }
             | Self::AcceptPlanningDelivery { project_id, .. }
             | Self::ApproveExecution { project_id, .. }
             | Self::RequestProposalChanges { project_id, .. }
+            | Self::CancelProjectCore { project_id, .. }
+            | Self::DisputePlanningCore { project_id, .. }
             | Self::CancelProject { project_id, .. }
             | Self::DisputePlanning { project_id, .. }
             | Self::RejectMilestoneCompletion { project_id, .. }
@@ -789,6 +831,21 @@ impl UnsignedContractCallV1 {
             return Err(ContractError::InvalidPayload);
         }
         self.command.validate()?;
+        let metadata_operation = match &self.command {
+            ProviderCommand::RegisterWorkerCore(request) => Some(request.content.operation_id),
+            ProviderCommand::CreateProjectCore(content)
+            | ProviderCommand::CreateProposalCore { content, .. }
+            | ProviderCommand::UpdateProposalCore { content, .. }
+            | ProviderCommand::RequestProposalChangesCore { content, .. }
+            | ProviderCommand::UpsertCatalogEntryCore { content, .. }
+            | ProviderCommand::CreateSkillRequestCore { content, .. }
+            | ProviderCommand::CancelProjectCore { content, .. }
+            | ProviderCommand::DisputePlanningCore { content, .. } => Some(content.operation_id),
+            _ => None,
+        };
+        if metadata_operation.is_some_and(|id| id != self.operation_id) {
+            return Err(ContractError::InvalidPayload);
+        }
         if self.encoded_size() > MAX_SIGNABLE_BYTES {
             return Err(ContractError::InvalidPayload);
         }
@@ -842,7 +899,7 @@ dto!(/// Recoverable provider execution receipt; generated IDs are not inferred.
 dto!(/// Browser mutation acknowledgement, not a claim of business success.
     OperationRef { operation_id: OperationId, status: ProviderOperationStatus });
 dto!(/// Browser-pollable outcome, retained independently of an SSE connection.
-    OperationView { operation_id: OperationId, status: ProviderOperationStatus, receipt: Option<OperationReceipt>, error_code: Option<String> });
+    OperationView { operation_id: OperationId, status: ProviderOperationStatus, receipt: Option<OperationReceipt>, error_code: Option<String>, #[serde(default, skip_serializing_if = "Option::is_none")] task_result: Option<TaskOperationResult> });
 dto!(/// Stable sanitized HTTP error for internal and browser boundaries.
     ApiError { code: String, message: String });
 
@@ -917,7 +974,7 @@ dto!(/// Durable provider event with explicit recipients, no secret or raw paylo
 dto!(/// Cursor-based provider event page; cursor always refers to this instance.
     ProviderEvents { provider_instance_id: ProviderInstanceId, events: Vec<DomainEvent>, next_cursor: u64 });
 dto!(/// Session-owned persisted notification; SSE delivery never changes `read_at`.
-    NotificationView { notification_id: u64, event: DomainEvent, read_at: Option<UnixSeconds>, actor: Option<NotificationActorView>, project_title: Option<String> });
+    NotificationView { notification_id: u64, event: NotificationEvent, read_at: Option<UnixSeconds>, actor: Option<NotificationActorView>, project_title: Option<String> });
 dto!(/// Public identity of the verified account that caused an event.
     NotificationActorView { account_id: AccountId32, display_name: String, image_url: Option<String> });
 dto!(/// Public notification page, resumable by its monotonically increasing ID.

@@ -12,11 +12,13 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post, put},
 };
+use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::{
     BalanceView, CalendarSummaryView, CatalogKind, CatalogView, DeleteCatalogEntryRequest,
     EntityId, MAX_SIGNABLE_BYTES, Minutes, Money, NotificationView, NotificationsPage,
-    OperationRef, OperationView, ProjectView, ProviderCommand, ProviderInfo, RevisionRequest,
-    SessionView, TaskStorageView, TaskView, WalletView, Week, WeeklyCommitment, WorkerSummaryView,
+    OperationRef, OperationView, ProjectView, ProviderCommand, ProviderInfo, ProviderInstanceId,
+    RevisionRequest, SessionView, TaskStorageView, TaskView, WalletView, Week, WeeklyCommitment,
+    WorkerSummaryView,
 };
 use serde::{Deserialize, de::DeserializeOwned};
 use std::{
@@ -453,11 +455,23 @@ async fn password(
     auth::change_password(&app, &session, json(&headers, &body)?).await
 }
 async fn catalog(State(app): State<Arc<App>>) -> Result<Json<CatalogView>, Error> {
-    Ok(Json(app.snapshot().await?.catalog))
+    let snapshot = app.snapshot().await?;
+    Ok(Json(
+        crate::catalog_metadata::compose(
+            &app,
+            snapshot.info.provider_instance_id,
+            snapshot.info.root_account,
+            snapshot.catalog,
+        )
+        .await?,
+    ))
 }
 async fn workers(State(app): State<Arc<App>>) -> Result<Json<Vec<WorkerSummaryView>>, Error> {
     let mut workers = Vec::new();
-    for worker in app.snapshot().await?.workers {
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    for worker in snapshot.workers {
+        let worker = crate::profiles::directory::compose(&app, generation, worker).await?;
         let mut committed = BTreeMap::<Week, Minutes>::new();
         for reservation in &worker.calendar.reservations {
             let total = committed.entry(reservation.week).or_insert(Minutes::ZERO);
@@ -490,14 +504,20 @@ async fn projects(
     State(app): State<Arc<App>>,
     Extension(session): Extension<Session>,
 ) -> Result<Json<Vec<ProjectView>>, Error> {
-    Ok(Json(
-        app.snapshot()
-            .await?
-            .projects
-            .into_iter()
-            .filter(|p| operations::visible(p, session.view.account_id))
-            .collect(),
-    ))
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    let projects: Vec<_> = snapshot
+        .projects
+        .into_iter()
+        .filter(|p| operations::visible(p, session.view.account_id))
+        .collect();
+    let mut composed = Vec::with_capacity(projects.len());
+    for project in projects {
+        let mut project = crate::project_content::compose(&app, generation, project).await?;
+        crate::evidence::project(&app, generation, &mut project).await?;
+        composed.push(project);
+    }
+    Ok(Json(composed))
 }
 async fn project(
     State(app): State<Arc<App>>,
@@ -505,35 +525,69 @@ async fn project(
     Path(id): Path<String>,
 ) -> Result<Json<ProjectView>, Error> {
     let id = parse::<EntityId>(&id)?;
-    Ok(Json(
-        app.snapshot()
-            .await?
-            .projects
-            .into_iter()
-            .find(|p| p.project_id == id && operations::visible(p, session.view.account_id))
-            .ok_or(Error::NotFound)?,
-    ))
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    let project = snapshot
+        .projects
+        .into_iter()
+        .find(|p| p.project_id == id && operations::visible(p, session.view.account_id))
+        .ok_or(Error::NotFound)?;
+    let mut project = crate::project_content::compose(&app, generation, project).await?;
+    crate::evidence::project(&app, generation, &mut project).await?;
+    Ok(Json(project))
 }
 
+async fn visible_storage_project(
+    app: &App,
+    session: &Session,
+    storage_id: EntityId,
+) -> Result<(ProviderInstanceId, ProjectCore), Error> {
+    let snapshot = app.snapshot().await?;
+    let project = snapshot
+        .projects
+        .into_iter()
+        .find(|project| {
+            operations::visible(project, session.view.account_id)
+                && project
+                    .proposals
+                    .iter()
+                    .flat_map(|p| &p.milestones)
+                    .any(|m| m.task_storage.task_storage_id == storage_id)
+        })
+        .ok_or(Error::NotFound)?;
+    Ok((snapshot.info.provider_instance_id, project))
+}
+fn storage_from_project(
+    project: ProjectCore,
+    storage_id: EntityId,
+) -> Result<(EntityId, TaskStorageView), Error> {
+    let id = project.project_id;
+    let storage = project
+        .proposals
+        .into_iter()
+        .flat_map(|p| p.milestones)
+        .find(|m| m.task_storage.task_storage_id == storage_id)
+        .ok_or(Error::NotFound)?
+        .task_storage;
+    Ok((id, storage))
+}
+/// Command resolution uses raw authoritative facts, never presentation copies.
 async fn visible_storage(
     app: &App,
     session: &Session,
     storage_id: EntityId,
 ) -> Result<(EntityId, TaskStorageView), Error> {
-    app.snapshot()
-        .await?
-        .projects
-        .into_iter()
-        .filter(|project| operations::visible(project, session.view.account_id))
-        .find_map(|project| {
-            project
-                .proposals
-                .into_iter()
-                .flat_map(|proposal| proposal.milestones)
-                .find(|milestone| milestone.task_storage.task_storage_id == storage_id)
-                .map(|milestone| (project.project_id, milestone.task_storage))
-        })
-        .ok_or(Error::NotFound)
+    let (_, project) = visible_storage_project(app, session, storage_id).await?;
+    storage_from_project(project, storage_id)
+}
+async fn composed_storage(
+    app: &App,
+    session: &Session,
+    storage_id: EntityId,
+) -> Result<(EntityId, TaskStorageView), Error> {
+    let (generation, project) = visible_storage_project(app, session, storage_id).await?;
+    let project = crate::project_content::children(app, generation, project).await?;
+    storage_from_project(project, storage_id)
 }
 
 async fn task_storage(
@@ -541,7 +595,7 @@ async fn task_storage(
     Extension(session): Extension<Session>,
     Path(storage_id): Path<String>,
 ) -> Result<Json<TaskStorageView>, Error> {
-    let (_, storage) = visible_storage(&app, &session, parse(&storage_id)?).await?;
+    let (_, storage) = composed_storage(&app, &session, parse(&storage_id)?).await?;
     Ok(Json(storage))
 }
 
@@ -550,7 +604,7 @@ async fn task(
     Extension(session): Extension<Session>,
     Path((storage_id, task_id)): Path<(String, String)>,
 ) -> Result<Json<TaskView>, Error> {
-    let (_, storage) = visible_storage(&app, &session, parse(&storage_id)?).await?;
+    let (_, storage) = composed_storage(&app, &session, parse(&storage_id)?).await?;
     let task_id = parse::<u32>(&task_id)?;
     Ok(Json(
         storage

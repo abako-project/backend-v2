@@ -67,3 +67,42 @@ fn evidence_uses_url_only_and_preserves_old_signed_commands()
     );
     Ok(())
 }
+
+#[test]
+fn storage_commitments_preserve_legacy_bytes_and_fail_closed()
+-> Result<(), Box<dyn std::error::Error>> {
+    let original = EvidenceReference::new("https://example.test/delivery".into())?;
+    let legacy = EvidenceRecordReferenceV1::Legacy(original.clone());
+    assert_eq!(legacy.encode(), original.encode());
+    assert_eq!(
+        legacy,
+        EvidenceRecordReferenceV1::decode(&mut &legacy.encode()[..])?
+    );
+    assert_eq!(
+        serde_json::to_value(&legacy)?,
+        serde_json::to_value(&original)?
+    );
+    let committed = EvidenceRecordReferenceV1::Committed(EvidenceCommitmentV1 {
+        record_id: EntityId::from_bytes([9; 16]),
+        hash: PayloadHash::from_bytes([7; 32]),
+    });
+    let bytes = committed.encode();
+    assert_eq!(bytes.len(), 50);
+    assert_eq!(&bytes[..2], &[0xff, 1]);
+    assert_eq!(
+        committed,
+        EvidenceRecordReferenceV1::decode(&mut &bytes[..])?
+    );
+    assert!(EvidenceReference::decode(&mut &bytes[..]).is_err());
+    assert!(committed.url().is_none());
+    for value in [
+        serde_json::json!({"url":"https://example.test","hash":PayloadHash::from_bytes([7;32])}),
+        serde_json::json!({"recordId":EntityId::from_bytes([9;16]),"hash":PayloadHash::from_bytes([7;32]),"url":"https://example.test"}),
+    ] {
+        assert!(serde_json::from_value::<EvidenceRecordReferenceV1>(value).is_err());
+    }
+    assert!(EvidenceRecordReferenceV1::decode(&mut &[0xff, 2][..]).is_err());
+    assert!(EvidenceRecordReferenceV1::decode(&mut &[0xfd, 0xff][..]).is_err());
+    assert!(EvidenceRecordReferenceV1::decode(&mut &bytes[..49]).is_err());
+    Ok(())
+}

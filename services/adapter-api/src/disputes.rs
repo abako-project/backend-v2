@@ -7,7 +7,10 @@ use axum::{
 use generated_contracts::{DisputeView, EntityId, EvidenceRequest, ProviderCommand};
 use std::sync::Arc;
 
-pub(crate) async fn read(app: &App, id: EntityId) -> Result<DisputeView, Error> {
+pub(crate) async fn read(
+    app: &App,
+    id: EntityId,
+) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
     app.get(
         &app.config.provider_url,
         &format!("/internal/disputes/{id}"),
@@ -15,11 +18,70 @@ pub(crate) async fn read(app: &App, id: EntityId) -> Result<DisputeView, Error> 
     .await
 }
 
+pub(crate) async fn public_read(app: &App, id: EntityId) -> Result<DisputeView, Error> {
+    let (generation, mut view) = present(app, read(app, id).await?).await?;
+    let _verified_text = crate::evidence::case(app, generation, &mut view).await?;
+    Ok(view)
+}
+
+/// Public case presentation resolves only the selected frozen milestone title.
+/// Signing aliases and private conversations continue to use `read` directly.
+pub(crate) async fn present(
+    app: &App,
+    view: generated_contracts::provider_core::CoreDisputeView,
+) -> Result<(generated_contracts::ProviderInstanceId, DisputeView), Error> {
+    let snapshot = app.snapshot().await?;
+    let generation = snapshot.info.provider_instance_id;
+    let project = snapshot
+        .projects
+        .iter()
+        .find(|p| p.project_id == view.dispute.project_id)
+        .ok_or(Error::Dependency)?;
+    let proposal = project
+        .proposals
+        .iter()
+        .find(|p| {
+            p.milestones
+                .iter()
+                .any(|m| m.milestone_id == view.milestone.milestone_id)
+        })
+        .ok_or(Error::Dependency)?;
+    let milestone = proposal
+        .milestones
+        .iter()
+        .find(|m| m.milestone_id == view.milestone.milestone_id)
+        .ok_or(Error::Dependency)?;
+    if *milestone != view.milestone || proposal.revision != view.dispute.proposal_revision {
+        return Err(Error::Dependency);
+    }
+    let definition = crate::proposal_metadata::definition(
+        app,
+        generation,
+        project.project_id,
+        project.coordinator,
+        proposal.clone(),
+    )
+    .await?;
+    let title = definition
+        .milestones
+        .into_iter()
+        .find(|m| m.key == view.milestone.definition.key)
+        .ok_or(Error::Dependency)?
+        .title;
+    Ok((
+        generation,
+        DisputeView {
+            dispute: view.dispute,
+            milestone: view.milestone.into_view(title),
+        },
+    ))
+}
+
 pub(crate) async fn public_case(
     State(app): State<Arc<App>>,
     Path(id): Path<String>,
 ) -> Result<Json<DisputeView>, Error> {
-    Ok(Json(read(&app, parse(&id)?).await?))
+    Ok(Json(public_read(&app, parse(&id)?).await?))
 }
 
 pub(crate) async fn response(

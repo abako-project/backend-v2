@@ -1,5 +1,5 @@
 use crate::state::Error;
-use generated_contracts::{AccountId32, EntityId, ProposalDefinition, ProposalView};
+use generated_contracts::{AccountId32, EntityId, ProposalDefinition};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
@@ -70,19 +70,11 @@ pub(crate) struct Cursor {
     #[serde(default)]
     pub(crate) after: i64,
 }
-pub(super) fn definition(proposal: &ProposalView) -> ProposalDefinition {
-    ProposalDefinition {
-        title: proposal.title.clone(),
-        description: proposal.description.clone(),
-        milestones: proposal
-            .milestones
-            .iter()
-            .map(|m| m.definition.clone())
-            .collect(),
-    }
-}
 impl PutPresentation {
-    pub(super) fn validate(&self, proposal: &ProposalView) -> Result<(), Error> {
+    pub(super) fn validate(
+        &self,
+        proposal: &generated_contracts::provider_core::ProposalCore,
+    ) -> Result<(), Error> {
         if self.expected_proposal_revision > i64::MAX as u64
             || !(0..i64::MAX).contains(&self.expected_presentation_revision)
             || self.milestones.len() > 100

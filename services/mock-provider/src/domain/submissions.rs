@@ -1,18 +1,21 @@
+use generated_contracts::provider_core::MilestoneCore;
+use generated_contracts::provider_core::ProjectCore;
 use std::collections::BTreeSet;
 
 use generated_contracts::{
-    AccountId32, CompletionSubmission, EntityId, EvidenceReference, EvidenceRequest,
-    MilestoneStatus, MilestoneView, ProjectView, SubmissionReview, UnixSeconds, WorkerRating,
+    AccountId32, CompletionSubmission, EntityId, EvidenceRecordReferenceV1, MilestoneStatus,
+    SubmissionReview, UnixSeconds, WorkerRating,
 };
 
 use super::project::milestone_mut;
-use crate::{Error, Result, random_id, require};
+use crate::{Error, Result, require};
 
 pub(super) fn submit(
-    project: &mut ProjectView,
+    context: &super::execution::EngineContext,
+    project: &mut ProjectCore,
     origin: AccountId32,
     milestone_id: EntityId,
-    deliverable: Option<EvidenceReference>,
+    deliverable: Option<EvidenceRecordReferenceV1>,
     worker_ratings: Option<&[WorkerRating]>,
     now: UnixSeconds,
 ) -> Result<EntityId> {
@@ -37,7 +40,7 @@ pub(super) fn submit(
         .map_err(|_| Error::internal())?
         .checked_add(1)
         .ok_or_else(Error::internal)?;
-    let submission_id = random_id()?;
+    let submission_id = context.random_id();
     milestone.submissions.push(CompletionSubmission {
         submission_id,
         version,
@@ -53,7 +56,7 @@ pub(super) fn submit(
 }
 
 pub(super) fn pending(
-    milestone: &mut MilestoneView,
+    milestone: &mut MilestoneCore,
     submission_id: EntityId,
 ) -> Result<&mut CompletionSubmission> {
     let submission = milestone
@@ -72,11 +75,11 @@ pub(super) fn pending(
 }
 
 pub(super) fn reject(
-    project: &mut ProjectView,
+    project: &mut ProjectCore,
     origin: AccountId32,
     milestone_id: EntityId,
     submission_id: EntityId,
-    request: &EvidenceRequest,
+    evidence: EvidenceRecordReferenceV1,
     now: UnixSeconds,
 ) -> Result<()> {
     require(project.client == origin, "client_required")?;
@@ -86,7 +89,7 @@ pub(super) fn reject(
         "invalid_milestone_state",
     )?;
     pending(milestone, submission_id)?.review = SubmissionReview::Rejected {
-        reason: request.evidence.clone(),
+        reason: evidence,
         reviewed_by: origin,
         reviewed_at: now,
     };
