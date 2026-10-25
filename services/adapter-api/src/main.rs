@@ -28,6 +28,7 @@ mod submission_presentations;
 mod task_execution;
 mod task_freezes;
 mod task_history;
+mod task_rollback;
 mod task_state;
 mod task_views;
 
@@ -167,6 +168,18 @@ async fn owner_command(app: &App, arguments: &[String]) -> Result<bool, Error> {
         [command, generation, path] if command == "export-prepared-tasks" => {
             task_state::export(app, state::parse(generation)?, path.into()).await?;
             tracing::info!("Prepared task state exported; no ownership or signature asserted");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, generation, path] if command == "export-current-tasks" => {
+            task_rollback::export(app, state::parse(generation)?, path.into()).await?;
+            tracing::info!("Current task restore projection exported; ownership unchanged");
+            app.db.close().await;
+            Ok(true)
+        }
+        [command, path] if command == "complete-task-rollback" => {
+            task_rollback::complete(app, path.into()).await?;
+            tracing::info!("Task rollback readback verified; provider owns tasks");
             app.db.close().await;
             Ok(true)
         }

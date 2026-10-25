@@ -354,7 +354,7 @@ async fn api_task_views_keep_one_pg_snapshot_during_an_atomic_task_commit() -> T
     Ok(())
 }
 
-async fn case_fixture()
+pub(super) async fn case_fixture()
 -> Result<(Cohort, CaseSlot, EntityId, OperationId), Box<dyn std::error::Error>> {
     let slot = Arc::new(Mutex::new(None));
     let c = Cohort::with_case(true, Some(slot.clone())).await?;

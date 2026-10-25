@@ -10,6 +10,7 @@ struct Cohort {
     app: Arc<App>,
     internal: Server,
     fake: Arc<Mutex<Fake>>,
+    task_source: Arc<Mutex<Option<TaskStateV1>>>,
     owner: Session,
     owner_cookie: String,
     worker: Session,
@@ -102,6 +103,7 @@ impl Cohort {
             app,
             internal,
             fake,
+            task_source,
             owner,
             owner_cookie,
             worker,
@@ -782,3 +784,6 @@ mod freezes;
 
 #[path = "task_view_tests.rs"]
 mod views;
+
+#[path = "task_rollback_tests.rs"]
+mod rollback;

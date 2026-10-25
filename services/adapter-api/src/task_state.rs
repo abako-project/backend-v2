@@ -241,6 +241,10 @@ pub(crate) async fn export(
     })
     .await??;
     tx.commit().await?;
+    write(state, path).await
+}
+
+pub(crate) async fn write(state: TaskStateV1, path: PathBuf) -> Result<(), Error> {
     tokio::task::spawn_blocking(move || {
         use std::io::Write;
         let bytes = serde_json::to_vec(&state)?;

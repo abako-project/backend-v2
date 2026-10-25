@@ -296,15 +296,26 @@ pub(crate) async fn compose_case(
         tx.commit().await?;
         return Ok(view);
     };
+    let view = accepted_case(&mut tx, generation, proposal, next, view).await?;
+    tx.commit().await?;
+    Ok(view)
+}
+
+async fn accepted_case(
+    connection: &mut PgConnection,
+    generation: ProviderInstanceId,
+    proposal: EntityId,
+    next: u32,
+    view: generated_contracts::provider_core::CoreDisputeView,
+) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
     // Core currently permits one permanent milestone dispute per project. Two
     // confirmed opening records are ambiguous and cannot establish frozen text.
     let rows=sqlx::query("SELECT f.operation_id,f.snapshot_json,o.command_json,o.command_bytes,o.provider_instance_id,o.account_id,o.signable_payload,o.signed_json,o.receipt_json FROM task_freezes f JOIN operations o USING(operation_id) WHERE f.provider_instance_id=$1 AND f.project_id=$2 AND f.kind='Dispute' AND f.state='Confirmed' AND o.status='Finalized' AND NOT o.task_operation ORDER BY o.creation_sequence LIMIT 2")
-        .bind(generation.to_string()).bind(view.dispute.project_id.to_string()).fetch_all(&mut *tx).await?;
+        .bind(generation.to_string()).bind(view.dispute.project_id.to_string()).fetch_all(connection).await?;
     let view = tokio::task::spawn_blocking(move || {
         frozen(generation, proposal, next, view, rows).map_err(|_| Error::Dependency)
     })
     .await??;
-    tx.commit().await?;
     Ok(view)
 }
 fn frozen(
@@ -413,4 +424,21 @@ fn frozen(
     }
     view.milestone.task_storage.tasks = record.storage.tasks;
     Ok(view)
+}
+
+/// Ownership handoff must preserve the frozen public task vector as well as
+/// current tasks. This check intentionally also works for an identical retry.
+pub(crate) async fn verify_restored_case(
+    connection: &mut PgConnection,
+    generation: ProviderInstanceId,
+    next: u32,
+    proposal: EntityId,
+    view: generated_contracts::provider_core::CoreDisputeView,
+) -> Result<(), Error> {
+    let expected = view.milestone.task_storage.clone();
+    let accepted = accepted_case(connection, generation, proposal, next, view).await?;
+    if accepted.milestone.task_storage != expected {
+        return Err(Error::Conflict("task_rollback_frozen_mismatch"));
+    }
+    Ok(())
 }

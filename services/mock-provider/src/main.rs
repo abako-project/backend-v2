@@ -5,6 +5,8 @@ use std::{env, error::Error, fs};
 use generated_contracts::AccountId32;
 use mock_provider::{Provider, router};
 
+mod owner;
+
 fn secret(name: &str) -> Result<String, Box<dyn Error>> {
     let path = env::var(name).map_err(|_| format!("missing {name}"))?;
     let value = fs::read_to_string(path).map_err(|_| format!("cannot read {name}"))?;
@@ -21,6 +23,23 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let root: AccountId32 = secret("MOCK_ROOT_ACCOUNT_FILE")?.parse()?;
     let args: Vec<_> = env::args().skip(1).collect();
     if !args.is_empty() {
+        if let [command, archive, tasks, output] = args.as_slice()
+            && command == "restore-tasks"
+        {
+            owner::restore(archive.into(), tasks.into(), output.into(), root)
+                .await
+                .map_err(|e| e as Box<dyn Error>)?;
+            return Ok(());
+        }
+        #[cfg(feature = "storage-sqlite")]
+        if let [command, output] = args.as_slice()
+            && command == "export"
+        {
+            owner::export(env::var("MOCK_DATABASE_URL")?, output.into(), root)
+                .await
+                .map_err(|e| e as Box<dyn Error>)?;
+            return Ok(());
+        }
         #[cfg(feature = "storage-sqlite")]
         if let [command, archive, destination] = args.as_slice()
             && command == "import"
@@ -28,7 +47,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             import_native(archive.into(), destination.into(), root).await?;
             return Ok(());
         }
-        return Err("usage: mock-provider [import CORE_ARCHIVE NEW_DATABASE_FILE]".into());
+        return Err("usage: mock-provider [import CORE_ARCHIVE NEW_DATABASE_FILE | export NEW_ARCHIVE | restore-tasks CORE_ARCHIVE TASK_STATE NEW_ARCHIVE]".into());
     }
     let service_token = secret("INTERNAL_SERVICE_TOKEN_FILE")?;
     let mode = env::var("MOCK_STORAGE").unwrap_or_else(|_| {

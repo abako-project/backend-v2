@@ -306,3 +306,96 @@ actual paired current-task rollback and the pending planning-dispute/notificatio
 policy choices remain before activation. The subsequent rollback step must restore
 actual current tasks and allocator while retaining truthful API operation and
 notification history; the prepared-export fingerprint cannot do that conversion.
+
+## R3b3d: paused current-task rollback, native rehearsal
+
+This compatible owner-tool slice restores current API tasks to the preserved
+V4 provider cohort. It adds no forward activation, new archive version, public
+route, dependency or contract artifact. Provider-owned generations keep their
+current behavior. Native proof does not establish Rust/Shadow/Sandbox rollback
+or resolve the SDK's unwaived dependency-policy failure.
+
+`adapter-api export-current-tasks <generation> <new-path>` reads the authoritative
+current API graph and actual allocator. Current core associations and proposal
+revisions select the export; old staging revisions/fingerprints do not describe
+mutable truth. Obsolete storage rows remain in PostgreSQL history/backup rather
+than being reinserted into current core. Empty current storages are included.
+The command requires API ownership, a drained queue across all generations
+(including generation-unbound work), no pending freeze, and no unresolved
+submission. A definitive `provider_rejected` is known failure despite its
+conservative submission marker. An unproven legacy Finalized provider operation
+without a receipt blocks this procedure until reconciliation. Files are bounded
+32 MiB, create-new and mode 0600, with large data processing off Tokio cores.
+
+`mock-provider restore-tasks <core-archive> <task-state> <new-archive>` validates
+both inputs, generation, nonregressing actual counter and every current
+project/proposal/revision/storage/milestone association. Missing, extra, duplicate
+or invalid contexts fail; no maximum-live-ID inference or truncation is allowed.
+Only task vectors and next_task_id change in V4. Whole-state validation follows,
+and serializing all other fields must produce identical values: financial and
+reputation facts, captured terms, reservations, accepted bytes, nonces, receipts,
+events and metadata references are preserved. Unexpected source normalization
+fails instead of silently rewriting history. The core archive limit stays 64 MiB.
+
+`mock-provider export <new-archive>` reads its own native SQLite checkpoint through
+a read-only connection. It does not open the serving constructor or reseed a
+catalog. `import <archive> <new-database-file>` retains its existing fresh-file
+requirement. No service reads or writes another service's database.
+
+`adapter-api complete-task-rollback <saved-task-state>` compares the saved export,
+current API projection and restored provider's private task-state readback before
+setting API ownership false in the same PostgreSQL transaction. A current active
+milestone case must also retain the exact public frozen task vector proven by its
+confirmed API opening snapshot and real successful signed receipt/context. A
+missing, ambiguous or incompatible snapshot fails closed. Unchanged completion is
+retryable; failure preserves API ownership and all task/history rows. Only this
+ownership fact changes: operations, results, notifications/read state, task data,
+allocator/provenance and immutable freeze snapshots remain. No fake provider
+receipt, event cursor or historical signature is created.
+
+### Paused owner procedure (no live cutover authorization)
+
+1. Select the exact compatible previous cohort and verify its binary hashes.
+   Confirm frontend result/notification compatibility. Pause external ingress,
+   all source/core/direct task writers, API workers and provider ingestion;
+   reconcile queued/possibly-submitted work. A paused read-only provider endpoint
+   may serve owner reads. Take and verify paired PostgreSQL, provider and custody
+   backups and preserve the originals. The task file is only a projection, not
+   these backups or evidence that the source will remain fresh.
+2. Export current API tasks and the provider's current V4 archive, then run the
+   provider-owned task converter. Admission/preparation locks are acquired in
+   order 621009 then 621007 before queue checks; they fence API admission while
+   the tool runs, not direct provider calls or writes between tool invocations.
+   Keeping all external writers stopped is an explicit operator precondition.
+3. Import into a fresh previous-provider destination. Reopen it, re-export the
+   **complete** target archive with the native owner's read-only export command,
+   and compare its typed value with the converted archive, including the entire
+   non-task history/shell. Do not substitute a task-only comparison for this step.
+   Completion's task readback cannot prove preserved money, nonces or history.
+4. Point the current owner tool at that verified target and retained PostgreSQL;
+   run `complete-task-rollback`. On any mismatch keep ingress stopped and the
+   source/backups intact; do not force the ownership flag or truncate data. Start
+   the compatible previous adapter/wallet with retained API/custody stores and
+   the restored provider. Verify public tasks/cases, result history, mixed SSE
+   resume/read state and signed-call replay before reopening ingress.
+
+`python3 scripts/check-task-rollback.py --binaries <current-bin-dir>
+--predecessor <frozen-native-bin-dir>` exercises this boundary with disposable
+PostgreSQL and SQLite stores, real current services and frozen previous binaries.
+The predecessor directory includes its source/hash manifest. The script's SQL
+ownership/admission fixture is test-only: public admission still targets the
+provider, so the fixture fences a real earlier finalized same-wallet operation,
+converts only the just-admitted definitely unsigned task job, then restores the
+barrier exactly. The actual SQL worker executes the edits and produces truthful
+API task results/notifications. This supplies no production activation procedure.
+
+The scenario changes API tasks without any provider archive effect, retains a
+deleted-ID gap, large Unicode/NUL descriptions, assignees, reporters/times and
+progress, then opens a real signed milestone dispute and rejects later task work.
+It checks fresh import/full archive readback, identical task results and operation
+history, frozen public output, notification read state/SSE resume, restart,
+existing signed operation replay and further signed task CRUD using the retained
+next ID. The disposable PostgreSQL/custody stores are retained through handoff;
+this is not a PostgreSQL backup/restore, a live cutover or an all-authority proof.
+Existing frontend adoption, active admission, historical-case reconciliation,
+policy choices, three-authority task rollback and R4/R5 remain open gates.

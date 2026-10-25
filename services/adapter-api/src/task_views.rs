@@ -203,3 +203,39 @@ fn apply(
     .map_err(|_| Error::Dependency)?;
     Ok(projects)
 }
+
+/// Owner-only current restore projection. Historical/orphan rows remain in the
+/// paired `PostgreSQL` backup; the returned graph contains current core targets.
+pub(crate) async fn current_state(
+    connection: &mut PgConnection,
+    generation: ProviderInstanceId,
+    next: u32,
+    projects: Vec<ProjectCore>,
+) -> Result<TaskStateV1, Error> {
+    let projects = read(connection, generation, next, projects).await?;
+    tokio::task::spawn_blocking(move || {
+        let mut storages = Vec::new();
+        for project in projects {
+            for proposal in project.proposals {
+                for milestone in proposal.milestones {
+                    storages.push(TaskStorageRecordV1 {
+                        project_id: project.project_id,
+                        proposal_id: proposal.proposal_id,
+                        proposal_revision: proposal.revision,
+                        storage: milestone.task_storage,
+                    });
+                }
+            }
+        }
+        storages.sort_by_key(|r| r.storage.task_storage_id);
+        let state = TaskStateV1 {
+            schema_version: 1,
+            generation,
+            next_task_id: next,
+            storages,
+        };
+        state.validate().map_err(|_| Error::Dependency)?;
+        Ok(state)
+    })
+    .await?
+}

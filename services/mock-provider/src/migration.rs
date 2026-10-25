@@ -1,4 +1,4 @@
-//! One explicit V3↔V4 owner exchange. No predecessor business engine runs here.
+//! Explicit owner exchanges: V3↔V4 and current task replacement in V4.
 use crate::{Error, ReferenceState, Result, require};
 use generated_contracts::{
     AccountId32, CatalogEntry, CatalogKind, ExecutionOutcome, PayloadHash, SkillRequestView,
@@ -606,4 +606,72 @@ pub fn recover_legacy_reasons(archive: &CoreArchiveV4) -> Result<Vec<ReasonMetad
         }
     }
     Ok(records)
+}
+
+/// Restore current API tasks into the existing V4 exchange. Every other field,
+/// including accepted calls, receipts, events, funds and nonces, stays exact.
+pub fn restore_tasks(
+    root: AccountId32,
+    archive: &CoreArchiveV4,
+    tasks: generated_contracts::provider_core::TaskStateV1,
+) -> Result<CoreArchiveV4> {
+    tasks.validate()?;
+    let original = serde_json::to_vec(&archive).map_err(|_| Error::internal())?;
+    let mut restored = ReferenceState::from_archive(root, archive.clone())?.archive()?;
+    require(
+        serde_json::to_vec(&restored).map_err(|_| Error::internal())? == original,
+        "task_restore_normalization",
+    )?;
+    require(
+        tasks.generation == archive.checkpoint.info.provider_instance_id
+            && tasks.next_task_id >= archive.checkpoint.next_task_id,
+        "task_restore_generation_or_counter",
+    )?;
+    let mut records: BTreeMap<_, _> = tasks
+        .storages
+        .into_iter()
+        .map(|record| (record.storage.task_storage_id, record))
+        .collect();
+    for project in restored.checkpoint.projects.values_mut() {
+        for proposal in &mut project.proposals {
+            for milestone in &mut proposal.milestones {
+                let record = records
+                    .remove(&milestone.task_storage.task_storage_id)
+                    .ok_or_else(|| Error::domain("task_restore_context"))?;
+                require(
+                    record.project_id == project.project_id
+                        && record.proposal_id == proposal.proposal_id
+                        && record.proposal_revision == proposal.revision
+                        && record.storage.milestone_id == milestone.milestone_id,
+                    "task_restore_context",
+                )?;
+                milestone.task_storage.tasks = record.storage.tasks;
+            }
+        }
+    }
+    require(records.is_empty(), "task_restore_context")?;
+    restored.checkpoint.next_task_id = tasks.next_task_id;
+    let restored = ReferenceState::from_archive(root, restored)?.archive()?;
+    let mut unchanged = restored.clone();
+    for (id, project) in &mut unchanged.checkpoint.projects {
+        let old = &archive.checkpoint.projects[id];
+        for (proposal, original_proposal) in project.proposals.iter_mut().zip(&old.proposals) {
+            for (milestone, original_milestone) in proposal
+                .milestones
+                .iter_mut()
+                .zip(&original_proposal.milestones)
+            {
+                milestone
+                    .task_storage
+                    .tasks
+                    .clone_from(&original_milestone.task_storage.tasks);
+            }
+        }
+    }
+    unchanged.checkpoint.next_task_id = archive.checkpoint.next_task_id;
+    require(
+        serde_json::to_vec(&unchanged).map_err(|_| Error::internal())? == original,
+        "task_restore_non_task_change",
+    )?;
+    Ok(restored)
 }
