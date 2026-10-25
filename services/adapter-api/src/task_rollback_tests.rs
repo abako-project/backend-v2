@@ -213,3 +213,63 @@ async fn task_rollback_requires_frozen_task_equality_and_atomic_ownership_commit
     c.internal.finish().await?;
     Ok(())
 }
+
+#[tokio::test]
+async fn task_rollback_rejects_lost_rows_and_bad_counts_but_keeps_retained_orphans() -> TestResult {
+    let c = Cohort::new(true).await?;
+    c.run(&c.owner, c.create()).await?;
+    let (file, state) = export(&c).await?;
+    *c.task_source.lock().await = Some(state);
+    sqlx::query("DELETE FROM task_items")
+        .execute(&c.app.db)
+        .await?;
+    assert!(matches!(
+        crate::task_rollback::export(&c.app, info().provider_instance_id, path()?).await,
+        Err(Error::Dependency)
+    ));
+    assert!(matches!(
+        crate::task_rollback::complete(&c.app, file.clone()).await,
+        Err(Error::Dependency)
+    ));
+    assert!(owned(&c).await?);
+    std::fs::remove_file(file)?;
+    // Return to the known empty graph, then model retained obsolete context.
+    // Its real row count matters; stale revision/narrative do not enter export.
+    sqlx::query("UPDATE task_generations SET task_count=0,storage_count=99")
+        .execute(&c.app.db)
+        .await?;
+    assert!(
+        crate::task_rollback::export(&c.app, info().provider_instance_id, path()?)
+            .await
+            .is_err()
+    );
+    sqlx::query("UPDATE task_generations SET storage_count=1")
+        .execute(&c.app.db)
+        .await?;
+    let orphan = EntityId::from_bytes([99; 16]);
+    sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$2,$2,'18446744073709551615',$2)")
+        .bind(info().provider_instance_id.to_string()).bind(orphan.to_string()).execute(&c.app.db).await?;
+    let orphan_task = TaskView {
+        task_id: 9,
+        reporter: c.owner.view.account_id,
+        created_at: UnixSeconds::new(1),
+        updated_at: UnixSeconds::new(1),
+        task: c.definition.clone(),
+    };
+    sqlx::query("INSERT INTO task_items(provider_instance_id,task_id,task_storage_id,ordinal,payload,assignees) VALUES($1,9,$2,0,$3,$4)")
+        .bind(info().provider_instance_id.to_string()).bind(orphan.to_string()).bind(serde_json::to_string(&orphan_task)?).bind(vec![c.worker.view.account_id.to_string()]).execute(&c.app.db).await?;
+    sqlx::query("UPDATE task_generations SET storage_count=2,task_count=1")
+        .execute(&c.app.db)
+        .await?;
+    let before = retained(&c).await?;
+    let (file, state) = export(&c).await?;
+    assert_eq!(state.storages.len(), 1);
+    assert!(state.storages[0].storage.tasks.is_empty());
+    assert_eq!(state.next_task_id, 10);
+    *c.task_source.lock().await = Some(state);
+    crate::task_rollback::complete(&c.app, file.clone()).await?;
+    assert_eq!(retained(&c).await?, before);
+    std::fs::remove_file(file)?;
+    c.internal.finish().await?;
+    Ok(())
+}

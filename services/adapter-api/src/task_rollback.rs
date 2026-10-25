@@ -28,8 +28,18 @@ async fn current(
     connection: &mut PgConnection,
     generation: ProviderInstanceId,
 ) -> Result<(TaskStateV1, CoreSnapshotV4, bool), Error> {
-    let row=sqlx::query("SELECT next_task_id,api_owned FROM task_generations WHERE provider_instance_id=$1 FOR NO KEY UPDATE")
+    let row=sqlx::query("SELECT next_task_id,api_owned,storage_count,task_count FROM task_generations WHERE provider_instance_id=$1 FOR NO KEY UPDATE")
         .bind(generation.to_string()).fetch_optional(&mut *connection).await?.ok_or(Error::NotFound)?;
+    // Counts describe all retained API rows, including obsolete core contexts.
+    // Check before selecting live targets so a missing row cannot become an
+    // apparently valid empty export and then overwrite the provider's tasks.
+    let (storage_count,task_count):(i64,i64)=sqlx::query_as("SELECT (SELECT count(*) FROM task_storages WHERE provider_instance_id=$1),(SELECT count(*) FROM task_items WHERE provider_instance_id=$1)")
+        .bind(generation.to_string()).fetch_one(&mut *connection).await?;
+    if storage_count != row.try_get::<i64, _>("storage_count")?
+        || task_count != row.try_get::<i64, _>("task_count")?
+    {
+        return Err(Error::Dependency);
+    }
     let owned = row.try_get("api_owned")?;
     let next =
         u32::try_from(row.try_get::<i64, _>("next_task_id")?).map_err(|_| Error::Dependency)?;

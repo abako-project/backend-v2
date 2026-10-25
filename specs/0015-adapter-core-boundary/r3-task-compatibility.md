@@ -318,7 +318,9 @@ or resolve the SDK's unwaived dependency-policy failure.
 `adapter-api export-current-tasks <generation> <new-path>` reads the authoritative
 current API graph and actual allocator. Current core associations and proposal
 revisions select the export; old staging revisions/fingerprints do not describe
-mutable truth. Obsolete storage rows remain in PostgreSQL history/backup rather
+mutable truth. Maintained storage/task counts must match all retained generation
+rows before selecting live targets; missing rows fail instead of becoming empty
+exports. Obsolete storage rows remain in PostgreSQL history/backup rather
 than being reinserted into current core. Empty current storages are included.
 The command requires API ownership, a drained queue across all generations
 (including generation-unbound work), no pending freeze, and no unresolved
