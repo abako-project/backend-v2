@@ -91,7 +91,7 @@ def run(binaries, predecessor):
         print(name + " predecessor SHA-256: " + digest, flush=True)
     with ExitStack() as resources:
         directory = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="task-rollback-")))
-        database = os.environ.get("TEST_ADAPTER_DATABASE_URL") or POC.temporary_postgres(resources, directory)
+        database = POC.temporary_postgres(resources, directory)
         secrets_dir = directory / "secrets"
         subprocess.run([str(binaries / "wallet"), "init-dev-secrets", str(secrets_dir)],
                        check=True, stdout=subprocess.DEVNULL)
