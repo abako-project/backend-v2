@@ -297,6 +297,15 @@ fn current_directory_project_and_calendar_writes_restore_into_frozen_predecessor
             "import",
             &predecessor_archive,
         );
+        // Bundle cleanup changes identity even when business WASM is unchanged.
+        // A fresh import is required; never reinterpret the old checkpoint.
+        runtime.block_on(async {
+            assert!(
+                Worker::reopen_whole(restored.clone(), configuration.clone(), authority)
+                    .await
+                    .is_err()
+            );
+        });
         for phase in ["first", "reopened"] {
             let exported = directory.join(format!("preceding-{phase}.json"));
             cli(predecessor, &restored, &root, name, "export", &exported);
@@ -364,8 +373,49 @@ fn current_directory_project_and_calendar_writes_restore_into_frozen_predecessor
             serde_json::to_value(reference.archive().unwrap()).unwrap(),
             "{name}: replay/further work changed unrelated state or history"
         );
+        // Roll forward from the predecessor's latest writes through the logical
+        // archive, into a fresh current store, then verify reopen and signed replay.
+        let forward = directory.join("forward.sqlite");
+        runtime.block_on(async {
+            let worker = Worker::import_whole(
+                forward.clone(),
+                after.clone(),
+                configuration.clone(),
+                authority,
+            )
+            .await
+            .unwrap();
+            worker.shutdown().await.unwrap();
+            let worker = Worker::reopen_whole(forward, configuration.clone(), authority)
+                .await
+                .unwrap();
+            assert_eq!(
+                serde_json::to_value(
+                    worker
+                        .client()
+                        .export_archive()
+                        .unwrap()
+                        .result()
+                        .await
+                        .unwrap()
+                )
+                .unwrap(),
+                serde_json::to_value(&after).unwrap()
+            );
+            assert_eq!(
+                worker
+                    .client()
+                    .execute_signed(signed.clone(), UnixSeconds::new(1_950_000_000))
+                    .unwrap()
+                    .result()
+                    .await
+                    .unwrap(),
+                expected
+            );
+            worker.shutdown().await.unwrap();
+        });
         println!(
-            "{name}: current writes, frozen import/reopen/replay and further signed work verified"
+            "{name}: current writes, frozen rollback/further work, physical-cohort rejection and fresh roll-forward verified"
         );
     }
     fs::remove_dir_all(base).unwrap();

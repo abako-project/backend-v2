@@ -286,6 +286,16 @@ fn captured_ids_replay_read_isolation_and_request_visibility() {
             1
         );
         let before = db.stored().await;
+        assert_eq!(
+            client
+                .execute_signed(call.clone(), UnixSeconds::new(999))
+                .unwrap()
+                .result()
+                .await
+                .unwrap(),
+            receipt
+        );
+        assert_eq!(db.stored().await, before);
         // Even a mutating query at the correct Directory address is discarded.
         let persisted: Value = serde_json::from_slice(&before.2).unwrap();
         let address: Account = serde_json::from_value(persisted["directory"].clone()).unwrap();
@@ -310,6 +320,20 @@ fn captured_ids_replay_read_isolation_and_request_visibility() {
         assert_eq!(projection(&client).await.3, registered.3);
         worker.shutdown().await.unwrap();
         let worker = db.start().await;
+        let reopened = shell(&worker.client()).await;
+        assert_eq!(
+            reopened.info.provider_instance_id,
+            state.info.provider_instance_id
+        );
+        assert_eq!(
+            reopened.receipts[&call.call.operation_id]
+                .inputs
+                .as_ref()
+                .unwrap()
+                .seed,
+            captured.seed
+        );
+        assert_eq!(reopened.events[0].origin, Some(account(2)));
         assert_eq!(
             worker
                 .client()
@@ -483,18 +507,30 @@ fn sql_failure_rolls_back_new_child_contract_shell_and_retry() {
             .await
             .unwrap();
         pool.close().await;
+        let receipt = client
+            .execute_directory_with_inputs(call.clone(), inputs(10))
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+        assert_eq!(projection(&client).await.3.len(), 1);
+        assert_eq!(shell(&client).await.events.len(), 1);
+        worker.shutdown().await.unwrap();
+        let worker = db.start().await;
+        let before = db.stored().await;
         assert_eq!(
-            client
-                .execute_directory_with_inputs(call, inputs(10))
+            worker
+                .client()
+                .execute_signed(call, UnixSeconds::new(999))
                 .unwrap()
                 .result()
                 .await
-                .unwrap()
-                .outcome,
-            ExecutionOutcome::Success
+                .unwrap(),
+            receipt
         );
-        assert_eq!(projection(&client).await.3.len(), 1);
-        assert_eq!(shell(&client).await.events.len(), 1);
+        assert_eq!(db.stored().await, before);
+        assert_eq!(projection(&worker.client()).await.3.len(), 1);
         worker.shutdown().await.unwrap();
     });
 }
@@ -515,6 +551,16 @@ fn competing_workers_replay_one_commit_and_reject_conflicting_nonce() {
             .execute_directory_with_inputs(call, inputs(11))
             .unwrap();
         assert_eq!(a.result().await.unwrap(), b.result().await.unwrap());
+        assert_eq!(db.stored().await.0, 1);
+        shell_error(
+            first
+                .client()
+                .execute_signed(signed(2, 0, 1, calendar(37)), NOW)
+                .unwrap()
+                .result()
+                .await,
+            "idempotency_conflict",
+        );
         assert_eq!(db.stored().await.0, 1);
         let a = first
             .client()
@@ -544,8 +590,35 @@ fn startup_checks_fixture_identity_mode_and_contract_pointer() {
     test(async {
         let db = Database::new();
         let worker = db.start().await;
+        let generation = shell(&worker.client()).await.info.provider_instance_id;
+        assert!(matches!(
+            worker.client().execute(
+                0,
+                ink_v5_compatibility::worker::Invocation {
+                    caller: Account::new(account(2).into_bytes()),
+                    action: ink_v5_compatibility::worker::Action::Call {
+                        address: Account::new([7; 32])
+                    },
+                    input: vec![],
+                    gas: GAS,
+                    timestamp_ms: NOW.get() * 1000,
+                },
+                ink_v5_compatibility::worker::ShellChanges {
+                    success: vec![1],
+                    rejection: vec![2]
+                }
+            ),
+            Err(Error::InvalidState)
+        ));
         worker.shutdown().await.unwrap();
         let before = db.stored().await;
+        let mut wrong = fixture(GAS);
+        wrong.root = account(3);
+        assert!(
+            Worker::start_directory_fixture(db.0.clone(), wrong)
+                .await
+                .is_err()
+        );
         let mut wrong = fixture(GAS);
         wrong.reference_controller = account(3);
         assert!(
@@ -564,6 +637,12 @@ fn startup_checks_fixture_identity_mode_and_contract_pointer() {
                 .is_err()
         );
         assert!(Worker::start(db.0.clone(), vec![], vec![]).await.is_err());
+        assert_eq!(db.stored().await, before);
+        let restarted = db.start().await;
+        let reopened = shell(&restarted.client()).await;
+        assert_eq!(reopened.info.provider_instance_id, generation);
+        assert!(reopened.receipts.is_empty());
+        restarted.shutdown().await.unwrap();
         assert_eq!(db.stored().await, before);
         let pool = db.pool().await;
         let mut stored: Value = serde_json::from_slice(&before.2).unwrap();

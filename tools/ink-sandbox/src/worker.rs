@@ -40,20 +40,14 @@ pub use migration::WholeConfiguration;
 pub use whole::{Authority, WholeDiagnostics};
 mod project_storage;
 mod projects;
-mod signed;
 pub use directory::{
     DirectoryFixture, DirectoryProjection, FinancialProjection, MarketplaceProjection,
     MoneyProjection,
 };
-pub use signed::{CalendarFixture, FixtureWorker};
 
 #[derive(Clone, Copy)]
 enum Mode {
     Raw,
-    Calendar {
-        root: AccountId32,
-        gas: Weight,
-    },
     Directory {
         root: AccountId32,
         gas: Weight,
@@ -68,7 +62,6 @@ impl Mode {
     fn key(self) -> &'static str {
         match self {
             Self::Raw => "raw-fixture-v1",
-            Self::Calendar { .. } => "signed-calendar-v1",
             Self::Directory { .. } => "signed-directory-v1",
         }
     }
@@ -78,7 +71,6 @@ enum InitialState {
         accounts: Vec<Account>,
         shell: Vec<u8>,
     },
-    Calendar(CalendarFixture),
     Directory(DirectoryFixture),
     Import {
         archive: Box<provider_execution::migration::CoreArchiveV5>,
@@ -108,10 +100,6 @@ impl InitialState {
                 authority,
             } => whole::mode(configuration, *authority),
             Self::Raw { .. } => Mode::Raw,
-            Self::Calendar(fixture) => Mode::Calendar {
-                root: fixture.root,
-                gas: fixture.gas_limit,
-            },
             Self::Directory(fixture) => fixture.mode(),
             Self::Import { configuration, .. } | Self::Reopen(configuration) => {
                 configuration.mode()
@@ -545,15 +533,6 @@ impl Worker {
         }
         Self::start_with(path, InitialState::Raw { accounts, shell }).await
     }
-    /// Start an explicit legacy-calendar fixture; this never selects sandbox
-    /// authority for the app and reports other commands as incomplete coverage.
-    pub async fn start_calendar_fixture(
-        path: PathBuf,
-        fixture: CalendarFixture,
-    ) -> Result<Self, Error> {
-        fixture.validate()?;
-        Self::start_with(path, InitialState::Calendar(fixture)).await
-    }
     /// Explicit fresh Directory/Calendar fixture. Other domains remain incomplete.
     pub async fn start_directory_fixture(
         path: PathBuf,
@@ -652,12 +631,7 @@ impl Worker {
                                                         )
                                                         .await
                                                     }
-                                                    _ => {
-                                                        signed::execute(
-                                                            &pool, &bundles, mode, call, now,
-                                                        )
-                                                        .await
-                                                    }
+                                                    Mode::Raw => Err(Error::InvalidState),
                                                 }
                                             }),
                                         );
@@ -693,10 +667,7 @@ impl Worker {
                                                         directory::read_shell(&pool, &bundles, mode)
                                                             .await
                                                     }
-                                                    _ => {
-                                                        signed::read_shell(&pool, &bundles, mode)
-                                                            .await
-                                                    }
+                                                    Mode::Raw => Err(Error::InvalidState),
                                                 }
                                             }),
                                         );
@@ -887,7 +858,7 @@ async fn open(
     if foreign_tables != 0 {
         return Err(Error::InvalidState);
     }
-    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-calendar-v1','signed-directory-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 67108864), outcome BLOB NOT NULL CHECK(length(outcome) <= 524288))").execute(&pool).await?;
+    sqlx::query("CREATE TABLE IF NOT EXISTS candidate_state (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), revision INTEGER NOT NULL CHECK(revision >= 0), mode TEXT NOT NULL CHECK(mode IN ('raw-fixture-v1','signed-directory-v1')), runtime BLOB NOT NULL CHECK(length(runtime) <= 67108864), shell BLOB NOT NULL CHECK(length(shell) <= 67108864), outcome BLOB NOT NULL CHECK(length(outcome) <= 524288))").execute(&pool).await?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let exists: i64 = sqlx::query_scalar("SELECT count(*) FROM candidate_state")
         .fetch_one(&mut *tx)
@@ -907,7 +878,6 @@ async fn open(
     if exists == 0 {
         let (ext, shell) = match initial {
             InitialState::Raw { accounts, shell } => (new_externalities(accounts)?, shell),
-            InitialState::Calendar(fixture) => signed::initialize(bundles, fixture)?,
             InitialState::Directory(fixture) => directory::initialize(bundles, fixture)?,
             InitialState::Import {
                 archive,
@@ -942,9 +912,6 @@ async fn open(
             .await?;
     }
     let stored = load(&mut tx, bundles.identity(), mode).await?;
-    if let Mode::Calendar { root, .. } = mode {
-        signed::validate(&stored, bundles, root)?;
-    }
     if matches!(mode, Mode::Directory { .. }) {
         directory::validate(&stored, bundles, mode)?;
     }

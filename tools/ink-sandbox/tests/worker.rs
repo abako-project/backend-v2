@@ -111,15 +111,15 @@ async fn deploy(
     assert_eq!(outcome.status, Status::Success);
     outcome.address.unwrap()
 }
-async fn workers(client: &Client, calendar: &Account) -> Vec<Account> {
+async fn value(client: &Client, probe: &Account) -> u32 {
     let outcome = client
-        .query(call(calendar, "get_registered_workers", ()))
+        .query(call(probe, "value", ()))
         .unwrap()
         .result()
         .await
         .unwrap();
     assert_eq!(outcome.status, Status::Success);
-    Result::<Vec<Account>, u8>::decode_all(&mut &outcome.data[..])
+    Result::<u32, u8>::decode_all(&mut &outcome.data[..])
         .unwrap()
         .unwrap()
 }
@@ -129,20 +129,20 @@ fn durable_child_storage_and_mutating_queries_are_discarded() {
         let db = Database::new();
         let worker = db.start().await;
         let client = worker.client();
-        let calendar = deploy(&client, 0, "calendar", 1, Option::<Account>::None).await;
+        let probe = deploy(&client, 0, "sandbox-probe", 1, ()).await;
         let before = client.diagnostics().unwrap().result().await.unwrap();
         let dry_run = client
-            .query(call(&calendar, "register_worker", account(2)))
+            .query(call(&probe, "set_value", 2_u32))
             .unwrap()
             .result()
             .await
             .unwrap();
         assert_eq!(dry_run.status, Status::Success);
-        assert!(workers(&client, &calendar).await.is_empty());
+        assert_eq!(value(&client, &probe).await, 0);
         let after = client.diagnostics().unwrap().result().await.unwrap();
         assert_eq!((before.root, before.revision), (after.root, after.revision));
         let outcome = client
-            .execute(1, call(&calendar, "register_worker", account(2)), shell(2))
+            .execute(1, call(&probe, "set_value", 2_u32), shell(2))
             .unwrap()
             .result()
             .await
@@ -152,7 +152,7 @@ fn durable_child_storage_and_mutating_queries_are_discarded() {
         assert!(matches!(client.diagnostics(), Err(Error::Stopped)));
         let restarted = db.start().await;
         let client = restarted.client();
-        assert_eq!(workers(&client, &calendar).await, vec![account(2)]);
+        assert_eq!(value(&client, &probe).await, 2);
         assert_eq!(
             client
                 .diagnostics()
@@ -253,19 +253,19 @@ fn database_failure_rolls_back_runtime_shell_and_revision() {
         let db = Database::new();
         let worker = db.start().await;
         let client = worker.client();
-        let calendar = deploy(&client, 0, "calendar", 1, Option::<Account>::None).await;
+        let probe = deploy(&client, 0, "sandbox-probe", 1, ()).await;
         let before = client.diagnostics().unwrap().result().await.unwrap();
         let pool = db.pool().await;
         sqlx::query("CREATE TRIGGER fail_commit AFTER UPDATE ON candidate_state BEGIN SELECT RAISE(ABORT, 'injected storage failure'); END").execute(&pool).await.unwrap();
         assert!(matches!(
             client
-                .execute(1, call(&calendar, "register_worker", account(2)), shell(2))
+                .execute(1, call(&probe, "set_value", 2_u32), shell(2))
                 .unwrap()
                 .result()
                 .await,
             Err(Error::Storage(_))
         ));
-        assert!(workers(&client, &calendar).await.is_empty());
+        assert_eq!(value(&client, &probe).await, 0);
         let after = client.diagnostics().unwrap().result().await.unwrap();
         assert_eq!((before.root, before.revision), (after.root, after.revision));
         let persisted: Vec<u8> = sqlx::query_scalar("SELECT shell FROM candidate_state")
@@ -278,7 +278,7 @@ fn database_failure_rolls_back_runtime_shell_and_revision() {
             .await
             .unwrap();
         let outcome = client
-            .execute(1, call(&calendar, "register_worker", account(2)), shell(2))
+            .execute(1, call(&probe, "set_value", 2_u32), shell(2))
             .unwrap()
             .result()
             .await
@@ -287,7 +287,7 @@ fn database_failure_rolls_back_runtime_shell_and_revision() {
         pool.close().await;
         worker.shutdown().await.unwrap();
         let worker = db.start().await;
-        assert_eq!(workers(&worker.client(), &calendar).await, vec![account(2)]);
+        assert_eq!(value(&worker.client(), &probe).await, 2);
         worker.shutdown().await.unwrap();
     });
 }
@@ -304,11 +304,11 @@ fn competing_workers_use_latest_revision_and_corruption_never_reseeds() {
                 0,
                 invocation(
                     Action::Instantiate {
-                        bundle: "calendar".into(),
+                        bundle: "sandbox-probe".into(),
                         salt: vec![1],
                     },
                     "new",
-                    Option::<Account>::None,
+                    (),
                 ),
                 shell(1),
             )
@@ -318,18 +318,18 @@ fn competing_workers_use_latest_revision_and_corruption_never_reseeds() {
                 0,
                 invocation(
                     Action::Instantiate {
-                        bundle: "calendar".into(),
+                        bundle: "sandbox-probe".into(),
                         salt: vec![2],
                     },
                     "new",
-                    Option::<Account>::None,
+                    (),
                 ),
                 shell(2),
             )
             .unwrap();
         let one = one.result().await;
         let two = two.result().await;
-        let calendar = match (one, two) {
+        let probe = match (one, two) {
             (Ok(one), Err(Error::StaleRevision)) => one.address.unwrap(),
             (Err(Error::StaleRevision), Ok(two)) => two.address.unwrap(),
             other => panic!("unexpected race result: {other:?}"),
@@ -356,7 +356,7 @@ fn competing_workers_use_latest_revision_and_corruption_never_reseeds() {
         );
         assert_eq!(
             first_client
-                .execute(1, call(&calendar, "register_worker", account(2)), shell(3))
+                .execute(1, call(&probe, "set_value", 2_u32), shell(3))
                 .unwrap()
                 .result()
                 .await
@@ -364,7 +364,7 @@ fn competing_workers_use_latest_revision_and_corruption_never_reseeds() {
                 .status,
             Status::Success
         );
-        assert_eq!(workers(&second_client, &calendar).await, vec![account(2)]);
+        assert_eq!(value(&second_client, &probe).await, 2);
         first.shutdown().await.unwrap();
         second.shutdown().await.unwrap();
         let pool = db.pool().await;
@@ -438,11 +438,11 @@ fn cancelled_queued_request_does_not_execute() {
                 0,
                 invocation(
                     Action::Instantiate {
-                        bundle: "calendar".into(),
+                        bundle: "sandbox-probe".into(),
                         salt: vec![1],
                     },
                     "new",
-                    Option::<Account>::None,
+                    (),
                 ),
                 shell(1),
             )
@@ -452,11 +452,11 @@ fn cancelled_queued_request_does_not_execute() {
                 1,
                 invocation(
                     Action::Instantiate {
-                        bundle: "calendar".into(),
+                        bundle: "sandbox-probe".into(),
                         salt: vec![2],
                     },
                     "new",
-                    Option::<Account>::None,
+                    (),
                 ),
                 shell(2),
             )

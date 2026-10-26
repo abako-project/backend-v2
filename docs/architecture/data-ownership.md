@@ -44,7 +44,9 @@ core amounts. Authorization and financial operations use raw core facts. Task vi
 child copies are no longer selected. Historical rows and review snapshots remain;
 there is no text fallback. `adapter-api backfill-provider-content` verifies selected
 worker/Project views through provider HTTP without signing or submitting work.
-The paging helper remains until R4/R5.
+All three v5 contracts use ordinary ink storage. The unused paging helper and
+old compiled proof contracts are removed by R5; native reference and explicit
+paused migration/rollback codecs remain.
 
 Migration and rollback require matching current core state and API-owned content.
 The [R2b2 operator procedure](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md)

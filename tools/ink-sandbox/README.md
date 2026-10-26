@@ -21,24 +21,21 @@ and membership changes require core confirmation; local task edits retain an API
 result. Existing V4 stores require the [paired task owner exchange](../../docs/operations/task-cutover.md).
 Earlier V3↔V4 catalog exchange remains an explicit historical converter.
 Directory and Project are148857 and184306 bytes; runtime limits are unchanged.
-All three operational contracts use ordinary ink! storage. Final transitional
-cleanup remains R5 work. Current acceptance and promotion limits are recorded in the
+All three operational contracts use ordinary ink! storage. R5 removes obsolete proof wiring and the unused canonical paging helper. Current acceptance and promotion limits are recorded in the
 [ownership handoff](../../progress/handoffs/SPEC-0015.md).
 
 ```sh
 bash scripts/verify.sh ink-sandbox
 ```
 
-The original M0 proof executes Calendar → Ratings and Project → Calendar calls, direct
-caller asset deposits, contract balance queries and payouts using real
-`pallet-assets`. It checks a failed deposit after tentative task mutations,
-revert flags, finite gas, denied origins, malformed selectors and restoration
-of contract Mapping data from a serialized raw-trie checkpoint. Contracts use
-the production `cfg(not(test))` code paths, not ink's offchain test bypasses.
-A separate v5 failure probe checks explicit traps, nested domain rejections and
-an endless storage-writing loop, including rollback after gas exhaustion.
-The marketplace fixture exercises **legacy** contract behavior to establish VM compatibility;
-it does not establish parity with the current application or authorize switching.
+The current compiled bundle contains the three application contracts and one
+private `sandbox-probe`. Operational signed suites test nested calls, exact
+assets, receipts, failure rollback and restart against the native reference.
+The probe retains traps, nested rejection, denied origins, malformed selectors,
+gas exhaustion, successful persistence and query/cancellation isolation.
+All run production WASM, not ink's offchain test environment. See the
+[R5 removal and regression inventory](../../specs/0015-adapter-core-boundary/r5-cleanup.md)
+for immutable provenance and the checks moved off obsolete proof contracts.
 
 ## M3 Calendar slice
 
@@ -215,20 +212,13 @@ unsupported or incompatible state rejects startup without resetting genesis.
 The old version-1 proof format was never a provider format and is not migrated.
 The existing Rust provider's JSON/SQLite format is unchanged.
 
-Milestone 2 also uses the real `provider-execution` shell shared with the
-working Rust provider. `Worker::start_calendar_fixture` opens explicit genesis
-fixtures, verifies signatures, admits/replays operations and commits the runtime
-with actual nonces, receipts, captured inputs and events. Clients cannot supply
-transport outcomes. Raw mutation admission rejects signed fixture stores; their
-mode, root, checkpoint and pinned Calendar code are checked on startup.
-
-The fixture bridge supports only `SetCalendar` whole-hour weekly capacity with
-no overrides, against pre-registered fixture accounts and explicit calendar IDs.
-Other commands or unsupported shapes return `IncompleteCoverage` with no nonce,
-receipt or business write. This demonstrates shell/ABI integration; it does not
-replace the M3 Directory bridge above. There is no public raw-contract
-endpoint or frontend change. This limited fixture API is distinct from the
-whole-provider authority selector and comparison diagnostics described below.
+The worker uses the real `provider-execution` shell shared with the Rust provider.
+Current Directory and whole-provider tests verify signatures, replay, captured
+inputs, nonces, receipts and events committed with runtime state. Raw mutation
+admission rejects signed stores; mode, root, checkpoint and pinned code are checked
+on startup. The early Calendar-only fixture bridge has been removed. Its unique
+regressions now use the current Directory path; no public raw-contract endpoint
+or frontend behavior is added.
 
 The owner approved the exact [SDK exceptions](policy/README.md) for integration
 work on 2026-10-22. Check the expiring, exact-lock SDK policy separately:
@@ -242,7 +232,7 @@ packages. Its existing advisory/license findings are not waived. The full signer
 remains in wallet/app tests; the shared verification shell uses the exact same
 Schnorrkel primitive and context without importing key derivation into the SDK.
 
-The candidate SQLite schema distinguishes raw, legacy Calendar and Directory signed fixture modes.
+The candidate SQLite schema distinguishes raw and Directory signed modes.
 Earlier proof/candidate SQLite files without the mode column reject startup;
 these were never application provider data. Runtime/lock identity changes also
 reject old candidate checkpoints. At this earlier milestone, app SQLite/JSON
@@ -391,8 +381,8 @@ The operational `calendar-v5` uses standard ink! `Lazy` and `Mapping`, with fixe
 manual keys pinned by the fixture manifest. Its header is at most 138 bytes;
 a reservation is at most 47 bytes. Overrides, ordered indexes and per-week
 reserved totals have their own fixed-size cells. Calendar no longer depends on
-`storage-v5`. Directory and Project also use ordinary storage. The unused helper
-remains in the canonical repository until the final R5 cleanup.
+`storage-v5`. Directory and Project also use ordinary storage. R5 removes the
+unused helper from the canonical tree.
 No runtime, code, value, memory, input or gas limit is raised.
 
 Replacing 1,000 retained overrides uses more metered resources than the former
@@ -531,8 +521,10 @@ explicit compatibility tests, not a promotion of application authority.
 
 ### Offline cutover and current-state rollback
 
-These steps switch authorities within the current V4 cohort. For the explicit
-V3↔V4 binary/content transition, use the [R2b2 procedure](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
+These steps switch authorities within the current V5 cohort. For the explicit
+V4↔V5 content/ownership transition, use the [paired task procedure](../../docs/operations/task-cutover.md).
+A bundle change, including removal of unused fixtures, changes cohort identity:
+export and import into a fresh store; never reuse its physical checkpoint.
 
 Pause business writes, drain the adapter/provider queue and resolve unknown
 outcomes before export. Keep the source stopped until comparison and routing
