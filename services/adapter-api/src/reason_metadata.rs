@@ -1,8 +1,8 @@
 //! Immutable lifecycle explanation staging; execution owns its timestamp/freeze.
-use crate::state::{App, Error, hash};
+use crate::state::{Error, hash};
 use generated_contracts::{
     AccountId32, OperationId, PayloadHash, ProviderCommand, ProviderInstanceId,
-    provider_core::{MetadataCommitmentV1, ReasonCore, ReasonMetadataRecordV1},
+    provider_core::{MetadataCommitmentV1, ReasonMetadataRecordV1},
 };
 use sqlx::PgConnection;
 pub(crate) fn needs_record(command: &ProviderCommand) -> bool {
@@ -63,23 +63,4 @@ pub(crate) async fn capture(
         }
         _ => Err(Error::Internal),
     }
-}
-pub(crate) async fn record(
-    app: &App,
-    generation: ProviderInstanceId,
-    index: u64,
-    core: ReasonCore,
-) -> Result<ReasonMetadataRecordV1, Error> {
-    let payload:String=sqlx::query_scalar("SELECT payload FROM lifecycle_reason_documents WHERE provider_instance_id=$1 AND content_hash=$2").bind(generation.to_string()).bind(core.content.hash().as_bytes().as_slice()).fetch_optional(&app.db).await?.ok_or(Error::Dependency)?;
-    tokio::task::spawn_blocking(move || {
-        let record: ReasonMetadataRecordV1 =
-            serde_json::from_str(&payload).map_err(|_| Error::Dependency)?;
-        if !record.matches_context(generation, index, &core)
-            || hash(&record.hash_input()) != core.content.hash().into_bytes()
-        {
-            return Err(Error::Dependency);
-        }
-        Ok(record)
-    })
-    .await?
 }

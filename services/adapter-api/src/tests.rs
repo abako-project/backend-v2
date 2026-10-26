@@ -48,10 +48,6 @@ mod reason_documents;
 mod task_execution;
 #[path = "task_history_tests.rs"]
 mod task_history;
-#[path = "task_migration_tests.rs"]
-mod task_migration;
-#[path = "task_state_tests.rs"]
-mod task_state;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
@@ -1481,8 +1477,8 @@ mod platform;
 #[path = "evidence_tests.rs"]
 mod evidence_commitments;
 
-#[path = "content_copy_tests.rs"]
-mod content_copies;
+#[path = "content_tests.rs"]
+mod content;
 
 // Synthetic retained-entity fixtures explicitly stage API-owned preimages.
 // They do not invent old signed creation operations.
@@ -1541,8 +1537,8 @@ async fn stage_task_content(
     project: ProjectView,
 ) -> TestResult {
     let mut tx = app.db.begin().await?;
-    sqlx::query("INSERT INTO task_generations(provider_instance_id,next_task_id,source_hash,storage_count,task_count,api_owned) VALUES($1,1,$2,0,0,TRUE) ON CONFLICT DO NOTHING")
-        .bind(generation.to_string()).bind([0_u8;32].as_slice()).execute(&mut *tx).await?;
+    sqlx::query("INSERT INTO task_generations(provider_instance_id,next_task_id) VALUES($1,1) ON CONFLICT DO NOTHING")
+        .bind(generation.to_string()).execute(&mut *tx).await?;
     for proposal in project.proposals {
         for milestone in proposal.milestones {
             let storage = milestone.task_storage;
@@ -1561,7 +1557,7 @@ async fn stage_task_content(
             }
         }
     }
-    sqlx::query("UPDATE task_generations SET storage_count=(SELECT count(*) FROM task_storages WHERE provider_instance_id=$1),task_count=(SELECT count(*) FROM task_items WHERE provider_instance_id=$1),next_task_id=GREATEST(next_task_id,COALESCE((SELECT max(task_id)+1 FROM task_items WHERE provider_instance_id=$1),1)) WHERE provider_instance_id=$1")
+    sqlx::query("UPDATE task_generations SET next_task_id=GREATEST(next_task_id,COALESCE((SELECT max(task_id)+1 FROM task_items WHERE provider_instance_id=$1),1)) WHERE provider_instance_id=$1")
         .bind(generation.to_string()).execute(&mut *tx).await?;
     tx.commit().await?;
     Ok(())
@@ -1740,5 +1736,90 @@ async fn stage_proposal_documents(
         .await?;
     }
     tx.commit().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn startup_rejects_unmarked_existing_schema_without_modifying_data() -> TestResult {
+    let internal = Server::start(internal(fake()?)).await?;
+    let app = app(&internal).await?;
+    let (owner, _) = register(&app, "schema_owner").await?;
+    let before: i64 = sqlx::query_scalar("SELECT count(*) FROM principals")
+        .fetch_one(&app.db)
+        .await?;
+    sqlx::query("DROP TABLE adapter_schema")
+        .execute(&app.db)
+        .await?;
+    assert!(matches!(
+        App::new(test_config(app.config.database_url.clone(), &internal)?).await,
+        Err(Error::Schema)
+    ));
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM principals")
+            .fetch_one(&app.db)
+            .await?,
+        before
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, String>("SELECT username FROM principals WHERE principal_id=$1")
+            .bind(owner.view.principal_id.to_string())
+            .fetch_one(&app.db)
+            .await?,
+        "schema_owner"
+    );
+    internal.finish().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn task_initialization_is_repeatable_and_refuses_missing_content_after_core_use() -> TestResult
+{
+    use generated_contracts::provider_core::TaskStateV2;
+    let fake = fake()?;
+    let state = Arc::new(Mutex::new(TaskStateV2 {
+        schema_version: 2,
+        generation: info().provider_instance_id,
+        next_task_id: 1,
+        has_task_history: false,
+        storages: vec![],
+    }));
+    let source = state.clone();
+    let router = internal(fake).route(
+        "/internal/task-state",
+        get(move || {
+            let source = source.clone();
+            async move { Json(source.lock().await.clone()) }
+        }),
+    );
+    let internal = Server::start(router).await?;
+    let app = app(&internal).await?;
+    crate::task_state::initialize_empty(&app).await?;
+    crate::task_state::initialize_empty(&app).await?;
+    sqlx::query("UPDATE task_generations SET next_task_id=9")
+        .execute(&app.db)
+        .await?;
+    state.lock().await.next_task_id = 9;
+    state.lock().await.has_task_history = true;
+    crate::task_state::initialize_empty(&app).await?;
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT next_task_id FROM task_generations")
+            .fetch_one(&app.db)
+            .await?,
+        9
+    );
+    sqlx::query("DELETE FROM task_generations")
+        .execute(&app.db)
+        .await?;
+    assert!(matches!(
+        crate::task_state::initialize_empty(&app).await,
+        Err(Error::Conflict("task_state_missing"))
+    ));
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM task_generations")
+            .fetch_one(&app.db)
+            .await?,
+        0
+    );
+    internal.finish().await?;
     Ok(())
 }

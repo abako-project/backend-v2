@@ -10,6 +10,10 @@ and requested continued implementation. The approved scope and review expiry
 are in `tools/ink-sandbox/policy/`. This does not approve additional exceptions,
 authority promotion, publication or deployment.
 
+The owner-approved fresh-install amendment in SPEC-0015 supersedes the historical
+migration, maintained-native-comparison and two-release rollback requirements below.
+Public API behavior and current execution safety requirements remain in force.
+
 ## Scope and invariants
 
 Replace the mock's Rust business rules progressively with canonical ink! v5

@@ -75,15 +75,12 @@ pub(crate) async fn authorize(
             .into_iter()
             .find(|p| p.project_id == id)
             .ok_or(Error::NotFound)?;
-        let (project, api_tasks) = if matches!(command, ProviderCommand::UpdateTaskProgress { .. })
+        if matches!(command, ProviderCommand::UpdateTaskProgress { .. })
+            && !visible(&project, account)
         {
-            crate::task_views::project(app, snapshot.info.provider_instance_id, project, account)
-                .await?
-        } else {
-            (Some(project), false)
-        };
-        let project = project.ok_or(Error::Forbidden)?;
-        return authorize_project(app, &project, account, command, api_tasks).await;
+            return Err(Error::Forbidden);
+        }
+        return authorize_project(app, &project, account, command).await;
     }
     match command {
         ProviderCommand::RegisterWorker(_) | ProviderCommand::CreateProject(_) => Ok(()),
@@ -115,7 +112,6 @@ async fn authorize_project(
     project: &ProjectCore,
     account: AccountId32,
     command: &ProviderCommand,
-    api_tasks: bool,
 ) -> Result<(), Error> {
     let allowed = match command {
         ProviderCommand::QuotePlanning { .. }
@@ -165,8 +161,7 @@ async fn authorize_project(
                     .find(|m| m.task_storage.task_storage_id == *task_storage_id)
                     .and_then(|m| m.task_storage.tasks.iter().find(|t| t.task_id == *task_id))
                     .is_some_and(|task| {
-                        task.assignees.contains(&account)
-                            || (api_tasks && project.coordinator == account)
+                        task.assignees.contains(&account) || project.coordinator == account
                     })
         }
         ProviderCommand::CancelProject { .. }
@@ -302,14 +297,13 @@ pub(crate) async fn enqueue(
     let task_operation = task_project.is_some();
     if task_operation {
         let generation = generation.ok_or(Error::Dependency)?;
-        let owned: Option<bool> = sqlx::query_scalar(
-            "SELECT api_owned FROM task_generations WHERE provider_instance_id=$1",
-        )
-        .bind(generation.to_string())
-        .fetch_optional(&mut *tx)
-        .await?;
+        let owned: Option<bool> =
+            sqlx::query_scalar("SELECT TRUE FROM task_generations WHERE provider_instance_id=$1")
+                .bind(generation.to_string())
+                .fetch_optional(&mut *tx)
+                .await?;
         if owned != Some(true) {
-            return Err(Error::Conflict("task_state_provider_owned"));
+            return Err(Error::Conflict("task_state_missing"));
         }
     }
     let initial_status = if task_operation {
@@ -342,10 +336,7 @@ fn existing(
     operation_id: OperationId,
 ) -> Result<OperationRef, Error> {
     if row.try_get::<&str, _>("principal_id")? != session.view.principal_id.to_string()
-        || row
-            .try_get::<Option<Vec<u8>>, _>("request_command_bytes")?
-            .unwrap_or(row.try_get("command_bytes")?)
-            != command
+        || row.try_get::<Vec<u8>, _>("request_command_bytes")? != command
     {
         return Err(Error::Conflict("idempotency_conflict"));
     }
@@ -550,7 +541,7 @@ async fn save(
 
 pub(crate) async fn process(app: &App, mut job: Job) -> Result<(), Error> {
     // A stale/incorrect dispatch must not sign API-owned work. The supported
-    // downgrade drains task work first; this bridge deliberately cannot run it.
+    // Task execution and provider signing use distinct dispatch paths.
     let provider_owned: Option<bool> =
         sqlx::query_scalar("SELECT NOT task_operation FROM operations WHERE operation_id=$1")
             .bind(job.id.to_string())

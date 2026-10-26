@@ -16,11 +16,7 @@ async fn get(
 }
 async fn project(c: &Cohort, account: AccountId32) -> Result<Option<ProjectCore>, Error> {
     let raw = c.fake.lock().await.snapshot.projects[0].clone();
-    Ok(
-        crate::task_views::project(&c.app, info().provider_instance_id, raw, account)
-            .await?
-            .0,
-    )
+    Ok(crate::task_views::project(raw, account))
 }
 
 #[tokio::test]
@@ -124,12 +120,6 @@ async fn api_task_views_grant_and_remove_task_only_access_without_r1_copies() ->
     );
     let history = notifications::page(&c.app, c.worker.view.account_id, 0).await?;
     assert!(history.notifications.is_empty());
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM project_content_copies")
-            .fetch_one(&c.app.db)
-            .await?,
-        0
-    );
     assert!(
         c.fake.lock().await.snapshot.projects[0].proposals[0].milestones[0]
             .task_storage
@@ -598,7 +588,7 @@ async fn api_frozen_views_fail_closed_and_cannot_reenable_predecessor_task_fallb
         crate::disputes::public_read(&c.app, id).await,
         Err(Error::Dependency)
     ));
-    sqlx::query("UPDATE task_generations SET api_owned=FALSE")
+    sqlx::query("DELETE FROM task_generations")
         .execute(&c.app.db)
         .await?;
     assert!(crate::disputes::public_read(&c.app, id).await.is_err());
@@ -614,12 +604,6 @@ async fn api_frozen_views_fail_closed_and_cannot_reenable_predecessor_task_fallb
         .status(),
         StatusCode::SERVICE_UNAVAILABLE
     );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM project_content_copies")
-            .fetch_one(&c.app.db)
-            .await?,
-        0
-    );
     server.finish().await?;
     c.internal.finish().await?;
     Ok(())
@@ -632,13 +616,13 @@ async fn api_task_view_namespace_and_new_empty_storage_reads_do_not_reuse_old_ta
     c.run(&c.owner, c.create()).await?;
     let generation = ProviderInstanceId::from_bytes([61; 16]);
     // Explicit candidate namespace fixture, not a cutover or a source fingerprint.
-    sqlx::query("INSERT INTO task_generations(provider_instance_id,next_task_id,source_hash,storage_count,task_count,api_owned) VALUES($1,99,$2,0,0,TRUE)")
-        .bind(generation.to_string()).bind(vec![0u8;32]).execute(&c.app.db).await?;
+    sqlx::query("INSERT INTO task_generations(provider_instance_id,next_task_id) VALUES($1,99)")
+        .bind(generation.to_string())
+        .execute(&c.app.db)
+        .await?;
     let mut core = c.fake.lock().await.snapshot.projects[0].clone();
     core.proposals[0].milestones[0].task_storage.tasks.clear();
-    let (other, owned) =
-        crate::task_views::project(&c.app, generation, core, c.owner.view.account_id).await?;
-    assert!(owned);
+    let other = crate::task_views::project(core, c.owner.view.account_id);
     assert!(
         other.ok_or("owner")?.proposals[0].milestones[0]
             .task_storage

@@ -247,7 +247,7 @@ async fn catalog_completion_read_failure_keeps_lane_claim_and_retries_after_rest
     let app = app(&internal).await?;
     let admin = administrator(&app).await?;
     let (worker, _) = register(&app, "catalog_worker").await?;
-    let mut view = content_copies::source_worker()?;
+    let mut view = content::source_worker();
     view.account = worker.view.account_id;
     fake.lock()
         .await
@@ -319,7 +319,7 @@ async fn duplicate_requests_stay_pending_and_approval_publishes_actual_id_once()
     let app = app(&internal).await?;
     let admin = administrator(&app).await?;
     let (worker, _) = register(&app, "catalog_pending").await?;
-    let mut view = content_copies::source_worker()?;
+    let mut view = content::source_worker();
     view.account = worker.view.account_id;
     fake.lock()
         .await
@@ -551,79 +551,6 @@ async fn raw_delete_repairs_duplicate_graph_without_releasing_another_identity()
     Ok(())
 }
 #[tokio::test]
-async fn catalog_exchange_verifies_shared_refs_and_rolls_back_bad_cohorts() -> TestResult {
-    let fake = fake()?;
-    seed(&fake).await;
-    let internal = Server::start(internal(fake.clone())).await?;
-    let source = app(&internal).await?;
-    let target = app(&internal).await?;
-    let admin = administrator(&source).await?;
-    let created = operations::enqueue(&source, &admin, upsert(90, "Owned\0catalog"), None).await?;
-    drive(&source, &admin, created.operation_id).await?;
-    let path = metadata_path()?;
-    let count = crate::catalog_metadata_io::export(&source, path.clone()).await?;
-    assert_eq!(
-        crate::catalog_metadata_io::import(&target, path.clone()).await?,
-        count
-    );
-    assert_eq!(
-        crate::catalog_metadata_io::import(&target, path.clone()).await?,
-        count
-    );
-    assert!(
-        crate::catalog_metadata_io::export(&source, path.clone())
-            .await
-            .is_err()
-    );
-    let original = tokio::fs::read_to_string(&path).await?;
-    let first = original.lines().nth(1).ok_or("first")?;
-    let bad = metadata_path()?;
-    tokio::fs::write(&bad, format!("{original}{first}\n")).await?;
-    let empty = app(&internal).await?;
-    assert!(
-        crate::catalog_metadata_io::import(&empty, bad.clone())
-            .await
-            .is_err()
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM catalog_documents")
-            .fetch_one(&empty.db)
-            .await?,
-        0
-    );
-    // Content unavailable affects catalog presentation; ordinary financial work
-    // still executes without entering the catalog lane or hydrating these refs.
-    sqlx::query("DELETE FROM catalog_documents WHERE provider_instance_id=$1")
-        .bind(info().provider_instance_id.to_string())
-        .execute(&target.db)
-        .await?;
-    let (money, _) = register(&target, "money_owner").await?;
-    let deposit = operations::enqueue(
-        &target,
-        &money,
-        ProviderCommand::CreateDeposit(CreateDepositRequest {
-            amount: KvnAmount::new(Money::new(5))?,
-        }),
-        None,
-    )
-    .await?;
-    assert_eq!(
-        drive(&target, &money, deposit.operation_id).await?.status,
-        ProviderOperationStatus::Finalized
-    );
-    tokio::fs::remove_file(path).await?;
-    tokio::fs::remove_file(bad).await?;
-    internal.finish().await?;
-    Ok(())
-}
-
-fn metadata_path() -> Result<std::path::PathBuf, Error> {
-    Ok(std::env::temp_dir().join(format!(
-        "catalog-metadata-{}.ndjson",
-        OperationId::from_bytes(crate::state::random()?)
-    )))
-}
-#[tokio::test]
 async fn uncertain_expired_submissions_hold_names_until_authoritative_reconciliation() -> TestResult
 {
     let fake = fake()?;
@@ -632,7 +559,7 @@ async fn uncertain_expired_submissions_hold_names_until_authoritative_reconcilia
     let app = app(&internal).await?;
     let admin = administrator(&app).await?;
     let (worker, _) = register(&app, "uncertain_worker").await?;
-    let mut view = content_copies::source_worker()?;
+    let mut view = content::source_worker();
     view.account = worker.view.account_id;
     fake.lock()
         .await

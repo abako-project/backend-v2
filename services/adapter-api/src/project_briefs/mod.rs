@@ -27,13 +27,7 @@ async fn context(
         .into_iter()
         .find(|project| project.project_id == id)
         .ok_or(Error::NotFound)?;
-    let (project, _) = crate::task_views::project(
-        app,
-        snapshot.info.provider_instance_id,
-        project,
-        session.view.account_id,
-    )
-    .await?;
+    let project = crate::task_views::project(project, session.view.account_id);
     let project = project.ok_or(Error::NotFound)?;
     if writing && project.client != session.view.account_id {
         return Err(Error::Forbidden);

@@ -19,27 +19,33 @@ pub(super) fn source_project() -> Result<ProjectView, Box<dyn std::error::Error>
         });
     Ok(project)
 }
-#[derive(serde::Deserialize)]
-struct WorkerSource {
-    checkpoint: WorkerCheckpoint,
-}
-#[derive(serde::Deserialize)]
-struct WorkerCheckpoint {
-    workers: std::collections::BTreeMap<AccountId32, WorkerView>,
-}
-
-pub(super) fn source_worker() -> Result<WorkerView, Box<dyn std::error::Error>> {
-    let trace: Value = serde_json::from_str(include_str!(
-        "../../mock-provider/src/domain/fixtures/predecessor-migration.json"
-    ))?;
-    let archive: WorkerSource =
-        serde_json::from_str(trace["archives"][1]["archive"].as_str().ok_or("archive")?)?;
-    archive
-        .checkpoint
-        .workers
-        .into_values()
-        .next()
-        .ok_or_else(|| "worker".into())
+pub(super) fn source_worker() -> WorkerView {
+    let account = AccountId32::from_bytes([22; 32]);
+    let score = ReputationView {
+        weighted_score_sum: 0,
+        rated_minutes: 0,
+    };
+    WorkerView {
+        account,
+        display_name: "Worker".into(),
+        qualifications: Qualifications {
+            role_ids: vec![3],
+            skill_ids: vec![1],
+        },
+        mode: WorkerMode::Coordinator,
+        coordinator_eligible: true,
+        calendar: CalendarView {
+            calendar_id: EntityId::from_bytes([23; 16]),
+            owner: account,
+            definition: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+            reservations: vec![],
+        },
+        worker_score: score.clone(),
+        coordinator_score: score,
+    }
 }
 
 #[tokio::test]
@@ -99,11 +105,7 @@ async fn project_composition_preserves_metadata_versions_and_current_api_task_co
         .await?,
         original
     );
-    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM project_content_copies")
-        .fetch_one(&app.db)
-        .await?;
-    assert_eq!(count, 0);
-    let mut worker = source_worker()?;
+    let mut worker = source_worker();
     worker.display_name = format!("\0{}", "n".repeat(MAX_SIGNABLE_BYTES - 201));
     let expected = worker.clone();
     let core = stage_worker(&app, generation, worker.clone()).await?;
@@ -154,166 +156,11 @@ async fn project_composition_preserves_metadata_versions_and_current_api_task_co
 }
 
 #[tokio::test]
-async fn provider_content_copies_preserve_public_views_visibility_and_read_only_backfill()
--> TestResult {
-    let fake = fake()?;
-    let internal = Server::start(internal(fake.clone())).await?;
-    let app = app(&internal).await?;
-    let (client, cookie) = register(&app, "content_owner").await?;
-    let (_, stranger_cookie) = register(&app, "content_stranger").await?;
-    let mut project = source_project()?;
-    project.client = client.view.account_id;
-    let id = project.project_id;
-    let storage_id = project.proposals[0].milestones[0]
-        .task_storage
-        .task_storage_id;
-    let worker = source_worker()?;
-    fake.lock()
-        .await
-        .snapshot
-        .projects
-        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
-    fake.lock()
-        .await
-        .snapshot
-        .workers
-        .push(stage_worker(&app, info().provider_instance_id, worker.clone()).await?);
-    let server = Server::start(crate::http::router(app.clone())).await?;
-    let http = reqwest::Client::new();
-    let project_url = format!("{}/api/projects/{id}", server.url);
-    assert_eq!(
-        http.get(&project_url)
-            .header(header::COOKIE, &stranger_cookie)
-            .send()
-            .await?
-            .status(),
-        StatusCode::NOT_FOUND
-    );
-    assert_eq!(
-        http.get(format!("{}/api/projects", server.url))
-            .header(header::COOKIE, &stranger_cookie)
-            .send()
-            .await?
-            .json::<Value>()
-            .await?,
-        json!([])
-    );
-    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM project_content_copies")
-        .fetch_one(&app.db)
-        .await?;
-    assert_eq!(
-        count, 0,
-        "invisible projects must not be copied by a stranger's request"
-    );
-    assert_eq!(
-        http.get(&project_url)
-            .header(header::COOKIE, &cookie)
-            .send()
-            .await?
-            .json::<ProjectView>()
-            .await?,
-        project
-    );
-    let storage: TaskStorageView = http
-        .get(format!("{}/api/task-storages/{storage_id}", server.url))
-        .header(header::COOKIE, &cookie)
-        .send()
-        .await?
-        .json()
-        .await?;
-    assert_eq!(storage, project.proposals[0].milestones[0].task_storage);
-    let task: TaskView = http
-        .get(format!(
-            "{}/api/task-storages/{storage_id}/tasks/1",
-            server.url
-        ))
-        .header(header::COOKIE, &cookie)
-        .send()
-        .await?
-        .json()
-        .await?;
-    assert_eq!(task, storage.tasks[0]);
-    let workers: Value = http
-        .get(format!("{}/api/workers", server.url))
-        .header(header::COOKIE, &cookie)
-        .send()
-        .await?
-        .json()
-        .await?;
-    assert_eq!(workers[0]["displayName"], worker.display_name);
-    assert_eq!(crate::backfill_content(&app).await?, (1, 1));
-    assert_eq!(crate::backfill_content(&app).await?, (1, 1));
-    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM project_content_copies")
-        .fetch_one(&app.db)
-        .await?;
-    assert_eq!(count, 0);
-    assert_eq!(
-        fake.lock().await.snapshot.projects,
-        vec![core_project(&project, info().provider_instance_id)?.0]
-    );
-    assert_eq!(fake.lock().await.submissions, 0);
-    assert!(fake.lock().await.jobs.is_empty());
-    server.finish().await?;
-    internal.finish().await?;
-    app.db.close().await;
-    Ok(())
-}
-
-#[tokio::test]
-async fn obsolete_project_copy_writes_are_not_required_for_current_views() -> TestResult {
-    let fake = fake()?;
-    let internal = Server::start(internal(fake.clone())).await?;
-    let app = app(&internal).await?;
-    let project = source_project()?;
-    fake.lock()
-        .await
-        .snapshot
-        .projects
-        .push(stage_project(&app, info().provider_instance_id, project.clone()).await?);
-    sqlx::query("ALTER TABLE project_content_copies ADD CONSTRAINT reject_copy CHECK (false)")
-        .execute(&app.db)
-        .await?;
-    assert!(
-        crate::project_content::compose(
-            &app,
-            info().provider_instance_id,
-            stage_project(&app, info().provider_instance_id, project.clone()).await?
-        )
-        .await
-        .is_ok()
-    );
-    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM project_content_copies")
-        .fetch_one(&app.db)
-        .await?;
-    assert_eq!(count, 0);
-    assert_eq!(
-        fake.lock().await.snapshot.projects,
-        vec![core_project(&project.clone(), info().provider_instance_id)?.0]
-    );
-    sqlx::query("ALTER TABLE project_content_copies DROP CONSTRAINT reject_copy")
-        .execute(&app.db)
-        .await?;
-    assert_eq!(
-        crate::project_content::compose(
-            &app,
-            info().provider_instance_id,
-            stage_project(&app, info().provider_instance_id, project.clone()).await?
-        )
-        .await?,
-        project
-    );
-    assert_eq!(fake.lock().await.submissions, 0);
-    internal.finish().await?;
-    app.db.close().await;
-    Ok(())
-}
-
-#[tokio::test]
 #[allow(
     clippy::too_many_lines,
-    reason = "Compare all task write aliases with project routes under one corrupt-copy scenario."
+    reason = "Compare all task write aliases with project routes under one missing-content scenario."
 )]
-async fn provider_content_copies_cannot_block_raw_task_write_aliases() -> TestResult {
+async fn missing_task_content_cannot_block_raw_task_write_aliases() -> TestResult {
     let fake = fake()?;
     let internal = Server::start(internal(fake.clone())).await?;
     let app = app(&internal).await?;

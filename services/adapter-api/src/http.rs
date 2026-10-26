@@ -506,9 +506,7 @@ async fn projects(
 ) -> Result<Json<Vec<ProjectView>>, Error> {
     let snapshot = app.snapshot().await?;
     let generation = snapshot.info.provider_instance_id;
-    let projects =
-        crate::task_views::visible(&app, generation, snapshot.projects, session.view.account_id)
-            .await?;
+    let projects = crate::task_views::visible(snapshot.projects, session.view.account_id);
     let mut composed = Vec::with_capacity(projects.len());
     for project in projects {
         let mut project = crate::project_content::compose(&app, generation, project).await?;
@@ -530,8 +528,7 @@ async fn project(
         .into_iter()
         .find(|p| p.project_id == id)
         .ok_or(Error::NotFound)?;
-    let (project, _) =
-        crate::task_views::project(&app, generation, project, session.view.account_id).await?;
+    let project = crate::task_views::project(project, session.view.account_id);
     let project = project.ok_or(Error::NotFound)?;
     let mut project = crate::project_content::compose(&app, generation, project).await?;
     crate::evidence::project(&app, generation, &mut project).await?;
@@ -555,13 +552,7 @@ async fn visible_storage_project(
                 .any(|m| m.task_storage.task_storage_id == storage_id)
         })
         .ok_or(Error::NotFound)?;
-    let (project, _) = crate::task_views::project(
-        app,
-        snapshot.info.provider_instance_id,
-        project,
-        session.view.account_id,
-    )
-    .await?;
+    let project = crate::task_views::project(project, session.view.account_id);
     let project = project.ok_or(Error::NotFound)?;
     Ok((snapshot.info.provider_instance_id, project))
 }

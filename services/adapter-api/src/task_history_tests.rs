@@ -536,7 +536,7 @@ async fn task_history_constraints_preserve_truthful_source_and_existing_rows() -
 }
 
 #[tokio::test]
-async fn task_history_migration_preserves_actual_pre_bridge_rows() -> TestResult {
+async fn task_history_preserves_results_and_notifications_on_restart() -> TestResult {
     let internal = Server::start(internal(fake()?)).await?;
     let app = app(&internal).await?;
     let (alice, _) = register(&app, "task_upgrade_alice").await?;
@@ -567,16 +567,6 @@ async fn task_history_migration_preserves_actual_pre_bridge_rows() -> TestResult
     .await?;
     let expected_operation = operations::read(&app, &alice, operation.operation_id).await?;
     let expected_notifications = notifications::page(&app, alice.view.account_id, 0).await?;
-    // Recreate only the predecessor schema in this isolated test database. The
-    // retained provider rows, IDs, payloads and sessions are left untouched.
-    sqlx::raw_sql("ALTER TABLE notifications DROP CONSTRAINT notifications_event_source;
-        ALTER TABLE notifications DROP COLUMN api_operation_id;
-        ALTER TABLE notifications ALTER COLUMN provider_cursor SET NOT NULL;
-        ALTER TABLE operations DROP CONSTRAINT operations_task_source;
-        ALTER TABLE operations DROP COLUMN task_operation;
-        ALTER TABLE operations DROP COLUMN task_result_json;
-        ALTER TABLE operations ADD CONSTRAINT operations_status_check CHECK(status IN ('AwaitingSignature','ReadyToSubmit','Submitted','OutcomeUnknown','Finalized','Rejected','Expired'));")
-        .execute(&app.db).await?;
     let database_url = app.config.database_url.clone();
     drop(app);
     for _ in 0..2 {
@@ -623,9 +613,6 @@ async fn task_core_intent_schema_preserves_original_request_across_classificatio
         .bind(project_id.to_string())
         .execute(&app.db)
         .await?;
-    // Upgrade a real previous constraint before exercising the additive schema.
-    sqlx::raw_sql("ALTER TABLE operations DROP CONSTRAINT operations_task_project_source; ALTER TABLE operations ADD CONSTRAINT operations_task_project_source CHECK(task_project_id IS NULL OR task_operation)")
-        .execute(&app.db).await?;
     let upgraded = App::new(test_config(app.config.database_url.clone(), &internal)?).await?;
     let core = ProviderCommand::CreateTaskCore {
         project_id: *project_id,

@@ -139,21 +139,8 @@ async fn enrich(
                             .any(|n| n.event.project_id() == Some(p.project_id))
                     })
                     .collect();
-                match crate::task_views::visible(
-                    app,
-                    snapshot.info.provider_instance_id,
-                    selected,
-                    account,
-                )
-                .await
-                {
-                    Ok(projects) => {
-                        snapshot.projects = projects;
-                        Some(snapshot)
-                    }
-                    Err(Error::Dependency | Error::NotFound) => None,
-                    Err(error) => return Err(error),
-                }
+                snapshot.projects = crate::task_views::visible(selected, account);
+                Some(snapshot)
             }
             Err(Error::Dependency | Error::NotFound) => None,
             Err(error) => return Err(error),

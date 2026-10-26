@@ -1,5 +1,6 @@
 //! Real `PostgreSQL` hold admission, task races and existing transport recovery.
 use super::*;
+use generated_contracts::provider_core::TaskStorageRecordV1;
 
 fn cancellation(project: EntityId) -> ProviderCommand {
     ProviderCommand::CancelProject {
@@ -234,13 +235,14 @@ async fn task_freeze_intervening_operation_keeps_order_without_deadlocking_freez
 }
 
 #[tokio::test]
-async fn task_freeze_provider_owned_generation_and_planning_behavior_stay_unchanged() -> TestResult
-{
+async fn task_freeze_rejects_missing_generation_and_leaves_planning_unchanged() -> TestResult {
     let c = Cohort::new(false).await?;
-    let id = freeze(&c, &c.owner, c.project.project_id).await?;
-    finish_provider(&c, id, &c.owner).await?;
+    assert!(matches!(
+        freeze(&c, &c.owner, c.project.project_id).await,
+        Err(Error::Dependency)
+    ));
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM task_freezes")
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM operations")
             .fetch_one(&c.app.db)
             .await?,
         0
@@ -478,74 +480,6 @@ async fn task_freeze_admission_failure_rolls_back_operation_reason_and_hold() ->
     .await?;
     assert_eq!(state(&c, id).await?.0, "Pending");
     c.internal.finish().await?;
-    Ok(())
-}
-
-#[tokio::test]
-async fn task_freeze_context_upgrade_is_bounded_restart_safe_and_keeps_future_histories()
--> TestResult {
-    for owned in [false, true] {
-        let c = Cohort::new(owned).await?;
-        // Retained queue fixtures exercise two decoder pages, not fresh admission.
-        let mut ids = Vec::new();
-        for _ in 0..65 {
-            ids.push(c.queue(&c.owner, c.create()).await?);
-        }
-        let commands: Vec<String> =
-            sqlx::query_scalar("SELECT command_json FROM operations ORDER BY creation_sequence")
-                .fetch_all(&c.app.db)
-                .await?;
-        sqlx::raw_sql(
-            "DROP TABLE task_freezes; ALTER TABLE operations DROP COLUMN task_project_id;",
-        )
-        .execute(&c.app.db)
-        .await?;
-        if !owned {
-            sqlx::query("UPDATE operations SET command_json='unknown future representation'")
-                .execute(&c.app.db)
-                .await?;
-        }
-        let reopened =
-            App::new(test_config(c.app.config.database_url.clone(), &c.internal)?).await?;
-        let filled: i64 =
-            sqlx::query_scalar("SELECT count(*) FROM operations WHERE task_project_id IS NOT NULL")
-                .fetch_one(&reopened.db)
-                .await?;
-        assert_eq!(filled, if owned { 65 } else { 0 });
-        if owned {
-            let retained: Vec<String> = sqlx::query_scalar(
-                "SELECT command_json FROM operations ORDER BY creation_sequence",
-            )
-            .fetch_all(&reopened.db)
-            .await?;
-            assert_eq!(retained, commands);
-            let again =
-                App::new(test_config(c.app.config.database_url.clone(), &c.internal)?).await?;
-            assert_eq!(
-                sqlx::query_scalar::<_, i64>(
-                    "SELECT count(*) FROM operations WHERE task_project_id IS NOT NULL"
-                )
-                .fetch_one(&again.db)
-                .await?,
-                65
-            );
-            sqlx::query("UPDATE operations SET task_project_id=$2 WHERE operation_id=$1")
-                .bind(ids[0].to_string())
-                .bind(EntityId::from_bytes([79; 16]).to_string())
-                .execute(&again.db)
-                .await?;
-            c.step().await?;
-            assert_eq!(
-                operations::read(&c.app, &c.owner, ids[0]).await?.status,
-                ProviderOperationStatus::Queued
-            );
-            assert!(c.tasks().await?.is_empty());
-            assert_eq!(c.counter().await?, 9);
-        } else {
-            assert!(operations::claim_work(&reopened).await?.is_none());
-        }
-        c.internal.finish().await?;
-    }
     Ok(())
 }
 

@@ -138,7 +138,7 @@ impl Request {
 pub(crate) async fn process(app: &App, job: Job) -> Result<(), Error> {
     match execute(app, &job).await {
         Ok(()) | Err(Error::Conflict("lease_lost")) => Ok(()),
-        Err(Error::Conflict("task_state_provider_owned")) => {
+        Err(Error::Conflict("task_state_missing")) => {
             sqlx::query("UPDATE operations SET lease_token=NULL,lease_until=NULL WHERE operation_id=$1 AND task_operation AND status='Queued' AND lease_token=$2")
                 .bind(job.id.to_string()).bind(&job.lease).execute(&app.db).await?;
             Ok(())
@@ -170,7 +170,7 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
     let Some(next) =
         crate::task_freezes::lock_project(&mut tx, request.generation, request.project).await?
     else {
-        return Err(Error::Conflict("task_state_provider_owned"));
+        return Err(Error::Conflict("task_state_missing"));
     };
     match crate::task_freezes::hold(&mut tx, request.generation, request.project).await? {
         crate::task_freezes::Hold::Clear => {}
@@ -304,8 +304,6 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
         if storage.is_none() {
             sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$3,$4,$5,$6)")
                 .bind(request.generation.to_string()).bind(request.storage.to_string()).bind(request.project.to_string()).bind(proposal.to_string()).bind(revision.to_string()).bind(milestone.to_string()).execute(&mut *tx).await?;
-            sqlx::query("UPDATE task_generations SET storage_count=storage_count+1 WHERE provider_instance_id=$1")
-                .bind(request.generation.to_string()).execute(&mut *tx).await?;
         }
         let (json, bytes) = tokio::task::spawn_blocking(move || {
             Ok::<_, Error>((serde_json::to_string(&command)?, command.encode()))
@@ -330,20 +328,19 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
                     // Core identity exists; missing API content is retryable, not deletion.
                     return Err(Error::Dependency);
                 }
-                let old_count = tasks.len();
                 apply(
                     &request.command,
                     tasks,
                     next,
                     UnixSeconds::new(u64::try_from(time).map_err(|_| Error::Internal)?),
                 )
-                .map(|(tasks, next, kind)| (project, tasks, next, kind, old_count))
+                .map(|(tasks, next, kind)| (project, tasks, next, kind))
             }
         };
         Ok::<_, Error>((request, changed))
     })
     .await??;
-    let (project, tasks, next, kind, old_count) = match changed {
+    let (project, tasks, next, kind) = match changed {
         Ok(value) => value,
         Err(code) => {
             return finish(
@@ -395,10 +392,11 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
     }
     sqlx::query("UPDATE task_storages SET proposal_revision=$3 WHERE provider_instance_id=$1 AND task_storage_id=$2")
         .bind(&generation).bind(request.storage.to_string()).bind(revision.to_string()).execute(&mut *tx).await?;
-    let delta = i64::try_from(prepared.len()).map_err(|_| Error::Dependency)?
-        - i64::try_from(old_count).map_err(|_| Error::Dependency)?;
-    sqlx::query("UPDATE task_generations SET next_task_id=$2,task_count=task_count+$3,storage_count=storage_count+$4 WHERE provider_instance_id=$1")
-        .bind(&generation).bind(i64::from(next)).bind(delta).bind(i64::from(storage.is_none())).execute(&mut *tx).await?;
+    sqlx::query("UPDATE task_generations SET next_task_id=$2 WHERE provider_instance_id=$1")
+        .bind(&generation)
+        .bind(i64::from(next))
+        .execute(&mut *tx)
+        .await?;
     let mut recipients = BTreeSet::from([project.client, project.coordinator]);
     recipients.extend(
         project

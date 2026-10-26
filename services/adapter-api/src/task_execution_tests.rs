@@ -1,6 +1,5 @@
 //! Real task execution in explicitly API-owned test cohorts. No production cutover.
 use super::*;
-use generated_contracts::provider_core::{TaskStateV1, TaskStorageRecordV1};
 use parity_scale_codec::Encode;
 use serde_json::Value;
 
@@ -28,17 +27,7 @@ impl Cohort {
         case: Option<CaseSlot>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let fake = fake()?;
-        let task_source = Arc::new(Mutex::new(None::<TaskStateV1>));
-        let router = internal(fake.clone()).route(
-            "/internal/task-state",
-            get({
-                let source = task_source.clone();
-                move || {
-                    let source = source.clone();
-                    async move { Json(source.lock().await.clone()) }
-                }
-            }),
-        );
+        let router = internal(fake.clone());
         let router = if let Some(case) = case {
             router.route(
                 "/internal/disputes/{id}",
@@ -70,27 +59,14 @@ impl Cohort {
         project.proposals[0].status = ProposalStatus::Draft;
         let core =
             stage_project_without_tasks(&app, info().provider_instance_id, project.clone()).await?;
-        let mut known = content_copies::source_worker()?;
+        let mut known = content::source_worker();
         known.account = worker.view.account_id;
         let known = stage_worker(&app, info().provider_instance_id, known).await?;
         fake.lock().await.snapshot.projects = vec![core];
         fake.lock().await.snapshot.workers = vec![known];
-        let state = TaskStateV1 {
-            schema_version: 1,
-            generation: info().provider_instance_id,
-            next_task_id: 9,
-            storages: vec![TaskStorageRecordV1 {
-                project_id: project.project_id,
-                proposal_id: project.proposals[0].proposal_id,
-                proposal_revision: project.proposals[0].revision,
-                storage: project.proposals[0].milestones[0].task_storage.clone(),
-            }],
-        };
-        *task_source.lock().await = Some(state);
-        crate::task_state::backfill(&app).await?;
         if api_owned {
-            // Explicit test-only ownership fixture; production uses verified activation.
-            sqlx::query("UPDATE task_generations SET api_owned=TRUE")
+            stage_task_content(&app, info().provider_instance_id, project.clone()).await?;
+            sqlx::query("UPDATE task_generations SET next_task_id=9")
                 .execute(&app.db)
                 .await?;
         }
@@ -185,7 +161,7 @@ fn outcome(operation: &OperationView) -> Result<&ExecutionOutcome, Box<dyn std::
     }
 }
 #[tokio::test]
-async fn task_executor_requires_explicit_content_ownership_before_public_admission() -> TestResult {
+async fn task_executor_refuses_missing_generation_before_public_admission() -> TestResult {
     let c = Cohort::new(false).await?;
     let id = c.queue(&c.owner, c.create()).await?;
     assert!(operations::claim_work(&c.app).await?.is_none());
@@ -193,7 +169,7 @@ async fn task_executor_requires_explicit_content_ownership_before_public_admissi
         operations::read(&c.app, &c.owner, id).await?.status,
         ProviderOperationStatus::Queued
     );
-    assert_eq!(c.counter().await?, 9);
+    assert!(c.counter().await.is_err());
     assert!(c.tasks().await?.is_empty());
     sqlx::query("DELETE FROM operations WHERE operation_id=$1")
         .bind(id.to_string())
@@ -201,7 +177,7 @@ async fn task_executor_requires_explicit_content_ownership_before_public_admissi
         .await?;
     assert!(matches!(
         operations::enqueue(&c.app, &c.owner, c.create(), None).await,
-        Err(Error::Conflict("task_state_provider_owned"))
+        Err(Error::Conflict("task_state_missing"))
     ));
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM operations")
@@ -301,15 +277,6 @@ async fn task_executor_uses_core_receipts_for_identity_and_api_results_for_progr
     );
     assert_eq!(c.fake.lock().await.submissions, 3);
     assert_eq!(sqlx::query_scalar::<_,i64>("SELECT count(*) FROM operations WHERE signable_payload IS NOT NULL OR signed_json IS NOT NULL OR receipt_json IS NOT NULL OR possibly_submitted").fetch_one(&c.app.db).await?,3);
-    assert!(matches!(
-        crate::task_state::backfill(&c.app).await,
-        Err(Error::Conflict("task_state_api_owned"))
-    ));
-    let path = std::env::temp_dir().join("must-not-export-active-preparation.json");
-    assert!(matches!(
-        crate::task_state::export(&c.app, info().provider_instance_id, path).await,
-        Err(Error::Conflict("task_state_api_owned"))
-    ));
     c.internal.finish().await?;
     Ok(())
 }
@@ -723,25 +690,6 @@ async fn task_executor_rechecks_ownership_generation_and_retained_request_before
 -> TestResult {
     let c = Cohort::new(true).await?;
     let id = c.queue(&c.owner, c.create()).await?;
-    let Some(operations::Work::Task(job)) = operations::claim_work(&c.app).await? else {
-        return Err("claim".into());
-    };
-    sqlx::query("UPDATE task_generations SET api_owned=FALSE")
-        .execute(&c.app.db)
-        .await?;
-    crate::task_execution::process(&c.app, job).await?;
-    assert!(operations::claim_work(&c.app).await?.is_none());
-    assert_eq!(c.counter().await?, 9);
-    assert!(c.tasks().await?.is_empty());
-    let row = sqlx::query("SELECT status,attempt_count,lease_token FROM operations")
-        .fetch_one(&c.app.db)
-        .await?;
-    assert_eq!(row.try_get::<&str, _>("status")?, "Queued");
-    assert_eq!(row.try_get::<i64, _>("attempt_count")?, 0);
-    assert!(row.try_get::<Option<String>, _>("lease_token")?.is_none());
-    sqlx::query("UPDATE task_generations SET api_owned=TRUE")
-        .execute(&c.app.db)
-        .await?;
     c.fake.lock().await.snapshot.info.provider_instance_id =
         ProviderInstanceId::from_bytes([72; 16]);
     c.step().await?;

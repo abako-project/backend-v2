@@ -1,5 +1,4 @@
 use super::*;
-use crate::{proposal_metadata as documents, proposal_metadata_io as exchange};
 use generated_contracts::provider_core::*;
 use serde_json::Value;
 fn definition() -> Result<ProposalDefinition, ContractError> {
@@ -28,7 +27,7 @@ async fn empty_project(
     fake: &Arc<Mutex<Fake>>,
     account: AccountId32,
 ) -> Result<ProjectView, Box<dyn std::error::Error>> {
-    let mut project = content_copies::source_project()?;
+    let mut project = content::source_project()?;
     project.coordinator = account;
     project.proposals.clear();
     fake.lock().await.snapshot.projects =
@@ -124,7 +123,7 @@ async fn proposal_staging_is_compact_pending_private_and_uses_captured_core_poli
             .is_empty()
     );
     // Confirmed facts capture 20%, irrespective of both the input and current 70%.
-    let mut confirmed = content_copies::source_project()?;
+    let mut confirmed = content::source_project()?;
     confirmed.client = project.client;
     confirmed.coordinator = project.coordinator;
     confirmed.proposals[0].revision = 0;
@@ -356,238 +355,6 @@ async fn proposal_generation_and_occupied_hash_fail_before_signing() -> TestResu
     );
     assert!(fake.lock().await.jobs.is_empty());
     assert_eq!(fake.lock().await.submissions, 0);
-    internal.finish().await?;
-    app.db.close().await;
-    Ok(())
-}
-fn path() -> Result<std::path::PathBuf, Error> {
-    Ok(std::env::temp_dir().join(format!(
-        "proposal-metadata-{}.ndjson",
-        OperationId::from_bytes(crate::state::random()?)
-    )))
-}
-async fn file(
-    path: std::path::PathBuf,
-    generation: ProviderInstanceId,
-    records: Vec<ProposalMetadataRecordV1>,
-) -> TestResult {
-    tokio::task::spawn_blocking(move || -> Result<(), Error> {
-        use std::io::Write;
-        let mut options = std::fs::OpenOptions::new();
-        options.create_new(true).write(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        let mut file = options.open(path)?;
-        serde_json::to_writer(
-            &mut file,
-            &ProposalMetadataHeaderV1 {
-                schema_version: 1,
-                generation,
-            },
-        )?;
-        file.write_all(b"\n")?;
-        for record in records {
-            serde_json::to_writer(&mut file, &record)?;
-            file.write_all(b"\n")?;
-        }
-        Ok(())
-    })
-    .await??;
-    Ok(())
-}
-#[tokio::test]
-async fn proposal_exchange_preserves_current_views_and_rejects_incomplete_conflicting_content()
--> TestResult {
-    let fake = fake()?;
-    let internal = Server::start(internal(fake.clone())).await?;
-    let source = app(&internal).await?;
-    let target = app(&internal).await?;
-    let generation = info().provider_instance_id;
-    let mut project = content_copies::source_project()?;
-    project.proposals[0].title = "Exact\0title".into();
-    project.proposals[0].description = "λ".repeat(40_000);
-    project.proposals[0].change_request = Some("Change\0request".into());
-    let core = stage_project(&source, generation, project.clone()).await?;
-    fake.lock().await.snapshot.projects = vec![core.clone()];
-    let records = core_proposals(&project, generation)?.1;
-    assert_eq!(records.len(), 2);
-    for (header, records) in [
-        (ProviderInstanceId::from_bytes([98; 16]), records.clone()),
-        (generation, vec![records[0].clone()]),
-        (
-            generation,
-            vec![records[0].clone(), records[0].clone(), records[1].clone()],
-        ),
-    ] {
-        let input = path()?;
-        file(input.clone(), header, records).await?;
-        assert!(exchange::import(&target, input.clone()).await.is_err());
-        assert_eq!(
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM proposal_documents")
-                .fetch_one(&target.db)
-                .await?,
-            0
-        );
-        std::fs::remove_file(input)?;
-    }
-    let exported = path()?;
-    assert_eq!(exchange::export(&source, exported.clone()).await?, 2);
-    assert!(exchange::export(&source, exported.clone()).await.is_err());
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        assert_eq!(
-            std::fs::metadata(&exported)?.permissions().mode() & 0o777,
-            0o600
-        );
-    }
-    for _ in 0..2 {
-        assert_eq!(exchange::import(&target, exported.clone()).await?, 2);
-        assert_eq!(
-            documents::compose(
-                &target,
-                generation,
-                project.project_id,
-                project.coordinator,
-                project.client,
-                core.proposals[0].clone(),
-                project.proposals[0]
-                    .milestones
-                    .iter()
-                    .map(|m| m.task_storage.clone())
-                    .collect()
-            )
-            .await?,
-            project.proposals[0]
-        );
-    }
-    let config = test_config(target.config.database_url.clone(), &internal)?;
-    target.db.close().await;
-    let reopened = App::new(config).await?;
-    assert_eq!(
-        documents::compose(
-            &reopened,
-            generation,
-            project.project_id,
-            project.coordinator,
-            project.client,
-            core.proposals[0].clone(),
-            project.proposals[0]
-                .milestones
-                .iter()
-                .map(|m| m.task_storage.clone())
-                .collect()
-        )
-        .await?,
-        project.proposals[0]
-    );
-    sqlx::query("UPDATE proposal_documents SET payload='tampered'")
-        .execute(&reopened.db)
-        .await?;
-    assert!(matches!(
-        exchange::import(&reopened, exported.clone()).await,
-        Err(Error::Dependency)
-    ));
-    assert!(matches!(
-        documents::compose(
-            &reopened,
-            generation,
-            project.project_id,
-            project.coordinator,
-            project.client,
-            core.proposals[0].clone(),
-            project.proposals[0]
-                .milestones
-                .iter()
-                .map(|m| m.task_storage.clone())
-                .collect()
-        )
-        .await,
-        Err(Error::Dependency)
-    ));
-    assert!(fake.lock().await.jobs.is_empty());
-    assert_eq!(fake.lock().await.submissions, 0);
-    std::fs::remove_file(exported)?;
-    internal.finish().await?;
-    source.db.close().await;
-    reopened.db.close().await;
-    Ok(())
-}
-#[tokio::test]
-async fn proposal_partial_recovery_verifies_every_other_selected_record_and_pending_barrier()
--> TestResult {
-    let fake = fake()?;
-    let internal = Server::start(internal(fake.clone())).await?;
-    let app = app(&internal).await?;
-    let (owner, _) = register(&app, "proposal_recovery").await?;
-    let generation = info().provider_instance_id;
-    let mut project = content_copies::source_project()?;
-    project.coordinator = owner.view.account_id;
-    project.proposals[0].change_request = Some("Retained request".into());
-    let core = stage_project(&app, generation, project.clone()).await?;
-    fake.lock().await.snapshot.projects = vec![core.clone()];
-    let records = core_proposals(&project, generation)?.1;
-    let selected_hash = core.proposals[0].content.hash();
-    sqlx::query("DELETE FROM proposal_documents WHERE content_hash=$1")
-        .bind(selected_hash.as_bytes().as_slice())
-        .execute(&app.db)
-        .await?;
-    let input = path()?;
-    file(input.clone(), generation, vec![records[0].clone()]).await?;
-    assert_eq!(exchange::import(&app, input.clone()).await?, 2);
-    sqlx::query("DELETE FROM proposal_documents WHERE content_hash=$1")
-        .bind(selected_hash.as_bytes().as_slice())
-        .execute(&app.db)
-        .await?;
-    sqlx::query("UPDATE proposal_documents SET payload='tampered'")
-        .execute(&app.db)
-        .await?;
-    assert!(matches!(
-        exchange::import(&app, input.clone()).await,
-        Err(Error::Dependency)
-    ));
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>(
-            "SELECT count(*) FROM proposal_documents WHERE content_hash=$1"
-        )
-        .bind(selected_hash.as_bytes().as_slice())
-        .fetch_one(&app.db)
-        .await?,
-        0
-    );
-    let pending = operations::enqueue(
-        &app,
-        &owner,
-        ProviderCommand::UpdateProposal {
-            project_id: project.project_id,
-            proposal_id: project.proposals[0].proposal_id,
-            proposal: definition()?,
-        },
-        None,
-    )
-    .await?;
-    assert!(matches!(
-        exchange::import(&app, input.clone()).await,
-        Err(Error::Conflict("cutover_operations_pending"))
-    ));
-    assert!(matches!(
-        exchange::export(&app, path()?).await,
-        Err(Error::Conflict("cutover_operations_pending"))
-    ));
-    sqlx::query(
-        "UPDATE operations SET status='Expired',possibly_submitted=true WHERE operation_id=$1",
-    )
-    .bind(pending.operation_id.to_string())
-    .execute(&app.db)
-    .await?;
-    assert!(matches!(
-        exchange::import(&app, input.clone()).await,
-        Err(Error::Conflict("cutover_operations_pending"))
-    ));
-    std::fs::remove_file(input)?;
     internal.finish().await?;
     app.db.close().await;
     Ok(())

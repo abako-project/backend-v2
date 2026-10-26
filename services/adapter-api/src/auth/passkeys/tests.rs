@@ -71,10 +71,7 @@ async fn database() -> Result<PgPool, Box<dyn std::error::Error>> {
         "{base}{separator}options=-csearch_path%3D{schema}"
     ))
     .await?;
-    sqlx::raw_sql(include_str!("../../../migrations/0001_adapter.sql"))
-        .execute(&db)
-        .await?;
-    sqlx::raw_sql(include_str!("../../../migrations/0003_passkeys.sql"))
+    sqlx::raw_sql(include_str!("../../../schema.sql"))
         .execute(&db)
         .await?;
     Ok(db)

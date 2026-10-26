@@ -5,6 +5,35 @@ Approval: owner approved the staged plan in the current conversation, 2026-10-23
 Task: SPEC-0015. Owner requested a simplification plan on 2026-10-23 after
 identifying custom storage paging as a symptom of inappropriate provider data.
 
+## Fresh-install simplification amendment
+
+Approved by the owner on 2026-10-26: the only deployed environment is disposable
+development data. Start from clean state and minimal current fixtures; historical
+migration, rollback, legacy formats and intermediate deployment compatibility are
+no longer requirements. This amendment supersedes conflicting historical-data,
+additive-migration, bridge-release and maintained-reference obligations in
+SPEC-0013/0014/0015. Keep current frontend REST/JSON/SSE behavior, authorization,
+exact money, contract-enforced task identity/membership and API-owned content.
+
+Use one current internal model and schema. Remove historical import/export
+converters, staged ownership switches, migration-only commitments and fixture
+copies. Initialize fresh state through ordinary constructors/current commands.
+Retain restart persistence, operation idempotency, uncertain-outcome recovery,
+atomic commits and ordinary backups of a running current installation. Incompatible
+old stores must fail clearly; startup must never silently reset an existing store.
+
+The contract provider should execute one WASM authority and read its own current
+facts/shell. Remove live shadow/native comparison and its duplicated state. A
+standalone native development provider may remain isolated while the existing SDK
+dependency-policy gate prevents normal application integration; it is not a legacy
+migration or runtime-read dependency. Remove unnecessary duplicate representations
+without introducing another service, generic repository or storage framework.
+
+Keep focused current financial, permission, task/freeze, signature, restart and
+failure-atomicity tests. Replace historical golden archives with small fresh
+scenarios. Record source changes, measured reduction and review in the existing PRs.
+No dependency-policy waiver, image publication or deployment is authorized.
+
 ## Decision
 
 The adapter owns application content and workflow that does not determine

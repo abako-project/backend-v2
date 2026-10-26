@@ -5,7 +5,7 @@
 WITH suspended_tasks AS (
     SELECT task.operation_id
     FROM operations task
-    JOIN task_generations generation ON generation.provider_instance_id=task.provider_instance_id AND generation.api_owned
+    JOIN task_generations generation ON generation.provider_instance_id=task.provider_instance_id
     WHERE task.task_operation AND task.status='Queued'
       AND EXISTS (
           SELECT 1 FROM task_freezes hold
@@ -20,7 +20,7 @@ WITH suspended_tasks AS (
 )
 SELECT * FROM operations o
 WHERE (NOT o.task_operation OR ($2 AND EXISTS (
-    SELECT 1 FROM task_generations g WHERE g.provider_instance_id=o.provider_instance_id AND g.api_owned
+    SELECT 1 FROM task_generations g WHERE g.provider_instance_id=o.provider_instance_id
 )))
 AND o.status NOT IN ('Finalized','Rejected','Expired')
 AND (o.lease_token IS NULL OR o.lease_until<=$1)

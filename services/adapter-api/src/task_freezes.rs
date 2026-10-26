@@ -30,46 +30,6 @@ pub(crate) fn task_project(command: &ProviderCommand) -> Option<EntityId> {
     }
 }
 
-/// Upgrade only queued API-owned work. Unknown future provider-owned histories
-/// stay untouched, and large command decoding has bounded pages off the reactor.
-pub(crate) async fn backfill_context(connection: &mut PgConnection) -> Result<(), Error> {
-    let mut after = 0_i64;
-    loop {
-        let rows=sqlx::query("SELECT o.operation_id,o.creation_sequence,o.command_json,o.command_bytes,o.request_command_bytes FROM operations o JOIN task_generations g ON g.provider_instance_id=o.provider_instance_id AND g.api_owned WHERE o.task_operation AND o.status='Queued' AND o.task_project_id IS NULL AND o.creation_sequence>$1 ORDER BY o.creation_sequence LIMIT 64 FOR UPDATE OF o")
-            .bind(after).fetch_all(&mut *connection).await?;
-        if rows.is_empty() {
-            return Ok(());
-        }
-        let projects = tokio::task::spawn_blocking(move || {
-            rows.into_iter()
-                .map(|row| {
-                    let command: ProviderCommand =
-                        serde_json::from_str(row.try_get("command_json")?)?;
-                    let project = task_project(&command).ok_or(Error::Dependency)?;
-                    let bytes = command.encode();
-                    if bytes != row.try_get::<Vec<u8>, _>("command_bytes")?
-                        || Some(bytes)
-                            != row.try_get::<Option<Vec<u8>>, _>("request_command_bytes")?
-                    {
-                        return Err(Error::Dependency);
-                    }
-                    Ok::<_, Error>((
-                        row.try_get::<String, _>("operation_id")?,
-                        row.try_get::<i64, _>("creation_sequence")?,
-                        project,
-                    ))
-                })
-                .collect::<Result<Vec<_>, _>>()
-        })
-        .await??;
-        for (id, sequence, project) in projects {
-            sqlx::query("UPDATE operations SET task_project_id=$2 WHERE operation_id=$1 AND task_project_id IS NULL")
-                .bind(id).bind(project.to_string()).execute(&mut *connection).await?;
-            after = sequence;
-        }
-    }
-}
-
 /// Operation lock precedes project lock; the non-key allocator lock is compatible
 /// with foreign-key readers when first writes arrive on different projects.
 pub(crate) async fn lock_project(
@@ -77,18 +37,19 @@ pub(crate) async fn lock_project(
     generation: ProviderInstanceId,
     project: EntityId,
 ) -> Result<Option<u32>, Error> {
-    sqlx::query("INSERT INTO task_projects(provider_instance_id,project_id) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM task_generations WHERE provider_instance_id=$1 AND api_owned) ON CONFLICT DO NOTHING")
+    sqlx::query("INSERT INTO task_projects(provider_instance_id,project_id) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM task_generations WHERE provider_instance_id=$1) ON CONFLICT DO NOTHING")
         .bind(generation.to_string()).bind(project.to_string()).execute(&mut *connection).await?;
     let locked:Option<String>=sqlx::query_scalar("SELECT project_id FROM task_projects WHERE provider_instance_id=$1 AND project_id=$2 FOR UPDATE")
         .bind(generation.to_string()).bind(project.to_string()).fetch_optional(&mut *connection).await?;
-    let row=sqlx::query("SELECT next_task_id,api_owned FROM task_generations WHERE provider_instance_id=$1 FOR NO KEY UPDATE")
-        .bind(generation.to_string()).fetch_optional(&mut *connection).await?;
+    let row = sqlx::query(
+        "SELECT next_task_id FROM task_generations WHERE provider_instance_id=$1 FOR NO KEY UPDATE",
+    )
+    .bind(generation.to_string())
+    .fetch_optional(&mut *connection)
+    .await?;
     let Some(row) = row else {
         return Ok(None);
     };
-    if !row.try_get::<bool, _>("api_owned")? {
-        return Ok(None);
-    }
     if locked.is_none() {
         return Err(Error::Dependency);
     }
@@ -133,9 +94,9 @@ pub(crate) async fn capture(
         return Ok(());
     };
     let project = command.project_id().ok_or(Error::Dependency)?;
-    let Some(next) = lock_project(connection, generation, project).await? else {
-        return Ok(());
-    };
+    let next = lock_project(connection, generation, project)
+        .await?
+        .ok_or(Error::Dependency)?;
     let snapshot = app.snapshot().await?;
     if snapshot.info.provider_instance_id != generation {
         return Err(Error::Dependency);
@@ -217,8 +178,7 @@ pub(crate) async fn complete(
 }
 
 /// Public frozen presentation only. Raw private-case authorization remains core
-/// owned. API-owned cases require proved acceptance data; absence is not evidence
-/// that a case predates cutover or that current/provider task text is historical.
+/// owned. Cases require verified acceptance data; absent snapshots fail closed.
 pub(crate) async fn compose_case(
     app: &App,
     generation: ProviderInstanceId,
@@ -248,14 +208,6 @@ pub(crate) async fn accepted_case(
     // confirmed opening records are ambiguous and cannot establish frozen text.
     let rows=sqlx::query("SELECT f.operation_id,f.snapshot_json,o.command_json,o.command_bytes,o.provider_instance_id,o.account_id,o.signable_payload,o.signed_json,o.receipt_json FROM task_freezes f JOIN operations o USING(operation_id) WHERE f.provider_instance_id=$1 AND f.project_id=$2 AND f.kind='Dispute' AND f.state='Confirmed' AND o.status='Finalized' AND NOT o.task_operation ORDER BY o.creation_sequence LIMIT 2")
         .bind(generation.to_string()).bind(view.dispute.project_id.to_string()).fetch_all(&mut *connection).await?;
-    let migrated =
-        crate::task_migration::lookup(connection, generation, proposal, next, view.clone()).await?;
-    if let Some(tasks) = migrated {
-        if !rows.is_empty() {
-            return Err(Error::Conflict("task_migration_case_conflict"));
-        }
-        return Ok(tasks);
-    }
     let view = tokio::task::spawn_blocking(move || {
         frozen(generation, proposal, next, &view, rows).map_err(|_| Error::Dependency)
     })
@@ -369,32 +321,4 @@ fn frozen(
         return Err(Error::Dependency);
     }
     Ok(record.storage)
-}
-
-/// Ownership handoff must preserve the frozen public task vector as well as
-/// current tasks. This check intentionally also works for an identical retry.
-pub(crate) async fn verify_restored_case(
-    connection: &mut PgConnection,
-    generation: ProviderInstanceId,
-    next: u32,
-    proposal: EntityId,
-    view: generated_contracts::provider_core::CoreDisputeViewV4,
-) -> Result<(), Error> {
-    let (expected, compact) = tokio::task::spawn_blocking(move || {
-        let expected = view.milestone.task_storage.clone();
-        let compact = generated_contracts::provider_core::CoreDisputeView {
-            dispute: view.dispute,
-            milestone: view.milestone.into(),
-        };
-        (expected, compact)
-    })
-    .await?;
-    let accepted = accepted_case(connection, generation, proposal, next, compact).await?;
-    tokio::task::spawn_blocking(move || {
-        if accepted != expected {
-            return Err(Error::Conflict("task_rollback_frozen_mismatch"));
-        }
-        Ok(())
-    })
-    .await?
 }

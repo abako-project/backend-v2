@@ -106,7 +106,6 @@ pub(crate) async fn complete(
     let allocated = allocated.cloned();
     let Prepared {
         rows: prepared,
-        delta,
         next,
     } = tokio::task::spawn_blocking(move || {
         prepare(original, &receipt, allocated.as_ref(), rows, next)
@@ -121,14 +120,13 @@ pub(crate) async fn complete(
         sqlx::query("INSERT INTO task_items(provider_instance_id,task_id,task_storage_id,ordinal,payload,assignees) VALUES($1,$2,$3,$4,$5,$6)")
             .bind(generation.to_string()).bind(id).bind(storage.to_string()).bind(ordinal).bind(payload).bind(assignees).execute(&mut *connection).await?;
     }
-    sqlx::query("UPDATE task_generations SET next_task_id=GREATEST(next_task_id,$2),task_count=task_count+$3 WHERE provider_instance_id=$1")
-        .bind(generation.to_string()).bind(i64::from(next)).bind(delta).execute(connection).await?;
+    sqlx::query("UPDATE task_generations SET next_task_id=GREATEST(next_task_id,$2) WHERE provider_instance_id=$1")
+        .bind(generation.to_string()).bind(i64::from(next)).execute(connection).await?;
     Ok(())
 }
 
 struct Prepared {
     rows: Vec<(i64, i64, String, Vec<String>)>,
-    delta: i64,
     next: u32,
 }
 
@@ -142,7 +140,6 @@ fn prepare(
     let project = original.project_id().ok_or(Error::Dependency)?;
     let storage = receipt.created_entity_id.ok_or(Error::Dependency)?;
     let mut tasks = crate::task_execution::decode_tasks(rows, next)?;
-    let count = i64::try_from(tasks.len()).map_err(|_| Error::Dependency)?;
     let mut next = next;
     match original {
         ProviderCommand::CreateTask { task, .. } => {
@@ -184,7 +181,6 @@ fn prepare(
         }
         _ => return Err(Error::Dependency),
     }
-    let delta = i64::try_from(tasks.len()).map_err(|_| Error::Dependency)? - count;
     let prepared = tasks
         .into_iter()
         .enumerate()
@@ -203,7 +199,6 @@ fn prepare(
         .collect::<Result<Vec<_>, _>>()?;
     Ok(Prepared {
         rows: prepared,
-        delta,
         next,
     })
 }

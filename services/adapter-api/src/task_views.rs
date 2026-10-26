@@ -7,21 +7,12 @@ use generated_contracts::{
 use sqlx::{PgConnection, Row, postgres::PgRow};
 use std::collections::BTreeMap;
 
-pub(crate) async fn owned(app: &App, generation: ProviderInstanceId) -> Result<bool, Error> {
-    Ok(sqlx::query_scalar::<_, bool>(
-        "SELECT api_owned FROM task_generations WHERE provider_instance_id=$1",
-    )
-    .bind(generation.to_string())
-    .fetch_optional(&app.db)
-    .await?
-    .unwrap_or(false))
-}
 pub(crate) async fn counter(
     connection: &mut PgConnection,
     generation: ProviderInstanceId,
 ) -> Result<Option<u32>, Error> {
     let value: Option<i64> = sqlx::query_scalar(
-        "SELECT next_task_id FROM task_generations WHERE provider_instance_id=$1 AND api_owned",
+        "SELECT next_task_id FROM task_generations WHERE provider_instance_id=$1",
     )
     .bind(generation.to_string())
     .fetch_optional(connection)
@@ -39,43 +30,15 @@ fn ids(projects: &[ProjectCore]) -> Vec<String> {
         .collect()
 }
 
-/// Core membership is authoritative even when a caller submits directly to core.
-/// Content rows never select or grant access to a project.
-async fn selected(
-    app: &App,
-    generation: ProviderInstanceId,
-    projects: Vec<ProjectCore>,
-    account: AccountId32,
-) -> Result<(Vec<ProjectCore>, bool), Error> {
-    let owned = owned(app, generation).await?;
-    Ok((
-        projects
-            .into_iter()
-            .filter(|p| crate::operations::visible(p, account))
-            .collect(),
-        owned,
-    ))
+/// Only contract membership grants visibility, independently of API content availability.
+pub(crate) fn visible(projects: Vec<ProjectCore>, account: AccountId32) -> Vec<ProjectCore> {
+    projects
+        .into_iter()
+        .filter(|p| crate::operations::visible(p, account))
+        .collect()
 }
-
-pub(crate) async fn visible(
-    app: &App,
-    generation: ProviderInstanceId,
-    projects: Vec<ProjectCore>,
-    account: AccountId32,
-) -> Result<Vec<ProjectCore>, Error> {
-    Ok(selected(app, generation, projects, account).await?.0)
-}
-
-/// Core membership establishes visibility; API rows supply verified task content
-/// only after that access check.
-pub(crate) async fn project(
-    app: &App,
-    generation: ProviderInstanceId,
-    project: ProjectCore,
-    account: AccountId32,
-) -> Result<(Option<ProjectCore>, bool), Error> {
-    let (mut projects, owned) = selected(app, generation, vec![project], account).await?;
-    Ok((projects.pop(), owned))
+pub(crate) fn project(project: ProjectCore, account: AccountId32) -> Option<ProjectCore> {
+    crate::operations::visible(&project, account).then_some(project)
 }
 
 async fn read(
@@ -198,8 +161,7 @@ pub(crate) async fn content(
     Ok(tasks)
 }
 
-/// Owner-only current restore projection. Historical/orphan rows remain in the
-/// paired `PostgreSQL` backup; the returned graph contains current core targets.
+/// Read current content within the caller's transaction before a core task write.
 pub(crate) async fn current_state(
     connection: &mut PgConnection,
     generation: ProviderInstanceId,

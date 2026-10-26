@@ -33,6 +33,10 @@ pub(crate) enum Error {
     Capacity,
     #[error("dependency unavailable")]
     Dependency,
+    #[error(
+        "unsupported adapter database schema; use an empty database for this development build"
+    )]
+    Schema,
     #[error("invalid runtime configuration")]
     Config,
     #[error("internal error")]
@@ -197,39 +201,30 @@ impl App {
             .acquire_timeout(Duration::from_secs(5))
             .connect(&config.database_url)
             .await?;
-        let mut migration = db.begin().await?;
+        let mut setup = db.begin().await?;
         sqlx::query("SELECT pg_advisory_xact_lock(621006)")
-            .execute(&mut *migration)
+            .execute(&mut *setup)
             .await?;
-        for script in [
-            include_str!("../migrations/0001_adapter.sql"),
-            include_str!("../migrations/0002_profiles.sql"),
-            include_str!("../migrations/0003_passkeys.sql"),
-            include_str!("../migrations/0004_profile_images.sql"),
-            include_str!("../migrations/0005_worker_contact_email.sql"),
-            include_str!("../migrations/0006_project_briefs.sql"),
-            include_str!("../migrations/0007_proposal_reviews.sql"),
-            include_str!("../migrations/0008_submission_presentations.sql"),
-            include_str!("../migrations/0009_proposal_review_delivery.sql"),
-            include_str!("../migrations/0010_submission_comments.sql"),
-            include_str!("../migrations/0011_dispute_conversations.sql"),
-            include_str!("../migrations/0012_private_profile_details.sql"),
-            include_str!("../migrations/0013_evidence_commitments.sql"),
-            include_str!("../migrations/0014_provider_content_copies.sql"),
-            include_str!("../migrations/0015_creation_metadata.sql"),
-            include_str!("../migrations/0016_proposal_documents.sql"),
-            include_str!("../migrations/0017_catalog_reason_documents.sql"),
-            include_str!("../migrations/0018_task_history.sql"),
-            include_str!("../migrations/0019_task_state.sql"),
-            include_str!("../migrations/0020_task_execution.sql"),
-            include_str!("../migrations/0021_task_freezes.sql"),
-            include_str!("../migrations/0022_task_core_intent.sql"),
-            include_str!("../migrations/0023_task_migration_cases.sql"),
-        ] {
-            sqlx::raw_sql(script).execute(&mut *migration).await?;
+        let exists: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema() AND table_name='adapter_schema')")
+            .fetch_one(&mut *setup).await?;
+        if exists {
+            let formats: Vec<String> = sqlx::query_scalar("SELECT format FROM adapter_schema")
+                .fetch_all(&mut *setup)
+                .await?;
+            if formats != ["current"] {
+                return Err(Error::Schema);
+            }
+        } else {
+            let occupied: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM information_schema.tables WHERE table_schema=current_schema())")
+                .fetch_one(&mut *setup).await?;
+            if occupied {
+                return Err(Error::Schema);
+            }
+            sqlx::raw_sql(include_str!("../schema.sql"))
+                .execute(&mut *setup)
+                .await?;
         }
-        crate::task_freezes::backfill_context(&mut migration).await?;
-        migration.commit().await?;
+        setup.commit().await?;
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(5))
             .redirect(reqwest::redirect::Policy::none())
@@ -307,7 +302,7 @@ pub(crate) async fn decode_response<T: DeserializeOwned>(
     let bytes = bounded_response(response).await?;
     serde_json::from_slice(&bytes).map_err(|_| Error::Dependency)
 }
-/// Existing transport bound shared by ordinary reads and the serialized task backfill.
+/// Bound responses from private services before decoding their payloads.
 pub(crate) async fn bounded_response(mut response: reqwest::Response) -> Result<Vec<u8>, Error> {
     const RESPONSE_LIMIT: usize = 32 * 1024 * 1024;
     if response.status() == StatusCode::NOT_FOUND {
