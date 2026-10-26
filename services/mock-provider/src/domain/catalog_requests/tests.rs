@@ -26,11 +26,6 @@ fn worker(state: &mut State, account: AccountId32) -> Result<()> {
         }),
         NOW,
     )?;
-    // Imported fixture worker has no historical creation receipt.
-    state.engine.worker_mut(account)?.content =
-        generated_contracts::provider_core::MetadataReferenceV1::Migration(
-            generated_contracts::PayloadHash::from_bytes([88; 32]),
-        );
     Ok(())
 }
 
@@ -180,12 +175,38 @@ fn transition_records_a_durable_request_event() -> Result<()> {
         .map_err(|_| crate::Error::internal())?;
     let owner = AccountId32::from_bytes(key.public_key().0);
     let mut state = State::new(root)?;
-    worker(&mut state, owner)?;
+    let creation = UnsignedContractCallV1::new(
+        state.info().provider_instance_id,
+        OperationId::from_bytes([8; 16]),
+        owner,
+        0,
+        UnixSeconds::new(200),
+        ProviderCommand::RegisterWorker(RegisterWorkerRequest {
+            display_name: "Worker".into(),
+            qualifications: Qualifications {
+                role_ids: vec![1],
+                skill_ids: vec![],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        }),
+    )?;
+    let signature =
+        generated_contracts::Sr25519Signature::from_bytes(key.sign(&creation.signable_bytes()?).0);
+    (state, _) = state.execute(
+        VerifiedCall::verify(generated_contracts::SignedContractCallV1 {
+            call: creation,
+            signature,
+        })?,
+        NOW,
+    )?;
     let call = UnsignedContractCallV1::new(
         state.info().provider_instance_id,
         OperationId::from_bytes([9; 16]),
         owner,
-        0,
+        1,
         UnixSeconds::new(200),
         ProviderCommand::CreateSkillRequest(CreateSkillRequest {
             name: "Durable Skill".into(),
@@ -198,13 +219,13 @@ fn transition_records_a_durable_request_event() -> Result<()> {
         VerifiedCall::verify(generated_contracts::SignedContractCallV1 { call, signature })?;
     let (state, receipt) = state.execute(verified, NOW)?;
     assert_eq!(receipt.outcome, ExecutionOutcome::Success);
-    assert_eq!(state.events(0, 10).events.len(), 1);
-    assert_eq!(state.events(0, 10).events[0].recipients.len(), 2);
+    assert_eq!(state.events(0, 10).events.len(), 2);
+    assert_eq!(state.events(0, 10).events[1].recipients.len(), 2);
     #[cfg(feature = "storage-sqlite")]
     {
         let restored = State::restore(&state.encode()?, root)?;
         assert_eq!(restored.skill_requests(owner).len(), 1);
-        assert_eq!(restored.events(0, 10).events.len(), 1);
+        assert_eq!(restored.events(0, 10).events.len(), 2);
     }
     Ok(())
 }

@@ -1,15 +1,12 @@
-//! Exact private codec for the pinned ordinary Project cells and typed import.
+//! Exact private codec for the pinned ordinary Project cells.
 use super::{
     Account, Error, MAX_SHELL,
-    archive::{Reason, Storage},
-    evidence_wire as wire,
+    facts::{Reason, Storage},
 };
 use generated_contracts::{provider_core::*, *};
 use parity_scale_codec::{Decode, Encode};
 type Result<T> = std::result::Result<T, Error>;
 type MilestonePosition = (u32, u32);
-type ChildPosition = (MilestonePosition, u32);
-type NestedPosition = (ChildPosition, u32);
 macro_rules! record {
     ($name:ident { $($field:ident: $ty:ty),* $(,)? }) => {
         #[derive(Clone, Encode, Decode)]
@@ -24,19 +21,6 @@ pub(super) enum StoredDelivery {
     SpecificDate([u8; 10]),
 }
 impl StoredDelivery {
-    fn from_view(value: &DeliveryPreference) -> Result<Self> {
-        value.validate().map_err(|_| Error::InvalidState)?;
-        Ok(match value {
-            DeliveryPreference::WithinOneMonth {} => Self::WithinOneMonth,
-            DeliveryPreference::OneToThreeMonths {} => Self::OneToThreeMonths,
-            DeliveryPreference::ThreeToSixMonths {} => Self::ThreeToSixMonths,
-            DeliveryPreference::SpecificDate { date } => Self::SpecificDate(
-                date.as_bytes()
-                    .try_into()
-                    .map_err(|_| Error::InvalidState)?,
-            ),
-        })
-    }
     fn view(&self) -> Result<DeliveryPreference> {
         let value = match self {
             Self::WithinOneMonth => DeliveryPreference::WithinOneMonth {},
@@ -79,8 +63,8 @@ record!(TaskRecord {
     assignees: u32
 });
 record!(SubmissionRecord {
-    submission_id: EntityId, version: u64, deliverable: Option<wire::Reference>,
-    submitted_by: AccountId32, submitted_at: UnixSeconds, worker_ratings: u32, review: wire::Review
+    submission_id: EntityId, version: u64, deliverable: Option<EvidenceRecordReferenceV1>,
+    submitted_by: AccountId32, submitted_at: UnixSeconds, worker_ratings: u32, review: SubmissionReview
 });
 record!(EvaluationRecord {
     author: AccountId32,
@@ -88,27 +72,6 @@ record!(EvaluationRecord {
     ratings: u32
 });
 
-#[derive(Clone, Encode)]
-pub(super) enum Record {
-    Project(ProjectRecord),
-    Proposal(u32, ProposalRecord),
-    Milestone(MilestonePosition, MilestoneRecord),
-    Requirement(ChildPosition, RequirementRecord),
-    Skill(NestedPosition, u32),
-    Assignment(ChildPosition, AssignmentView),
-    MilestoneRating(ChildPosition, WorkerRating),
-    Task(ChildPosition, TaskRecord),
-    Assignee(NestedPosition, AccountId32),
-    Submission(ChildPosition, SubmissionRecord),
-    SubmissionRating(NestedPosition, WorkerRating),
-    Evaluation(u32, EvaluationRecord),
-    EvaluationRating((u32, u32), AccountRating),
-    Reason(u32, Reason),
-    Dispute(u32, wire::Dispute),
-}
-fn count(value: usize) -> Result<u32> {
-    u32::try_from(value).map_err(|_| Error::Limit)
-}
 fn items<T>(length: u32, read: impl FnMut(u32) -> Result<T>) -> Result<Vec<T>> {
     if length as usize > MAX_SHELL {
         return Err(Error::Limit);
@@ -117,21 +80,18 @@ fn items<T>(length: u32, read: impl FnMut(u32) -> Result<T>) -> Result<Vec<T>> {
 }
 pub(super) struct StoredProject {
     pub(super) directory: Account,
-    pub(super) project: wire::Project,
+    pub(super) project: ProjectCore,
     pub(super) reasons: Vec<Reason>,
-    pub(super) cases: Vec<wire::Dispute>,
-    pub(super) live: bool,
+    pub(super) cases: Vec<Dispute>,
 }
 pub(super) fn read(reader: &mut Storage<'_>, address: &Account) -> Result<StoredProject> {
-    let (directory, id, phase): (Account, EntityId, u8) = reader.cell(address, 0u32)?;
-    if !(1..=2).contains(&phase) {
-        return Err(Error::InvalidState);
-    }
+    let (directory, id): (Account, EntityId) = reader.cell(address, 0u32)?;
+
     let record: ProjectRecord = reader.cell(address, 1u32)?;
     if record.project_id != id {
         return Err(Error::InvalidState);
     }
-    let project = wire::Project {
+    let project = ProjectCore {
         project_id: record.project_id,
         created_at: record.created_at,
         client: record.client,
@@ -155,14 +115,13 @@ pub(super) fn read(reader: &mut Storage<'_>, address: &Account) -> Result<Stored
     Ok(StoredProject {
         directory,
         project,
-        live: phase == 2,
         reasons: items(record.reasons, |i| reader.value(address, 22, i))?,
         cases: items(record.disputes, |i| reader.value(address, 23, i))?,
     })
 }
-fn proposal(reader: &mut Storage<'_>, address: &Account, p: u32) -> Result<wire::Proposal> {
+fn proposal(reader: &mut Storage<'_>, address: &Account, p: u32) -> Result<ProposalCore> {
     let record: ProposalRecord = reader.value(address, 10, p)?;
-    Ok(wire::Proposal {
+    Ok(ProposalCore {
         proposal_id: record.proposal_id,
         revision: record.revision,
         content: record.content,
@@ -181,9 +140,9 @@ fn milestone(
     reader: &mut Storage<'_>,
     address: &Account,
     pos: MilestonePosition,
-) -> Result<wire::Milestone> {
+) -> Result<MilestoneCore> {
     let record: MilestoneRecord = reader.value(address, 11, pos)?;
-    Ok(wire::Milestone {
+    Ok(MilestoneCore {
         milestone_id: record.milestone_id,
         definition: MilestoneTerms {
             key: record.key,
@@ -221,7 +180,7 @@ fn milestone(
         submissions: items(record.submissions, |s| {
             let key = (pos, s);
             let record: SubmissionRecord = reader.value(address, 18, key)?;
-            Ok(wire::Submission {
+            Ok(CompletionSubmission {
                 submission_id: record.submission_id,
                 version: record.version,
                 deliverable: record.deliverable,
@@ -232,145 +191,4 @@ fn milestone(
             })
         })?,
     })
-}
-
-pub(super) fn records(
-    project: wire::Project,
-    reasons: Vec<Reason>,
-    cases: Vec<wire::Dispute>,
-) -> Result<Vec<Record>> {
-    let mut records = vec![Record::Project(ProjectRecord {
-        project_id: project.project_id,
-        created_at: project.created_at,
-        client: project.client,
-        coordinator: project.coordinator,
-        content: project.content,
-        planning: project.planning,
-        proposals: count(project.proposals.len())?,
-        execution_escrow: project.execution_escrow,
-        cancelled: project.cancelled,
-        completed: project.completed,
-        evaluations: count(project.evaluations.len())?,
-        active_dispute_id: project.active_dispute_id,
-        reasons: count(reasons.len())?,
-        disputes: count(cases.len())?,
-    })];
-    for (p, proposal) in project.proposals.into_iter().enumerate() {
-        let p = count(p)?;
-        records.push(Record::Proposal(
-            p,
-            ProposalRecord {
-                proposal_id: proposal.proposal_id,
-                revision: proposal.revision,
-                content: proposal.content,
-                status: proposal.status,
-                milestones: count(proposal.milestones.len())?,
-                change_request: proposal.change_request,
-                delivery: proposal
-                    .delivery
-                    .as_ref()
-                    .map(StoredDelivery::from_view)
-                    .transpose()?,
-                compensation_policy: proposal.compensation_policy,
-            },
-        ));
-        for (m, milestone) in proposal.milestones.into_iter().enumerate() {
-            let pos = (p, count(m)?);
-            if milestone.task_storage.milestone_id != milestone.milestone_id {
-                return Err(Error::InvalidState);
-            }
-            records.push(Record::Milestone(
-                pos,
-                MilestoneRecord {
-                    milestone_id: milestone.milestone_id,
-                    key: milestone.definition.key,
-                    window: milestone.definition.window,
-                    coordinator_fee: milestone.definition.coordinator_fee,
-                    coordinator_minutes: milestone.definition.coordinator_minutes,
-                    requirements: count(milestone.definition.requirements.len())?,
-                    status: milestone.status,
-                    assignments: count(milestone.assignments.len())?,
-                    worker_ratings: count(milestone.worker_ratings.len())?,
-                    task_storage_id: milestone.task_storage.task_storage_id,
-                    tasks: count(milestone.task_storage.tasks.len())?,
-                    frozen: milestone.frozen,
-                    submissions: count(milestone.submissions.len())?,
-                },
-            ));
-            for (r, requirement) in milestone.definition.requirements.into_iter().enumerate() {
-                let key = (pos, count(r)?);
-                records.push(Record::Requirement(
-                    key,
-                    RequirementRecord {
-                        key: requirement.key,
-                        role_id: requirement.role_id,
-                        skills: count(requirement.skill_ids.len())?,
-                        minutes: requirement.minutes,
-                        budget: requirement.budget,
-                    },
-                ));
-                for (i, skill) in requirement.skill_ids.into_iter().enumerate() {
-                    records.push(Record::Skill((key, count(i)?), skill));
-                }
-            }
-            for (i, assignment) in milestone.assignments.into_iter().enumerate() {
-                records.push(Record::Assignment((pos, count(i)?), assignment));
-            }
-            for (i, rating) in milestone.worker_ratings.into_iter().enumerate() {
-                records.push(Record::MilestoneRating((pos, count(i)?), rating));
-            }
-            for (t, task) in milestone.task_storage.tasks.into_iter().enumerate() {
-                let key = (pos, count(t)?);
-                records.push(Record::Task(
-                    key,
-                    TaskRecord {
-                        task_id: task.task_id,
-                        assignees: count(task.assignees.len())?,
-                    },
-                ));
-                for (i, assignee) in task.assignees.into_iter().enumerate() {
-                    records.push(Record::Assignee((key, count(i)?), assignee));
-                }
-            }
-            for (s, submission) in milestone.submissions.into_iter().enumerate() {
-                let key = (pos, count(s)?);
-                records.push(Record::Submission(
-                    key,
-                    SubmissionRecord {
-                        submission_id: submission.submission_id,
-                        version: submission.version,
-                        deliverable: submission.deliverable,
-                        submitted_by: submission.submitted_by,
-                        submitted_at: submission.submitted_at,
-                        worker_ratings: count(submission.worker_ratings.len())?,
-                        review: submission.review,
-                    },
-                ));
-                for (i, rating) in submission.worker_ratings.into_iter().enumerate() {
-                    records.push(Record::SubmissionRating((key, count(i)?), rating));
-                }
-            }
-        }
-    }
-    for (e, evaluation) in project.evaluations.into_iter().enumerate() {
-        let e = count(e)?;
-        records.push(Record::Evaluation(
-            e,
-            EvaluationRecord {
-                author: evaluation.author,
-                submitted_at: evaluation.submitted_at,
-                ratings: count(evaluation.ratings.len())?,
-            },
-        ));
-        for (i, rating) in evaluation.ratings.into_iter().enumerate() {
-            records.push(Record::EvaluationRating((e, count(i)?), rating));
-        }
-    }
-    for (i, reason) in reasons.into_iter().enumerate() {
-        records.push(Record::Reason(count(i)?, reason));
-    }
-    for (i, case) in cases.into_iter().enumerate() {
-        records.push(Record::Dispute(count(i)?, case));
-    }
-    Ok(records)
 }

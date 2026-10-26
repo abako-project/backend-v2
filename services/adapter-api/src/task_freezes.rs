@@ -2,7 +2,7 @@
 use crate::state::{App, Error, parse};
 use generated_contracts::{
     EntityId, ExecutionOutcome, OperationId, OperationReceipt, ProviderCommand, ProviderInstanceId,
-    TaskStorageView, provider_core::TaskStateV1,
+    TaskStorageView, provider_core::TaskSnapshot,
 };
 use parity_scale_codec::Encode;
 use sqlx::{PgConnection, Row, postgres::PgRow};
@@ -297,7 +297,7 @@ fn frozen(
     {
         return Err(Error::Dependency);
     }
-    let state = TaskStateV1 {
+    let state = TaskSnapshot {
         schema_version: 1,
         generation,
         next_task_id: next,

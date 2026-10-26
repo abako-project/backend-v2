@@ -1,6 +1,6 @@
 //! Real `PostgreSQL` hold admission, task races and existing transport recovery.
 use super::*;
-use generated_contracts::provider_core::TaskStorageRecordV1;
+use generated_contracts::provider_core::TaskSnapshotRecord;
 
 fn cancellation(project: EntityId) -> ProviderCommand {
     ProviderCommand::CancelProject {
@@ -73,7 +73,7 @@ async fn task_freeze_captures_confirmed_tasks_and_preserves_snapshot_on_replay()
     let id = freeze(&c, &c.owner, c.project.project_id).await?;
     let (status, snapshot) = state(&c, id).await?;
     assert_eq!(status, "Pending");
-    let records: Vec<TaskStorageRecordV1> = serde_json::from_str(&snapshot)?;
+    let records: Vec<TaskSnapshotRecord> = serde_json::from_str(&snapshot)?;
     assert_eq!(records[0].storage.tasks, expected);
     assert_eq!(records[0].storage.tasks.len(), 1);
     let replay = operations::enqueue(
@@ -128,7 +128,7 @@ async fn task_freeze_failed_receipt_releases_and_retains_original_snapshot() -> 
     assert_eq!(outcome(&completed)?, &ExecutionOutcome::Success);
     assert_eq!(c.counter().await?, 10);
     assert_eq!(state(&c, id).await?.1, snapshot);
-    let captured: Vec<TaskStorageRecordV1> = serde_json::from_str(&snapshot)?;
+    let captured: Vec<TaskSnapshotRecord> = serde_json::from_str(&snapshot)?;
     assert!(captured[0].storage.tasks.is_empty());
     c.internal.finish().await?;
     Ok(())
@@ -425,7 +425,7 @@ async fn task_freeze_and_task_edit_share_project_lock_in_both_race_orders() -> T
         edited?;
         let id = frozen?;
         unlocked?;
-        let records: Vec<TaskStorageRecordV1> = serde_json::from_str(&state(&c, id).await?.1)?;
+        let records: Vec<TaskSnapshotRecord> = serde_json::from_str(&state(&c, id).await?.1)?;
         let expected = if capture_first {
             original.as_str()
         } else {

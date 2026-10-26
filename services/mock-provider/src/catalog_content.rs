@@ -1,5 +1,5 @@
 //! Narrow text-to-commitment lowering after verified replay admission.
-use crate::migration::source_hash;
+use crate::content_hash;
 use generated_contracts::{
     ProviderCommand, UnsignedContractCallV1,
     provider_core::{
@@ -18,7 +18,7 @@ pub fn compact_catalog(call: &UnsignedContractCallV1) -> Option<ProviderCommand>
     )?;
     let content = MetadataCommitmentV1 {
         operation_id: call.operation_id,
-        hash: source_hash(&record.hash_input()),
+        hash: content_hash(&record.hash_input()),
     };
     match record.content {
         CatalogContentV1::Entry { kind, id, .. } => {
@@ -28,7 +28,6 @@ pub fn compact_catalog(call: &UnsignedContractCallV1) -> Option<ProviderCommand>
             role_ids: request.role_ids,
             content,
         }),
-        CatalogContentV1::RetainedRequest { .. } => None,
     }
 }
 /// Legacy lifecycle text becomes a fixed commitment, preserving original bytes.
@@ -42,7 +41,7 @@ pub fn compact_reason(call: &UnsignedContractCallV1) -> Option<ProviderCommand> 
     )?;
     let content = MetadataCommitmentV1 {
         operation_id: call.operation_id,
-        hash: source_hash(&record.hash_input()),
+        hash: content_hash(&record.hash_input()),
     };
     match call.command {
         ProviderCommand::CancelProject { project_id, .. } => {

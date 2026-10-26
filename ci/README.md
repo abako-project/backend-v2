@@ -53,9 +53,8 @@ bash scripts/verify.sh ink-sandbox-dependencies
 The first checks formatting, all targets/features, strict Clippy, tests, doctests
 and build. The second enforces the existing exact-lock/expiring policy; its known
 security finding remains unwaived. See the [runtime guide](../tools/ink-sandbox/README.md)
-for artifact reproduction, real-service tests and explicit frozen-predecessor
-rollback. The opt-in timing test needs a controlled idle host; an ignored test is
-not acceptance evidence. Keep build output and temporary databases on disk if
+for artifact reproduction and real-service tests. Performance acceptance needs
+a controlled idle host; functional tests do not establish latency acceptance. Keep build output and temporary databases on disk if
 `/tmp` is RAM-backed. Record current results in the PR.
 
 ## Container and gateway checks
@@ -123,8 +122,7 @@ licenses and advisory IDs. A changed SDK lock requires a new review. The root
 application policy and its existing findings remain unchanged.
 
 The SDK workflow runs for changes anywhere in `services/mock-provider/`, because
-its manifest, HTTP boundary, reference and storage/read models are linked by the
-candidate. It installs the already reviewed cargo-deny 0.20.2 with its locked
+its manifest, HTTP boundary and error types are used by the embedded provider. It installs the already reviewed cargo-deny 0.20.2 with its locked
 tool dependencies and runs the policy wrapper before compatibility tests. This
 checks the exact SDK lock, review expiry, current advisories, licenses and sources;
 it does not grant exceptions to the root application policy. The tool's published

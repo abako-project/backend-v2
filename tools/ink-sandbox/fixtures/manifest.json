@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "df735fd222427c1633090f5b9e4d33f82be7f1a6",
+  "sourceCommit": "6db7b56ddf055671fb8fe013ddb559d0ef26acd5",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
@@ -15,21 +15,21 @@
       "lockSha256": "1193ede85e8cdf2564b030f3e648e6f8fbd2561e226968f39db9a3ae98ad9c42"
     },
     "calendar": {
-      "artifactSha256": "9f2eb4941064d13171bab99a568647157fe79487decc9b322d8b1c2a7c0f9218",
-      "wasmBlake2b256": "0xfba8b15b0ae6fbe2f8fd2689a72a8eae5d5264ce09a255f72bd3cdb445a8267d",
+      "artifactSha256": "2fa1d070ec1449e1e0750a5c3da83dcd86bbfdc1cf59c7a09798a86875076c9b",
+      "wasmBlake2b256": "0xcf62c7954ab07d3c70c2e0b8906dd8a66682dd60d7290b0339bb8e9ce95378f6",
       "lockSha256": "81d7a4ad0b00071c78c22dda8afac7a26630001450543f8b4fe991b993a99b37",
       "staticBufferBytes": 294912
     },
     "directory": {
-      "artifactSha256": "bd426f421873f4b7bbdddcd3e79d24fd9be96746e5a44f68489bdb54024faa18",
-      "wasmBlake2b256": "0x7f245e21aab743f3867f0262c9a1c3b00ad312d0fab22b47416b201a3549d41b",
-      "lockSha256": "ea126d822d58fa56ebd2e1e64119be245473ff1eccb462c612f252d1eb52b7ee",
+      "artifactSha256": "7506515c4a7d5c5db37b45af80b07e46133aa6a5383bc1bb1fb7ba3627e91954",
+      "wasmBlake2b256": "0x4ac724cf9343440ebc9ce58c9d7c4dfdb0a094e674b7161eb466e6d46da20eb5",
+      "lockSha256": "4b9b21b42e8738ba5f1adf119928e78001d433d3e90d9b694d9af935df5a509a",
       "staticBufferBytes": 294912
     },
     "project": {
-      "artifactSha256": "17b757577054fe9a9fb6262d2ffbb31fdcbd3366fee508f71cdef5e1edd0f07c",
-      "wasmBlake2b256": "0xd2a4336a73d7c43643d65681e7723a38cfaaadddf485cee67d669d28d4a4fa0b",
-      "lockSha256": "1f2fe617a7c5c8e6085265761745493aab8de36cafa73d4864d83644b87e967c",
+      "artifactSha256": "15ecb8de3429642fea66efb5ea86206e51a2e9c28bfd14583044262666047496",
+      "wasmBlake2b256": "0xb0ab889b9e365b9c211aacd2af84ce9f8606daeef6666ffbe7bde65e2a7c9240",
+      "lockSha256": "501c5ed7b361060dcec7707442ad1f21b67447024ef73bbdc08cd1e1a770da98",
       "staticBufferBytes": 294912
     }
   }

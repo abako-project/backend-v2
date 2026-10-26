@@ -46,7 +46,7 @@ impl std::error::Error for ProofError {}
 pub type Account = AccountId32;
 pub const GAS: Weight = Weight::from_parts(1_000_000_000_000, 16 * 1024 * 1024);
 /// Whole-provider candidate bound; fixture execution retains its original budget.
-pub const WHOLE_GAS: Weight = Weight::from_parts(2_000_000_000_000, 128 * 1024 * 1024);
+pub const EXECUTION_GAS: Weight = Weight::from_parts(2_000_000_000_000, 128 * 1024 * 1024);
 pub const TECHNICAL_BALANCE: u128 = 1_000_000_000_000_000;
 
 frame_support::construct_runtime!(

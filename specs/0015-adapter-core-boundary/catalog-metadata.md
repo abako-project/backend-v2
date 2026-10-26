@@ -23,7 +23,7 @@ share a name. No tighter public bound or new crypto dependency.
 
 A catalog entry's current label reference is distinct from its skill origin
 reference. Actual creation selects origin, rename preserves it, deletion removes
-it and recreation selects a new origin. Seed/migration documents retain exact
+it and recreation selects a new origin. Seed documents retain exact
 categories; a fresh upsert/request origin supplies category requested. This
 preserves categories and role associations without predicting creation from a
 stale enqueue snapshot. Approval may reuse its request document; numeric Decide
@@ -31,8 +31,7 @@ and Delete commands remain unchanged. Use existing scoped internal request reads
 when composition needs their association, not all-history expansion of snapshots.
 
 Reason core records retain project/milestone, actor, captured timestamp, effect
-kind and ordering, replacing text with a fixed reference. Migration identifies
-the source archive and original record position. Existing public reason write
+kind and ordering, replacing text with a fixed reference. Existing public reason write
 routes stay compatible; no new history endpoint is needed.
 
 The existing operation queue gets one catalog-specific FIFO across wallets;
@@ -42,13 +41,10 @@ Pending. Ordinary paths do not hydrate catalog content, while the usual wallet
 FIFO can still make a later operation wait. API naming rejection uses existing
 202/polling with terminal Rejected/error_code and no invented provider outcome.
 
-Ordinary native SQLite reopen still reseeds missing defaults; imported stores
-still skip that step. If reseeding/direct core writes produce a duplicate label
-graph, fail closed rather than silently pick a winner or alter data. Raw authorized
-Delete and DecideReject, including their claim finalization, must permit sequential
-repair without whole-graph composition. Never release another ID's same-digest
-claim. Require a content-valid graph before rollback/export to the stricter V3
-predecessor; API naming guarantees do not cover arbitrary direct core writes.
+Defaults are seeded once when the provider is created. Reopening preserves catalog
+edits and deletions. API naming guarantees do not cover arbitrary direct core
+writes. Raw authorized Delete and DecideReject must permit sequential repair
+without whole-graph composition; never release another ID’s same-digest claim.
 
 ## Queue and metadata
 
@@ -70,9 +66,11 @@ money/lifecycle commands. API-side name validation uses the supported asynchrono
 Rejected/errorCode path, without fabricating provider receipts, nonces or events.
 
 
-## Recovery
+## Fresh development and recovery
 
-Use the current [paired owner procedure](../../docs/operations/task-cutover.md) for
-task ownership and preserve matching API/core backups. Earlier metadata converter
-steps remain in [the frozen instructions](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
-Never reinterpret a signed format or substitute a stale checkpoint after writes.
+The owner-approved fresh-start amendment removes migration records and converters.
+Contracts start through ordinary constructors. Keep matching API, wallet and
+provider backups together; the core cannot reconstruct descriptive preimages.
+Existing incompatible stores fail startup and are explicitly replaced for a new
+development installation. Signed command indexes and current content hashing
+remain unchanged.

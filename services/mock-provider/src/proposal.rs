@@ -1,5 +1,5 @@
 //! Narrow legacy input lowering, after signature/replay admission only.
-use crate::migration::source_hash;
+use crate::content_hash;
 use generated_contracts::{
     ProviderCommand, UnsignedContractCallV1,
     provider_core::{
@@ -17,7 +17,7 @@ pub fn compact_proposal(call: &UnsignedContractCallV1) -> Option<ProviderCommand
     )?;
     let content = MetadataCommitmentV1 {
         operation_id: call.operation_id,
-        hash: source_hash(&record.hash_input()),
+        hash: content_hash(&record.hash_input()),
     };
     match (&call.command, record.content) {
         (

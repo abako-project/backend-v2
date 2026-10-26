@@ -3,7 +3,7 @@
 use crate::state::{App, Error};
 
 pub(crate) async fn initialize_empty(app: &App) -> Result<(), Error> {
-    let state: generated_contracts::provider_core::TaskStateV2 = app
+    let state: generated_contracts::provider_core::TaskState = app
         .get(&app.config.provider_url, "/internal/task-state")
         .await?;
     let state = tokio::task::spawn_blocking(move || {

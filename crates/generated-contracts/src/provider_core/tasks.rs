@@ -1,4 +1,4 @@
-//! Private task migration data, captured from one selected provider state.
+//! Current core task facts and immutable API dispute snapshots.
 use crate::{ContractError, EntityId, ProviderInstanceId, TaskStorageView};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
@@ -53,7 +53,7 @@ impl From<&TaskStorageView> for TaskStorageCore {
 /// Atomic private read of current core task facts, including the actual allocator.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct TaskStateV2 {
+pub struct TaskState {
     /// Version 2 denotes identity/membership rather than full task content.
     pub schema_version: u16,
     /// Generation scopes all task and context identities.
@@ -64,13 +64,13 @@ pub struct TaskStateV2 {
     /// Empty-development initialization must not reinterpret such a history.
     pub has_task_history: bool,
     /// Complete current storage contexts in deterministic ID order.
-    pub storages: Vec<TaskStorageRecordV2>,
+    pub storages: Vec<TaskStorageRecord>,
 }
 
 /// Exact proposal revision and milestone owning a compact task storage.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct TaskStorageRecordV2 {
+pub struct TaskStorageRecord {
     /// Owning Project.
     pub project_id: EntityId,
     /// Owning proposal.
@@ -81,7 +81,7 @@ pub struct TaskStorageRecordV2 {
     pub storage: TaskStorageCore,
 }
 
-impl TaskStateV2 {
+impl TaskState {
     /// Validate global allocation, distinct contexts and unique memberships.
     pub fn validate(&self) -> Result<(), ContractError> {
         if self.schema_version != 2 || self.next_task_id == 0 {
@@ -118,7 +118,7 @@ impl TaskStateV2 {
 /// Task data and the actual retained allocator, including deleted-ID gaps.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct TaskStateV1 {
+pub struct TaskSnapshot {
     /// Version of this owner-provided read format, independent of signed calls.
     pub schema_version: u16,
     /// Generation that scopes all entity and task IDs.
@@ -126,12 +126,12 @@ pub struct TaskStateV1 {
     /// Actual next global key; `u32::MAX` represents exhaustion, never wraparound.
     pub next_task_id: u32,
     /// Storages use deterministic ID order; each task-vector order is retained exactly.
-    pub storages: Vec<TaskStorageRecordV1>,
+    pub storages: Vec<TaskSnapshotRecord>,
 }
 /// The core context that owns a task storage, including empty storages.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct TaskStorageRecordV1 {
+pub struct TaskSnapshotRecord {
     /// Owning Project, independent of task assignment/visibility.
     pub project_id: EntityId,
     /// Owning proposal, without any presentation or financial rewrite.
@@ -141,7 +141,7 @@ pub struct TaskStorageRecordV1 {
     /// Original storage/milestone IDs, tasks, authors and timestamps.
     pub storage: TaskStorageView,
 }
-impl TaskStateV1 {
+impl TaskSnapshot {
     /// Check identity/context integrity without adding new task content rules.
     pub fn validate(&self) -> Result<(), ContractError> {
         if self.schema_version != 1 || self.next_task_id == 0 {
@@ -178,7 +178,7 @@ impl TaskStateV1 {
 /// The public receipt continues to identify the task storage, not the task key.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct TaskAllocationV1 {
+pub struct TaskAllocation {
     /// The original successful provider receipt, unchanged.
     pub receipt: crate::OperationReceipt,
     /// Owning project from the retained signed command.

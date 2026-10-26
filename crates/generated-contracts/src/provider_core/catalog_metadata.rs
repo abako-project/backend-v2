@@ -1,22 +1,12 @@
 //! Immutable catalog documents. This is one context, not a content registry.
 use super::{CatalogReferenceV1, MetadataCommitmentV1};
 use crate::{
-    AccountId32, CatalogKind, CreateSkillRequest, EntityId, OperationId, PayloadHash,
-    ProviderCommand, ProviderInstanceId,
+    AccountId32, CatalogKind, CreateSkillRequest, OperationId, ProviderCommand, ProviderInstanceId,
 };
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-/// Owner exchange header for catalog/request/origin documents.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct CatalogMetadataHeaderV1 {
-    /// Context exchange version, currently1.
-    pub schema_version: u16,
-    /// Exact selected provider generation.
-    pub generation: ProviderInstanceId,
-}
-/// Source of the catalog value; migration/seed never impersonates a signer.
+/// Source of the catalog value; seed never impersonates a signer.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(
     tag = "type",
@@ -36,12 +26,6 @@ pub enum CatalogProvenanceV1 {
         operation_id: OperationId,
         /// Verified root or worker origin.
         author: AccountId32,
-    },
-    /// Exact retained owner export, with target explicit in content.
-    #[codec(index = 1)]
-    Migration {
-        /// Hash of the exact source bytes, including whitespace.
-        source_archive_hash: PayloadHash,
     },
     /// Explicit reviewed default dataset; still bound to generation and target.
     #[codec(index = 2)]
@@ -78,18 +62,6 @@ pub enum CatalogContentV1 {
     /// Signed request, whose public name uses the existing trim rule.
     #[codec(index = 1)]
     Request(CreateSkillRequest),
-    /// Migration-only historical request, not a forged creation approval.
-    #[codec(index = 2)]
-    RetainedRequest {
-        /// Retained public request ID.
-        request_id: EntityId,
-        /// Original requester; not a fabricated signer.
-        requester: AccountId32,
-        /// Exact already-trimmed retained name.
-        name: String,
-        /// Retained ordered role references.
-        role_ids: Vec<u32>,
-    },
 }
 /// The API stores this record immutably; core selects only the fixed digest.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
@@ -163,10 +135,7 @@ impl CatalogMetadataRecordV1 {
                     ..
                 }),
             ) => *operation_id == *selected && author == Some(*origin),
-            (CatalogProvenanceV1::Migration { .. }, CatalogReferenceV1::Migration(_))
-            | (CatalogProvenanceV1::Seed { dataset_version: 1 }, CatalogReferenceV1::Seed(_)) => {
-                true
-            }
+            (CatalogProvenanceV1::Seed { dataset_version: 1 }, CatalogReferenceV1::Seed(_)) => true,
             _ => false,
         }
     }
@@ -193,17 +162,6 @@ impl CatalogMetadataRecordV1 {
         let (name, roles) = match (&self.provenance, &self.content) {
             (CatalogProvenanceV1::Operation { .. }, CatalogContentV1::Request(original)) => {
                 (original.name.trim(), &original.role_ids)
-            }
-            (
-                CatalogProvenanceV1::Migration { .. },
-                CatalogContentV1::RetainedRequest {
-                    request_id,
-                    requester,
-                    name,
-                    role_ids,
-                },
-            ) if *request_id == request.request_id && *requester == request.requester => {
-                (name.as_str(), role_ids)
             }
             _ => return Err(invalid()),
         };
@@ -259,9 +217,7 @@ impl CatalogMetadataRecordV1 {
                 .validate()?;
                 Ok(name)
             }
-            CatalogContentV1::Request(_) | CatalogContentV1::RetainedRequest { .. }
-                if kind == CatalogKind::Skill =>
-            {
+            CatalogContentV1::Request(_) if kind == CatalogKind::Skill => {
                 self.request_name(generation, Self::approved_request(id, reference, requests)?)
             }
             _ => Err(crate::ContractError::Invalid("catalog label context")),
@@ -290,7 +246,7 @@ impl CatalogMetadataRecordV1 {
                 }
                 Ok(category)
             }
-            CatalogContentV1::Request(_) | CatalogContentV1::RetainedRequest { .. } => {
+            CatalogContentV1::Request(_) => {
                 self.request_name(generation, Self::approved_request(id, reference, requests)?)?;
                 Ok("requested")
             }

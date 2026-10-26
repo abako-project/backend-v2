@@ -278,7 +278,7 @@ async fn resolve(
     reference: &EvidenceRecordReferenceV1,
 ) -> Result<Body, Error> {
     let EvidenceRecordReferenceV1::Committed(commitment) = reference else {
-        let EvidenceRecordReferenceV1::Legacy(reference) = reference else {
+        let EvidenceRecordReferenceV1::Url(reference) = reference else {
             return Err(Error::Dependency);
         };
         return Ok(Body::Url(reference.clone()));
@@ -459,7 +459,7 @@ pub(crate) async fn case(
     })
 }
 
-/// Legacy references retain every original field. New commitments resolve only
+/// URL views retain the public shape. Core commitments resolve only
 /// for this requested case, without changing authorization or other projects.
 pub(crate) async fn dispute(
     app: &App,

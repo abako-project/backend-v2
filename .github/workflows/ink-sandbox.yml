@@ -45,5 +45,5 @@ jobs:
         run: cargo install cargo-deny --version 0.20.2 --locked
       - name: Enforce the exact-lock SDK dependency policy
         run: bash scripts/verify.sh ink-sandbox-dependencies
-      - name: Verify pinned WASM against the native runtime
+      - name: Verify the embedded provider and pinned contracts
         run: bash scripts/verify.sh ink-sandbox

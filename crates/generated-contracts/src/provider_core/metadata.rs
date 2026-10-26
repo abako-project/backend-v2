@@ -9,18 +9,7 @@ use serde::{Deserialize, Serialize};
 /// does not pull a signing or hashing implementation into the frontend.
 pub const CREATION_METADATA_DOMAIN_V1: &[u8] = b"abako/creation-metadata/v1\0";
 
-/// First NDJSON line in an owner-controlled metadata exchange. Following lines
-/// are `CreationMetadataRecordV1` values verified against a selected core snapshot.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct CreationMetadataHeaderV1 {
-    /// File format version; the current explicit exchange supports only 1.
-    pub schema_version: u16,
-    /// Exact target/provider generation, never reassigned during import.
-    pub generation: ProviderInstanceId,
-}
-
-/// An entity restored from the exact source archive, not a historical signer.
+/// Entity whose creation content is selected by the core.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "type", content = "data", deny_unknown_fields)]
 #[allow(clippy::cast_possible_truncation, reason = "Two fixed SCALE variants.")]
@@ -33,7 +22,7 @@ pub enum MetadataEntityV1 {
     Project(EntityId),
 }
 
-/// Distinguishes signed creations from a later, explicit migration commitment.
+/// Provenance of an accepted creation operation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(
     tag = "type",
@@ -50,15 +39,6 @@ pub enum MetadataProvenanceV1 {
         operation_id: OperationId,
         /// Origin verified by the signing boundary.
         author: AccountId32,
-    },
-    /// The importer has retained this entity from an immutable owner export.
-    /// This makes no claim about its historical creation transaction or signer.
-    #[codec(index = 1)]
-    Migration {
-        /// Hash of the exact immutable export bytes, shared by all its records.
-        source_archive_hash: crate::PayloadHash,
-        /// Retained identity whose descriptive content was exported.
-        entity: MetadataEntityV1,
     },
 }
 
@@ -94,9 +74,9 @@ pub enum CreationContentV1 {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CreationMetadataRecordV1 {
-    /// Provider generation accepting the operation or retained by migration.
+    /// Provider generation accepting the operation.
     pub generation: ProviderInstanceId,
-    /// Signed creation or explicitly migration-time provenance.
+    /// Signed creation provenance.
     pub provenance: MetadataProvenanceV1,
     /// Exact descriptive preimage, retained offchain only.
     pub content: CreationContentV1,
@@ -134,13 +114,6 @@ impl CreationMetadataRecordV1 {
                 },
                 super::MetadataReferenceV1::Creation(content),
             ) => *operation_id == content.operation_id && *author == owner,
-            (
-                MetadataProvenanceV1::Migration {
-                    entity: retained, ..
-                },
-                super::MetadataReferenceV1::Migration(_),
-            ) => retained == entity,
-            _ => false,
         }
     }
 
@@ -190,7 +163,7 @@ mod tests {
     use std::fmt::Write;
 
     #[test]
-    fn creation_metadata_codec_matches_independent_signed_and_migration_vectors()
+    fn creation_metadata_codec_matches_independent_signed_vectors()
     -> Result<(), Box<dyn std::error::Error>> {
         let fixture: serde_json::Value = serde_json::from_str(include_str!(
             "../../../../specs/0015-adapter-core-boundary/creation-metadata-vectors.json"

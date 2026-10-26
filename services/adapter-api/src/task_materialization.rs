@@ -2,7 +2,7 @@
 use crate::state::{App, Error, parse};
 use generated_contracts::{
     ExecutionOutcome, OperationId, OperationReceipt, ProviderCommand, TaskView,
-    provider_core::TaskAllocationV1,
+    provider_core::TaskAllocation,
 };
 use sqlx::{PgConnection, Row};
 
@@ -12,7 +12,7 @@ pub(crate) async fn allocation(
     app: &App,
     command: &ProviderCommand,
     receipt_json: &str,
-) -> Result<Option<TaskAllocationV1>, Error> {
+) -> Result<Option<TaskAllocation>, Error> {
     let receipt: OperationReceipt = serde_json::from_str(receipt_json)?;
     if receipt.outcome != ExecutionOutcome::Success {
         return Ok(None);
@@ -25,7 +25,7 @@ pub(crate) async fn allocation(
     else {
         return Ok(None);
     };
-    let allocated: TaskAllocationV1 = app
+    let allocated: TaskAllocation = app
         .get(
             &app.config.provider_url,
             &format!("/internal/task-allocations/{}", receipt.operation_id),
@@ -49,7 +49,7 @@ pub(crate) async fn allocation(
 pub(crate) async fn complete(
     connection: &mut PgConnection,
     operation: OperationId,
-    allocated: Option<&TaskAllocationV1>,
+    allocated: Option<&TaskAllocation>,
 ) -> Result<(), Error> {
     let row = sqlx::query("SELECT * FROM operations WHERE operation_id=$1 AND NOT task_operation AND status='Finalized'")
         .bind(operation.to_string()).fetch_optional(&mut *connection).await?.ok_or(Error::Dependency)?;
@@ -133,7 +133,7 @@ struct Prepared {
 fn prepare(
     original: ProviderCommand,
     receipt: &OperationReceipt,
-    allocated: Option<&TaskAllocationV1>,
+    allocated: Option<&TaskAllocation>,
     rows: Vec<sqlx::postgres::PgRow>,
     next: u32,
 ) -> Result<Prepared, Error> {

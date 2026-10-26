@@ -6,7 +6,7 @@ pub(in crate::tests) fn apply_fixture(
     call: &UnsignedContractCallV1,
     mut receipt: OperationReceipt,
 ) -> Result<OperationReceipt, Error> {
-    use generated_contracts::provider_core::{TaskAllocationV1, TaskCore};
+    use generated_contracts::provider_core::{TaskAllocation, TaskCore};
     if receipt.outcome != ExecutionOutcome::Success {
         return Ok(receipt);
     }
@@ -54,7 +54,7 @@ pub(in crate::tests) fn apply_fixture(
             });
             fake.task_allocations.insert(
                 call.operation_id,
-                TaskAllocationV1 {
+                TaskAllocation {
                     receipt: receipt.clone(),
                     project_id,
                     task_storage_id: storage_id,

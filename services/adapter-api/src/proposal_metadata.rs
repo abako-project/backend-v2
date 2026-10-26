@@ -62,10 +62,7 @@ pub(crate) async fn capture(
         hash: generated_contracts::PayloadHash::from_bytes(fingerprint),
     };
     let generated_contracts::provider_core::ProposalProvenanceV1::Operation { proposal_id, .. } =
-        record.provenance
-    else {
-        return Err(Error::Internal);
-    };
+        record.provenance;
     match (record.content, proposal_id) {
         (ProposalContentV1::Definition(proposal), None) => {
             Ok(ProviderCommand::CreateProposalCore {

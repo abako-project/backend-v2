@@ -1,22 +1,12 @@
 //! Explicit proposal-context preimages; no presentation sections or task content.
 use super::{MetadataCommitmentV1, ProposalContentReferenceV1};
 use crate::{
-    AccountId32, EntityId, OperationId, PayloadHash, ProposalDefinition, ProviderCommand,
-    ProviderInstanceId,
+    AccountId32, EntityId, OperationId, ProposalDefinition, ProviderCommand, ProviderInstanceId,
 };
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-/// Header for owner-controlled proposal NDJSON exchange.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ProposalMetadataHeaderV1 {
-    /// Exchange version, currently 1.
-    pub schema_version: u16,
-    /// Exact retained generation.
-    pub generation: ProviderInstanceId,
-}
-/// Actual signed operation or explicit migration; never an invented old approval.
+/// Actual signed operation selecting the content.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(
     tag = "type",
@@ -35,14 +25,6 @@ pub enum ProposalProvenanceV1 {
         author: AccountId32,
         /// Existing target for non-creation operations.
         proposal_id: Option<EntityId>,
-    },
-    /// Current retained value, without claiming a historical signer.
-    #[codec(index = 1)]
-    Migration {
-        /// Hash of exact immutable source-file bytes.
-        source_archive_hash: PayloadHash,
-        /// Retained proposal identity.
-        proposal_id: EntityId,
     },
 }
 /// Two independent immutable values belonging to the same proposal context.
@@ -151,14 +133,6 @@ impl ProposalMetadataRecordV1 {
                         |target| target == proposal_id,
                     )
             }
-            (
-                ProposalProvenanceV1::Migration {
-                    proposal_id: target,
-                    ..
-                },
-                ProposalContentReferenceV1::Migration(_),
-            ) => *target == proposal_id,
-            _ => false,
         }
     }
     /// SHA-256 preimage; encode/hash on a blocking worker at async boundaries.
@@ -176,7 +150,7 @@ mod tests {
     use parity_scale_codec::DecodeAll;
     use std::fmt::Write;
     #[test]
-    fn proposal_record_codec_matches_independent_operation_and_migration_vectors()
+    fn proposal_record_codec_matches_independent_operation_vectors()
     -> Result<(), Box<dyn std::error::Error>> {
         let fixture: serde_json::Value = serde_json::from_str(include_str!(
             "../../../../specs/0015-adapter-core-boundary/proposal-metadata-vectors.json"

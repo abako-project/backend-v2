@@ -2,15 +2,14 @@
 //! selecting an authorized entity and verifying its immutable record.
 use super::MetadataCommitmentV1;
 use crate::{
-    AccountId32, BalanceView, CalendarView, CatalogView, EntityId, Money, PayloadHash,
-    PlanningView, ProjectEvaluation, ProjectView, ProposalView, ProviderInfo, Qualifications,
-    ReputationView, UnixSeconds, WorkerMode, WorkerView,
+    AccountId32, BalanceView, CalendarView, EntityId, Money, PayloadHash, PlanningView,
+    ProjectEvaluation, ProjectView, ProposalView, ProviderInfo, Qualifications, ReputationView,
+    UnixSeconds, WorkerMode, WorkerView,
 };
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-/// Creation references are introduced by signed commands; migration references
-/// only by a fresh sealed import. Neither variant stores descriptive preimages.
+/// Signed creation references select API-owned descriptive content.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "type", content = "data", deny_unknown_fields)]
 #[allow(clippy::cast_possible_truncation, reason = "Two fixed SCALE variants.")]
@@ -18,9 +17,6 @@ pub enum MetadataReferenceV1 {
     /// Immutable content bound to the original creation envelope.
     #[codec(index = 0)]
     Creation(MetadataCommitmentV1),
-    /// Explicit migration-time commitment, without an invented old signer.
-    #[codec(index = 1)]
-    Migration(PayloadHash),
 }
 impl MetadataReferenceV1 {
     /// Expected digest of the exact offchain record.
@@ -28,7 +24,6 @@ impl MetadataReferenceV1 {
     pub const fn hash(&self) -> PayloadHash {
         match self {
             Self::Creation(content) => content.hash,
-            Self::Migration(hash) => *hash,
         }
     }
 }
@@ -57,31 +52,6 @@ ProjectCore {
     proposals: Vec<super::ProposalCore>, execution_escrow: Money, cancelled: bool,
     completed: bool, evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId>
 });
-core_dto!(/// Project business facts. Proposal/task children move in subsequent slices.
-ProjectCoreV4 {
-    project_id: EntityId, created_at: Option<UnixSeconds>, client: AccountId32,
-    coordinator: AccountId32, content: MetadataReferenceV1, planning: PlanningView,
-    proposals: Vec<super::ProposalCoreV4>, execution_escrow: Money, cancelled: bool,
-    completed: bool, evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId>
-});
-core_dto!(/// Retained V2 predecessor fields; data exchange only, never a second engine.
-ProjectCoreV2 {
-    project_id: EntityId, created_at: Option<UnixSeconds>, client: AccountId32,
-    coordinator: AccountId32, content: MetadataReferenceV1, planning: PlanningView,
-    proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool,
-    completed: bool, evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId>
-});
-core_dto!(/// Private generation snapshot; the adapter assembles public views.
-CoreSnapshotV3 {
-    schema_version: u16, info: ProviderInfo, catalog: CatalogView,
-    workers: Vec<WorkerCore>, projects: Vec<ProjectCoreV4>, balances: Vec<BalanceView>
-});
-core_dto!(/// Private current core snapshot; catalog presentation stays in the API.
-CoreSnapshotV4 {
-    schema_version: u16, info: ProviderInfo, catalog: super::CatalogCore,
-    workers: Vec<WorkerCore>, projects: Vec<ProjectCoreV4>, balances: Vec<BalanceView>
-});
-
 impl WorkerCore {
     /// Assemble only with the exact verified directory-name preimage.
     #[must_use]
@@ -127,7 +97,7 @@ impl ProjectCore {
 }
 
 core_dto!(/// Current core facts, with task identity and membership only.
-CoreSnapshotV5 {
+CoreSnapshot {
     schema_version: u16, info: ProviderInfo, catalog: super::CatalogCore,
     workers: Vec<WorkerCore>, projects: Vec<ProjectCore>, balances: Vec<BalanceView>
 });

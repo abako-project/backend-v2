@@ -464,8 +464,11 @@ fn project_fixture(
         created_at: None,
         client,
         coordinator,
-        content: generated_contracts::provider_core::MetadataReferenceV1::Migration(
-            PayloadHash::from_bytes([0; 32]),
+        content: generated_contracts::provider_core::MetadataReferenceV1::Creation(
+            generated_contracts::provider_core::MetadataCommitmentV1 {
+                operation_id: generated_contracts::OperationId::from_bytes([1; 16]),
+                hash: PayloadHash::from_bytes([0; 32]),
+            },
         ),
         planning: PlanningView {
             revision: 0,

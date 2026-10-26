@@ -405,7 +405,7 @@ pub(crate) struct Job {
     instance: Option<String>,
     receipt: Option<String>,
     task_intent: bool,
-    task_allocation: Option<generated_contracts::provider_core::TaskAllocationV1>,
+    task_allocation: Option<generated_contracts::provider_core::TaskAllocation>,
     error: Option<String>,
     submitted: bool,
     attempts: i64,

@@ -2,8 +2,6 @@
 //! the returned shell and tentative engine state in the same transaction.
 #![allow(clippy::missing_errors_doc)]
 
-pub mod migration;
-
 use generated_contracts::{
     AccountId32, DomainEvent, DomainEventKind, EntityId, ExecutionOutcome, OperationId,
     OperationReceipt, PAYLOAD_VERSION, ProviderCommand, ProviderInfo, ProviderInstanceId,
@@ -209,7 +207,7 @@ impl Shell {
     pub fn task_allocation(
         &self,
         operation: OperationId,
-    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocation>> {
         let Some(record) = self.receipts.get(&operation) else {
             return Ok(None);
         };
@@ -239,7 +237,7 @@ impl Shell {
         {
             return Err(Error::unavailable());
         }
-        Ok(Some(generated_contracts::provider_core::TaskAllocationV1 {
+        Ok(Some(generated_contracts::provider_core::TaskAllocation {
             receipt: record.receipt.clone(),
             project_id,
             task_storage_id,

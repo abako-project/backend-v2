@@ -1,5 +1,5 @@
 use generated_contracts::provider_core::{
-    CatalogCore, CatalogEntryCore, CoreSnapshotV5, ProjectCore, SkillRequestCore, SkillRoleCore,
+    CatalogCore, CatalogEntryCore, CoreSnapshot, ProjectCore, SkillRequestCore, SkillRoleCore,
     WorkerCore,
 };
 use std::{
@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 use crate::{Error, Result, require, seed::SkillMetadata};
 
 mod bramp;
+#[cfg(feature = "storage-sqlite")]
 mod catalog_history;
 mod catalog_requests;
 mod checkpoint;
@@ -34,12 +35,11 @@ mod validation;
 use provider_execution::Effect;
 
 use generated_contracts::provider_core::ReasonCore as RecordedReason;
-use provider_execution::migration::CoreArchiveV5;
 
 /// Private aggregate: only authenticated calls can obtain a transition and only
 /// storage can commit it. HTTP snapshots are copies, never mutable handles.
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(from = "checkpoint::CoreCheckpointV5")]
+#[serde(from = "checkpoint::Checkpoint")]
 pub(crate) struct State {
     #[serde(flatten)]
     shell: execution::Shell,
@@ -94,7 +94,7 @@ impl State {
         };
         self.shell.info.provider_instance_id = generation;
         for seed in catalog_seed_v1() {
-            let reference = CatalogReferenceV1::Seed(crate::migration::source_hash(
+            let reference = CatalogReferenceV1::Seed(crate::content_hash(
                 &seed.record(generation).hash_input(),
             ));
             let catalog = if seed.kind == CatalogKind::Role {
@@ -114,11 +114,6 @@ impl State {
                 metadata.origin = reference;
             }
         }
-    }
-
-    #[cfg(feature = "storage-sqlite")]
-    pub(crate) fn seed(&mut self) {
-        self.engine.seed(self.shell.info.provider_instance_id);
     }
 
     pub(crate) fn lifecycle_reasons(
@@ -188,7 +183,7 @@ impl State {
     pub(crate) fn task_allocation(
         &self,
         operation: OperationId,
-    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocation>> {
         let allocation = self.shell.task_allocation(operation)?;
         if allocation
             .as_ref()
@@ -198,10 +193,10 @@ impl State {
         }
         Ok(allocation)
     }
-    pub(crate) fn task_state(&self) -> generated_contracts::provider_core::TaskStateV2 {
-        use generated_contracts::provider_core::{TaskStateV2, TaskStorageRecordV2};
+    pub(crate) fn task_state(&self) -> generated_contracts::provider_core::TaskState {
+        use generated_contracts::provider_core::{TaskState, TaskStorageRecord};
         let mut state =
-            TaskStateV2 {
+            TaskState {
                 schema_version: 2,
                 has_task_history: self.shell.receipts.values().any(|record| {
                     generated_contracts::UnsignedContractCallV1::decode_signable(&record.bytes)
@@ -233,7 +228,7 @@ impl State {
                             proposal
                                 .milestones
                                 .iter()
-                                .map(move |milestone| TaskStorageRecordV2 {
+                                .map(move |milestone| TaskStorageRecord {
                                     project_id: project.project_id,
                                     proposal_id: proposal.proposal_id,
                                     proposal_revision: proposal.revision,
@@ -248,8 +243,8 @@ impl State {
             .sort_by_key(|record| record.storage.task_storage_id);
         state
     }
-    pub(crate) fn snapshot(&self) -> CoreSnapshotV5 {
-        CoreSnapshotV5 {
+    pub(crate) fn snapshot(&self) -> CoreSnapshot {
+        CoreSnapshot {
             schema_version: 5,
             info: self.info(),
             catalog: CatalogCore {
@@ -306,21 +301,7 @@ impl State {
         state.validate_restored(root_account)
     }
 
-    pub(crate) fn archive(&self) -> Result<CoreArchiveV5> {
-        self.engine.validate_task_keys()?;
-        Ok(CoreArchiveV5 {
-            version: 5,
-            checkpoint: serde_json::from_slice(&self.encode()?).map_err(|_| Error::internal())?,
-        })
-    }
-
-    pub(crate) fn from_archive(archive: CoreArchiveV5, root_account: AccountId32) -> Result<Self> {
-        require(archive.version == 5, "state_configuration_mismatch")?;
-        let state = Self::from(archive.checkpoint).validate_restored(root_account)?;
-        state.engine.validate_task_keys()?;
-        Ok(state)
-    }
-
+    #[cfg(feature = "storage-sqlite")]
     fn validate_restored(mut self, root_account: AccountId32) -> Result<Self> {
         let state = &mut self;
         require(
@@ -329,19 +310,11 @@ impl State {
                 && state.shell.info.payload_version == generated_contracts::PAYLOAD_VERSION,
             "state_configuration_mismatch",
         )?;
-        // Older snapshots retain the real creation time in their durable events.
-        for event in &state.shell.events {
-            if event.kind == DomainEventKind::ProjectCreated
-                && let Some(id) = event.project_id
-                && let Some(project) = state.engine.projects.get_mut(&id)
-            {
-                project.created_at = project.created_at.or(Some(event.occurred_at));
-            }
-        }
         state.engine.context = execution::EngineContext::new(root_account);
         state.engine.context.event_cursor =
             u64::try_from(state.shell.events.len()).map_err(|_| Error::internal())?;
         state.engine.validate()?;
+        state.engine.validate_task_keys()?;
         state.validate_history()?;
         require(
             state.shell.receipts.values().all(|record| {
@@ -354,6 +327,7 @@ impl State {
         state.engine.rebuild_index();
         Ok(self)
     }
+    #[cfg(any(test, feature = "storage-sqlite"))]
     pub(crate) fn encode(&self) -> Result<Vec<u8>> {
         serde_json::to_vec(self).map_err(|_| Error::internal())
     }

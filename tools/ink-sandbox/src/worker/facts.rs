@@ -7,8 +7,45 @@ use generated_contracts::provider_core::{
 };
 use generated_contracts::*;
 use parity_scale_codec::DecodeAll;
-use provider_execution::migration::{BrampArchive, CoreArchiveV5, CoreCheckpointV5};
 use std::collections::{BTreeMap, BTreeSet};
+/// Current facts read from ink cells. Transport history lives only in the shell.
+pub(super) struct Facts {
+    pub roles: BTreeMap<u32, CatalogEntryCore>,
+    pub skills: BTreeMap<u32, CatalogEntryCore>,
+    pub skill_metadata: BTreeMap<u32, SkillMetadataCore>,
+    pub skill_requests: BTreeMap<EntityId, SkillRequestCore>,
+    pub score_policy: ScorePolicy,
+    pub compensation_policy: CompensationPolicy,
+    pub workers: BTreeMap<AccountId32, WorkerCore>,
+    pub projects: BTreeMap<EntityId, generated_contracts::provider_core::ProjectCore>,
+    pub balances: BTreeMap<AccountId32, Money>,
+    pub reasons: Vec<ReasonCore>,
+    pub disputes: BTreeMap<EntityId, Dispute>,
+    pub next_task_id: u32,
+}
+
+pub(super) fn next_task_id(
+    ext: &mut sp_io::TestExternalities,
+    state: &State,
+) -> Result<u32, Error> {
+    let header: Directory = Storage::new(ext).cell(&state.directory, 0u32)?;
+    Ok(header.next_task_id)
+}
+pub(super) fn deposit(
+    ext: &mut sp_io::TestExternalities,
+    state: &State,
+    id: EntityId,
+) -> Result<Option<DepositView>, Error> {
+    Storage::new(ext).optional_cell(&state.directory, (102u32, id))
+}
+pub(super) fn withdrawal(
+    ext: &mut sp_io::TestExternalities,
+    state: &State,
+    id: EntityId,
+) -> Result<Option<WithdrawalView>, Error> {
+    Storage::new(ext).optional_cell(&state.directory, (103u32, id))
+}
+
 pub(super) type Reason = (
     EntityId,
     Option<EntityId>,
@@ -23,7 +60,7 @@ struct Bank {
     _mock_funding: bool,
     #[codec(skip)]
     accounts: Vec<AccountId32>,
-    minted: Money,
+    _minted: Money,
     #[codec(skip)]
     deposits: Vec<EntityId>,
     #[codec(skip)]
@@ -56,7 +93,6 @@ struct Directory {
     bank: Bank,
     #[codec(skip)]
     disputes: Vec<EntityId>,
-    phase: u8,
     reasons: u64,
 }
 #[derive(Decode)]
@@ -101,8 +137,6 @@ struct CalendarHeader {
     overrides: u32,
     reservations: u32,
     reserved_weeks: u32,
-    expected: Option<(u32, u32)>,
-    phase: u8,
 }
 pub(super) struct Storage<'a> {
     ext: &'a mut sp_io::TestExternalities,
@@ -174,12 +208,9 @@ impl<'a> Storage<'a> {
             .map(|i| self.cell(address, (namespace, (owner, i))))
             .collect()
     }
-    fn root(&mut self, state: &directory::State, importing: bool) -> Result<Directory, Error> {
+    fn root(&mut self, state: &directory::State) -> Result<Directory, Error> {
         let address = &state.directory;
         let mut header: Directory = self.cell(address, 0u32)?;
-        if importing != (header.phase == 1) || header.phase > 2 {
-            return Err(Error::InvalidState);
-        }
         header.roles = self.index(address, 50)?;
         header.skills = self.index(address, 51)?;
         header.workers = self.index(address, 52)?;
@@ -200,15 +231,9 @@ impl<'a> Storage<'a> {
     ) -> Result<T, Error> {
         self.cell(address, (namespace, key))
     }
-    fn calendar(
-        &mut self,
-        address: &Account,
-    ) -> Result<(CalendarView, Account, Account, bool), Error> {
+    fn calendar(&mut self, address: &Account) -> Result<(CalendarView, Account, Account), Error> {
         let header: CalendarHeader = self.cell(address, 0x4341_4c01u32)?;
-        if header.expected.is_some()
-            || !matches!(header.phase, 2 | 3)
-            || header.reserved_weeks > header.reservations
-        {
+        if header.reserved_weeks > header.reservations {
             return Err(Error::InvalidState);
         }
         let records = u64::from(header.overrides) + u64::from(header.reservations);
@@ -253,25 +278,18 @@ impl<'a> Storage<'a> {
             },
             header.directory,
             header.controller,
-            header.phase == 3,
         ))
     }
-    fn workers(
-        &mut self,
-        state: &State,
-        directory: &Directory,
-        sealed: Option<bool>,
-    ) -> Result<Vec<WorkerCore>, Error> {
+    fn workers(&mut self, state: &State, directory: &Directory) -> Result<Vec<WorkerCore>, Error> {
         let mut workers = Vec::new();
         for account in &directory.workers {
             let worker: WorkerRecord = self.value(&state.directory, 4, *account)?;
-            let (calendar, parent, controller, live): (CalendarView, Account, Account, bool) =
+            let (calendar, parent, controller): (CalendarView, Account, Account) =
                 self.calendar(&worker.calendar)?;
             if calendar.owner != *account
                 || calendar.calendar_id != worker.calendar_id
                 || parent != state.directory
                 || controller != state.directory
-                || sealed.is_some_and(|expected| live != expected)
             {
                 return Err(Error::InvalidState);
             }
@@ -302,23 +320,10 @@ impl<'a> Storage<'a> {
         Ok(workers)
     }
 }
-pub(super) fn workers(
-    ext: &mut sp_io::TestExternalities,
-    state: &State,
-) -> Result<Vec<WorkerCore>, Error> {
+pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<Facts, Error> {
     let mut reader = Storage::new(ext);
-    let directory: Directory = reader.root(state, false)?;
-    reader.workers(state, &directory, None)
-}
-pub(super) fn read(
-    ext: &mut sp_io::TestExternalities,
-    state: &State,
-    sealed: bool,
-) -> Result<CoreArchiveV5, Error> {
-    let mut reader = Storage::new(ext);
-    let directory: Directory = reader.root(state, !sealed)?;
+    let directory: Directory = reader.root(state)?;
     if directory.root != state.shell.info.root_account
-        || directory.phase != if sealed { 2 } else { 1 }
         || !directory.bank.enabled
         || directory.reasons > MAX_SHELL as u64
     {
@@ -352,7 +357,7 @@ pub(super) fn read(
         );
     }
     let workers = reader
-        .workers(state, &directory, Some(sealed))?
+        .workers(state, &directory)?
         .into_iter()
         .map(|w| (w.account, w))
         .collect();
@@ -383,12 +388,9 @@ pub(super) fn read(
             project,
             reasons,
             cases,
-            live,
         } = super::project_storage::read(&mut reader, &address)?;
-        let project = project.into_domain(&state.legacy_references)?;
         if parent != state.directory
             || project.project_id != *id
-            || live != sealed
             || reasons.iter().any(|r| r.0 != *id)
         {
             return Err(Error::InvalidState);
@@ -459,7 +461,6 @@ pub(super) fn read(
             return Err(Error::InvalidState);
         }
         for case in cases {
-            let case = case.into_domain(&state.legacy_references)?;
             let owner: EntityId = reader.value(&state.directory, 12, case.dispute_id)?;
             if case.project_id != *id
                 || owner != *id
@@ -477,8 +478,6 @@ pub(super) fn read(
         return Err(Error::InvalidState);
     }
     let mut balances = BTreeMap::new();
-    let mut deposits = BTreeMap::new();
-    let mut withdrawals = BTreeMap::new();
     for account in directory.bank.accounts {
         balances.insert(account, reader.value(&state.directory, 100, account)?);
     }
@@ -487,14 +486,12 @@ pub(super) fn read(
         if deposit.deposit_id != id {
             return Err(Error::InvalidState);
         }
-        deposits.insert(id, deposit);
     }
     for id in directory.bank.withdrawals {
         let withdrawal: WithdrawalView = reader.value(&state.directory, 103, id)?;
         if withdrawal.withdrawal_id != id {
             return Err(Error::InvalidState);
         }
-        withdrawals.insert(id, withdrawal);
     }
     let mut reasons = Vec::new();
     for index in 0..directory.reasons {
@@ -512,49 +509,28 @@ pub(super) fn read(
             return Err(Error::InvalidState);
         }
     }
-    let archive = CoreArchiveV5 {
-        version: 5,
-        checkpoint: CoreCheckpointV5 {
-            info: state.shell.info.clone(),
-            roles,
-            skills,
-            skill_metadata: metadata,
-            skill_requests: requests,
-            score_policy: directory.score_policy,
-            compensation_policy: directory.compensation_policy,
-            workers,
-            projects,
-            balances,
-            nonces: state.shell.nonces.clone(),
-            receipts: state.shell.receipts.clone(),
-            events: state.shell.events.clone(),
-            reasons: reasons
-                .into_iter()
-                .map(|r| ReasonCore {
-                    project_id: r.0,
-                    milestone_id: r.1,
-                    origin: r.2,
-                    content: r.3,
-                    occurred_at: r.4,
-                    kind: r.5,
-                })
-                .collect(),
-            disputes,
-            bramp: BrampArchive {
-                deposits,
-                withdrawals,
-            },
-            next_task_id: directory.next_task_id,
-            minted_units: directory.bank.minted,
-            engine_version: 5,
-        },
-    };
-    if serde_json::to_vec(&archive)
-        .map_err(|_| Error::InvalidState)?
-        .len()
-        > MAX_SHELL
-    {
-        return Err(Error::Limit);
-    }
-    Ok(archive)
+    Ok(Facts {
+        roles,
+        skills,
+        skill_metadata: metadata,
+        skill_requests: requests,
+        score_policy: directory.score_policy,
+        compensation_policy: directory.compensation_policy,
+        workers,
+        projects,
+        balances,
+        disputes,
+        next_task_id: directory.next_task_id,
+        reasons: reasons
+            .into_iter()
+            .map(|r| ReasonCore {
+                project_id: r.0,
+                milestone_id: r.1,
+                origin: r.2,
+                content: r.3,
+                occurred_at: r.4,
+                kind: r.5,
+            })
+            .collect(),
+    })
 }

@@ -58,6 +58,7 @@ impl State {
             Admission::Execute(pending) => self.execute_prepared(*pending),
         }
     }
+    #[cfg(all(test, feature = "mock-seed"))]
     pub(crate) fn execute_with_inputs(
         self,
         verified: VerifiedCall,
@@ -97,6 +98,7 @@ impl State {
         }
         Ok((self, receipt))
     }
+    #[cfg(feature = "storage-sqlite")]
     pub(super) fn validate_history(&self) -> Result<()> {
         self.shell.validate(self.shell.info.root_account)?;
         for worker in self.engine.workers.values() {
@@ -125,6 +127,7 @@ impl State {
         self.validate_reason_history()?;
         Ok(())
     }
+    #[cfg(feature = "storage-sqlite")]
     fn validate_proposal_ref(
         &self,
         project: &generated_contracts::provider_core::ProjectCore,
@@ -136,9 +139,7 @@ impl State {
             ExecutionOutcome, ProviderCommand, UnsignedContractCallV1,
             provider_core::ProposalContentReferenceV1,
         };
-        let ProposalContentReferenceV1::Signed(expected) = reference else {
-            return Ok(());
-        };
+        let ProposalContentReferenceV1::Signed(expected) = reference;
         let accepted = self
             .shell
             .receipts
@@ -185,6 +186,7 @@ impl State {
             _ => Err(Error::domain("invalid_proposal_metadata_state")),
         }
     }
+    #[cfg(feature = "storage-sqlite")]
     fn validate_quoted_proposal(
         proposal: &generated_contracts::provider_core::ProposalCore,
         expected: &generated_contracts::provider_core::MetadataCommitmentV1,
@@ -204,6 +206,7 @@ impl State {
             "invalid_proposal_metadata_state",
         )
     }
+    #[cfg(feature = "storage-sqlite")]
     fn validate_creation_ref(
         &self,
         reference: &generated_contracts::provider_core::MetadataReferenceV1,
@@ -212,10 +215,7 @@ impl State {
         worker: bool,
     ) -> Result<()> {
         use generated_contracts::{ExecutionOutcome, ProviderCommand, UnsignedContractCallV1};
-        let generated_contracts::provider_core::MetadataReferenceV1::Creation(expected) = reference
-        else {
-            return Ok(());
-        };
+        let generated_contracts::provider_core::MetadataReferenceV1::Creation(expected) = reference;
         let recorded = self
             .shell
             .receipts
@@ -245,14 +245,6 @@ mod directory_parity;
 #[cfg(all(test, feature = "mock-seed"))]
 #[path = "matching_parity.rs"]
 mod matching_parity;
-
-#[cfg(all(test, feature = "mock-seed"))]
-#[path = "project_parity.rs"]
-mod project_parity;
-
-#[cfg(all(test, feature = "mock-seed"))]
-#[path = "financial_parity.rs"]
-mod financial_parity;
 
 #[cfg(test)]
 mod tests {

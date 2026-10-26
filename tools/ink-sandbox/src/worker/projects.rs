@@ -1,6 +1,6 @@
-//! M5 ABI routing only. Project contracts own authorization and transitions.
-use super::evidence_wire::{LegacyReferences, Reference};
+//! ABI routing only. Project contracts own authorization and transitions.
 use super::*;
+use generated_contracts::EvidenceRecordReferenceV1 as Reference;
 use generated_contracts::ProviderCommand;
 use parity_scale_codec::DecodeAll;
 use provider_execution::PreparedExecution;
@@ -13,7 +13,6 @@ fn command_input(
     command: &ProviderCommand,
     seed: [u8; 32],
     event_cursor: u64,
-    refs: &mut LegacyReferences,
 ) -> Result<Vec<u8>, Error> {
     Ok(match command {
         ProviderCommand::ApproveExecution {
@@ -29,11 +28,11 @@ fn command_input(
             "submit_milestone",
             (
                 milestone_id,
-                request
-                    .deliverable
-                    .clone()
-                    .map(|value| Reference::legacy(value, refs))
-                    .transpose()?,
+                if request.deliverable.is_none() {
+                    None::<Reference>
+                } else {
+                    return Err(Error::IncompleteCoverage);
+                },
                 seed,
             ),
         ),
@@ -42,24 +41,11 @@ fn command_input(
             worker_ratings,
             ..
         } => input(
-            "submit_legacy_milestone",
+            "submit_rated_milestone",
             (
                 milestone_id,
                 Option::<Reference>::None,
                 worker_ratings,
-                seed,
-            ),
-        ),
-        ProviderCommand::RequestMilestoneCompletion {
-            milestone_id,
-            request,
-            ..
-        } => input(
-            "submit_legacy_milestone",
-            (
-                milestone_id,
-                Some(Reference::legacy(request.deliverable.clone(), refs)?),
-                &request.worker_ratings,
                 seed,
             ),
         ),
@@ -73,7 +59,7 @@ fn command_input(
             request,
             ..
         } => input(
-            "accept_legacy_milestone",
+            "accept_rated_milestone",
             (
                 milestone_id,
                 request.submission_id,
@@ -90,32 +76,9 @@ fn command_input(
             "reject_milestone_comment",
             (milestone_id, submission_id, comment_id),
         ),
-        ProviderCommand::RejectMilestoneCompletion {
-            milestone_id,
-            submission_id,
-            request,
-            ..
-        } => input(
-            "reject_milestone",
-            (
-                milestone_id,
-                submission_id,
-                Reference::legacy(request.evidence.clone(), refs)?,
-            ),
-        ),
         ProviderCommand::EvaluateProject { request, .. } => {
             input("evaluate_project", &request.ratings)
         }
-        ProviderCommand::OpenDispute(request) => input(
-            "open_dispute",
-            (
-                request.milestone_id,
-                request.rejected_submission_id,
-                Reference::legacy(request.evidence.clone(), refs)?,
-                seed,
-                event_cursor,
-            ),
-        ),
         ProviderCommand::OpenDisputeWithComment(request) => input(
             "open_dispute_comment",
             (
@@ -126,18 +89,6 @@ fn command_input(
                 event_cursor,
             ),
         ),
-        ProviderCommand::RespondDispute {
-            dispute_id,
-            request,
-            ..
-        } => input(
-            "respond_dispute",
-            (
-                dispute_id,
-                Reference::legacy(request.evidence.clone(), refs)?,
-            ),
-        ),
-
         ProviderCommand::SubmitMilestoneCommitted {
             milestone_id,
             evidence,
@@ -147,7 +98,7 @@ fn command_input(
             let reference = Some(Reference::Committed(evidence.clone()));
             match worker_ratings {
                 Some(ratings) => input(
-                    "submit_legacy_milestone",
+                    "submit_rated_milestone",
                     (milestone_id, reference, ratings, seed),
                 ),
                 None => input("submit_milestone", (milestone_id, reference, seed)),
@@ -260,27 +211,6 @@ fn command_input(
         _ => return Err(Error::IncompleteCoverage),
     })
 }
-pub(super) fn requires_money(command: &ProviderCommand) -> bool {
-    matches!(
-        command,
-        ProviderCommand::ApproveExecution { .. }
-            | ProviderCommand::SubmitMilestoneDelivery { .. }
-            | ProviderCommand::RequestMilestoneCompletionWithoutDeliverable { .. }
-            | ProviderCommand::RequestMilestoneCompletion { .. }
-            | ProviderCommand::AcceptMilestoneDelivery { .. }
-            | ProviderCommand::AcceptMilestoneCompletion { .. }
-            | ProviderCommand::RejectMilestoneDelivery { .. }
-            | ProviderCommand::RejectMilestoneCompletion { .. }
-            | ProviderCommand::EvaluateProject { .. }
-            | ProviderCommand::OpenDispute(_)
-            | ProviderCommand::OpenDisputeWithComment(_)
-            | ProviderCommand::RespondDispute { .. }
-            | ProviderCommand::SubmitMilestoneCommitted { .. }
-            | ProviderCommand::RejectMilestoneCommitted { .. }
-            | ProviderCommand::OpenDisputeCommitted { .. }
-            | ProviderCommand::RespondDisputeCommitted { .. }
-    )
-}
 pub(super) fn execute(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,
@@ -291,13 +221,9 @@ pub(super) fn execute(
     event_cursor: u64,
 ) -> Result<Outcome, Error> {
     let directory = &state.directory;
-    let refs = &mut state.legacy_references;
     let call = pending.call();
-    let compact = mock_provider::creation::compact_creation(call)
-        .or_else(|| mock_provider::proposal::compact_proposal(call))
-        .or_else(|| mock_provider::catalog_content::compact_reason(call));
-    let command = compact.as_ref().unwrap_or(&call.command);
-    let data = command_input(command, pending.inputs().seed, event_cursor, refs)?;
+    let command = &call.command;
+    let data = command_input(command, pending.inputs().seed, event_cursor)?;
     let mut invocation = Invocation {
         caller: Account::new(call.origin.into_bytes()),
         action: Action::Call {
@@ -307,7 +233,7 @@ pub(super) fn execute(
         gas,
         timestamp_ms: time,
     };
-    invocation.validate_with_budget(crate::WHOLE_GAS)?;
+    invocation.validate_with_budget(crate::EXECUTION_GAS)?;
     let mut resolution_gas = Weight::zero();
     if !matches!(
         command,
@@ -341,7 +267,7 @@ pub(super) fn execute(
         invocation.action = Action::Call { address };
     }
     // The user calls Project directly. Directory/factory never becomes the
-    // payer when M6 adds asset deposits. Lookup and execution share one gas cap.
+    // payer for asset deposits. Lookup and execution share one gas cap.
     let mut result = run(ext, bundles, invocation)?;
     result.gas_consumed = result.gas_consumed.saturating_add(resolution_gas);
     Ok(result)

@@ -1,7 +1,7 @@
 //! Transport effect boundary shared by native and whole-provider candidates.
 use crate::{Provider, Result};
 use generated_contracts::provider_core::CoreDisputeView;
-use generated_contracts::provider_core::CoreSnapshotV5;
+use generated_contracts::provider_core::CoreSnapshot;
 use generated_contracts::provider_core::SkillRequestCore;
 use generated_contracts::{
     AccountId32, AccountNonce, DepositView, EntityId, OperationId, OperationReceipt,
@@ -16,11 +16,11 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
     /// Next nonce for a new account operation.
     fn nonce(&self, account: AccountId32) -> impl Future<Output = Result<AccountNonce>> + Send;
     /// Internal read model; the adapter still filters project visibility.
-    fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshotV5>> + Send;
+    fn snapshot(&self) -> impl Future<Output = Result<CoreSnapshot>> + Send;
     /// Atomic task graph and retained next key from the selected authority.
     fn task_state(
         &self,
-    ) -> impl Future<Output = Result<generated_contracts::provider_core::TaskStateV2>> + Send;
+    ) -> impl Future<Output = Result<generated_contracts::provider_core::TaskState>> + Send;
     /// Recorded finality independent of the original transport response.
     fn receipt(
         &self,
@@ -30,7 +30,7 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
     fn task_allocation(
         &self,
         operation: OperationId,
-    ) -> impl Future<Output = Result<Option<generated_contracts::provider_core::TaskAllocationV1>>> + Send;
+    ) -> impl Future<Output = Result<Option<generated_contracts::provider_core::TaskAllocation>>> + Send;
     /// Bounded page of durable provider events.
     fn events(
         &self,
@@ -76,10 +76,10 @@ impl ProviderApi for Provider {
     async fn nonce(&self, account: AccountId32) -> Result<AccountNonce> {
         Self::nonce(self, account).await
     }
-    async fn snapshot(&self) -> Result<CoreSnapshotV5> {
+    async fn snapshot(&self) -> Result<CoreSnapshot> {
         Self::snapshot(self).await
     }
-    async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskStateV2> {
+    async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskState> {
         Self::task_state(self).await
     }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
@@ -88,7 +88,7 @@ impl ProviderApi for Provider {
     async fn task_allocation(
         &self,
         operation: OperationId,
-    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocation>> {
         Self::task_allocation(self, operation).await
     }
     async fn events(&self, after: u64, limit: usize) -> Result<ProviderEvents> {

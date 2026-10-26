@@ -1,5 +1,5 @@
 use generated_contracts::provider_core::CoreDisputeView;
-use generated_contracts::provider_core::{CoreSnapshotV5, ReasonPageV1, SkillRequestCore};
+use generated_contracts::provider_core::{CoreSnapshot, ReasonPageV1, SkillRequestCore};
 use std::sync::Arc;
 
 use generated_contracts::{
@@ -73,122 +73,83 @@ impl Provider {
     /// Startup never silently changes its configured root or overwrites seed edits.
     #[cfg(feature = "storage-sqlite")]
     pub async fn sqlite(url: &str, root: AccountId32) -> Result<Self> {
-        Self::open_sqlite(url, root, None).await
-    }
-
-    /// Import into a fresh `SQLite` provider only. Existing state is never replaced.
-    /// The caller must pause/drain the source before exporting the cutover archive.
-    #[cfg(feature = "storage-sqlite")]
-    pub async fn sqlite_from_archive(
-        url: &str,
-        root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV5,
-    ) -> Result<Self> {
-        Self::open_sqlite(url, root, Some(archive)).await
-    }
-
-    #[cfg(feature = "storage-sqlite")]
-    async fn open_sqlite(
-        url: &str,
-        root: AccountId32,
-        archive: Option<provider_execution::migration::CoreArchiveV5>,
-    ) -> Result<Self> {
-        use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+        use sqlx::{
+            ConnectOptions,
+            sqlite::{SqliteConnectOptions, SqlitePoolOptions},
+        };
         use std::{str::FromStr, time::Duration};
         let options = SqliteConnectOptions::from_str(url)
             .map_err(|_| Error::bad("invalid_database_url"))?
-            .create_if_missing(true)
+            .create_if_missing(false)
             .busy_timeout(Duration::from_secs(5))
             .foreign_keys(true);
+        // SQLx 0.9 cannot render its generated memory filename as a URL.
+        // Use a harmless filename when inspecting the already-parsed mode.
+        let fresh = if options
+            .clone()
+            .filename("provider")
+            .to_url_lossy()
+            .query_pairs()
+            .any(|(key, value)| key == "mode" && value == "memory")
+        {
+            true
+        } else {
+            let path = options.get_filename().to_path_buf();
+            tokio::task::spawn_blocking(move || {
+                let mut options = std::fs::OpenOptions::new();
+                options.write(true).create_new(true);
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::OpenOptionsExt;
+                    options.mode(0o600);
+                }
+                match options.open(path) {
+                    Ok(_) => Ok(true),
+                    Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => Ok(false),
+                    Err(_) => Err(Error::internal()),
+                }
+            })
+            .await
+            .map_err(|_| Error::internal())??
+        };
         let pool = SqlitePoolOptions::new()
             .max_connections(1)
             .acquire_timeout(Duration::from_secs(5))
             .connect_with(options)
             .await
             .map_err(|_| Error::internal())?;
-        sqlx::query("CREATE TABLE IF NOT EXISTS provider_state (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), format_version INTEGER NOT NULL CHECK (format_version = 1), state BLOB NOT NULL)")
-            .execute(&pool).await.map_err(|_| Error::internal())?;
         let mut tx = pool
             .begin_with("BEGIN IMMEDIATE")
             .await
             .map_err(|_| Error::internal())?;
-        let row: Option<(i64, Vec<u8>)> =
-            sqlx::query_as("SELECT format_version, state FROM provider_state WHERE singleton = 1")
-                .fetch_optional(&mut *tx)
+        let bytes = if fresh {
+            sqlx::query("CREATE TABLE provider_state (singleton INTEGER PRIMARY KEY CHECK (singleton = 1), format TEXT NOT NULL CHECK(format = 'current'), state BLOB NOT NULL)")
+                .execute(&mut *tx).await.map_err(|_| Error::internal())?;
+            let bytes = tokio::task::spawn_blocking(move || State::new(root)?.encode())
                 .await
-                .map_err(|_| Error::internal())?;
-        let importing = archive.is_some();
-        if importing && row.is_some() {
-            return Err(Error::domain("migration_destination_not_empty"));
-        }
-        let row = match row {
-            Some((1, bytes)) => Some(bytes),
-            Some(_) => return Err(Error::domain("state_configuration_mismatch")),
-            None => None,
+                .map_err(|_| Error::internal())??;
+            sqlx::query(
+                "INSERT INTO provider_state (singleton, format, state) VALUES (1, 'current', ?)",
+            )
+            .bind(&bytes)
+            .execute(&mut *tx)
+            .await
+            .map_err(|_| Error::internal())?;
+            bytes
+        } else {
+            sqlx::query_scalar(
+                "SELECT state FROM provider_state WHERE singleton = 1 AND format = 'current'",
+            )
+            .fetch_one(&mut *tx)
+            .await
+            .map_err(|_| Error::domain("state_configuration_mismatch"))?
         };
-        sqlx::query("CREATE TABLE IF NOT EXISTS provider_migration (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), imported INTEGER NOT NULL CHECK(imported = 1))")
-            .execute(&mut *tx).await.map_err(|_| Error::internal())?;
-        let previously_imported: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM provider_migration WHERE singleton = 1)",
-        )
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(|_| Error::internal())?;
-        if previously_imported && row.is_none() {
-            return Err(Error::domain("state_configuration_mismatch"));
-        }
-        let bytes = tokio::task::spawn_blocking(move || {
-            let imported = archive.is_some() || previously_imported;
-            let mut state = match (archive, row) {
-                (Some(_), Some(_)) => return Err(Error::domain("migration_destination_not_empty")),
-                (Some(archive), None) => State::from_archive(archive, root)?,
-                (None, Some(bytes)) => State::restore(&bytes, root)?,
-                (None, None) => State::new(root)?,
-            };
-            if !imported {
-                state.seed();
-            }
-            state.encode()
-        })
-        .await
-        .map_err(|_| Error::internal())??;
-        sqlx::query("INSERT INTO provider_state (singleton, format_version, state) VALUES (1, 1, ?) ON CONFLICT(singleton) DO UPDATE SET state = excluded.state")
-            .bind(bytes).execute(&mut *tx).await.map_err(|_| Error::internal())?;
-        if importing {
-            sqlx::query("INSERT INTO provider_migration (singleton, imported) VALUES (1, 1)")
-                .execute(&mut *tx)
-                .await
-                .map_err(|_| Error::internal())?;
-        }
+        tokio::task::spawn_blocking(move || State::restore(&bytes, root))
+            .await
+            .map_err(|_| Error::internal())??;
         tx.commit().await.map_err(|_| Error::internal())?;
         Ok(Self {
             backend: Arc::new(Backend::Sqlite(pool)),
-            root,
-        })
-    }
-
-    /// Complete private archive for a paused migration; no HTTP route exposes it.
-    /// The caller must drain writes before taking the cutover archive.
-    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV5> {
-        let state = self.read().await?;
-        tokio::task::spawn_blocking(move || state.archive())
-            .await
-            .map_err(|_| Error::internal())?
-    }
-
-    /// Restore current exported state into a fresh memory provider generation.
-    /// Generation, replay history and nonces are retained, never regenerated.
-    #[cfg(feature = "storage-memory")]
-    pub async fn memory_from_archive(
-        root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV5,
-    ) -> Result<Self> {
-        let state = tokio::task::spawn_blocking(move || State::from_archive(archive, root))
-            .await
-            .map_err(|_| Error::internal())??;
-        Ok(Self {
-            backend: Arc::new(Backend::Memory(Box::new(tokio::sync::Mutex::new(state)))),
-            #[cfg(feature = "storage-sqlite")]
             root,
         })
     }
@@ -200,7 +161,7 @@ impl Provider {
             #[cfg(feature = "storage-sqlite")]
             Backend::Sqlite(pool) => {
                 let bytes: Vec<u8> = sqlx::query_scalar(
-                    "SELECT state FROM provider_state WHERE singleton = 1 AND format_version = 1",
+                    "SELECT state FROM provider_state WHERE singleton = 1 AND format = 'current'",
                 )
                 .fetch_one(pool)
                 .await
@@ -246,7 +207,7 @@ impl Provider {
                     .await
                     .map_err(|_| Error::internal())?;
                 let bytes: Vec<u8> = sqlx::query_scalar(
-                    "SELECT state FROM provider_state WHERE singleton = 1 AND format_version = 1",
+                    "SELECT state FROM provider_state WHERE singleton = 1 AND format = 'current'",
                 )
                 .fetch_one(&mut *tx)
                 .await
@@ -259,7 +220,7 @@ impl Provider {
                 })
                 .await
                 .map_err(|_| Error::internal())??;
-                let result = sqlx::query("UPDATE provider_state SET state = ? WHERE singleton = 1 AND format_version = 1")
+                let result = sqlx::query("UPDATE provider_state SET state = ? WHERE singleton = 1 AND format = 'current'")
                     .bind(bytes).execute(&mut *tx).await.map_err(|_| Error::internal())?;
                 if result.rows_affected() != 1 {
                     return Err(Error::internal());
@@ -279,11 +240,11 @@ impl Provider {
         Ok(self.read().await?.nonce(account))
     }
     /// Read-only internal snapshot; the adapter must filter private project data.
-    pub async fn snapshot(&self) -> Result<CoreSnapshotV5> {
+    pub async fn snapshot(&self) -> Result<CoreSnapshot> {
         Ok(self.read().await?.snapshot())
     }
     /// Atomic task inventory and retained global allocator from one owned state.
-    pub async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskStateV2> {
+    pub async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskState> {
         let state = self.read().await?;
         tokio::task::spawn_blocking(move || state.task_state())
             .await
@@ -297,7 +258,7 @@ impl Provider {
     pub async fn task_allocation(
         &self,
         operation: OperationId,
-    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocation>> {
         let state = self.read().await?;
         tokio::task::spawn_blocking(move || state.task_allocation(operation))
             .await

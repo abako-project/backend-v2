@@ -22,10 +22,6 @@ fn creation_metadata_sha256_matches_independent_vectors_and_binds_context() -> T
             MetadataProvenanceV1::Creation { author, .. } => {
                 *author = AccountId32::from_bytes([42; 32]);
             }
-            MetadataProvenanceV1::Migration {
-                source_archive_hash,
-                ..
-            } => *source_archive_hash = PayloadHash::from_bytes([42; 32]),
         }
         assert_ne!(digest.into_bytes(), hash(&changed.hash_input()));
         changed = record.clone();

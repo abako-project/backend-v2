@@ -76,14 +76,13 @@ impl State {
         origin_roles: Option<&[u32]>,
     ) -> Result<()> {
         match reference {
-            CatalogReferenceV1::Migration(_) => Ok(()),
             CatalogReferenceV1::Seed(expected) => {
                 let seed = catalog_seed_v1()
                     .into_iter()
                     .find(|s| s.kind == kind && s.id == id)
                     .ok_or_else(|| Error::domain("invalid_catalog_metadata_state"))?;
                 require(
-                    crate::migration::source_hash(
+                    crate::content_hash(
                         &seed.record(self.info().provider_instance_id).hash_input(),
                     ) == *expected
                         && origin_roles.is_none_or(|roles| roles == seed.role_ids),
@@ -138,9 +137,7 @@ impl State {
     pub(super) fn validate_reason_history(&self) -> Result<()> {
         let mut cursor = 0;
         for reason in &self.engine.reasons {
-            let ReasonReferenceV1::Write(expected) = &reason.content else {
-                continue;
-            };
+            let ReasonReferenceV1::Write(expected) = &reason.content;
             let recorded = self
                 .shell
                 .receipts

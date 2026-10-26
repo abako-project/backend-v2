@@ -5,8 +5,6 @@ use std::{env, error::Error, fs};
 use generated_contracts::AccountId32;
 use mock_provider::{Provider, router};
 
-mod owner;
-
 fn secret(name: &str) -> Result<String, Box<dyn Error>> {
     let path = env::var(name).map_err(|_| format!("missing {name}"))?;
     let value = fs::read_to_string(path).map_err(|_| format!("cannot read {name}"))?;
@@ -21,41 +19,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .try_init()
         .map_err(|_| std::io::Error::other("tracing initialization failed"))?;
     let root: AccountId32 = secret("MOCK_ROOT_ACCOUNT_FILE")?.parse()?;
-    let args: Vec<_> = env::args().skip(1).collect();
-    if !args.is_empty() {
-        if let [command, archive, tasks, output] = args.as_slice()
-            && command == "restore-tasks"
-        {
-            owner::restore(archive.into(), tasks.into(), output.into(), root)
-                .await
-                .map_err(|e| e as Box<dyn Error>)?;
-            return Ok(());
-        }
-        if let [command, archive, tasks, output] = args.as_slice()
-            && command == "compact-tasks"
-        {
-            owner::compact(archive.into(), tasks.into(), output.into(), root)
-                .await
-                .map_err(|e| e as Box<dyn Error>)?;
-            return Ok(());
-        }
-        #[cfg(feature = "storage-sqlite")]
-        if let [command, output] = args.as_slice()
-            && command == "export"
-        {
-            owner::export(env::var("MOCK_DATABASE_URL")?, output.into(), root)
-                .await
-                .map_err(|e| e as Box<dyn Error>)?;
-            return Ok(());
-        }
-        #[cfg(feature = "storage-sqlite")]
-        if let [command, archive, destination] = args.as_slice()
-            && command == "import"
-        {
-            import_native(archive.into(), destination.into(), root).await?;
-            return Ok(());
-        }
-        return Err("usage: mock-provider [import CORE_ARCHIVE NEW_DATABASE_FILE | export NEW_ARCHIVE | restore-tasks CORE_ARCHIVE TASK_STATE NEW_ARCHIVE | compact-tasks V4_ARCHIVE PREPARED_TASKS NEW_ARCHIVE]".into());
+    if env::args().len() != 1 {
+        return Err("usage: mock-provider".into());
     }
     let service_token = secret("INTERNAL_SERVICE_TOKEN_FILE")?;
     let mode = env::var("MOCK_STORAGE").unwrap_or_else(|_| {
@@ -85,39 +50,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     axum::serve(listener, router(provider, &service_token)?)
         .with_graceful_shutdown(shutdown())
         .await?;
-    Ok(())
-}
-
-#[cfg(feature = "storage-sqlite")]
-async fn import_native(
-    archive: std::path::PathBuf,
-    destination: std::path::PathBuf,
-    root: AccountId32,
-) -> Result<(), Box<dyn Error>> {
-    let url = format!("sqlite://{}", destination.display());
-    let archive = tokio::task::spawn_blocking(move || {
-        use std::io::Read;
-        let mut bytes = Vec::new();
-        fs::File::open(archive)?
-            .take(67_108_865)
-            .read_to_end(&mut bytes)?;
-        if bytes.len() > 67_108_864 {
-            return Err(std::io::Error::other("archive exceeds limit"));
-        }
-        let archive: provider_execution::migration::CoreArchiveV5 = serde_json::from_slice(&bytes)
-            .map_err(|_| std::io::Error::other("invalid core archive"))?;
-        let mut options = fs::OpenOptions::new();
-        options.write(true).create_new(true);
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::OpenOptionsExt;
-            options.mode(0o600);
-        }
-        options.open(destination)?.sync_all()?;
-        Ok::<_, std::io::Error>(archive)
-    })
-    .await??;
-    Provider::sqlite_from_archive(&url, root, archive).await?;
     Ok(())
 }
 

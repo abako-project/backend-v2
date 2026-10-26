@@ -87,10 +87,9 @@ There is no broker, webhook consumer or separate ingestion service.
 
 ## Recovery
 
-Backups must preserve matching API, wallet and provider state plus the original
-secrets. Core export alone omits API-owned content. Ownership or artifact-cohort
-changes require paused writes, reconciled operations, fresh import, complete
-comparison and reopen before switching. Current-state rollback retains accepted
-writes and history; it never substitutes a stale backup. Historical rows are not
-deleted by the cleanup. See [task cutover](operations/task-cutover.md) and
+Backups preserve matching API, wallet and provider state plus the original
+secrets. Provider state alone omits API-owned content. Stop admission and reconcile
+uncertain operations before backup or replacement. The development installation
+uses clean data; no historical import or rollback converter is shipped. Existing
+incompatible stores fail startup rather than being silently reset. See
 [disaster recovery](operations/disaster-recovery.md).

@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshotV5};
+use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshot};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -275,8 +275,8 @@ impl App {
             .map_err(|_| Error::Dependency)?;
         decode_response(response).await
     }
-    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshotV5, Error> {
-        let snapshot: CoreSnapshotV5 = self
+    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshot, Error> {
+        let snapshot: CoreSnapshot = self
             .get(&self.config.provider_url, "/internal/snapshot")
             .await?;
         if snapshot.schema_version != 5 {

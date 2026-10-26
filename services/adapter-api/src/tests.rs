@@ -84,7 +84,7 @@ impl Server {
     reason = "Independent injected transport faults, not a production state machine."
 )]
 struct Fake {
-    snapshot: generated_contracts::provider_core::CoreSnapshotV5,
+    snapshot: generated_contracts::provider_core::CoreSnapshot,
     jobs: BTreeMap<OperationId, SigningJobView>,
     receipts: BTreeMap<OperationId, OperationReceipt>,
     nonces: BTreeMap<AccountId32, u64>,
@@ -98,7 +98,7 @@ struct Fake {
     snapshot_failures: usize,
     next_outcome: Option<ExecutionOutcome>,
     next_entity: Option<EntityId>,
-    task_allocations: BTreeMap<OperationId, generated_contracts::provider_core::TaskAllocationV1>,
+    task_allocations: BTreeMap<OperationId, generated_contracts::provider_core::TaskAllocation>,
     allocation_unavailable: bool,
     next_task_id: u32,
 }
@@ -111,7 +111,7 @@ pub(crate) fn info() -> ProviderInfo {
 }
 fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
     Ok(Arc::new(Mutex::new(Fake {
-        snapshot: generated_contracts::provider_core::CoreSnapshotV5 {
+        snapshot: generated_contracts::provider_core::CoreSnapshot {
             schema_version: 5,
             info: info(),
             catalog: generated_contracts::provider_core::CatalogCore {
@@ -1480,8 +1480,7 @@ mod evidence_commitments;
 #[path = "content_tests.rs"]
 mod content;
 
-// Synthetic retained-entity fixtures explicitly stage API-owned preimages.
-// They do not invent old signed creation operations.
+// Synthetic current-operation fixtures stage API-owned content directly.
 pub(crate) fn core_project(
     project: &ProjectView,
     generation: ProviderInstanceId,
@@ -1495,9 +1494,9 @@ pub(crate) fn core_project(
     use generated_contracts::provider_core::*;
     let record = CreationMetadataRecordV1 {
         generation,
-        provenance: MetadataProvenanceV1::Migration {
-            source_archive_hash: PayloadHash::from_bytes([88; 32]),
-            entity: MetadataEntityV1::Project(project.project_id),
+        provenance: MetadataProvenanceV1::Creation {
+            operation_id: OperationId::from_bytes([88; 16]),
+            author: project.client,
         },
         content: CreationContentV1::ProjectText {
             title: project.title.clone(),
@@ -1514,14 +1513,14 @@ pub(crate) fn core_project(
     );
     object.insert(
         "content".into(),
-        serde_json::to_value(MetadataReferenceV1::Migration(PayloadHash::from_bytes(
-            hash(&record.hash_input()),
-        )))?,
+        serde_json::to_value(MetadataReferenceV1::Creation(MetadataCommitmentV1 {
+            operation_id: OperationId::from_bytes([88; 16]),
+            hash: PayloadHash::from_bytes(hash(&record.hash_input())),
+        }))?,
     );
     Ok((serde_json::from_value(value)?, record))
 }
-// Test setup for a current API-owned project. Predecessor preparation tests use
-// stage_project_without_tasks so their migration/ownership checks remain real.
+// Test setup stages current core facts and API task content.
 async fn stage_project(
     app: &App,
     generation: ProviderInstanceId,
@@ -1597,9 +1596,9 @@ async fn stage_worker(
     use generated_contracts::provider_core::*;
     let record = CreationMetadataRecordV1 {
         generation,
-        provenance: MetadataProvenanceV1::Migration {
-            source_archive_hash: PayloadHash::from_bytes([88; 32]),
-            entity: MetadataEntityV1::Worker(worker.account),
+        provenance: MetadataProvenanceV1::Creation {
+            operation_id: OperationId::from_bytes([88; 16]),
+            author: worker.account,
         },
         content: CreationContentV1::WorkerName {
             display_name: worker.display_name.clone(),
@@ -1610,9 +1609,10 @@ async fn stage_worker(
     object.remove("displayName");
     object.insert(
         "content".into(),
-        serde_json::to_value(MetadataReferenceV1::Migration(PayloadHash::from_bytes(
-            hash(&record.hash_input()),
-        )))?,
+        serde_json::to_value(MetadataReferenceV1::Creation(MetadataCommitmentV1 {
+            operation_id: OperationId::from_bytes([88; 16]),
+            hash: PayloadHash::from_bytes(hash(&record.hash_input())),
+        }))?,
     );
     let mut tx = app.db.begin().await?;
     crate::creation_metadata::insert(
@@ -1653,29 +1653,33 @@ fn core_proposals(
         let record = ProposalMetadataRecordV1 {
             generation,
             project_id: project.project_id,
-            provenance: ProposalProvenanceV1::Migration {
-                source_archive_hash: PayloadHash::from_bytes([88; 32]),
-                proposal_id: proposal.proposal_id,
+            provenance: ProposalProvenanceV1::Operation {
+                operation_id: OperationId::from_bytes([88; 16]),
+                author: project.coordinator,
+                proposal_id: Some(proposal.proposal_id),
             },
             content: ProposalContentV1::Definition(definition),
         };
-        let content = ProposalContentReferenceV1::Migration(PayloadHash::from_bytes(hash(
-            &record.hash_input(),
-        )));
+        let content = ProposalContentReferenceV1::Signed(MetadataCommitmentV1 {
+            operation_id: OperationId::from_bytes([88; 16]),
+            hash: PayloadHash::from_bytes(hash(&record.hash_input())),
+        });
         records.push(record);
         let change = proposal.change_request.as_ref().map(|text| {
             let record = ProposalMetadataRecordV1 {
                 generation,
                 project_id: project.project_id,
-                provenance: ProposalProvenanceV1::Migration {
-                    source_archive_hash: PayloadHash::from_bytes([88; 32]),
-                    proposal_id: proposal.proposal_id,
+                provenance: ProposalProvenanceV1::Operation {
+                    operation_id: OperationId::from_bytes([88; 16]),
+                    author: project.client,
+                    proposal_id: Some(proposal.proposal_id),
                 },
                 content: ProposalContentV1::ChangeRequest(text.clone()),
             };
-            let reference = ProposalContentReferenceV1::Migration(PayloadHash::from_bytes(hash(
-                &record.hash_input(),
-            )));
+            let reference = ProposalContentReferenceV1::Signed(MetadataCommitmentV1 {
+                operation_id: OperationId::from_bytes([88; 16]),
+                hash: PayloadHash::from_bytes(hash(&record.hash_input())),
+            });
             records.push(record);
             reference
         });
@@ -1774,9 +1778,9 @@ async fn startup_rejects_unmarked_existing_schema_without_modifying_data() -> Te
 #[tokio::test]
 async fn task_initialization_is_repeatable_and_refuses_missing_content_after_core_use() -> TestResult
 {
-    use generated_contracts::provider_core::TaskStateV2;
+    use generated_contracts::provider_core::TaskState;
     let fake = fake()?;
-    let state = Arc::new(Mutex::new(TaskStateV2 {
+    let state = Arc::new(Mutex::new(TaskState {
         schema_version: 2,
         generation: info().provider_instance_id,
         next_task_id: 1,

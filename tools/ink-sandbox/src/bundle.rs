@@ -35,8 +35,8 @@ pub struct Identity {
 }
 impl Identity {
     pub fn pinned() -> Self {
-        // Changes require an explicit import, rather than reinterpret existing state.
-        // Including complete sources is deliberately conservative for this candidate.
+        // Changes require fresh state, rather than reinterpreting an existing checkpoint.
+        // Source and dependency identity bind the runtime configuration.
         let runtime = [
             include_bytes!("lib.rs").as_slice(),
             include_bytes!("assets.rs").as_slice(),

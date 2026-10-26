@@ -46,6 +46,3 @@ pub use catalog_seed::*;
 
 mod tasks;
 pub use tasks::*;
-
-mod legacy_v4;
-pub use legacy_v4::*;

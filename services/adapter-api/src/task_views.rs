@@ -2,7 +2,7 @@
 use crate::state::{App, Error, parse};
 use generated_contracts::{
     AccountId32, EntityId, ProviderInstanceId,
-    provider_core::{ProjectCore, TaskStateV1, TaskStorageRecordV1},
+    provider_core::{ProjectCore, TaskSnapshot, TaskSnapshotRecord},
 };
 use sqlx::{PgConnection, Row, postgres::PgRow};
 use std::collections::BTreeMap;
@@ -46,7 +46,7 @@ async fn read(
     generation: ProviderInstanceId,
     next: u32,
     projects: Vec<ProjectCore>,
-) -> Result<TaskStateV1, Error> {
+) -> Result<TaskSnapshot, Error> {
     let storage_ids = ids(&projects);
     let contexts=sqlx::query("SELECT task_storage_id,project_id,proposal_id,milestone_id FROM task_storages WHERE provider_instance_id=$1 AND task_storage_id=ANY($2)")
         .bind(generation.to_string()).bind(&storage_ids).fetch_all(&mut *connection).await?;
@@ -63,7 +63,7 @@ fn apply(
     projects: Vec<ProjectCore>,
     contexts: Vec<PgRow>,
     rows: Vec<PgRow>,
-) -> Result<TaskStateV1, Error> {
+) -> Result<TaskSnapshot, Error> {
     let mut stored = BTreeMap::new();
     for row in contexts {
         stored.insert(
@@ -116,7 +116,7 @@ fn apply(
                     task.task.assignees.clone_from(&core.assignees);
                     composed.push(task);
                 }
-                validated.push(TaskStorageRecordV1 {
+                validated.push(TaskSnapshotRecord {
                     project_id: project.project_id,
                     proposal_id: proposal.proposal_id,
                     proposal_revision: proposal.revision,
@@ -133,7 +133,7 @@ fn apply(
         return Err(Error::Dependency);
     }
     validated.sort_by_key(|record| record.storage.task_storage_id);
-    let state = TaskStateV1 {
+    let state = TaskSnapshot {
         schema_version: 1,
         generation,
         next_task_id: next,
@@ -148,7 +148,7 @@ pub(crate) async fn content(
     app: &App,
     generation: ProviderInstanceId,
     project: ProjectCore,
-) -> Result<TaskStateV1, Error> {
+) -> Result<TaskSnapshot, Error> {
     let mut tx = app.db.begin().await?;
     sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         .execute(&mut *tx)
@@ -167,6 +167,6 @@ pub(crate) async fn current_state(
     generation: ProviderInstanceId,
     next: u32,
     projects: Vec<ProjectCore>,
-) -> Result<TaskStateV1, Error> {
+) -> Result<TaskSnapshot, Error> {
     read(connection, generation, next, projects).await
 }

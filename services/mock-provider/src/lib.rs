@@ -5,16 +5,13 @@ mod calendar;
 pub mod creation;
 mod domain;
 mod http;
-pub mod migration;
 pub mod proposal;
 mod provider_api;
-mod reference;
 mod seed;
 mod storage;
 
 pub use http::{router, router_with_provider};
 pub use provider_api::ProviderApi;
-pub use reference::ReferenceState;
 pub use storage::Provider;
 
 use axum::{
@@ -34,14 +31,18 @@ pub struct Error {
 }
 
 impl Error {
-    pub(crate) const fn domain(code: &'static str) -> Self {
+    /// Domain read rejection; commands record business failures in their receipts.
+    #[must_use]
+    pub const fn domain(code: &'static str) -> Self {
         Self {
             code,
             status: StatusCode::CONFLICT,
         }
     }
 
-    pub(crate) const fn bad(code: &'static str) -> Self {
+    /// Invalid private transport request.
+    #[must_use]
+    pub const fn bad(code: &'static str) -> Self {
         Self {
             code,
             status: StatusCode::BAD_REQUEST,
@@ -120,3 +121,10 @@ pub(crate) fn require(condition: bool, code: &'static str) -> Result<()> {
 
 /// Explicit compact catalog/reason legacy conversion. No preimages are stored.
 pub mod catalog_content;
+
+/// Hash exact descriptive content bytes for the adapter commitment.
+#[must_use]
+pub fn content_hash(bytes: &[u8]) -> generated_contracts::PayloadHash {
+    use sha2::{Digest, Sha256};
+    generated_contracts::PayloadHash::from_bytes(Sha256::digest(bytes).into())
+}

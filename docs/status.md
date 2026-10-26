@@ -20,8 +20,8 @@ Implemented behavior is not a claim of deployment or production readiness.
 | Disputes | Opening on the current rejection, project freeze, public arguments and a private case conversation |
 | Delivery | Durable operations, idempotent replay, uncertain-outcome recovery and recipient notifications/SSE |
 | Platform | One configurable DAO profile per deployment: branding, vocabulary, project types and currency display |
-| Providers | Native memory/SQLite and an isolated embedded ink runtime with Rust/Shadow/Sandbox comparison |
-| Recovery | Paused paired API/core migration, fresh sealed imports, complete current-state rollback and restart |
+| Providers | Native memory/SQLite and an isolated embedded ink runtime with one WASM authority |
+| Recovery | Fresh development initialization, atomic persistence and restart |
 
 The API, wallet and provider remain separate services. All three application
 contracts use ordinary ink storage; no custom paging helper or onchain URL parser
@@ -42,10 +42,11 @@ and the [requirements](../specs/README.md).
 
 ## Release gates
 
-The native engine is the default and financial reference. Contract-provider
-promotion still needs controlled-host performance acceptance, frontend deployment
-and live-cutover verification, security remediation and the approved observed
-release period. Larger retained histories remain subject to finite resource limits.
+The standalone native provider remains the default until the isolated SDK passes
+its dependency policy. Promotion also needs controlled-host performance acceptance
+and frontend deployment verification. This development environment starts with
+clean matching data; historical migration and rollback releases are not required.
+Larger histories remain subject to finite resource limits.
 
 The isolated SDK policy is blocked by unwaived RUSTSEC-2026-0387 in crypto-bigint.
 Application dependency findings and the unresolved project-license notice remain

@@ -1,12 +1,7 @@
-//! M3 ABI bridge. Domain permissions and rules run only in the pinned contracts.
+//! Signed ABI routing. Domain permissions and rules run only in the pinned contracts.
 use super::*;
-use generated_contracts::provider_core::{
-    CatalogCore, CatalogEntryCore, ProjectCore, ReasonReferenceV1, SkillRequestCore, SkillRoleCore,
-    WorkerCore,
-};
-use generated_contracts::{
-    CompensationPolicy, DomainEventKind, EntityId, ProviderCommand, ProviderInstanceId, ScorePolicy,
-};
+use generated_contracts::provider_core::{CatalogEntryCore, SkillRoleCore};
+use generated_contracts::{DomainEventKind, EntityId, ProviderCommand};
 use parity_scale_codec::DecodeAll;
 use provider_execution::{Admission, Effect, ExecutionInputs, VerifiedCall};
 use rand::{Rng, SeedableRng, rngs::StdRng};
@@ -18,97 +13,6 @@ pub type DirectoryCatalog = (
     Vec<CatalogEntryCore>,
     Vec<SkillRoleCore>,
 );
-pub type DirectoryProjection = (
-    Vec<CatalogEntryCore>,
-    Vec<CatalogEntryCore>,
-    Vec<SkillRoleCore>,
-    Vec<WorkerCore>,
-    Vec<SkillRequestCore>,
-);
-
-pub type MarketplaceProjection = (
-    CatalogCore,
-    Vec<WorkerCore>,
-    Vec<SkillRequestCore>,
-    Vec<ProjectCore>,
-    Vec<(
-        EntityId,
-        Option<EntityId>,
-        AccountId32,
-        ReasonReferenceV1,
-        generated_contracts::UnixSeconds,
-        DomainEventKind,
-    )>,
-);
-
-pub type FinancialProjection = (
-    MarketplaceProjection,
-    MoneyProjection,
-    Vec<(
-        generated_contracts::Dispute,
-        generated_contracts::provider_core::MilestoneCore,
-    )>,
-);
-pub type MoneyProjection = (
-    Vec<(AccountId32, generated_contracts::Money)>,
-    generated_contracts::Money,
-    Vec<generated_contracts::DepositView>,
-    Vec<generated_contracts::WithdrawalView>,
-);
-/// Explicit genesis inputs, never inferred from a partial application snapshot.
-pub struct DirectoryFixture {
-    pub root: AccountId32,
-    pub funded_accounts: Vec<AccountId32>,
-    pub catalog: DirectoryCatalog,
-    pub reservation_controller: AccountId32,
-    pub reference_controller: AccountId32,
-    /// A trusted parity fixture may reuse the reference generation.
-    pub generation: Option<ProviderInstanceId>,
-    pub gas_limit: Weight,
-    /// Enable the explicit M5 Project fixture; money/execution remain incomplete.
-    pub projects: bool,
-    /// Explicit M6 coverage; Some controls test-only funding, None disables money.
-    pub money: Option<bool>,
-}
-impl DirectoryFixture {
-    pub(super) fn validate(&self) -> Result<(), Error> {
-        if self.funded_accounts.len() > 127
-            || self.catalog.encoded_size() > MAX_INPUT
-            || (self.money.is_some() && !self.projects)
-            || !self.gas_limit.all_lte(GAS)
-        {
-            return Err(Error::Limit);
-        }
-        Ok(())
-    }
-    pub(super) fn mode(&self) -> Mode {
-        let accounts: BTreeSet<_> = self.funded_accounts.iter().copied().collect();
-        let configuration = sp_core::hashing::blake2_256(
-            &(
-                self.root,
-                accounts,
-                &self.catalog,
-                self.reservation_controller,
-                self.reference_controller,
-                self.generation,
-                self.projects,
-                self.money,
-                self.gas_limit.ref_time(),
-                self.gas_limit.proof_size(),
-            )
-                .encode(),
-        );
-        Mode::Directory {
-            root: self.root,
-            gas: self.gas_limit,
-            configuration: H256::from(configuration),
-            projects: self.projects,
-            money: self.money.is_some(),
-            whole: false,
-            authority: None,
-        }
-    }
-}
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct State {
@@ -116,7 +20,6 @@ pub(super) struct State {
     pub(super) configuration: H256,
     pub(super) shell: Shell,
     pub(super) directory: Account,
-    pub(super) legacy_references: super::evidence_wire::LegacyReferences,
 }
 #[derive(Decode)]
 struct ContractEffect {
@@ -141,7 +44,10 @@ pub(super) fn encode(state: &State) -> Result<Vec<u8>, Error> {
     Ok(bytes)
 }
 pub(super) fn decode(stored: &Stored, mode: Mode) -> Result<State, Error> {
-    let Mode::Directory {
+    decode_shell(&stored.shell, mode)
+}
+fn decode_shell(bytes: &[u8], mode: Mode) -> Result<State, Error> {
+    let Mode::Contracts {
         root,
         configuration,
         ..
@@ -149,31 +55,27 @@ pub(super) fn decode(stored: &Stored, mode: Mode) -> Result<State, Error> {
     else {
         return Err(Error::InvalidState);
     };
-    let state: State = serde_json::from_slice(&stored.shell).map_err(|_| Error::InvalidState)?;
+    let state: State = serde_json::from_slice(bytes).map_err(|_| Error::InvalidState)?;
     if state.version != 1 || state.configuration != configuration {
         return Err(Error::InvalidState);
     }
-    super::evidence_wire::validate(&state.legacy_references)?;
     state.shell.validate(root)?;
     Ok(state)
 }
 pub(super) fn initialize(
     bundles: &Bundles,
-    fixture: DirectoryFixture,
+    settings: Configuration,
+    catalog: DirectoryCatalog,
+    generation: generated_contracts::ProviderInstanceId,
 ) -> Result<(sp_io::TestExternalities, Vec<u8>), Error> {
-    fixture.validate()?;
-    let Mode::Directory { configuration, .. } = fixture.mode() else {
+    settings.validate()?;
+    let Mode::Contracts { configuration, .. } = settings.mode() else {
         return Err(Error::InvalidState);
     };
-    let accounts: BTreeSet<_> = fixture
-        .funded_accounts
-        .into_iter()
-        .chain([fixture.root])
-        .collect();
-    let mut ext = new_externalities(accounts.into_iter().map(account).collect())?;
+    let mut ext = new_externalities(vec![account(settings.root)])?;
     let calendar = ext.execute_with(|| {
         Contracts::bare_upload_code(
-            account(fixture.root),
+            account(settings.root),
             bundles.code("calendar")?.to_vec(),
             None,
             Determinism::Enforced,
@@ -182,18 +84,18 @@ pub(super) fn initialize(
         .map_err(|_| Error::InvalidState)
     })?;
     let invocation = Invocation {
-        caller: account(fixture.root),
+        caller: account(settings.root),
         action: Action::Instantiate {
             bundle: "directory".into(),
-            salt: b"signed-directory-v1".to_vec(),
+            salt: b"contracts".to_vec(),
         },
         input: input(
             "new",
             (
                 calendar,
-                account(fixture.reservation_controller),
-                account(fixture.reference_controller),
-                fixture.catalog,
+                account(settings.root),
+                account(settings.root),
+                catalog,
             ),
         ),
         gas: GAS,
@@ -204,10 +106,10 @@ pub(super) fn initialize(
     if created.status != Status::Success || created.data != [0, 0] {
         return Err(Error::InvalidState);
     }
-    if fixture.projects {
+    {
         let code = ext.execute_with(|| {
             Contracts::bare_upload_code(
-                account(fixture.root),
+                account(settings.root),
                 bundles.code("project")?.to_vec(),
                 None,
                 Determinism::Enforced,
@@ -219,7 +121,7 @@ pub(super) fn initialize(
             &mut ext,
             bundles,
             Invocation {
-                caller: account(fixture.root),
+                caller: account(settings.root),
                 action: Action::Call {
                     address: created.address.clone().ok_or(Error::InvalidState)?,
                 },
@@ -232,13 +134,14 @@ pub(super) fn initialize(
             return Err(Error::InvalidState);
         }
     }
-    if let Some(mock_funding) = fixture.money {
+    {
+        let mock_funding = settings.mock_funding;
         let address = created.address.clone().ok_or(Error::InvalidState)?;
         ext.execute_with(|| -> Result<(), Error> {
             crate::Assets::force_create(
                 crate::RuntimeOrigin::root(),
                 1,
-                account(fixture.root),
+                account(settings.root),
                 true,
                 1,
             )
@@ -246,7 +149,7 @@ pub(super) fn initialize(
             // Inventory is local setup, never visible issued/free KVN. It covers
             // u64::MAX visible units and separate bounded technical minima.
             crate::Assets::mint(
-                crate::RuntimeOrigin::signed(account(fixture.root)),
+                crate::RuntimeOrigin::signed(account(settings.root)),
                 1,
                 address.clone(),
                 u128::from(u64::MAX) * 2,
@@ -258,7 +161,7 @@ pub(super) fn initialize(
             &mut ext,
             bundles,
             Invocation {
-                caller: account(fixture.root),
+                caller: account(settings.root),
                 action: Action::Call { address },
                 input: input("configure_money", mock_funding),
                 gas: GAS,
@@ -269,16 +172,13 @@ pub(super) fn initialize(
             return Err(Error::InvalidState);
         }
     }
-    let mut shell = Shell::new(fixture.root)?;
-    if let Some(generation) = fixture.generation {
-        shell.info.provider_instance_id = generation;
-    }
+    let mut shell = Shell::new(settings.root)?;
+    shell.info.provider_instance_id = generation;
     let state = State {
         version: 1,
         configuration,
         shell,
         directory: created.address.ok_or(Error::InvalidState)?,
-        legacy_references: Default::default(),
     };
     Ok((ext, encode(&state)?))
 }
@@ -301,15 +201,10 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
         "money_enabled",
         (),
     )?;
-    if enabled != matches!(mode, Mode::Directory { money: true, .. }) {
+    if !enabled {
         return Err(Error::InvalidState);
     }
-    if let Mode::Directory {
-        projects: true,
-        root,
-        ..
-    } = mode
-    {
+    if let Mode::Contracts { root, .. } = mode {
         let addresses: Vec<(EntityId, Account)> =
             read(&mut ext, bundles, &state.directory, root, "projects", ())?;
         let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("project")?));
@@ -319,23 +214,11 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
             }
         }
     }
-    if matches!(mode, Mode::Directory { whole: true, .. }) {
-        super::migration::read_archive(&mut ext, bundles, &state, true)?;
-    }
+    super::facts::read(&mut ext, &state)?;
     Ok(())
 }
-fn money_command(command: &ProviderCommand) -> bool {
-    matches!(
-        command,
-        ProviderCommand::FundAccount(_)
-            | ProviderCommand::CreateDeposit(_)
-            | ProviderCommand::ConfirmDeposit { .. }
-            | ProviderCommand::CreateWithdrawal(_)
-            | ProviderCommand::CancelWithdrawal { .. }
-    )
-}
 fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<Vec<u8>, Error> {
-    // M3 commands allocate at most one ID, before any random selection. This is
+    // Directory commands allocate at most one ID, before any random selection. This is
     // the same first 16 bytes of the version-1 locked native StdRng stream.
     let id = || {
         let mut bytes = [0; 16];
@@ -400,8 +283,8 @@ fn transition(outcome: &Outcome) -> Result<Result<Effect, &'static str>, Error> 
                 _ => Err(Error::InvalidState),
             }
         }
-        // Known metered execution failures are failed operations, as in the M2
-        // fixture. Unknown host/runtime errors abort without touching the shell.
+        // Translate metered failures for diagnostic decoding. Whole-provider
+        // execution aborts infrastructure failures before shell completion.
         Status::LanguageError if outcome.data == [1, 1] => Ok(Err("sandbox_language_error")),
         Status::Dispatch(error)
             if error == pallet_contracts::Error::<crate::Runtime>::OutOfGas.into() =>
@@ -520,7 +403,6 @@ pub(super) struct Applied {
     pub(super) state: State,
     pub(super) receipt: OperationReceipt,
     pub(super) outcome: Outcome,
-    pub(super) archive: Option<provider_execution::migration::CoreArchiveV5>,
 }
 pub(super) enum Evaluation {
     Replay(OperationReceipt),
@@ -533,28 +415,18 @@ pub(super) fn evaluate(
     mode: Mode,
     verified: VerifiedCall,
     now: UnixSeconds,
-    inputs: Option<ExecutionInputs>,
 ) -> Result<Evaluation, Error> {
-    let Mode::Directory { gas, .. } = mode else {
+    let Mode::Contracts { gas, .. } = mode else {
         return Err(Error::InvalidState);
     };
     let mut state = decode(stored, mode)?;
-    let admission = match inputs {
-        Some(inputs) => state.shell.prepare_with_inputs(verified, inputs)?,
-        None => state.shell.prepare(verified, now)?,
-    };
+    let admission = state.shell.prepare(verified, now)?;
     let pending = match admission {
         Admission::Replay(receipt) => {
             return Ok(Evaluation::Replay(receipt));
         }
         Admission::Execute(pending) => *pending,
     };
-    if (money_command(&pending.call().command)
-        || super::projects::requires_money(&pending.call().command))
-        && !matches!(mode, Mode::Directory { money: true, .. })
-    {
-        return Err(Error::IncompleteCoverage);
-    }
     let time = pending
         .inputs()
         .now
@@ -562,7 +434,7 @@ pub(super) fn evaluate(
         .checked_mul(1000)
         .ok_or(Error::Limit)?;
     let mut ext = stored.checkpoint.clone().restore()?;
-    if matches!(mode, Mode::Directory { whole: true, .. }) {
+    {
         ext.execute_with(|| {
             let origin = account(pending.call().origin);
             if crate::Balances::free_balance(&origin) == 0 {
@@ -576,11 +448,8 @@ pub(super) fn evaluate(
             Ok::<(), Error>(())
         })?;
     }
-    let prior_references = state.legacy_references.clone();
     let event_cursor = state.shell.events.last().map_or(0, |event| event.cursor);
-    let compact = mock_provider::creation::compact_creation(pending.call())
-        .or_else(|| mock_provider::catalog_content::compact_catalog(pending.call()));
-    let command = compact.as_ref().unwrap_or(&pending.call().command);
+    let command = &pending.call().command;
     let outcome = match command_input(command, pending.inputs()) {
         Ok(data) => {
             let invocation = Invocation {
@@ -592,34 +461,24 @@ pub(super) fn evaluate(
                 gas,
                 timestamp_ms: time,
             };
-            invocation.validate_with_budget(
-                if matches!(mode, Mode::Directory { whole: true, .. }) {
-                    crate::WHOLE_GAS
-                } else {
-                    GAS
-                },
-            )?;
+            invocation.validate_with_budget(crate::EXECUTION_GAS)?;
             run(&mut ext, bundles, invocation)?
         }
-        Err(Error::IncompleteCoverage)
-            if matches!(mode, Mode::Directory { projects: true, .. }) =>
-        {
-            super::projects::execute(
-                &mut ext,
-                bundles,
-                &mut state,
-                &pending,
-                gas,
-                time,
-                event_cursor,
-            )?
-        }
+        Err(Error::IncompleteCoverage) => super::projects::execute(
+            &mut ext,
+            bundles,
+            &mut state,
+            &pending,
+            gas,
+            time,
+            event_cursor,
+        )?,
         Err(error) => return Err(error),
     };
     let transition = transition(&outcome)?;
     // Resource/VM failures are infrastructure, not canonical business rejections.
     // Whole-provider retries must retain the nonce and original durable state.
-    if matches!(mode, Mode::Directory { whole: true, .. }) {
+    {
         match transition {
             Err("sandbox_out_of_gas") => return Err(Error::ExecutionLimit(outcome.gas_consumed)),
             Err("sandbox_contract_trapped" | "sandbox_language_error") => {
@@ -629,31 +488,17 @@ pub(super) fn evaluate(
         }
     }
     let success = transition.is_ok();
-    if !success {
-        state.legacy_references = prior_references;
-    }
     let receipt = state.shell.complete(pending, transition)?;
     let checkpoint = if success {
         Checkpoint::capture(ext)?
     } else {
         stored.checkpoint.clone()
     };
-    let archive = if matches!(mode, Mode::Directory { whole: true, .. }) {
-        Some(super::migration::read_archive(
-            &mut checkpoint.clone().restore()?,
-            bundles,
-            &state,
-            true,
-        )?)
-    } else {
-        None
-    };
     Ok(Evaluation::Applied(Box::new(Applied {
         checkpoint,
         state,
         receipt,
         outcome,
-        archive,
     })))
 }
 pub(super) async fn persist(
@@ -663,7 +508,7 @@ pub(super) async fn persist(
     applied: &Applied,
 ) -> Result<(), Error> {
     let next = revision.checked_add(1).ok_or(Error::Limit)?;
-    let changed = sqlx::query("UPDATE candidate_state SET revision = ?, runtime = ?, shell = ?, outcome = ? WHERE singleton = 1 AND revision = ? AND mode = ?")
+    let changed = sqlx::query("UPDATE provider_state SET revision = ?, runtime = ?, shell = ?, outcome = ? WHERE singleton = 1 AND revision = ? AND mode = ?")
         .bind(next).bind(applied.checkpoint.to_bytes()?).bind(encode(&applied.state)?).bind(applied.outcome.encode())
         .bind(revision).bind(mode.key()).execute(&mut **tx).await?;
     if changed.rows_affected() != 1 {
@@ -677,12 +522,11 @@ pub(super) async fn execute(
     mode: Mode,
     call: SignedContractCallV1,
     now: UnixSeconds,
-    inputs: Option<ExecutionInputs>,
 ) -> Result<OperationReceipt, Error> {
     let verified = VerifiedCall::verify(call)?;
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let stored = load(&mut tx, bundles.identity(), mode).await?;
-    match evaluate(bundles, &stored, mode, verified, now, inputs)? {
+    match evaluate(bundles, &stored, mode, verified, now)? {
         Evaluation::Replay(receipt) => {
             tx.rollback().await?;
             Ok(receipt)
@@ -694,16 +538,10 @@ pub(super) async fn execute(
         }
     }
 }
-pub(super) async fn read_shell(
-    pool: &SqlitePool,
-    bundles: &Bundles,
-    mode: Mode,
-) -> Result<Shell, Error> {
-    let mut tx = pool.begin().await?;
-    let stored = load(&mut tx, bundles.identity(), mode).await?;
-    let state = decode(&stored, mode)?;
-    tx.rollback().await?;
-    Ok(state.shell)
+pub(super) async fn read_shell(pool: &SqlitePool, mode: Mode) -> Result<Shell, Error> {
+    let bytes: Vec<u8> = sqlx::query_scalar("SELECT shell FROM provider_state WHERE singleton = 1 AND mode = ? AND revision >= 0 AND length(shell) <= 67108864")
+        .bind(mode.key()).fetch_optional(pool).await?.ok_or(Error::InvalidState)?;
+    Ok(decode_shell(&bytes, mode)?.shell)
 }
 pub(super) fn read<T: Decode>(
     ext: &mut sp_io::TestExternalities,
@@ -734,204 +572,6 @@ pub(super) fn read<T: Decode>(
         .map_err(|_| Error::InvalidState)
 }
 // Read large labels independently so a valid signed profile remains exportable.
-pub(super) fn read_workers(
-    ext: &mut sp_io::TestExternalities,
-    bundles: &Bundles,
-    state: &State,
-    origin: AccountId32,
-) -> Result<Vec<WorkerCore>, Error> {
-    let _ = (bundles, origin);
-    super::archive::workers(ext, state)
-}
-pub(super) async fn projection(
-    pool: &SqlitePool,
-    bundles: &Bundles,
-    mode: Mode,
-    origin: AccountId32,
-) -> Result<DirectoryProjection, Error> {
-    let mut tx = pool.begin().await?;
-    let stored = load(&mut tx, bundles.identity(), mode).await?;
-    let state = decode(&stored, mode)?;
-    let mut ext = stored.checkpoint.restore()?;
-    let catalog: DirectoryCatalog =
-        read(&mut ext, bundles, &state.directory, origin, "catalog", ())?;
-    let workers = read_workers(&mut ext, bundles, &state, origin)?;
-    let requests = read(
-        &mut ext,
-        bundles,
-        &state.directory,
-        origin,
-        "skill_requests",
-        (),
-    )?;
-    tx.rollback().await?;
-    Ok((catalog.0, catalog.1, catalog.2, workers, requests))
-}
-
-pub(super) async fn marketplace_projection(
-    pool: &SqlitePool,
-    bundles: &Bundles,
-    mode: Mode,
-    origin: AccountId32,
-) -> Result<MarketplaceProjection, Error> {
-    if !matches!(mode, Mode::Directory { projects: true, .. }) {
-        return Err(Error::IncompleteCoverage);
-    }
-    let mut tx = pool.begin().await?;
-    let stored = load(&mut tx, bundles.identity(), mode).await?;
-    let state = decode(&stored, mode)?;
-    let mut ext = stored.checkpoint.restore()?;
-    let projection = read_marketplace(&mut ext, bundles, &state, origin)?;
-    tx.rollback().await?;
-    Ok(projection)
-}
-fn read_marketplace(
-    ext: &mut sp_io::TestExternalities,
-    bundles: &Bundles,
-    state: &State,
-    origin: AccountId32,
-) -> Result<MarketplaceProjection, Error> {
-    let (roles, skills, skill_roles): DirectoryCatalog =
-        read(ext, bundles, &state.directory, origin, "catalog", ())?;
-    let score_policy: ScorePolicy =
-        read(ext, bundles, &state.directory, origin, "score_policy", ())?;
-    let compensation_policy: CompensationPolicy = read(
-        ext,
-        bundles,
-        &state.directory,
-        origin,
-        "compensation_policy",
-        (),
-    )?;
-    let workers = read_workers(ext, bundles, state, origin)?;
-    let requests = read(ext, bundles, &state.directory, origin, "skill_requests", ())?;
-    let addresses: Vec<(EntityId, Account)> =
-        read(ext, bundles, &state.directory, origin, "projects", ())?;
-    let mut projects = Vec::new();
-    let mut reasons: Vec<(
-        EntityId,
-        Option<EntityId>,
-        AccountId32,
-        ReasonReferenceV1,
-        generated_contracts::UnixSeconds,
-        DomainEventKind,
-    )> = Vec::new();
-    for (id, address) in addresses {
-        let project: super::evidence_wire::Project =
-            read(ext, bundles, &address, origin, "view", ())?;
-        let project = project.into_domain(&state.legacy_references)?;
-        if project.project_id != id {
-            return Err(Error::InvalidState);
-        }
-        let entries: Vec<(
-            EntityId,
-            Option<EntityId>,
-            AccountId32,
-            ReasonReferenceV1,
-            generated_contracts::UnixSeconds,
-            DomainEventKind,
-        )> = read(ext, bundles, &address, origin, "reasons", ())?;
-        reasons.extend(entries);
-        projects.push(project);
-    }
-    reasons.sort_by_key(Encode::encode);
-    Ok((
-        CatalogCore {
-            roles,
-            skills,
-            skill_roles,
-            score_policy,
-            compensation_policy,
-        },
-        workers,
-        requests,
-        projects,
-        reasons,
-    ))
-}
-
-pub(super) async fn money_projection(
-    pool: &SqlitePool,
-    bundles: &Bundles,
-    mode: Mode,
-    origin: AccountId32,
-) -> Result<MoneyProjection, Error> {
-    if !matches!(mode, Mode::Directory { money: true, .. }) {
-        return Err(Error::IncompleteCoverage);
-    }
-    let mut tx = pool.begin().await?;
-    let stored = load(&mut tx, bundles.identity(), mode).await?;
-    let state = decode(&stored, mode)?;
-    let mut ext = stored.checkpoint.restore()?;
-    let result: Result<MoneyProjection, String> = read(
-        &mut ext,
-        bundles,
-        &state.directory,
-        origin,
-        "financial_projection",
-        (),
-    )?;
-    tx.rollback().await?;
-    result.map_err(|_| Error::InvalidState)
-}
-
-pub(super) async fn financial_projection(
-    pool: &SqlitePool,
-    bundles: &Bundles,
-    mode: Mode,
-    origin: AccountId32,
-) -> Result<FinancialProjection, Error> {
-    if !matches!(mode, Mode::Directory { money: true, .. }) {
-        return Err(Error::IncompleteCoverage);
-    }
-    let mut tx = pool.begin().await?;
-    let stored = load(&mut tx, bundles.identity(), mode).await?;
-    let state = decode(&stored, mode)?;
-    let mut ext = stored.checkpoint.restore()?;
-    let marketplace = read_marketplace(&mut ext, bundles, &state, origin)?;
-    let money: Result<MoneyProjection, String> = read(
-        &mut ext,
-        bundles,
-        &state.directory,
-        origin,
-        "financial_projection",
-        (),
-    )?;
-    let money = money.map_err(|_| Error::InvalidState)?;
-    let registry: Vec<(EntityId, EntityId)> =
-        read(&mut ext, bundles, &state.directory, origin, "disputes", ())?;
-    let mut cases = Vec::new();
-    for (id, project_id) in registry {
-        let address: Result<Account, String> = read(
-            &mut ext,
-            bundles,
-            &state.directory,
-            origin,
-            "resolve_project",
-            project_id,
-        )?;
-        let address = address.map_err(|_| Error::InvalidState)?;
-        let record: Result<
-            (
-                super::evidence_wire::Dispute,
-                super::evidence_wire::Milestone,
-            ),
-            String,
-        > = read(&mut ext, bundles, &address, origin, "dispute", id)?;
-        let (case, milestone) = record.map_err(|_| Error::InvalidState)?;
-        let record = (
-            case.into_domain(&state.legacy_references)?,
-            milestone.into_domain(&state.legacy_references)?,
-        );
-        if record.0.dispute_id != id || record.0.project_id != project_id {
-            return Err(Error::InvalidState);
-        }
-        cases.push(record);
-    }
-    tx.rollback().await?;
-    Ok((marketplace, money, cases))
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

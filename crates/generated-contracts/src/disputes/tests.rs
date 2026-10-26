@@ -69,11 +69,12 @@ fn evidence_uses_url_only_and_preserves_old_signed_commands()
 }
 
 #[test]
-fn storage_commitments_preserve_legacy_bytes_and_fail_closed()
+fn current_evidence_scale_is_explicit_and_public_json_stays_compatible()
 -> Result<(), Box<dyn std::error::Error>> {
     let original = EvidenceReference::new("https://example.test/delivery".into())?;
-    let legacy = EvidenceRecordReferenceV1::Legacy(original.clone());
-    assert_eq!(legacy.encode(), original.encode());
+    let legacy = EvidenceRecordReferenceV1::Url(original.clone());
+    assert_eq!(legacy.encode()[0], 0);
+    assert_eq!(&legacy.encode()[1..], &original.encode());
     assert_eq!(
         legacy,
         EvidenceRecordReferenceV1::decode(&mut &legacy.encode()[..])?
@@ -87,8 +88,8 @@ fn storage_commitments_preserve_legacy_bytes_and_fail_closed()
         hash: PayloadHash::from_bytes([7; 32]),
     });
     let bytes = committed.encode();
-    assert_eq!(bytes.len(), 50);
-    assert_eq!(&bytes[..2], &[0xff, 1]);
+    assert_eq!(bytes.len(), 49);
+    assert_eq!(bytes[0], 1);
     assert_eq!(
         committed,
         EvidenceRecordReferenceV1::decode(&mut &bytes[..])?
@@ -103,6 +104,6 @@ fn storage_commitments_preserve_legacy_bytes_and_fail_closed()
     }
     assert!(EvidenceRecordReferenceV1::decode(&mut &[0xff, 2][..]).is_err());
     assert!(EvidenceRecordReferenceV1::decode(&mut &[0xfd, 0xff][..]).is_err());
-    assert!(EvidenceRecordReferenceV1::decode(&mut &bytes[..49]).is_err());
+    assert!(EvidenceRecordReferenceV1::decode(&mut &bytes[..48]).is_err());
     Ok(())
 }

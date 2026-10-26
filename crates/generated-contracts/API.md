@@ -251,5 +251,5 @@ and progress live in the adapter. Consumers must handle both result sources:
 
 For either event source, SSE `id`, `Last-Event-ID`, pagination and deduplication
 continue to use the outer `notificationId`; read state changes only through the
-explicit read route. Deployment still requires frontend compatibility and the
-[paired cutover checks](../../docs/operations/task-cutover.md).
+explicit read route. Deployment still requires frontend support for both operation result and
+notification sources, verified against a fresh matching backend environment.

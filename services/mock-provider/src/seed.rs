@@ -12,7 +12,7 @@ pub(crate) fn coordinator(generation: ProviderInstanceId) -> CatalogEntryCore {
     CatalogEntryCore {
         id: entry.id,
         fixed: true,
-        content: CatalogReferenceV1::Seed(crate::migration::source_hash(
+        content: CatalogReferenceV1::Seed(crate::content_hash(
             &entry.record(generation).hash_input(),
         )),
     }
@@ -25,9 +25,8 @@ pub(crate) fn seed(
     metadata: &mut BTreeMap<u32, SkillMetadataCore>,
 ) {
     for entry in catalog_seed_v1() {
-        let content = CatalogReferenceV1::Seed(crate::migration::source_hash(
-            &entry.record(generation).hash_input(),
-        ));
+        let content =
+            CatalogReferenceV1::Seed(crate::content_hash(&entry.record(generation).hash_input()));
         let record = CatalogEntryCore {
             id: entry.id,
             fixed: entry.kind == CatalogKind::Role && entry.id == 1,

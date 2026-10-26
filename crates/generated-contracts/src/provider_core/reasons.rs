@@ -7,7 +7,7 @@ use crate::{
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
-/// Compact reason content selection, with explicit migration provenance.
+/// Compact reason content selection from an accepted operation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "type", content = "data", deny_unknown_fields)]
 #[allow(clippy::cast_possible_truncation, reason = "Two fixed SCALE variants.")]
@@ -15,9 +15,6 @@ pub enum ReasonReferenceV1 {
     /// Actual accepted signing operation.
     #[codec(index = 0)]
     Write(MetadataCommitmentV1),
-    /// Explicit retained value from an owner export.
-    #[codec(index = 1)]
-    Migration(PayloadHash),
 }
 impl ReasonReferenceV1 {
     /// Expected exact context digest.
@@ -25,7 +22,6 @@ impl ReasonReferenceV1 {
     pub const fn hash(&self) -> PayloadHash {
         match self {
             Self::Write(v) => v.hash,
-            Self::Migration(v) => *v,
         }
     }
 }
@@ -46,15 +42,6 @@ pub struct ReasonCore {
     /// Original contractual effect.
     pub kind: DomainEventKind,
 }
-/// Protected owner-exchange header.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
-pub struct ReasonMetadataHeaderV1 {
-    /// Context version, currently1.
-    pub schema_version: u16,
-    /// Exact provider generation.
-    pub generation: ProviderInstanceId,
-}
 /// Real operation or current retained value; no invented historical signature.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(
@@ -73,18 +60,6 @@ pub enum ReasonProvenanceV1 {
         /// Actual authorized origin.
         author: AccountId32,
     },
-    /// Exact archive and retained ordered position.
-    #[codec(index = 1)]
-    Migration {
-        /// Hash exact source bytes.
-        source_archive_hash: PayloadHash,
-        /// Zero-based original global reason position.
-        record_index: u64,
-        /// Retained actor, without claiming a signature.
-        origin: AccountId32,
-        /// Retained timestamp.
-        occurred_at: UnixSeconds,
-    },
 }
 /// Exact immutable written explanation, bound to its lifecycle context.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
@@ -92,7 +67,7 @@ pub enum ReasonProvenanceV1 {
 pub struct ReasonMetadataRecordV1 {
     /// Generation fixed before signing.
     pub generation: ProviderInstanceId,
-    /// Signed operation or explicit migration provenance.
+    /// Signed operation provenance.
     pub provenance: ReasonProvenanceV1,
     /// Existing Project identity.
     pub project_id: EntityId,
@@ -140,7 +115,7 @@ impl ReasonMetadataRecordV1 {
     pub fn matches_context(
         &self,
         generation: ProviderInstanceId,
-        record_index: u64,
+        _record_index: u64,
         core: &ReasonCore,
     ) -> bool {
         if self.generation != generation
@@ -158,20 +133,6 @@ impl ReasonMetadataRecordV1 {
                 },
                 ReasonReferenceV1::Write(selected),
             ) => *operation_id == selected.operation_id && *author == core.origin,
-            (
-                ReasonProvenanceV1::Migration {
-                    origin,
-                    occurred_at,
-                    record_index: selected_index,
-                    ..
-                },
-                ReasonReferenceV1::Migration(_),
-            ) => {
-                *origin == core.origin
-                    && *occurred_at == core.occurred_at
-                    && *selected_index == record_index
-            }
-            _ => false,
         }
     }
     /// SHA256 preimage; encode/hash away from async runtime threads.

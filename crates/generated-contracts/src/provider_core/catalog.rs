@@ -18,9 +18,6 @@ pub enum CatalogReferenceV1 {
     /// Real accepted operation with a context-bound immutable document.
     #[codec(index = 0)]
     Write(MetadataCommitmentV1),
-    /// Retained value from the exact owner export.
-    #[codec(index = 1)]
-    Migration(PayloadHash),
     /// Explicit generation-bound default dataset record.
     #[codec(index = 2)]
     Seed(PayloadHash),
@@ -31,7 +28,7 @@ impl CatalogReferenceV1 {
     pub const fn hash(&self) -> PayloadHash {
         match self {
             Self::Write(value) => value.hash,
-            Self::Migration(value) | Self::Seed(value) => *value,
+            Self::Seed(value) => *value,
         }
     }
 }

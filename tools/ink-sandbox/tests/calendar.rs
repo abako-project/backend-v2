@@ -585,7 +585,7 @@ fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
         let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", db.0.display()))
             .await
             .unwrap();
-        let bytes: Vec<u8> = sqlx::query_scalar("SELECT runtime FROM candidate_state")
+        let bytes: Vec<u8> = sqlx::query_scalar("SELECT runtime FROM provider_state")
             .fetch_one(&pool)
             .await
             .unwrap();

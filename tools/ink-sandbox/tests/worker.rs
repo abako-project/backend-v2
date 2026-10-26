@@ -164,7 +164,7 @@ fn durable_child_storage_and_mutating_queries_are_discarded() {
             2
         );
         let pool = db.pool().await;
-        let row = sqlx::query("SELECT shell, outcome FROM candidate_state")
+        let row = sqlx::query("SELECT shell, outcome FROM provider_state")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -239,7 +239,7 @@ fn rejection_trap_language_error_and_gas_commit_only_failed_shell() {
         }
         worker.shutdown().await.unwrap();
         let pool = db.pool().await;
-        let shell: Vec<u8> = sqlx::query_scalar("SELECT shell FROM candidate_state")
+        let shell: Vec<u8> = sqlx::query_scalar("SELECT shell FROM provider_state")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -256,7 +256,7 @@ fn database_failure_rolls_back_runtime_shell_and_revision() {
         let probe = deploy(&client, 0, "sandbox-probe", 1, ()).await;
         let before = client.diagnostics().unwrap().result().await.unwrap();
         let pool = db.pool().await;
-        sqlx::query("CREATE TRIGGER fail_commit AFTER UPDATE ON candidate_state BEGIN SELECT RAISE(ABORT, 'injected storage failure'); END").execute(&pool).await.unwrap();
+        sqlx::query("CREATE TRIGGER fail_commit AFTER UPDATE ON provider_state BEGIN SELECT RAISE(ABORT, 'injected storage failure'); END").execute(&pool).await.unwrap();
         assert!(matches!(
             client
                 .execute(1, call(&probe, "set_value", 2_u32), shell(2))
@@ -268,7 +268,7 @@ fn database_failure_rolls_back_runtime_shell_and_revision() {
         assert_eq!(value(&client, &probe).await, 0);
         let after = client.diagnostics().unwrap().result().await.unwrap();
         assert_eq!((before.root, before.revision), (after.root, after.revision));
-        let persisted: Vec<u8> = sqlx::query_scalar("SELECT shell FROM candidate_state")
+        let persisted: Vec<u8> = sqlx::query_scalar("SELECT shell FROM provider_state")
             .fetch_one(&pool)
             .await
             .unwrap();
@@ -368,7 +368,7 @@ fn competing_workers_use_latest_revision_and_corruption_never_reseeds() {
         first.shutdown().await.unwrap();
         second.shutdown().await.unwrap();
         let pool = db.pool().await;
-        sqlx::query("UPDATE candidate_state SET runtime = X'010203'")
+        sqlx::query("UPDATE provider_state SET runtime = X'010203'")
             .execute(&pool)
             .await
             .unwrap();
@@ -377,7 +377,7 @@ fn competing_workers_use_latest_revision_and_corruption_never_reseeds() {
                 .await
                 .is_err()
         );
-        let row = sqlx::query("SELECT runtime, revision, shell FROM candidate_state")
+        let row = sqlx::query("SELECT runtime, revision, shell FROM provider_state")
             .fetch_one(&pool)
             .await
             .unwrap();

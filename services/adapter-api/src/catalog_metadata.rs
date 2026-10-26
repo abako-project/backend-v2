@@ -76,7 +76,6 @@ pub(crate) async fn capture(
             role_ids: request.role_ids,
             content,
         }),
-        CatalogContentV1::RetainedRequest { .. } => Err(Error::Internal),
     }
 }
 pub(crate) async fn record(

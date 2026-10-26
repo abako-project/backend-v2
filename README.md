@@ -89,7 +89,6 @@ contract parity, dependency policy, containers and browser limits. Use on-disk
 
 [Approved requirements](specs/README.md) define business behavior.
 [Contributing](CONTRIBUTING.md) describes changes and review.
-[Recovery](docs/operations/disaster-recovery.md), [task ownership cutover](docs/operations/task-cutover.md)
-and [security findings](docs/security/supply-chain.md) cover operational limits.
+[Recovery](docs/operations/disaster-recovery.md) and [security findings](docs/security/supply-chain.md) cover operational limits.
 Record commands, results and tested revisions in PRs; historical development notes
 remain in Git. Release publication and deployment require explicit approval.

@@ -48,7 +48,7 @@ impl From<&ProposalDefinition> for ProposalTerms {
     }
 }
 impl MilestoneTerms {
-    /// Exact execution-time allocation shared with public legacy definitions.
+    /// Exact execution-time allocation shared with public proposal definitions.
     pub fn allocate_budget(
         &mut self,
         policy: &crate::CompensationPolicy,
@@ -166,9 +166,6 @@ pub enum ProposalContentReferenceV1 {
     /// Metadata operation committed atomically with actual terms/revision.
     #[codec(index = 0)]
     Signed(super::MetadataCommitmentV1),
-    /// Explicit migration-time value, never a fabricated approval.
-    #[codec(index = 1)]
-    Migration(crate::PayloadHash),
 }
 impl ProposalContentReferenceV1 {
     /// Digest of the exact proposal-context preimage.
@@ -176,7 +173,6 @@ impl ProposalContentReferenceV1 {
     pub const fn hash(&self) -> crate::PayloadHash {
         match self {
             Self::Signed(value) => value.hash,
-            Self::Migration(value) => *value,
         }
     }
 }

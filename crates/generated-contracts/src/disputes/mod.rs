@@ -123,69 +123,22 @@ pub enum EvidencePurposeV1 {
     Response,
 }
 
-/// Private provider storage/read representation. The adapter resolves commitments
-/// into the existing frontend reference/comment shapes before serialization.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+/// Evidence is a fixed commitment in core and a resolved URL in public API views.
+/// JSON stays untagged; the current private SCALE codec uses explicit variants.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(untagged)]
+#[allow(clippy::cast_possible_truncation, reason = "Two fixed SCALE variants.")]
 pub enum EvidenceRecordReferenceV1 {
-    /// Historical URL reference; its original signed input remains compatible.
-    Legacy(EvidenceReference),
-    /// A fixed-size commitment to an adapter-owned immutable record.
+    /// Resolved API-owned URL with the existing public JSON shape.
+    #[codec(index = 0)]
+    Url(EvidenceReference),
+    /// Fixed-size commitment to an adapter-owned immutable record.
+    #[codec(index = 1)]
     Committed(EvidenceCommitmentV1),
-}
-// Keep historical read/storage SCALE bytes too. A valid URL is <=2048 bytes,
-// so its compact length cannot start with the big-integer marker 0xff.
-impl Encode for EvidenceRecordReferenceV1 {
-    fn size_hint(&self) -> usize {
-        match self {
-            Self::Legacy(reference) => reference.size_hint(),
-            Self::Committed(_) => 50,
-        }
-    }
-    fn encode_to<T: parity_scale_codec::Output + ?Sized>(&self, output: &mut T) {
-        match self {
-            Self::Legacy(reference) => reference.encode_to(output),
-            Self::Committed(reference) => {
-                output.write(&[0xff, 1]);
-                reference.encode_to(output);
-            }
-        }
-    }
-}
-impl Decode for EvidenceRecordReferenceV1 {
-    fn decode<I: parity_scale_codec::Input>(
-        input: &mut I,
-    ) -> Result<Self, parity_scale_codec::Error> {
-        let first = input.read_byte()?;
-        if first == 0xff {
-            if input.read_byte()? != 1 {
-                return Err("unsupported evidence commitment".into());
-            }
-            return Ok(Self::Committed(EvidenceCommitmentV1::decode(input)?));
-        }
-        let length = match first & 3 {
-            0 => usize::from(first >> 2),
-            1 => usize::from(u16::from_le_bytes([first, input.read_byte()?]) >> 2),
-            _ => return Err("invalid evidence reference length".into()),
-        };
-        if length > 2048 || (first & 3 == 1 && length < 64) {
-            return Err("invalid evidence reference length".into());
-        }
-        input.on_before_alloc_mem(length)?;
-        let mut bytes = vec![0; length];
-        input.read(&mut bytes)?;
-        let url = String::from_utf8(bytes)
-            .map_err(|_| parity_scale_codec::Error::from("invalid evidence reference"))?;
-        let legacy_sha256 = PayloadHash::decode(input)?;
-        let mut reference = EvidenceReference::new(url)
-            .map_err(|_| parity_scale_codec::Error::from("invalid evidence reference"))?;
-        reference.legacy_sha256 = legacy_sha256;
-        Ok(Self::Legacy(reference))
-    }
 }
 impl From<EvidenceReference> for EvidenceRecordReferenceV1 {
     fn from(value: EvidenceReference) -> Self {
-        Self::Legacy(value)
+        Self::Url(value)
     }
 }
 impl EvidenceRecordReferenceV1 {
@@ -193,7 +146,7 @@ impl EvidenceRecordReferenceV1 {
     #[must_use]
     pub fn url(&self) -> Option<&str> {
         match self {
-            Self::Legacy(reference) => Some(reference.url()),
+            Self::Url(reference) => Some(reference.url()),
             Self::Committed(_) => None,
         }
     }
