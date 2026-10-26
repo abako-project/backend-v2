@@ -1,6 +1,6 @@
 //! Compact task execution must agree across all three actual authority modes.
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };
@@ -333,7 +333,7 @@ async fn retained_v4_task_calls_replay_after_import_but_fresh_content_commands_d
                 .await
                 .unwrap_err();
             assert!(
-                matches!(&error, ink_v5_compatibility::worker::Error::Shell(e) if e.is_infrastructure()),
+                matches!(&error, ink_sandbox::worker::Error::Shell(e) if e.is_infrastructure()),
                 "{error:?}"
             );
             let observed = worker

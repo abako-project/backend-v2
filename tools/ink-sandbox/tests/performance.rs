@@ -1,6 +1,6 @@
 //! Opt-in engine timing; transport polling is deliberately excluded.
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };

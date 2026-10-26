@@ -1,6 +1,6 @@
 //! Offline migration uses protected new files and rolls back from current state.
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };

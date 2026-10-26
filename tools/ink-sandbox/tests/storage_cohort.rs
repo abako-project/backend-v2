@@ -1,7 +1,7 @@
 //! Explicit current-state handoff to a frozen preceding executable, not a rebuild
 //! of the same source under a different authority flag.
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };

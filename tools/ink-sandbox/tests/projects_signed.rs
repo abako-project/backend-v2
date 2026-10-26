@@ -1,7 +1,7 @@
 //! Native and WASM independently replay identical signed calls and captured inputs.
 use frame_support::weights::Weight;
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     Account, GAS,
     worker::{Client, DirectoryFixture, Error, MarketplaceProjection, Worker},
 };
@@ -275,7 +275,7 @@ fn input(name: &str, args: impl Encode) -> Vec<u8> {
 }
 #[test]
 fn direct_permissions_and_query_isolation_preserve_project_registry_and_global_ids() {
-    use ink_v5_compatibility::worker::{Action, Invocation, Status};
+    use ink_sandbox::worker::{Action, Invocation, Status};
     test(async {
         let db = Database::new();
         let worker = db.start().await;
@@ -353,7 +353,7 @@ fn direct_permissions_and_query_isolation_preserve_project_registry_and_global_i
             .query(Invocation {
                 caller: Account::new(account(2).into_bytes()),
                 action: Action::Instantiate {
-                    bundle: "projects-v5".into(),
+                    bundle: "project".into(),
                     salt: vec![42],
                 },
                 input: input(

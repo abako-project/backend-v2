@@ -4,7 +4,7 @@ use generated_contracts::{
     provider_core::{CatalogEntryCore, CatalogReferenceV1, MetadataCommitmentV1},
     *,
 };
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };

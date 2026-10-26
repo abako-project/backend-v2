@@ -1,6 +1,6 @@
 //! Executes production ink WASM, never ink's cfg(test) offchain environment.
 use frame_support::weights::Weight;
-use ink_v5_compatibility::{Account, Contracts, GAS, new_externalities};
+use ink_sandbox::{Account, Contracts, GAS, new_externalities};
 use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism, ExecReturnValue};
 use parity_scale_codec::{Decode, DecodeAll, Encode};
 use sp_core::hashing::{blake2_256, sha2_256};
@@ -176,7 +176,7 @@ fn wasm_traps_nested_rejections_and_endless_execution_roll_back_child_storage() 
         );
         assert_eq!(
             trap.result,
-            Err(pallet_contracts::Error::<ink_v5_compatibility::Runtime>::ContractTrapped.into())
+            Err(pallet_contracts::Error::<ink_sandbox::Runtime>::ContractTrapped.into())
         );
         assert_eq!(query::<u32>(&owner, &parent, "value", ()), 0);
         let limit = Weight::from_parts(10_000_000_000, 16 * 1024 * 1024);
@@ -193,7 +193,7 @@ fn wasm_traps_nested_rejections_and_endless_execution_roll_back_child_storage() 
         );
         assert_eq!(
             exhausted.result,
-            Err(pallet_contracts::Error::<ink_v5_compatibility::Runtime>::OutOfGas.into())
+            Err(pallet_contracts::Error::<ink_sandbox::Runtime>::OutOfGas.into())
         );
         assert!(exhausted.gas_consumed.all_lte(limit));
         assert_eq!(query::<u32>(&owner, &parent, "value", ()), 0);

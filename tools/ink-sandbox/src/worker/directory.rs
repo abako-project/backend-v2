@@ -174,7 +174,7 @@ pub(super) fn initialize(
     let calendar = ext.execute_with(|| {
         Contracts::bare_upload_code(
             account(fixture.root),
-            bundles.code("calendar-v5")?.to_vec(),
+            bundles.code("calendar")?.to_vec(),
             None,
             Determinism::Enforced,
         )
@@ -184,7 +184,7 @@ pub(super) fn initialize(
     let invocation = Invocation {
         caller: account(fixture.root),
         action: Action::Instantiate {
-            bundle: "directory-v5".into(),
+            bundle: "directory".into(),
             salt: b"signed-directory-v1".to_vec(),
         },
         input: input(
@@ -208,7 +208,7 @@ pub(super) fn initialize(
         let code = ext.execute_with(|| {
             Contracts::bare_upload_code(
                 account(fixture.root),
-                bundles.code("projects-v5")?.to_vec(),
+                bundles.code("project")?.to_vec(),
                 None,
                 Determinism::Enforced,
             )
@@ -288,7 +288,7 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     let code = ext.execute_with(|| Contracts::code_hash(&state.directory));
     if code
         != Some(H256::from(sp_core::hashing::blake2_256(
-            bundles.code("directory-v5")?,
+            bundles.code("directory")?,
         )))
     {
         return Err(Error::InvalidState);
@@ -312,7 +312,7 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     {
         let addresses: Vec<(EntityId, Account)> =
             read(&mut ext, bundles, &state.directory, root, "projects", ())?;
-        let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("projects-v5")?));
+        let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("project")?));
         for (_, address) in addresses {
             if ext.execute_with(|| Contracts::code_hash(&address)) != Some(expected) {
                 return Err(Error::InvalidState);

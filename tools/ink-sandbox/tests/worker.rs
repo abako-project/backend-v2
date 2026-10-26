@@ -1,5 +1,5 @@
 use frame_support::weights::Weight;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     Account, GAS, Runtime,
     worker::{Action, Client, Error, Invocation, MAX_INPUT, ShellChanges, Status, Worker},
 };

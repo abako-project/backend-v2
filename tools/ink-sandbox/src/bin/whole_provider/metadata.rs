@@ -7,7 +7,7 @@ use generated_contracts::{
         ProposalMetadataHeaderV1, ReasonMetadataHeaderV1, ReasonMetadataRecordV1,
     },
 };
-use ink_v5_compatibility::worker::MAX_SHELL;
+use ink_sandbox::worker::MAX_SHELL;
 use mock_provider::migration;
 use serde::{Serialize, de::DeserializeOwned};
 use std::{

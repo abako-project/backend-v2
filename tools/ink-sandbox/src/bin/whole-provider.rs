@@ -2,7 +2,7 @@
 #[path = "whole_provider/metadata.rs"]
 mod metadata;
 use generated_contracts::AccountId32;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, MAX_SHELL, WholeConfiguration, Worker},
 };

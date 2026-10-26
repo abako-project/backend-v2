@@ -1,6 +1,6 @@
 //! Real WASM growth, parent reordering, shrink and reuse with ordinary Project cells.
 use generated_contracts::{provider_core::*, *};
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };

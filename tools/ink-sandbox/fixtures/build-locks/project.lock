@@ -122,9 +122,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
-name = "calendar-v5"
+name = "calendar"
 version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=d1abf49066f80d10ae53fc4cb30c8dc7a659d15b#d1abf49066f80d10ae53fc4cb30c8dc7a659d15b"
+source = "git+https://github.com/abako-dev/contracts.git?rev=ce9ed40ffd48c6c25b0f0ca285ac5d4fc6251d64#ce9ed40ffd48c6c25b0f0ca285ac5d4fc6251d64"
 dependencies = [
  "chrono",
  "ink",
@@ -372,10 +372,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "directory-v5"
+name = "directory"
 version = "0.1.0"
+source = "git+https://github.com/abako-dev/contracts.git?rev=a4940db2a7c0d4891254445777d3cc1ab6d3a503#a4940db2a7c0d4891254445777d3cc1ab6d3a503"
 dependencies = [
- "calendar-v5",
+ "calendar",
  "chrono",
  "ink",
  "parity-scale-codec",
@@ -975,6 +976,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "985e7ec9bb745e6ce6535b544d84d6cd6f7ad8bd711c398938ae983b91a766d9"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "project"
+version = "0.1.0"
+dependencies = [
+ "calendar",
+ "chrono",
+ "directory",
+ "ink",
+ "parity-scale-codec",
+ "rand 0.10.2",
+ "scale-info",
 ]
 
 [[package]]

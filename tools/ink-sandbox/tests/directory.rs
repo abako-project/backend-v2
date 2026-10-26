@@ -4,7 +4,7 @@ use generated_contracts::provider_core::{
     CatalogEntryCore, SkillRequestCore, SkillRoleCore, WorkerCore,
 };
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
 };
 use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism, ExecReturnValue};
@@ -85,7 +85,7 @@ fn setup(seed: &Catalog, valid_code: bool) -> (sp_io::TestExternalities, Account
     let directory = ext.execute_with(|| {
         let uploaded = Contracts::bare_upload_code(
             account(1),
-            bundles.code("calendar-v5").unwrap().to_vec(),
+            bundles.code("calendar").unwrap().to_vec(),
             None,
             Determinism::Enforced,
         )
@@ -100,9 +100,9 @@ fn setup(seed: &Catalog, valid_code: bool) -> (sp_io::TestExternalities, Account
             0,
             GAS,
             None,
-            Code::Upload(bundles.code("directory-v5").unwrap().to_vec()),
+            Code::Upload(bundles.code("directory").unwrap().to_vec()),
             input("new", (hash, account(4), account(4), seed)),
-            b"directory-v5".to_vec(),
+            b"directory".to_vec(),
             DebugInfo::Skip,
             CollectEvents::Skip,
         )
@@ -406,7 +406,7 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         let bundles = Bundles::pinned().unwrap();
         assert_eq!(
             Contracts::code_hash(&calendar),
-            Some(H256::from(blake2_256(bundles.code("calendar-v5").unwrap())))
+            Some(H256::from(blake2_256(bundles.code("calendar").unwrap())))
         );
         // Directory is an actual contract caller here, not the root fixture account.
         reject::<()>(
@@ -490,7 +490,7 @@ fn parent_storage_failure_discards_tentative_child_instance() {
         // Measure the successful parent/child transaction, discard it, then
         // exhaust gas at its final boundary rather than relying on packed storage.
         let id=[8_u8;16];
-        let code_hash=H256::from(blake2_256(Bundles::pinned().unwrap().code("calendar-v5").unwrap()));
+        let code_hash=H256::from(blake2_256(Bundles::pinned().unwrap().code("calendar").unwrap()));
         let child=Contracts::contract_address(&directory,&code_hash,&input("new",(account(2),directory.clone(),id,&request.calendar)),&id);
         let data=input("register_worker_core",(request,id));
         let before=digest(&projection(&directory));
@@ -502,7 +502,7 @@ fn parent_storage_failure_discards_tentative_child_instance() {
         assert_eq!(Contracts::code_hash(&child),None);
         let gas=frame_support::weights::Weight::from_parts(completed.gas_consumed.ref_time().checked_sub(1).unwrap(),GAS.proof_size());
         let result=Contracts::bare_call(account(2),directory.clone(),0,gas,None,data,DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced).result;
-        assert!(matches!(result,Err(error) if error==pallet_contracts::Error::<ink_v5_compatibility::Runtime>::OutOfGas.into()));
+        assert!(matches!(result,Err(error) if error==pallet_contracts::Error::<ink_sandbox::Runtime>::OutOfGas.into()));
         assert_eq!(Contracts::code_hash(&child),None);
         assert_eq!(read::<Option<Account>>(&directory,1,"calendar_address",account(2)),None);
         assert_eq!(digest(&projection(&directory)),before);

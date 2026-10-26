@@ -7,19 +7,19 @@ use std::collections::BTreeMap;
 const MANIFEST: &[u8] = include_bytes!("../fixtures/manifest.json");
 const ARTIFACTS: [(&str, &[u8], &[u8]); 4] = [
     (
-        "projects-v5",
-        include_bytes!("../fixtures/projects-v5.contract"),
-        include_bytes!("../fixtures/build-locks/projects-v5.lock"),
+        "project",
+        include_bytes!("../fixtures/project.contract"),
+        include_bytes!("../fixtures/build-locks/project.lock"),
     ),
     (
-        "directory-v5",
-        include_bytes!("../fixtures/directory-v5.contract"),
-        include_bytes!("../fixtures/build-locks/directory-v5.lock"),
+        "directory",
+        include_bytes!("../fixtures/directory.contract"),
+        include_bytes!("../fixtures/build-locks/directory.lock"),
     ),
     (
-        "calendar-v5",
-        include_bytes!("../fixtures/calendar-v5.contract"),
-        include_bytes!("../fixtures/build-locks/calendar-v5.lock"),
+        "calendar",
+        include_bytes!("../fixtures/calendar.contract"),
+        include_bytes!("../fixtures/build-locks/calendar.lock"),
     ),
     (
         "sandbox-probe",

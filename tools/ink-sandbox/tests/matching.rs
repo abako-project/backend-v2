@@ -3,7 +3,7 @@ use generated_contracts::provider_core::{
     CatalogEntryCore, SkillRequestCore, SkillRoleCore, WorkerCore,
 };
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
 };
 use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism, ExecReturnValue};
@@ -116,7 +116,7 @@ fn setup() -> (sp_io::TestExternalities, Account) {
     let directory = ext.execute_with(|| {
         let calendar = Contracts::bare_upload_code(
             account(1),
-            bundles.code("calendar-v5").unwrap().to_vec(),
+            bundles.code("calendar").unwrap().to_vec(),
             None,
             Determinism::Enforced,
         )
@@ -127,7 +127,7 @@ fn setup() -> (sp_io::TestExternalities, Account) {
             0,
             GAS,
             None,
-            Code::Upload(bundles.code("directory-v5").unwrap().to_vec()),
+            Code::Upload(bundles.code("directory").unwrap().to_vec()),
             input("new", (calendar, account(99), account(99), seed())),
             b"matching-v5".to_vec(),
             DebugInfo::Skip,
@@ -407,7 +407,7 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
 
 #[test]
 fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
-    use ink_v5_compatibility::worker::{
+    use ink_sandbox::worker::{
         Action as VmAction, Error, Invocation, ShellChanges, Status, Worker,
     };
     use std::{
@@ -415,12 +415,12 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
         time::{SystemTime, UNIX_EPOCH},
     };
     async fn execute(
-        client: &ink_v5_compatibility::worker::Client,
+        client: &ink_sandbox::worker::Client,
         revision: i64,
         caller: u8,
         action: VmAction,
         data: Vec<u8>,
-    ) -> Result<ink_v5_compatibility::worker::Outcome, Error> {
+    ) -> Result<ink_sandbox::worker::Outcome, Error> {
         client
             .execute(
                 revision,
@@ -473,7 +473,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                 0,
                 1,
                 VmAction::Instantiate {
-                    bundle: "calendar-v5".into(),
+                    bundle: "calendar".into(),
                     salt: b"code-upload".to_vec(),
                 },
                 input("new", (account(1), account(99), [240u8; 16], &definition)),
@@ -482,14 +482,14 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
             .unwrap();
             assert_eq!(uploaded.status, Status::Success);
             let code = H256::from(blake2_256(
-                Bundles::pinned().unwrap().code("calendar-v5").unwrap(),
+                Bundles::pinned().unwrap().code("calendar").unwrap(),
             ));
             let created = execute(
                 &client,
                 1,
                 1,
                 VmAction::Instantiate {
-                    bundle: "directory-v5".into(),
+                    bundle: "directory".into(),
                     salt: b"matching-worker".to_vec(),
                 },
                 input("new", (code, account(99), account(99), seed())),

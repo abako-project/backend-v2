@@ -1,7 +1,7 @@
 //! Native and WASM independently replay identical signed calls and captured inputs.
 use frame_support::{traits::fungibles::Inspect, weights::Weight};
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     Account, Assets, Contracts, GAS,
     checkpoint::Checkpoint,
     worker::{Client, DirectoryFixture, Error, FinancialProjection, MarketplaceProjection, Worker},
@@ -404,7 +404,7 @@ fn input(name: &str, args: impl Encode) -> Vec<u8> {
 }
 #[test]
 fn normal_ramp_funding_permissions_private_reads_and_queries_do_not_bypass_accounting() {
-    use ink_v5_compatibility::worker::{Action, Invocation, Status};
+    use ink_sandbox::worker::{Action, Invocation, Status};
     test(async {
         let db = Database::new();
         let mut configured = fixture(GAS);
@@ -676,7 +676,7 @@ fn settlement_sql_failure_discards_all_payouts_activation_and_receipt_then_retri
 
 #[test]
 fn metered_failure_during_execution_approval_discards_funding_and_reservations() {
-    use ink_v5_compatibility::worker::Outcome;
+    use ink_sandbox::worker::Outcome;
     test(async {
         let trace = trace();
         let steps = trace["steps"].as_array().unwrap();

@@ -7,7 +7,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-EXPECTED_LOCK = "c03e9b652133062cbdf55dc8e5002cad3c245f5830dd6ece63ccb59c93b3099f"
+EXPECTED_LOCK = "25d3c0922e0efd677bd16bb746a0260bc0658db47c644fc3c62d76eb4c44e606"
 REVIEW_BY = datetime.date(2026, 12, 1)
 if hashlib.sha256((ROOT / "Cargo.lock").read_bytes()).hexdigest() != EXPECTED_LOCK:
     sys.exit("SDK policy needs a new review: Cargo.lock changed.")

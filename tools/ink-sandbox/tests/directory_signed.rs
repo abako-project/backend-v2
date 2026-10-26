@@ -1,7 +1,7 @@
 //! Native and WASM independently replay identical signed calls and captured inputs.
 use frame_support::weights::Weight;
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     Account, GAS,
     worker::{Client, DirectoryFixture, DirectoryProjection, Error, Worker},
 };
@@ -305,9 +305,9 @@ fn captured_ids_replay_read_isolation_and_request_visibility() {
         };
         data.extend(definition.encode());
         client
-            .query(ink_v5_compatibility::worker::Invocation {
+            .query(ink_sandbox::worker::Invocation {
                 caller: Account::new(account(2).into_bytes()),
-                action: ink_v5_compatibility::worker::Action::Call { address },
+                action: ink_sandbox::worker::Action::Call { address },
                 input: data,
                 gas: GAS,
                 timestamp_ms: 100_000,
@@ -594,16 +594,16 @@ fn startup_checks_fixture_identity_mode_and_contract_pointer() {
         assert!(matches!(
             worker.client().execute(
                 0,
-                ink_v5_compatibility::worker::Invocation {
+                ink_sandbox::worker::Invocation {
                     caller: Account::new(account(2).into_bytes()),
-                    action: ink_v5_compatibility::worker::Action::Call {
+                    action: ink_sandbox::worker::Action::Call {
                         address: Account::new([7; 32])
                     },
                     input: vec![],
                     gas: GAS,
                     timestamp_ms: NOW.get() * 1000,
                 },
-                ink_v5_compatibility::worker::ShellChanges {
+                ink_sandbox::worker::ShellChanges {
                     success: vec![1],
                     rejection: vec![2]
                 }
@@ -731,9 +731,9 @@ fn signed_score_policy_uses_root_authority_shared_receipts_and_exact_policy_byte
         let persisted: Value = serde_json::from_slice(&before.2).unwrap();
         let address: Account = serde_json::from_value(persisted["directory"].clone()).unwrap();
         let query = client
-            .query(ink_v5_compatibility::worker::Invocation {
+            .query(ink_sandbox::worker::Invocation {
                 caller: Account::new(account(1).into_bytes()),
-                action: ink_v5_compatibility::worker::Action::Call { address },
+                action: ink_sandbox::worker::Action::Call { address },
                 input: blake2_256(b"score_policy")[..4].to_vec(),
                 gas: GAS,
                 timestamp_ms: 100_000,

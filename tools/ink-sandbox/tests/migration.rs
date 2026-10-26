@@ -1,7 +1,7 @@
 //! Full retained-state comparison, fresh sealed imports and current-state export.
 mod support;
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     GAS,
     worker::{Error, WholeConfiguration, Worker},
 };
@@ -189,7 +189,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
             .unwrap();
         let expected: CoreArchiveV5 =
             serde_json::from_str(&reference.archives.last().unwrap().archive).unwrap();
-        use ink_v5_compatibility::worker::comparison::*;
+        use ink_sandbox::worker::comparison::*;
         let last: SignedContractCallV1 = serde_json::from_value(
             trace["steps"].as_array().unwrap().last().unwrap()["signed"].clone(),
         )
@@ -302,7 +302,7 @@ fn retained_score_overflow_precedes_missing_modern_worker_ratings() {
 
 fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV5) {
     use frame_support::traits::fungibles::Inspect;
-    use ink_v5_compatibility::{Account, Assets, Contracts, checkpoint::Checkpoint};
+    use ink_sandbox::{Account, Assets, Contracts, checkpoint::Checkpoint};
     let shell: serde_json::Value = serde_json::from_slice(&stored.2).unwrap();
     let directory: Account = serde_json::from_value(shell["directory"].clone()).unwrap();
     let mut ext = Checkpoint::decode(&stored.1).unwrap().restore().unwrap();
@@ -348,7 +348,7 @@ fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV5) {
 #[test]
 fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
     run(async {
-        use ink_v5_compatibility::{
+        use ink_sandbox::{
             Account,
             worker::{Action, Invocation, Status},
         };
@@ -511,7 +511,7 @@ fn retained_aggregates_above_the_single_call_limit_keep_working() {
             // This is a whole-provider workload. Ordinary per-record Calendar
             // storage needs more metered resources than the former packed blob; keep
             // the published WHOLE_GAS unchanged rather than using fixture GAS.
-            retained_case_with_gas(case, None, ink_v5_compatibility::WHOLE_GAS).await;
+            retained_case_with_gas(case, None, ink_sandbox::WHOLE_GAS).await;
         }
     })
 }
@@ -587,7 +587,7 @@ fn ordinary_retained_qualification_capacity_matches_native() {
         let archive: CoreArchiveV5 =
             serde_json::from_str(source["archive"].as_str().unwrap()).unwrap();
         let mut configuration = config(&archive);
-        configuration.gas_limit = ink_v5_compatibility::WHOLE_GAS;
+        configuration.gas_limit = ink_sandbox::WHOLE_GAS;
         let db = Database::new();
         let worker = Worker::import_archive(db.0.clone(), archive, configuration)
             .await
@@ -696,7 +696,7 @@ fn whole_resource_failure_preserves_runtime_shell_and_retry_after_restart() {
 #[test]
 fn whole_modes_serialize_primary_reference_replay_and_restart() {
     run(async {
-        use ink_v5_compatibility::worker::Authority;
+        use ink_sandbox::worker::Authority;
         use mock_provider::ProviderApi;
         let reference = reference();
         let retained = reference
@@ -839,7 +839,7 @@ async fn whole_rows(db: &Database) -> ((i64, Vec<u8>, Vec<u8>), (Vec<u8>, String
 #[test]
 fn whole_reference_storage_failure_competition_and_incomplete_shadow_are_explicit() {
     run(async {
-        use ink_v5_compatibility::worker::Authority;
+        use ink_sandbox::worker::Authority;
         let retained = reference()
             .archives
             .into_iter()
@@ -983,7 +983,7 @@ fn whole_reference_storage_failure_competition_and_incomplete_shadow_are_explici
 #[test]
 fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() {
     run(async {
-        use ink_v5_compatibility::worker::Authority;
+        use ink_sandbox::worker::Authority;
         let retained = reference()
             .archives
             .into_iter()
@@ -1097,7 +1097,7 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
             let mut oversized = call.clone();
             oversized.call.command = ProviderCommand::CreateProject(CreateProjectRequest {
                 title: "Oversized transport call".into(),
-                description: "x".repeat(ink_v5_compatibility::worker::MAX_INPUT + 1),
+                description: "x".repeat(ink_sandbox::worker::MAX_INPUT + 1),
             });
             let expected = mock_provider::ProviderApi::execute(
                 &native,
@@ -1126,7 +1126,7 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
 #[test]
 fn whole_differences_persist_without_substituting_either_primary() {
     run(async {
-        use ink_v5_compatibility::worker::Authority;
+        use ink_sandbox::worker::Authority;
         let retained = reference()
             .archives
             .into_iter()
@@ -1264,7 +1264,7 @@ fn whole_differences_persist_without_substituting_either_primary() {
 #[test]
 fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback() {
     run(async {
-        use ink_v5_compatibility::worker::Authority;
+        use ink_sandbox::worker::Authority;
         let initial: CoreArchiveV5 = serde_json::from_str(
             &reference()
                 .archives
@@ -1433,7 +1433,7 @@ fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback()
 #[test]
 fn task_state_exports_actual_selected_counter_and_preserves_exhaustion() {
     run(async {
-        use ink_v5_compatibility::worker::Authority;
+        use ink_sandbox::worker::Authority;
         use mock_provider::ProviderApi;
         let reference = reference();
         let retained = reference

@@ -1,7 +1,7 @@
 //! R2a creation commitments survive the catalog-only V3↔V4 transition.
 mod support;
 use generated_contracts::{provider_core::*, *};
-use ink_v5_compatibility::{
+use ink_sandbox::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };

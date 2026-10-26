@@ -1,4 +1,4 @@
-use ink_v5_compatibility::worker::comparison::*;
+use ink_sandbox::worker::comparison::*;
 use provider_execution::migration::CoreArchiveV5;
 fn archive() -> CoreArchiveV5 {
     let fixture: serde_json::Value = serde_json::from_str(include_str!(

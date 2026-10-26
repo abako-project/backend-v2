@@ -3,7 +3,7 @@
 use generated_contracts::{
     CalendarDefinition, CalendarView, Minutes, ReservationView, Week, WeekWindow,
 };
-use ink_v5_compatibility::{
+use ink_sandbox::{
     Account, GAS, Runtime,
     worker::{Action, Client, Invocation, Outcome, ShellChanges, Status, Worker},
 };
@@ -75,7 +75,7 @@ async fn deploy(client: &Client, definition: &CalendarDefinition) -> Account {
             Invocation {
                 caller: account(1),
                 action: Action::Instantiate {
-                    bundle: "calendar-v5".into(),
+                    bundle: "calendar".into(),
                     salt: vec![1],
                 },
                 input: input("new", (account(3), account(2), [1_u8; 16], definition)),
@@ -459,8 +459,8 @@ fn competing_reservations_observe_committed_capacity() {
         let a = one.execute(1, reserve(), shell()).unwrap();
         let b = two.execute(1, reserve(), shell()).unwrap();
         match (a.result().await, b.result().await) {
-            (Ok(outcome), Err(ink_v5_compatibility::worker::Error::StaleRevision))
-            | (Err(ink_v5_compatibility::worker::Error::StaleRevision), Ok(outcome)) => {
+            (Ok(outcome), Err(ink_sandbox::worker::Error::StaleRevision))
+            | (Err(ink_sandbox::worker::Error::StaleRevision), Ok(outcome)) => {
                 assert_eq!(outcome.status, Status::Success);
                 assert_eq!(decode::<()>(&outcome), Ok(()));
             }
@@ -590,20 +590,18 @@ fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
             .await
             .unwrap();
         pool.close().await;
-        let mut ext = ink_v5_compatibility::checkpoint::Checkpoint::decode(&bytes)
+        let mut ext = ink_sandbox::checkpoint::Checkpoint::decode(&bytes)
             .unwrap()
             .restore()
             .unwrap();
         ext.execute_with(|| {
-            let header = ink_v5_compatibility::Contracts::get_storage(
-                address.clone(),
-                0x4341_4c01u32.encode(),
-            )
-            .unwrap()
-            .unwrap();
+            let header =
+                ink_sandbox::Contracts::get_storage(address.clone(), 0x4341_4c01u32.encode())
+                    .unwrap()
+                    .unwrap();
             assert!(header.len() <= 138);
             for index in [0u32, 999] {
-                let value = ink_v5_compatibility::Contracts::get_storage(
+                let value = ink_sandbox::Contracts::get_storage(
                     address.clone(),
                     (0x4341_4c04u32, index).encode(),
                 )
@@ -612,12 +610,9 @@ fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
                 assert_eq!(value.len(), 47);
             }
             assert!(
-                ink_v5_compatibility::Contracts::get_storage(
-                    address.clone(),
-                    (u32::MAX, 0u32).encode()
-                )
-                .unwrap()
-                .is_none()
+                ink_sandbox::Contracts::get_storage(address.clone(), (u32::MAX, 0u32).encode())
+                    .unwrap()
+                    .is_none()
             );
         });
         let reopened = db.start().await;

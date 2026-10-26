@@ -1,6 +1,6 @@
 //! Migration admission must cover valid existing signed payloads.
 use generated_contracts::*;
-use ink_v5_compatibility::{
+use ink_sandbox::{
     GAS,
     worker::{DirectoryFixture, MarketplaceProjection, Worker},
 };
@@ -16,14 +16,8 @@ fn valid_large_worker_profile_matches_native_success() {
         .build()
         .unwrap()
         .block_on(async {
-            assert_eq!(
-                ink_v5_compatibility::Schedule::get().limits.payload_len,
-                16 * 1024
-            );
-            assert_eq!(
-                ink_v5_compatibility::Schedule::get().limits.memory_pages,
-                16
-            );
+            assert_eq!(ink_sandbox::Schedule::get().limits.payload_len, 16 * 1024);
+            assert_eq!(ink_sandbox::Schedule::get().limits.memory_pages, 16);
             for length in [17 * 1024, MAX_SIGNABLE_BYTES - 200] {
                 let trace: serde_json::Value = serde_json::from_str(include_str!(
                     "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
