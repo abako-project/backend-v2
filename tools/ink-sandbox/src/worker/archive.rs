@@ -1,6 +1,4 @@
-//! Read-only codec for pinned contract storage, including ordinary Calendar cells.
-//! Directory and Calendar use ordinary ink cells; Project still uses its preceding
-//! layout. This owner codec copies facts;
+//! Read-only codec for pinned ordinary ink storage. This owner codec copies facts;
 //! commands, permissions, prices and score updates still execute only in WASM.
 use super::{directory::State, *};
 use generated_contracts::provider_core::{
@@ -11,8 +9,7 @@ use generated_contracts::*;
 use parity_scale_codec::DecodeAll;
 use provider_execution::migration::{BrampArchive, CoreArchiveV5, CoreCheckpointV5};
 use std::collections::{BTreeMap, BTreeSet};
-const PAGE: usize = 8192;
-type Reason = (
+pub(super) type Reason = (
     EntityId,
     Option<EntityId>,
     AccountId32,
@@ -107,7 +104,7 @@ struct CalendarHeader {
     expected: Option<(u32, u32)>,
     phase: u8,
 }
-struct Storage<'a> {
+pub(super) struct Storage<'a> {
     ext: &'a mut sp_io::TestExternalities,
     remaining: usize,
 }
@@ -141,7 +138,11 @@ impl<'a> Storage<'a> {
             .map(Some)
             .map_err(|_| Error::InvalidState)
     }
-    fn cell<T: Decode>(&mut self, address: &Account, key: impl Encode) -> Result<T, Error> {
+    pub(super) fn cell<T: Decode>(
+        &mut self,
+        address: &Account,
+        key: impl Encode,
+    ) -> Result<T, Error> {
         self.optional_cell(address, key)?.ok_or(Error::InvalidState)
     }
     fn index<T: Decode + Ord>(&mut self, address: &Account, key: u32) -> Result<Vec<T>, Error> {
@@ -159,7 +160,7 @@ impl<'a> Storage<'a> {
         }
         Ok(values)
     }
-    fn list<T: Decode>(
+    pub(super) fn list<T: Decode>(
         &mut self,
         address: &Account,
         namespace: u32,
@@ -172,25 +173,6 @@ impl<'a> Storage<'a> {
         (0..count)
             .map(|i| self.cell(address, (namespace, (owner, i))))
             .collect()
-    }
-    fn pages<T: Decode>(
-        &mut self,
-        length: u32,
-        mut next: impl FnMut(&mut Self, u32) -> Result<Vec<u8>, Error>,
-    ) -> Result<T, Error> {
-        let length = length as usize;
-        if length > self.remaining {
-            return Err(Error::Limit);
-        }
-        let mut bytes = Vec::with_capacity(length);
-        for index in 0..length.div_ceil(PAGE) {
-            let page = next(self, u32::try_from(index).map_err(|_| Error::Limit)?)?;
-            if page.len() != PAGE.min(length - bytes.len()) {
-                return Err(Error::InvalidState);
-            }
-            bytes.extend(page);
-        }
-        T::decode_all(&mut &bytes[..]).map_err(|_| Error::InvalidState)
     }
     fn root(&mut self, state: &directory::State, importing: bool) -> Result<Directory, Error> {
         let address = &state.directory;
@@ -210,17 +192,7 @@ impl<'a> Storage<'a> {
         header.bank.withdrawals = self.index(address, 152)?;
         Ok(header)
     }
-    fn child<T: Decode>(&mut self, address: &Account) -> Result<T, Error> {
-        let (length, import): (u32, Option<(AccountId32, EntityId, u32)>) =
-            self.cell(address, 0u32)?;
-        if import.is_some() {
-            return Err(Error::InvalidState);
-        }
-        self.pages(length, |reader, index| {
-            reader.cell(address, (u32::MAX, index))
-        })
-    }
-    fn value<T: Decode>(
+    pub(super) fn value<T: Decode>(
         &mut self,
         address: &Account,
         namespace: u32,
@@ -406,13 +378,13 @@ pub(super) fn read(
     let mut proposal_ids = BTreeSet::new();
     for id in &directory.projects {
         let address: Account = reader.value(&state.directory, 8, *id)?;
-        let (parent, project, reasons, cases, live): (
-            Account,
-            super::evidence_wire::Project,
-            Vec<Reason>,
-            Vec<super::evidence_wire::Dispute>,
-            bool,
-        ) = reader.child(&address)?;
+        let super::project_storage::StoredProject {
+            directory: parent,
+            project,
+            reasons,
+            cases,
+            live,
+        } = super::project_storage::read(&mut reader, &address)?;
         let project = project.into_domain(&state.legacy_references)?;
         if parent != state.directory
             || project.project_id != *id

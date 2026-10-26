@@ -32,7 +32,7 @@ fn read(path: &Path) -> Value {
 
 #[test]
 #[ignore = "requires INK_STORAGE_PREDECESSOR and its recorded INK_STORAGE_PREDECESSOR_SHA256"]
-fn current_directory_and_calendar_writes_restore_into_frozen_r3_in_all_authorities() {
+fn current_directory_project_and_calendar_writes_restore_into_frozen_predecessor() {
     let predecessor =
         std::env::var_os("INK_STORAGE_PREDECESSOR").expect("frozen predecessor required");
     let predecessor = Path::new(&predecessor);
@@ -172,6 +172,48 @@ fn current_directory_and_calendar_writes_restore_into_frozen_r3_in_all_authoriti
             )
             .unwrap();
         assert_eq!(expected.outcome, ExecutionOutcome::Success);
+        let project = initial
+            .checkpoint
+            .projects
+            .values()
+            .find(|p| p.proposals[0].status == ProposalStatus::PendingApproval)
+            .unwrap();
+        let project_id = project.project_id;
+        let project_origin = project.coordinator;
+        let storage_id = project.proposals[0].milestones[0]
+            .task_storage
+            .task_storage_id;
+        let task_id = initial.checkpoint.next_task_id;
+        let project_key = (1..=10)
+            .map(|seed| sr25519::Pair::from_seed(&[seed; 32]))
+            .find(|key| AccountId32::from_bytes(key.public().0) == project_origin)
+            .unwrap();
+        let task_call = UnsignedContractCallV1::new(
+            configuration.generation,
+            OperationId::from_bytes([243; 16]),
+            project_origin,
+            reference.nonce(project_origin).nonce,
+            UnixSeconds::new(1_900_000_000),
+            ProviderCommand::CreateTaskCore {
+                project_id,
+                task_storage_id: storage_id,
+                assignees: vec![*origin],
+            },
+        )
+        .unwrap();
+        let task_call = SignedContractCallV1 {
+            signature: Sr25519Signature::from_bytes(
+                project_key.sign(&task_call.signable_bytes().unwrap()).0,
+            ),
+            call: task_call,
+        };
+        let (reference, task_expected) = reference
+            .execute(
+                VerifiedCall::verify(task_call.clone()).unwrap(),
+                inputs.clone(),
+            )
+            .unwrap();
+        assert_eq!(task_expected.outcome, ExecutionOutcome::Success);
         runtime.block_on(async {
             let worker = Worker::import_whole(
                 database.clone(),
@@ -191,12 +233,20 @@ fn current_directory_and_calendar_writes_restore_into_frozen_r3_in_all_authoriti
             assert_eq!(qualified_receipt, qualified);
             let receipt = worker
                 .client()
-                .execute_directory_with_inputs(signed.clone(), inputs)
+                .execute_directory_with_inputs(signed.clone(), inputs.clone())
                 .unwrap()
                 .result()
                 .await
                 .unwrap();
             assert_eq!(receipt, expected);
+            let task_receipt = worker
+                .client()
+                .execute_directory_with_inputs(task_call.clone(), inputs)
+                .unwrap()
+                .result()
+                .await
+                .unwrap();
+            assert_eq!(task_receipt, task_expected);
             let diagnostics = worker
                 .client()
                 .whole_diagnostics()
@@ -214,7 +264,7 @@ fn current_directory_and_calendar_writes_restore_into_frozen_r3_in_all_authoriti
             );
             assert_eq!(
                 diagnostics.comparisons,
-                if authority == Authority::Rust { 0 } else { 2 }
+                if authority == Authority::Rust { 0 } else { 3 }
             );
             worker.shutdown().await.unwrap();
         });
@@ -256,14 +306,19 @@ fn current_directory_and_calendar_writes_restore_into_frozen_r3_in_all_authoriti
                 "{name}/{phase}: complete state/history changed"
             );
         }
-        let mut next = signed.call.clone();
+        let mut next = task_call.call.clone();
         next.operation_id = OperationId::from_bytes([246; 16]);
-        next.nonce = next.nonce.checked_add(1).unwrap();
-        next.command = ProviderCommand::UpdateQualifications(UpdateQualificationsRequest {
-            qualifications: retained.qualifications.clone(),
-        });
+        next.nonce = reference.nonce(project_origin).nonce;
+        next.command = ProviderCommand::SetTaskAssigneesCore {
+            project_id,
+            task_storage_id: storage_id,
+            task_id,
+            assignees: Vec::new(),
+        };
         let fresh = SignedContractCallV1 {
-            signature: Sr25519Signature::from_bytes(key.sign(&next.signable_bytes().unwrap()).0),
+            signature: Sr25519Signature::from_bytes(
+                project_key.sign(&next.signable_bytes().unwrap()).0,
+            ),
             call: next,
         };
         fs::write(

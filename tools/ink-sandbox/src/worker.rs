@@ -38,6 +38,7 @@ mod migration;
 mod whole;
 pub use migration::WholeConfiguration;
 pub use whole::{Authority, WholeDiagnostics};
+mod project_storage;
 mod projects;
 mod signed;
 pub use directory::{

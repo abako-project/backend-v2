@@ -374,7 +374,7 @@ dependencies = [
 [[package]]
 name = "directory-v5"
 version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=348817540f899ed85390530161f5165a6ca6ba8f#348817540f899ed85390530161f5165a6ca6ba8f"
+source = "git+https://github.com/abako-dev/contracts.git?rev=459b41c5fad00e4f701cbb4d923f41b1e79c22ef#459b41c5fad00e4f701cbb4d923f41b1e79c22ef"
 dependencies = [
  "calendar-v5",
  "chrono",
@@ -989,7 +989,6 @@ dependencies = [
  "parity-scale-codec",
  "rand 0.10.2",
  "scale-info",
- "storage-v5",
 ]
 
 [[package]]
@@ -1448,15 +1447,6 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
-
-[[package]]
-name = "storage-v5"
-version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=09ca7bec6edaf81dd52fbdc9e3ab0dc767c91a35#09ca7bec6edaf81dd52fbdc9e3ab0dc767c91a35"
-dependencies = [
- "ink",
- "parity-scale-codec",
-]
 
 [[package]]
 name = "strsim"

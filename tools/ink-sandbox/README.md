@@ -20,9 +20,9 @@ assignees, the actual allocator and fixed content references. Creation/deletion
 and membership changes require core confirmation; local task edits retain an API
 result. Existing V4 stores require the [paired task owner exchange](../../docs/operations/task-cutover.md).
 Earlier V3↔V4 catalog exchange remains an explicit historical converter.
-Directory and Project are148621 and158345 bytes; runtime limits are unchanged.
-Calendar and Directory use ordinary ink! storage. Project paging removal remains
-R4/R5. Current acceptance and promotion limits are recorded in the
+Directory and Project are148857 and184306 bytes; runtime limits are unchanged.
+All three operational contracts use ordinary ink! storage. Final transitional
+cleanup remains R5 work. Current acceptance and promotion limits are recorded in the
 [ownership handoff](../../progress/handoffs/SPEC-0015.md).
 
 ```sh
@@ -301,7 +301,7 @@ A nested exhausted ink call may surface as an outer contract trap; either known
 metered failure commits only its failed receipt/nonce, with no business effects.
 
 SPEC-0014 removes the URL validator from current execution. The three operational
-contracts are Directory (148,621 bytes), Calendar and Project (158,345 bytes).
+contracts are Directory (148,857 bytes), Calendar and Project (184,306 bytes).
 The adapter validates URLs and retains complete evidence; Project stores fixed
 hashes, plus record IDs for new commitments. Contracts never fetch references.
 Seven pinned artifacts remain: these three plus four earlier test fixtures.
@@ -347,16 +347,15 @@ Directory imports natural typed records in batches of at most 64 records and
 8 KiB encoded input. Fixed headers declare child counts; separately keyed entries
 preserve qualifications, catalog references and project identities. Sealing
 checks completeness and uniqueness before activating children. Worker skill
-indexes are populated with each imported membership. Only Project images still
-use ordered 8 KiB pages pending the next R4 slice. Calendar uses bounded typed
-records as described below. Import uses the existing fixed `WHOLE_GAS` budget;
+indexes are populated with each imported membership. Project receives a bounded
+encoded batch of natural records through Directory, decodes its concrete type
+and retains no byte buffer. Calendar also uses bounded typed records. Import uses the existing fixed `WHOLE_GAS` budget;
 `WholeConfiguration.gas_limit` continues to control subsequent signed execution.
 Finite gas/memory and archive/checkpoint admission still apply, and a failure
 commits no destination.
 
-`worker::archive` decodes pinned ordinary Calendar/Directory cells and the
-remaining Project `storage-v5` cells through pallet-contracts' read-only storage
-API. It does not execute business rules. Cells remain <=16 KiB;
+`worker::archive` and its Project codec decode the pinned ordinary cells of all
+three operational contracts through pallet-contracts' read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
 legacy signed creation profiles are lowered before WASM; bounded core records
 retain their commitments without relaxing Kreivo's 16 memory pages or 192 KiB code limit. Complete reads
 have a cumulative 64 MiB cell budget and a 64 MiB archive limit. The existing
@@ -392,8 +391,8 @@ The operational `calendar-v5` uses standard ink! `Lazy` and `Mapping`, with fixe
 manual keys pinned by the fixture manifest. Its header is at most 138 bytes;
 a reservation is at most 47 bytes. Overrides, ordered indexes and per-week
 reserved totals have their own fixed-size cells. Calendar no longer depends on
-`storage-v5`. Project still does; the current Directory slice also removes that
-dependency. R4/R5 are not complete.
+`storage-v5`. Directory and Project also use ordinary storage. The unused helper
+remains in the canonical repository until the final R5 cleanup.
 No runtime, code, value, memory, input or gas limit is raised.
 
 Replacing 1,000 retained overrides uses more metered resources than the former
@@ -417,8 +416,10 @@ The growth regression accumulates 1,000 reservations through ordinary calls and
 reopens them after a rejected edit; it also checks atomic failure of an oversized
 single call. The opt-in frozen-executable test targets current Directory and Calendar writes,
 complete export/import/reopen, exact signed replay and further signed work in
-Rust, Shadow and Sandbox against the immediately preceding R3 executable. Both
-sides use CoreArchiveV5; task content remains in the adapter. Set the frozen
+Rust, Shadow and Sandbox against the immediately preceding accepted executable.
+The Project slice adds current Project task writes and further task membership
+work after rollback into the frozen Directory slice. Both sides use CoreArchiveV5;
+task content remains in the adapter. Set the frozen
 binary path and its recorded SHA-256:
 
 ```sh
@@ -433,7 +434,7 @@ It uses disposable SQLite files, local HTTP and Python's standard library. Keep
 it does not establish the later API task cutover, browser readiness or production
 migration approval. The separate SDK dependency-policy gate still applies.
 
-## Directory ordinary storage (SPEC-0015 R4 candidate)
+## Directory ordinary storage (accepted SPEC-0015 R4 slice)
 
 Directory and its embedded Bank use standard ink! `Mapping` and `StorageVec`.
 The packed header is at most 189 bytes. Worker headers are 155 bytes, historical
@@ -455,6 +456,33 @@ interior ID through signed Shadow execution and reopens the complete archive.
 Current candidate verification and review results are recorded in the
 [SPEC-0015 handoff](../../progress/handoffs/SPEC-0015.md). A test's presence alone
 does not establish a passing gate or authorize cohort activation.
+
+## Project ordinary storage (SPEC-0015 R4 candidate)
+
+Project uses standard Lazy/Mapping with a49-byte root and fixed domain records.
+Measured maximum encoded headers: Project222 bytes, Proposal142, Milestone81,
+Submission208, Reason123 and Dispute310. Requirements, skills, assignments, tasks,
+assignees and all rating lists have individual cells. Canonical dates use ten
+bytes with lossless conversion under the existing validation rule. The contract
+no longer depends on storage-v5 or its Text codec.
+
+The existing business rules consume one transient ProjectData tree. Persistence
+compares fixed cells, updates changed values and removes obsolete children after
+shrinking/removing/reordering lists. It does not create a second before-tree or
+serialized diff registry. Full history is still traversed; memory/gas constraints
+remain finite. ink!'s existing bump allocator does not free intermediate Vec
+allocations within a call, so child lists allocate once at their declared count.
+No allocator replacement or higher runtime limit is introduced.
+
+Directory forwards a registered child's import batch immediately. Project checks
+its Directory caller, dormant phase, DecodeAll, <=64 records/8192 bytes, declared
+parents/counts and duplicate positions. Finish reads every declared child; sealing
+activates the completed child. A late error reverts earlier writes. SDK tests
+exercise malformed/duplicate/out-of-range input, failed finish, unauthorized seal
+and exact checkpoint preservation, plus600-task WASM growth, parent reordering,
+shrink/removal/reuse and restart with exact native comparison. Frozen rollback,
+artifact reproduction and full-gate results are recorded in the ownership handoff;
+this candidate section alone is not an acceptance or activation claim.
 
 ## Explicit whole-provider candidate (M8)
 

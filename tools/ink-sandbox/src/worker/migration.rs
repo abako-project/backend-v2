@@ -170,29 +170,49 @@ fn write(
         .map_err(|_| Error::InvalidState)?
         .map_err(|_| Error::InvalidState)
 }
-fn upload(
+fn upload_project(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,
     state: &State,
     gas: Weight,
-    target: ImportTarget,
-    bytes: &[u8],
+    id: EntityId,
+    records: &[super::project_storage::Record],
 ) -> Result<(), Error> {
-    for (index, page) in bytes.chunks(8192).enumerate() {
+    let mut start = 0;
+    while start < records.len() {
+        let mut end = start;
+        let mut bytes = 5usize;
+        while end < records.len() && end - start < 64 {
+            let next = bytes
+                .checked_add(records[end].encoded_size())
+                .ok_or(Error::Limit)?;
+            if next > 8192 {
+                break;
+            }
+            bytes = next;
+            end += 1;
+        }
+        if end == start {
+            return Err(Error::Limit);
+        }
         write(
             ext,
             bundles,
             state,
             gas,
-            "import_child_page",
-            (
-                target,
-                u32::try_from(index).map_err(|_| Error::Limit)?,
-                page,
-            ),
+            "import_project_records",
+            (id, records[start..end].encode()),
         )?;
+        start = end;
     }
-    write(ext, bundles, state, gas, "finish_child_import", target)
+    write(
+        ext,
+        bundles,
+        state,
+        gas,
+        "finish_child_import",
+        ImportTarget::Project(id),
+    )
 }
 fn upload_records(
     ext: &mut sp_io::TestExternalities,
@@ -526,15 +546,9 @@ pub(super) fn initialize(
                 )
             })
             .collect::<Result<Vec<_>, _>>()?;
-        let image = (&state.directory, &project, reasons, disputes, false).encode();
-        upload(
-            &mut ext,
-            bundles,
-            &state,
-            gas,
-            ImportTarget::Project(project.project_id),
-            &image,
-        )?;
+        let id = project.project_id;
+        let records = super::project_storage::records(project, reasons, disputes)?;
+        upload_project(&mut ext, bundles, &state, gas, id, &records)?;
     }
     // Compare all retained fields before making the fresh contract tree live.
     let imported = read_archive(&mut ext, bundles, &state, false)?;
@@ -754,8 +768,8 @@ mod tests {
                     &bundles,
                     &state,
                     gas,
-                    "import_child_page",
-                    (target, 1u32, vec![0u8])
+                    "import_project_records",
+                    (EntityId::from_bytes([54; 16]), vec![0u8])
                 )
                 .is_err()
             )
@@ -927,12 +941,200 @@ mod tests {
                     &bundles,
                     &state,
                     gas,
-                    "import_child_page",
-                    (target, 0u32, vec![0u8])
+                    "import_project_records",
+                    (EntityId::from_bytes([54; 16]), vec![0u8])
                 )
                 .is_err()
             )
         });
         assert!(read_archive(&mut ext, &bundles, &state, true).is_ok());
+    }
+    #[test]
+    fn project_typed_batches_reject_malformed_late_and_incomplete_imports_atomically() {
+        use super::super::project_storage::{self, Record as ProjectRecord};
+        let corpus: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../services/mock-provider/src/domain/fixtures/migration-signed-v5.json"
+        ))
+        .unwrap();
+        let archive: CoreArchiveV5 =
+            serde_json::from_str(corpus["archives"][1]["archive"].as_str().unwrap()).unwrap();
+        let root = archive.checkpoint.info.root_account;
+        let bundles = Bundles::pinned().unwrap();
+        let fixture = DirectoryFixture {
+            root,
+            funded_accounts: Vec::new(),
+            catalog: (
+                vec![archive.checkpoint.roles[&1].clone()],
+                Vec::new(),
+                Vec::new(),
+            ),
+            reservation_controller: root,
+            reference_controller: root,
+            generation: Some(ProviderInstanceId::from_bytes([111; 16])),
+            gas_limit: GAS,
+            projects: true,
+            money: Some(true),
+        };
+        let (mut ext, bytes) = super::super::directory::initialize(&bundles, fixture).unwrap();
+        let mut state: State = serde_json::from_slice(&bytes).unwrap();
+        let gas = crate::WHOLE_GAS;
+        write(&mut ext, &bundles, &state, gas, "begin_import", ()).unwrap();
+        let project = archive.checkpoint.projects.values().next().unwrap().clone();
+        let project = super::super::evidence_wire::Project::from_domain(
+            project,
+            &mut state.legacy_references,
+        )
+        .unwrap();
+        let id = project.project_id;
+        // This fixture intentionally leaves Directory import unfinished; it tests
+        // its registered Project's bounded import boundary before publication.
+        upload_record(
+            &mut ext,
+            &bundles,
+            &state,
+            gas,
+            &Record::Project(ProjectImport {
+                id,
+                proposals: count(project.proposals.len()).unwrap(),
+                submissions: 0,
+                cases: 0,
+                evaluations: 0,
+                escrow: Money::new(0),
+            }),
+        )
+        .unwrap();
+        let records = project_storage::records(project.clone(), Vec::new(), Vec::new()).unwrap();
+        let ProjectRecord::Project(header) = &records[0] else {
+            panic!("project header first")
+        };
+        let ProjectRecord::Proposal(_, proposal) = &records[1] else {
+            panic!("proposal header second")
+        };
+        let valid_prefix = vec![ProjectRecord::Project(header.clone())];
+        let before = Checkpoint::capture(ext).unwrap();
+        let mut valid = before.clone().restore().unwrap();
+        write(
+            &mut valid,
+            &bundles,
+            &state,
+            gas,
+            "import_project_records",
+            (id, valid_prefix.encode()),
+        )
+        .unwrap();
+        assert_ne!(
+            before.to_bytes().unwrap(),
+            Checkpoint::capture(valid).unwrap().to_bytes().unwrap()
+        );
+        ext = before.restore().unwrap();
+        let mut trailing = valid_prefix.encode();
+        trailing.push(0);
+        for bytes in [
+            Vec::<ProjectRecord>::new().encode(),
+            vec![4, 255],
+            trailing,
+            vec![ProjectRecord::Project(header.clone()); 65].encode(),
+            vec![
+                ProjectRecord::Project(header.clone()),
+                ProjectRecord::Proposal(u32::MAX, proposal.clone()),
+            ]
+            .encode(),
+        ] {
+            ext = preserved(ext, |ext| {
+                assert!(
+                    write(
+                        ext,
+                        &bundles,
+                        &state,
+                        gas,
+                        "import_project_records",
+                        (id, bytes)
+                    )
+                    .is_err()
+                );
+            });
+        }
+        write(
+            &mut ext,
+            &bundles,
+            &state,
+            gas,
+            "import_project_records",
+            (id, valid_prefix.encode()),
+        )
+        .unwrap();
+        ext = preserved(ext, |ext| {
+            assert!(
+                write(
+                    ext,
+                    &bundles,
+                    &state,
+                    gas,
+                    "finish_child_import",
+                    ImportTarget::Project(id)
+                )
+                .is_err()
+            );
+        });
+        ext = preserved(ext, |ext| {
+            assert!(
+                write(
+                    ext,
+                    &bundles,
+                    &state,
+                    gas,
+                    "import_project_records",
+                    (id, valid_prefix.encode())
+                )
+                .is_err()
+            );
+        });
+        upload_project(&mut ext, &bundles, &state, gas, id, &records[1..]).unwrap();
+        let address: Option<Account> = read(
+            &mut ext,
+            &bundles,
+            &state.directory,
+            root,
+            "project_address",
+            id,
+        )
+        .unwrap();
+        let address = address.unwrap();
+        let actual: super::super::evidence_wire::Project =
+            read(&mut ext, &bundles, &address, root, "view", ()).unwrap();
+        assert_eq!(actual.encode(), project.encode());
+        ext = preserved(ext, |ext| {
+            assert!(
+                read::<Result<(), String>>(ext, &bundles, &address, root, "seal_import", ())
+                    .is_err()
+            );
+        });
+        let outcome = run(
+            &mut ext,
+            &bundles,
+            Invocation {
+                caller: state.directory.clone(),
+                action: Action::Call { address },
+                input: input("seal_import", ()),
+                gas,
+                timestamp_ms: 1_700_000_000_000,
+            },
+        )
+        .unwrap();
+        assert_eq!(outcome.status, Status::Success);
+        ext = preserved(ext, |ext| {
+            assert!(
+                write(
+                    ext,
+                    &bundles,
+                    &state,
+                    gas,
+                    "import_project_records",
+                    (id, valid_prefix.encode())
+                )
+                .is_err()
+            );
+        });
+        let _retained = Checkpoint::capture(ext).unwrap();
     }
 }
