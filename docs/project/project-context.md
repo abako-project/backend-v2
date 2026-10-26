@@ -1,7 +1,7 @@
 # Current implementation and limitations
 
 Application baseline: `608c70b`; current candidate includes SPEC-0015 metadata
-ownership and task migration preparation through R3b2, 2026-10-24. This page describes implementation;
+ownership and task migration preparation through native task rollback, 2026-10-26. This page describes implementation;
 [specifications](../../SPECS.md) define approved behavior. Dated handoffs record
 verification of their own revisions, not a fresh verification of every later commit.
 
@@ -48,8 +48,8 @@ source-pinned Directory, Calendar and Project WASM inside one native runtime.
 Rust, Shadow and Sandbox authority share the existing private HTTP boundary;
 the native reference remains available for differential checks. This candidate
 includes full application-domain parity, durable restart and current-state
-import/rollback. Its reviewed SDK graph passes the separately approved scoped
-dependency policy. It is not the deployed Kreivo contract cohort or a real-chain
+import/rollback. Its SDK dependency policy currently fails on unwaived RUSTSEC-2026-0387
+(`crypto-bigint`); earlier scoped maintenance/license exceptions do not cover it. It is not the deployed Kreivo contract cohort or a real-chain
 provider; changing an endpoint URL cannot supply compatible execution and
 reconciliation. ink! v6 remains outside scope.
 
@@ -121,3 +121,19 @@ The [platform handoff](../../progress/handoffs/PLATFORM-001.md) and
 revisions. The [sandbox consolidation](../../progress/handoffs/SPEC-0013-CONSOLIDATION.md)
 records the embedded candidate; the [ownership handoff](../../progress/handoffs/SPEC-0015.md)
 records current ownership source, exact checks, Astra review and later milestones.
+
+### Latest simplification decisions (2026-10-26)
+
+The owner requires Project notification audiences to reflect membership at core
+execution. Core will therefore retain task IDs, allocation and assignees; creation,
+deletion and assignment changes require core confirmation. Task narrative and
+progress stay in the adapter. This approved amendment replaces the provisional
+all-local CRUD/allocator design; its isolated tests do not establish the revised
+cutover. Provider event ingestion remains unchanged while the revised workflow
+is implemented.
+
+The independent `abako-web/dev` frontend compatibility patch is prepared in
+[draft PR #55](https://github.com/abako-project/abako-web/pull/55), revision
+`0fa37b0adebecd57f7f8b95db5d78764d4c13f54`. Astra xhigh accepted its task-result
+binding/recovery and mixed notification/SSE readers; all 429 tests pass. This is
+reviewed source readiness, not deployment or browser-to-new-writer evidence.

@@ -212,3 +212,36 @@ comparison, retaining long names without oversized B-tree keys). Contracts own c
 and admin authority; coordinator role ID 1 remains fixed. Label validity and
 uniqueness become adapter guarantees, not independently checked chain properties.
 No arbitrary shortened-name rule is introduced. The owner explicitly approved this boundary.
+
+## Execution-time notification audience amendment (2026-10-26)
+
+The owner chose to preserve task-assignee membership at core execution time for
+Project notifications, then explicitly approved confirming membership changes
+on-chain. Task text and progress remain adapter-owned; adding/removing assignees
+requires a core transaction. This supersedes the earlier expectation that every
+tracking edit is API-only. Reconstructing recipients at ingestion time or from
+cross-store timestamps does not meet this choice.
+
+The implementation must use the existing operation/signing/reconciliation path,
+not another coordinator or queue. A membership change cannot be reported complete
+before core confirmation and durable API materialization. Uncertain outcomes
+must preserve the exact intent and block conflicting work. Classification of an
+edit must use the serialized execution state, not a potentially stale admission
+snapshot. An accepted dispute snapshot cannot race an unresolved membership
+change: reconcile it before accepting the dispute, without holding a database
+transaction across signing or core submission.
+
+The owner subsequently approved retaining task IDs and assignees in core,
+including on-chain creation/deletion for unassigned tasks. Core retains the actual
+global allocator, contextual task identity and membership; the adapter owns
+narrative, progress and other descriptive fields. This supersedes R3's provisional
+API allocator/CRUD ownership, avoiding a second reservation/recovery protocol.
+Retain existing IDs and error/permission rules. Keep provider receipts for core
+operations and truthful API task results for local edits. A task creation's
+private execution record must identify its allocated task ID unambiguously for
+recovery; do not infer it from a later counter or change the public receipt's
+existing storage-ID field.
+
+No generation is activated by this amendment and frontend adoption remains a
+cutover prerequisite. Existing API-only execution fixtures do not establish
+compliance with this new membership requirement.
