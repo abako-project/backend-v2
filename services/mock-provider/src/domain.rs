@@ -327,7 +327,7 @@ impl State {
         state.engine.rebuild_index();
         Ok(self)
     }
-    #[cfg(any(test, feature = "storage-sqlite"))]
+    #[cfg(feature = "storage-sqlite")]
     pub(crate) fn encode(&self) -> Result<Vec<u8>> {
         serde_json::to_vec(self).map_err(|_| Error::internal())
     }

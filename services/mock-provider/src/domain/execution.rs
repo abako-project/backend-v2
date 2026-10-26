@@ -346,16 +346,12 @@ mod tests {
         assert_eq!(other.shell.events.len(), 1);
         let retained_seed = first.shell.receipts[&first_receipt.operation_id]
             .inputs
-            .as_ref()
-            .map(|i| i.seed);
+            .seed;
         let (replayed, receipt) =
             first.execute(call(&before, root, command)?, UnixSeconds::new(999))?;
         assert_eq!(receipt, first_receipt);
         assert_eq!(
-            replayed.shell.receipts[&receipt.operation_id]
-                .inputs
-                .as_ref()
-                .map(|i| i.seed),
+            replayed.shell.receipts[&receipt.operation_id].inputs.seed,
             retained_seed
         );
         assert_eq!(replayed.shell.events.len(), 1);
@@ -364,33 +360,24 @@ mod tests {
 
     #[cfg(feature = "storage-sqlite")]
     #[test]
-    fn checkpoint_keeps_historical_inputs_without_guessing_a_missing_engine_version() -> Result<()>
-    {
+    fn checkpoint_requires_complete_execution_history() -> Result<()> {
         let root = root()?;
         let initial = State::new(root)?;
         let verified = call(&initial, root, worker_command())?;
         let replay = verified.clone();
         let (state, receipt) = initial.execute(verified, UnixSeconds::new(100))?;
-        let decoded = serde_json::from_slice::<State>(&state.encode()?);
-        assert!(
-            decoded.is_ok(),
-            "{}",
-            decoded.err().map_or_else(String::new, |e| e.to_string())
-        );
-        let mut legacy = serde_json::to_value(&state).map_err(|_| Error::internal())?;
-        let mut missing_version = legacy.clone();
-        missing_version
-            .as_object_mut()
-            .ok_or_else(Error::internal)?
-            .remove("engine_version");
-        assert!(
-            State::restore(
-                &serde_json::to_vec(&missing_version).map_err(|_| Error::internal())?,
-                root
-            )
-            .is_err()
-        );
-        for recorded in legacy["receipts"]
+        let saved = serde_json::to_value(&state).map_err(|_| Error::internal())?;
+        let restored = State::restore(&state.encode()?, root)?;
+        assert_eq!(restored.info(), state.info());
+        assert_eq!(restored.nonce(root), state.nonce(root));
+        assert_eq!(restored.snapshot(), state.snapshot());
+        assert_eq!(restored.events(0, 100), state.events(0, 100));
+        let (replayed, same) = restored.execute(replay, UnixSeconds::new(999))?;
+        assert_eq!(same, receipt);
+        assert_eq!(replayed.shell.events.len(), 1);
+
+        let mut missing_inputs = saved.clone();
+        for recorded in missing_inputs["receipts"]
             .as_object_mut()
             .ok_or_else(Error::internal)?
             .values_mut()
@@ -400,25 +387,22 @@ mod tests {
                 .ok_or_else(Error::internal)?
                 .remove("inputs");
         }
-        assert!(legacy.get("shell").is_none());
-        assert!(legacy.get("engine").is_none());
-        let bytes = serde_json::to_vec(&legacy).map_err(|_| Error::internal())?;
-        let restored = State::restore(&bytes, root)?;
-        assert_eq!(restored.info(), state.info());
-        assert_eq!(restored.nonce(root), state.nonce(root));
-        assert_eq!(restored.snapshot(), state.snapshot());
-        assert_eq!(restored.events(0, 100), state.events(0, 100));
-        let (replayed, same) = restored.execute(replay, UnixSeconds::new(999))?;
-        assert_eq!(same, receipt);
-        assert_eq!(replayed.shell.events.len(), 1);
-        legacy["engine_version"] = serde_json::json!(99);
-        assert!(
-            State::restore(
-                &serde_json::to_vec(&legacy).map_err(|_| Error::internal())?,
-                root
-            )
-            .is_err()
-        );
+        let mut missing_version = saved.clone();
+        missing_version
+            .as_object_mut()
+            .ok_or_else(Error::internal)?
+            .remove("engine_version");
+        let mut wrong_version = saved;
+        wrong_version["engine_version"] = serde_json::json!(99);
+        for incomplete in [missing_inputs, missing_version, wrong_version] {
+            assert!(
+                State::restore(
+                    &serde_json::to_vec(&incomplete).map_err(|_| Error::internal())?,
+                    root,
+                )
+                .is_err()
+            );
+        }
         Ok(())
     }
     #[cfg(feature = "storage-sqlite")]
@@ -438,7 +422,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn task_allocation_history_roundtrip_preserves_old_absence_and_new_private_id()
+    fn task_allocation_history_roundtrip_preserves_optional_private_id()
     -> std::result::Result<(), Box<dyn std::error::Error>> {
         let before = State::new(root()?)?;
         let verified = call(&before, root()?, worker_command())?;
@@ -455,15 +439,14 @@ mod tests {
             .receipts
             .get(&receipt.operation_id)
             .ok_or("missing receipt")?;
-        let old = serde_json::to_value(record)?;
-        assert!(old.get("allocated_task_id").is_none());
-        let roundtrip: provider_execution::RecordedCall = serde_json::from_value(old.clone())?;
-        assert_eq!(serde_json::to_value(&roundtrip)?, old);
-        // Storage compatibility only; the successor's actual allocation is tested
-        // with its engine. The legacy command cannot claim this field in validation.
-        let mut future = roundtrip;
-        future.allocated_task_id = Some(7);
-        let encoded = serde_json::to_value(&future)?;
+        let saved = serde_json::to_value(record)?;
+        assert!(saved.get("allocated_task_id").is_none());
+        let roundtrip: provider_execution::RecordedCall = serde_json::from_value(saved.clone())?;
+        assert_eq!(serde_json::to_value(&roundtrip)?, saved);
+        // Non-task operations have no allocation. Task creation retains its private ID.
+        let mut allocated = roundtrip;
+        allocated.allocated_task_id = Some(7);
+        let encoded = serde_json::to_value(&allocated)?;
         let recovered: provider_execution::RecordedCall = serde_json::from_value(encoded.clone())?;
         assert_eq!(recovered.allocated_task_id, Some(7));
         assert_eq!(serde_json::to_value(&recovered)?, encoded);

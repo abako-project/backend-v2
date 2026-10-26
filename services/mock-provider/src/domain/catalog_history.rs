@@ -1,4 +1,4 @@
-//! References must select real accepted writes; migration/seed are explicit sources.
+//! References must select real accepted writes; fresh catalog seeds are explicit sources.
 use super::State;
 use crate::{Error, Result, require};
 use generated_contracts::{
@@ -152,10 +152,7 @@ impl State {
                     && recorded.receipt.origin == reason.origin
                     && recorded.receipt.created_entity_id == Some(reason.project_id)
                     && reason.milestone_id.is_none()
-                    && recorded
-                        .inputs
-                        .as_ref()
-                        .is_some_and(|input| input.now == reason.occurred_at)
+                    && recorded.inputs.now == reason.occurred_at
                     && next > cursor,
                 "invalid_reason_metadata_state",
             )?;

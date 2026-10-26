@@ -56,15 +56,14 @@ fn require(condition: bool, code: &'static str) -> Result<()> {
     }
 }
 
-/// Retained time and entropy. Version 1 uses the native locked rand 0.10.2
-/// stream in the Rust engine; future portable contract entropy needs a new version.
+/// Retained execution time and entropy, bound to the recorded outcome.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ExecutionInputs {
     /// Input interpretation version.
     pub version: u8,
     /// One accepted execution time.
     pub now: UnixSeconds,
-    /// One accepted execution seed, reused by comparison/replay tooling.
+    /// One accepted execution seed, retained for reproducible outcomes.
     pub seed: [u8; 32],
 }
 impl ExecutionInputs {
@@ -83,9 +82,8 @@ impl ExecutionInputs {
 pub struct RecordedCall {
     /// Exact versioned signed content, excluding its signature.
     pub bytes: Vec<u8>,
-    /// Absent on historical version-1 records.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub inputs: Option<ExecutionInputs>,
+    /// Inputs accepted with this operation.
+    pub inputs: ExecutionInputs,
     /// Finality is independent of success or domain rejection.
     pub receipt: OperationReceipt,
     /// Exact core allocation for compact task creation; never the public storage ID.
@@ -388,7 +386,7 @@ impl Shell {
             call.operation_id,
             RecordedCall {
                 bytes,
-                inputs: Some(inputs),
+                inputs,
                 receipt: receipt.clone(),
                 allocated_task_id,
             },
@@ -410,12 +408,11 @@ impl Shell {
         }
         let mut task_allocations = BTreeSet::new();
         for (id, recorded) in &self.receipts {
-            if let Some(inputs) = &recorded.inputs {
-                require(
-                    inputs.version == 1 && inputs.now == recorded.receipt.finalized_at,
-                    "invalid_execution_inputs",
-                )?;
-            }
+            require(
+                recorded.inputs.version == 1
+                    && recorded.inputs.now == recorded.receipt.finalized_at,
+                "invalid_execution_inputs",
+            )?;
             let call = UnsignedContractCallV1::decode_signable(&recorded.bytes)?;
             let created_task = matches!(call.command, ProviderCommand::CreateTaskCore { .. })
                 && recorded.receipt.outcome == ExecutionOutcome::Success;
@@ -526,7 +523,7 @@ mod tests {
             .receipts
             .get_mut(&receipt.operation_id)
             .ok_or_else(Error::unavailable)?;
-        assert_eq!(recorded.inputs.as_ref().map(|i| i.seed), Some([7; 32]));
+        assert_eq!(recorded.inputs.seed, [7; 32]);
         recorded.receipt.provider_instance_id = ProviderInstanceId::from_bytes([9; 16]);
         assert_eq!(
             shell.validate(root).err().map(|e| e.code()),
