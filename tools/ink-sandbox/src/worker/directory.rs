@@ -961,6 +961,25 @@ mod tests {
                 matches!(transition(&outcome(Status::Reverted, data)), Err(Error::Invariant(observed)) if observed == code)
             );
         }
+        // Preserve the retired Calendar bridge's distinction between language,
+        // metering and trap failures at the current signed ABI boundary.
+        for (status, data, expected) in [
+            (Status::LanguageError, vec![1, 1], "sandbox_language_error"),
+            (
+                Status::Dispatch(pallet_contracts::Error::<crate::Runtime>::OutOfGas.into()),
+                vec![],
+                "sandbox_out_of_gas",
+            ),
+            (
+                Status::Dispatch(pallet_contracts::Error::<crate::Runtime>::ContractTrapped.into()),
+                vec![],
+                "sandbox_contract_trapped",
+            ),
+        ] {
+            assert!(
+                matches!(transition(&outcome(status, data)), Ok(Err(code)) if code == expected)
+            );
+        }
         let rejected =
             Result::<Result<(), String>, u8>::Ok(Err("worker_not_found".into())).encode();
         assert!(matches!(
