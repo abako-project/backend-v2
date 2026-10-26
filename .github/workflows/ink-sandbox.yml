@@ -1,4 +1,4 @@
-name: ink! v5 compatibility
+name: Contract compatibility
 
 on:
   pull_request:

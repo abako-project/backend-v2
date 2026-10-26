@@ -21,12 +21,13 @@ The preview guide records a verified isolated restore for that mock deployment.
 Automated encrypted backups, retention, production restore drills, key-version
 recovery and regional failover remain undefined. Master-key rotation remains an open SPEC-0001 reconciliation item; no rotation command is available.
 
-SPEC-0015 R2a/R2b1 moves immutable directory names, Project root text and
-proposal documents into adapter
-PostgreSQL. The provider archive contains references and cannot reconstruct
-compact creation or proposal preimages alone. Preserve the complete API backup with the
-current core archive and wallet state. Its owner-only metadata exchange exports
-selected confirmed content, not sessions, pending operations or the full API
-backup. Follow the [explicit V2↔V3 transition and rollback procedure](../../specs/0015-adapter-core-boundary/r2b-proposals.md)
-for paused/reconciled operations, fresh destinations and the matching predecessor
-binary. This does not establish a production disaster-recovery guarantee.
+Directory names, project text, proposal documents and task content live in
+adapter PostgreSQL. The core archive cannot reconstruct those preimages.
+Preserve the complete API backup with the current core archive and wallet state.
+The owner-only metadata exchange exports selected confirmed content, not sessions,
+pending operations or the full API backup. Follow the [current paired recovery
+and rollback procedure](task-cutover.md) with paused/reconciled operations, fresh
+destinations and the matching predecessor binary. Earlier format transitions are
+[historical instructions](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/specs/0015-adapter-core-boundary/r2b-proposals.md),
+not the current recovery procedure. This does not establish a production
+disaster-recovery guarantee.

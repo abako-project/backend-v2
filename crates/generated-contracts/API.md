@@ -230,16 +230,15 @@ in `OperationView`; they do not change the already returned HTTP 202.
 
 Coordinator execution share is provider-owned (initially 10%), read from GET /api/catalog and captured on draft create/update. Separate planning quote/accept commands are retired; planning delivery acceptance transfers no funds. Positive budgets require worker effort. Execution approval reserves the full budget and each accepted milestone settles its stored shares.
 
-### Preparing consumers for API-owned tasks (R3a)
+### Task operations and notifications
 
-Task execution is still provider-owned in this release. Existing operation and
-notification JSON is unchanged. Before task ownership switches, both frontends
-must accept the additional forms documented in OpenAPI:
+Task IDs, creation/deletion and assignees are confirmed by the core. Task text
+and progress live in the adapter. Consumers must handle both result sources:
 
-- Accept the future `Queued` status as pending. It means accepted API work
+- Accept the `Queued` status as pending. It means accepted API work
   waiting for execution (including edit holds), without signing or provider
   submission. Existing `Submitted` keeps its possible signed provider submission
-  meaning. Current writers do not emit `Queued`.
+  meaning.
 - A finalized API task operation has `receipt: null` and a `taskResult` containing
   `outcome`, `taskStorageId` and `finalizedAt`. Check `outcome` just as for a
   receipt. `taskResult` is omitted for current provider operations. Finality
@@ -252,6 +251,5 @@ must accept the additional forms documented in OpenAPI:
 
 For either event source, SSE `id`, `Last-Event-ID`, pagination and deduplication
 continue to use the outer `notificationId`; read state changes only through the
-explicit read route. This reader milestone does not emit API task results or
-notifications and does not establish independent frontend readiness. See the
-[R3a scope and cutover gates](../../specs/0015-adapter-core-boundary/r3-task-compatibility.md).
+explicit read route. Deployment still requires frontend compatibility and the
+[paired cutover checks](../../docs/operations/task-cutover.md).

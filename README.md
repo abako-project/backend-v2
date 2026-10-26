@@ -1,112 +1,95 @@
 # Digesta backend
 
-Digesta is a marketplace for clients, coordinators and workers to plan projects,
-reserve team capacity, deliver milestones and settle payments. This Rust backend
-provides a REST API, custodial signing and a lightweight simulated provider so
-application development does not require a local parachain network.
+A marketplace backend for clients, coordinators and workers to plan projects,
+reserve team capacity, deliver milestones and settle payments. Deployments can
+choose DAO branding, currency display and terminology through `GET /api/platform`;
+the bundled profile is Abako for software projects.
 
-The current implementation supports profiles, skill matching and calendars,
-proposals, milestone escrow and payouts, final evaluations, notifications and
-public dispute opening with a private case conversation. `GET /api/platform`
-provides deployment-specific DAO branding and terminology; the bundled profile
-is Abako for software projects.
+Local development needs no parachain network. The default provider uses Rust rules;
+the embedded contract provider runs the same canonical ink! v5 contracts in one
+runtime. Both use simulated assets and real signatures. Neither submits transactions
+to Kreivo. See [current capabilities and limits](docs/status.md).
 
-**Funds and contract execution are simulated.** The mock verifies real sr25519
-signatures and uses Rust business logic by default. The explicit
-[ink! v5 provider candidate](tools/ink-sandbox/README.md) runs source-pinned
-Directory, Calendar and Project WASM locally, with Shadow comparison and
-current-state migration/rollback. Neither provider submits transactions to
-Kreivo or uses real funds. Existing data needs the paired
-[current ownership transition](docs/operations/task-cutover.md). See the
-[current status and limitations](docs/project/project-context.md).
+## Run
 
-## Architecture
+Use Linux, Docker Compose 2.24.4 or newer, and a running Docker daemon. Images build
+their own toolchains. Follow the [Compose startup steps](infra/README.md#start) to
+generate private development secrets and start PostgreSQL, the backend and frontend.
+Open **http://localhost:8088**. The guide covers login, persistent data and shutdown.
+
+[Development accounts and seeding](docs/operations/local-development.md#local-development-accounts)
+provide disposable clients, coordinators and workers.
+[Walk through the marketplace](docs/marketplace.md) for the complete workflow.
+Keep existing state and secrets when updating an environment; see
+[environment compatibility](docs/project/digesta-rename.md).
+
+## How it fits together
 
 ```mermaid
 flowchart LR
-    Browser[Leptos or external frontend] --> Gateway[Nginx]
+    Browser[Frontend] --> Gateway[Nginx]
     Gateway --> Adapter[adapter-api: REST and SSE]
-    Adapter --> Wallet[wallet: custodial signing]
-    Adapter --> Mock[mock-provider: business execution]
+    Adapter --> Wallet[wallet: signing]
+    Adapter --> Provider[provider: core rules]
     Adapter --> PG[(PostgreSQL)]
-    Wallet --> Keys[(Custody SQLite)]
-    Mock --> State[(Mock SQLite or memory)]
+    Wallet --> Keys[(Wallet SQLite)]
+    Provider --> State[(Provider state)]
 ```
 
-Only the adapter is exposed through the API gateway. The wallet owns signing
-keys; the provider owns enforceable business facts. The adapter owns profiles,
-immutable creation text and other application content. Contract instances are objects
-inside one atomic mock runtime, rather than separate nodes or services.
-See [data ownership](docs/architecture/data-ownership.md) and the
-[architecture decision](docs/architecture/adr/0001-rest-and-independent-frontends.md).
+The adapter owns identity, content, task progress and notifications. The wallet
+owns keys. The provider owns enforceable facts: permissions, exact money, capacity,
+lifecycle, task IDs and assignees. Services use private HTTP interfaces and own
+their stores. Frontends only use the adapter. Read [the architecture](docs/architecture.md)
+for transaction, content, notification and recovery boundaries.
 
-## Run locally
+| Path | What to read |
+|---|---|
+| `services/adapter-api/` | Public API, identity, content and operation reconciliation |
+| `services/wallet/` | Custodial keys and durable signing jobs |
+| `services/mock-provider/` | Native business engine and storage; also the reference for contract parity |
+| `crates/provider-execution/` | Shared signature, nonce, replay and receipt shell |
+| `crates/generated-contracts/`, `crates/domain-primitives/` | Wire contracts and validated value types |
+| `tools/ink-sandbox/` | Isolated contract runtime, pinned WASM and parity tests |
+| `apps/leptos-web/` | Independent example frontend |
+| `crates/bloque-rs/` | Standalone unofficial Bloque client; not an active backend integration |
+| `infra/` | Compose, images, gateway and preview deployment tooling |
 
-Use Linux, Rust **1.96.1**, Python 3, Docker Compose **2.24.4 or newer** and a
-running Docker daemon. Backend and browser images build their own toolchains.
-No agent tooling or blockchain nodes are needed.
+The [contract-provider guide](tools/ink-sandbox/README.md) explains how to build,
+run and verify WASM execution. Its [canonical source](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime)
+contains Directory, Calendar and Project. The SDK remains isolated from normal
+application builds while its promotion gates are open.
 
-Follow the [local Compose startup guide](infra/README.md#start), which generates
-private development secrets and starts PostgreSQL, the backend and the independent
-Leptos frontend. Open **http://localhost:8088**. The guide explains administrator
-login, persistent data, shutdown and replacing Leptos with the team's frontend.
-For an existing environment, read the [rename notes](docs/project/digesta-rename.md)
-before changing any secrets or storage.
-
-[Local development accounts and seeding](docs/operations/local-development.md#local-development-accounts)
-provide disposable workers, coordinators and clients for the complete flow.
-The [happy-path guide](docs/project/happy-path.md) explains the workflow and API calls.
-
-## API and frontend integration
-
-Both frontends use the same public REST/JSON and authenticated SSE API:
+## Integrate a frontend
 
 - [HTTP contract and examples](crates/generated-contracts/API.md)
 - [OpenAPI](contracts/openapi.json), also served at `/api/openapi.json`
-- [Platform profile configuration](services/adapter-api/README.md#public-platform-profile)
+- [DAO profile configuration](services/adapter-api/README.md#public-platform-profile)
 - [External frontend setup](infra/README.md#another-frontend)
 
-Sessions use an HttpOnly cookie. Authenticated mutations need `X-CSRF-Token`;
-retryable operations use `Idempotency-Key`. Business mutations return
-`202 OperationRef`: poll the operation and inspect its execution receipt before
-showing success. SSE delivery does not mark notifications read. Wallet and
-provider endpoints are internal.
+Sessions use an HttpOnly cookie. Authenticated mutations require `X-CSRF-Token`;
+retryable operations use `Idempotency-Key`. Business writes return an operation
+reference. Poll it and require exactly one confirmed result, `receipt` or
+`taskResult`, before showing completion. SSE notifications do not mark themselves
+read. Wallet and provider endpoints are internal.
 
-## Verify
+## Verify and review
 
-For application verification without containers, install PostgreSQL server tools `initdb`,
-`pg_ctl` and `psql` on `PATH`, then run as a non-root user:
+For native development use Rust **1.96.1**, Python 3 and PostgreSQL server tools
+`initdb`, `pg_ctl` and `psql` on `PATH`, then run as a non-root user:
 
 ```sh
 bash scripts/install-dev-tools.sh
 bash scripts/verify.sh app
 ```
 
-The command runs Rust checks, tests, the frontend WASM check and API E2E.
-The E2E suite starts disposable PostgreSQL and real backend processes with fresh
-secrets. It runs four scenarios on each mock storage backend: the signed
-lifecycle/security/SSE flow, a four-milestone team flow, disputes and auxiliary
-profile/catalog/Bramp checks. It removes temporary data. These are API tests;
-browser behavior needs a separate check.
+This runs Rust checks/tests, frontend WASM verification and real-service API E2E
+against disposable PostgreSQL. The [verification guide](ci/README.md) also covers
+contract parity, dependency policy, containers and browser limits. Use on-disk
+`TMPDIR` and Cargo output directories when `/tmp` is RAM-backed.
 
-See [verification and CI](ci/README.md) for Rust, frontend, infrastructure and
-dependency-policy checks. Historical results describe the revisions they tested.
-
-## Repository guide
-
-| Path | Contents |
-|---|---|
-| `services/` | REST adapter, signing wallet and transactional mock provider |
-| `crates/` | Domain primitives, wire contracts and standalone Bloque client |
-| `apps/leptos-web/` | Independent browser frontend consuming the public API |
-| `contracts/` | Public OpenAPI and contract governance |
-| `tools/ink-sandbox/` | Isolated v5 WASM compatibility proof and pinned artifacts |
-| `infra/` | Local Compose, images, gateway and server-preview tooling |
-| `specs/` | Approved behavior; see the [specification index](SPECS.md) |
-| `docs/` | Architecture, development, operations and security guidance |
-
-Start with [current status](docs/project/project-context.md),
-[requirements](SPECS.md), [deployment and recovery](docs/operations/cloud.md),
-[contributing](CONTRIBUTING.md), and the [approved simplification plan](docs/project/repository-simplification.md).
-The server preview uses simulated assets; production custody and real-chain
-execution are not delivered. Releases and deployments require explicit approval.
+[Approved requirements](specs/README.md) define business behavior.
+[Contributing](CONTRIBUTING.md) describes changes and review.
+[Recovery](docs/operations/disaster-recovery.md), [task ownership cutover](docs/operations/task-cutover.md)
+and [security findings](docs/security/supply-chain.md) cover operational limits.
+Record commands, results and tested revisions in PRs; historical development notes
+remain in Git. Release publication and deployment require explicit approval.

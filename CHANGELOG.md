@@ -7,7 +7,7 @@
   repository owner's namespace. See `docs/project/digesta-rename.md` before
   reusing an existing local environment.
 - Added `.github/workflows/release.yml`: `v*.*.*` tags on `master` run fmt,
-  clippy, Nextest and doc tests, then publish `digesta-adapter-api`,
+  clippy, Cargo tests and doc tests, then publish `digesta-adapter-api`,
   `digesta-wallet` and `digesta-mock-provider` to GHCR with semver tags and
   the Podman auto-update label.
 
@@ -17,7 +17,7 @@
   member on workspace dependency versions and lints.
 - Enabled HTTPS through `reqwest`'s `rustls` (aws-lc-rs) and allowed
   CDLA-Permissive-2.0 in `deny.toml`; see
-  `docs/dependencies/bloque-client-2026-09-25.md`.
+  the [original dependency review](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/docs/dependencies/bloque-client-2026-09-25.md).
 
 ## 2026.09.23
 

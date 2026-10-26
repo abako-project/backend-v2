@@ -64,43 +64,22 @@ Published manifests and license files are available under each exact package
 version on crates.io. [cargo-deny license exceptions](https://embarkstudios.github.io/cargo-deny/checks/licenses/cfg.html#exceptions)
 explain why package-level permissions are narrower than a global allowlist.
 
-## Observed evaluation
+## Current status and lock identity
 
-2026-10-22, cargo-deny 0.20.2: the locked integration graph passes advisories,
-bans, licenses and sources under these exact exceptions. Multiple-version and
-deprecated-SPDX warnings remain. The unchanged root policy still rejects its
-recorded findings; those findings remain unwaived.
+The policy is blocked by unwaived
+[RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387.html) in
+`crypto-bigint 0.5.5`. It reports timing variability in operations intended to be
+constant-time. The scoped maintenance/license approval above does not cover this
+advisory. No crypto upgrade or expanded exception is part of the cleanup.
 
+The package rename to `ink-sandbox` changes only the local package name in
+Cargo.lock. Registry packages, versions, sources, checksums and dependencies stay
+identical. `check.py` pins the resulting hash; exceptions and the 2026-12-01 expiry
+remain unchanged. This fingerprint renewal is not a new dependency-policy waiver.
 
-## M3 exact-lock renewal
-
-The signed Directory bridge reuses rand 0.10.2, rand_core 0.10.1, chacha20 0.10.2
-and cpufeatures 0.3.1 from the already reviewed application graph. Versions,
-registry sources and checksums match the app lock exactly. No existing SDK
-package is upgraded/removed, SDK cohort is unchanged, and the four advisory IDs,
-thirteen license exceptions and December 1 expiry are unchanged. The renewed
-fingerprint is the SHA256 in `check.py`; the [dependency review](../dependencies.md)
-records features, metadata, alternatives and upstream unsafe/crypto implications.
-Independent xhigh M3 review accepted this exact delta at `9dccb98`; see the
-[M3 evidence](../../../progress/handoffs/SPEC-0013-M3-SHELL.md). The renewed lock
-SHA256 is `0868a865d1445ca6b43f194af80b6920741a22748f80fd1e7db54aa409bebbaf`.
-The policy gate passes all four checks with the unchanged exceptions.
-
-## M8 exact-lock renewal
-
-Independent xhigh review approved the dependency/API foundation at `ddb4574`
-for SHA256 `6177968181449839086defd28175e02f56ee5b5c6f9c277455100b84554957ac`.
-The graph adds 15 packages already present in the app lock, upgrades/removes none,
-and retains every existing checksum. The [dependency review](../dependencies.md)
-records purpose, features, exact metadata and implications. Test-only signing/key
-derivation remains outside the linked production graph. The four advisory IDs,
-thirteen exact license exceptions and December 1 expiry remain unchanged. This
-renews only the fingerprint; the normal policy scan must still pass without extra
-waivers. No complete M8, release or authority-promotion approval is implied.
-
-
-R2b1's reviewed security patch changes only Tokio 1.53.1→1.53.3 in the app and SDK
-locks, with identical resolved features, to address RUSTSEC-2026-0386. Current SDK
-fingerprint: `c03e9b652133062cbdf55dc8e5002cad3c245f5830dd6ece63ccb59c93b3099f`.
-No ignore or expiry changes. See the [patch review](../dependencies.md#r2b1-advisory-fixing-patch-2026-10-23)
-and [gate/review record](../../../progress/handoffs/SPEC-0015.md).
+The graph includes the existing SDK's unsafe/native/cryptographic transitives,
+SQLite and the shared execution/HTTP components. It accepts only pinned artifacts;
+there is no arbitrary WASM upload endpoint. The complete earlier dependency review
+is available in [Git](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/tools/ink-sandbox/dependencies.md).
+Run the policy command for current advisory data; functional tests are not security
+clearance and do not authorize promotion or deployment.

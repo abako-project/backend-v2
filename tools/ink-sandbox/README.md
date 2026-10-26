@@ -1,570 +1,155 @@
-# ink! v5 local provider candidate
+# Embedded contract provider
 
-This candidate follows [SPEC-0013](../../specs/0013-ink-v5-sandbox/spec.md).
-It runs production WASM in a native FRAME runtime without starting a node. It
-is deliberately a separate Cargo workspace and lockfile: the application keeps
-its current dependency graph and default Rust authority.
+This package runs the canonical Directory, Calendar and Project contracts as
+ink! 5.1.1 WASM in one FRAME/pallet-contracts runtime. No parachain nodes or block
+production are needed. It uses the same internal HTTP boundary and signing shell
+as the native mock; browser clients continue using the adapter's REST/SSE API.
 
-The complete candidate supports explicit Rust, Shadow and Sandbox authority,
-current-state import/rollback and the existing private HTTP API. Start with the
-[current build and operation guide](#explicit-whole-provider-candidate-m8).
-The default application still uses Rust. Formal performance acceptance, approved
-promotion and two observed release cycles remain open. Earlier milestone sections
-below describe the retained compatibility tests; historical acceptance records
-live in `progress/handoffs/SPEC-0013*.md`.
+The SDK has its own Cargo workspace and lockfile. Normal application builds keep
+the native provider and do not acquire the SDK dependency graph. The candidate
+is functional but is not deployed or approved for promotion; see
+[dependency policy](policy/README.md) and [current limits](../../docs/status.md).
 
-SPEC-0015 R3 uses CoreArchiveV5 / engine version5 and CoreSnapshotV5. The API
-owns names, descriptive content, catalog/request narrative, lifecycle reasons,
-and task text/progress. Core retains numeric terms, permissions, task IDs and
-assignees, the actual allocator and fixed content references. Creation/deletion
-and membership changes require core confirmation; local task edits retain an API
-result. Existing V4 stores require the [paired task owner exchange](../../docs/operations/task-cutover.md).
-Earlier V3↔V4 catalog exchange remains an explicit historical converter.
-Directory and Project are148857 and184306 bytes; runtime limits are unchanged.
-All three operational contracts use ordinary ink! storage. R5 removes obsolete proof wiring and the unused canonical paging helper. Current acceptance and promotion limits are recorded in the
-[ownership handoff](../../progress/handoffs/SPEC-0015.md).
+## Build and run
+
+Use the repository's Rust toolchain. From the repository root:
 
 ```sh
+cargo build --release --manifest-path tools/ink-sandbox/Cargo.toml --locked --bin whole-provider
 bash scripts/verify.sh ink-sandbox
-```
-
-The current compiled bundle contains the three application contracts and one
-private `sandbox-probe`. Operational signed suites test nested calls, exact
-assets, receipts, failure rollback and restart against the native reference.
-The probe retains traps, nested rejection, denied origins, malformed selectors,
-gas exhaustion, successful persistence and query/cancellation isolation.
-All run production WASM, not ink's offchain test environment. See the
-[R5 removal and regression inventory](../../specs/0015-adapter-core-boundary/r5-cleanup.md)
-for immutable provenance and the checks moved off obsolete proof contracts.
-
-## M3 Calendar slice
-
-The separate `calendar-v5` candidate implements integer minutes, ISO weeks,
-weekly overrides and append-only reservations from the current app. Its real
-WASM and the Rust engine independently replay
-[`calendar/fixtures/parity.json`](../../services/mock-provider/src/calendar/fixtures/parity.json).
-The cases compare allocations, availability, capacity changes, domain errors
-and retained project/milestone/requirement references. Additional WASM tests
-exercise caller restrictions, query isolation, malformed weeks, metering,
-competing SQLite workers and restart. The old four compatibility artifacts stay
-unchanged. Directory and signed candidate routing are covered below. The older signed
-Calendar fixture continues testing the explicitly limited legacy contract.
-
-Directory creates one Calendar instance per worker. Only the worker or its
-creating Directory can change capacity; only an immutable reservation controller
-can reserve. These tests pass explicit fixture accounts as those capabilities.
-The component tests isolate Calendar permissions; complete Project wiring is
-covered by the M5/M6 and whole-provider tests. They add no browser API.
-No calendar release operation is added: the approved rules retain consumed hours.
-
-Adding the bundle changes the pinned candidate cohort identity. Existing private
-candidate databases fail closed; use a new disposable fixture database. Ordinary
-mock-provider SQLite data and its Rust authority remain unchanged. Complete
-import is covered in M7 below; formal performance acceptance and promotion
-remain open. See the
-[slice handoff](../../progress/handoffs/SPEC-0013-M3-CALENDAR.md).
-
-## M3 Directory slice
-
-`directory-v5` owns catalogs, descriptive skill/role associations, worker
-registration/qualifications, mode/eligibility, and skill requests/moderation.
-Registration creates an actual `calendar-v5` child in the same transaction.
-Worker views read that Calendar rather than duplicating capacity/reservations.
-Fixed constructor capabilities control reservation and retained proposal references;
-Real Project integration is covered by M5/M6 below; no browser endpoint is added.
-
-The shared [Directory trace](../../services/mock-provider/src/domain/fixtures/directory-parity.json)
-has 48 transitions replayed independently by Rust and real WASM. It compares error
-codes, effect IDs/kinds/recipients and SHA256 of the full SCALE catalog/worker/request
-projection after every step. IDs are captured fixture inputs; this does not claim
-signed admission, receipt/event-cursor or RNG bridge coverage. Additional WASM tests
-exercise request visibility, proposal-reference guards, immutable caller capabilities,
-nested overcommit errors and rollback of a tentative Calendar on parent failure.
-Raw-trie restart is checked during the trace.
-
-The v5 compiler uses Unicode 16 while the app uses Unicode 17. The candidate
-includes a reproducible, dependency-free compatibility layer for changed
-lowercase mappings and final-sigma properties, with the Unicode license notice.
-The canonical source documents generation and exhaustive cross-toolchain checks.
-The raw Directory slice did not change dependencies; the signed bridge below
-reuses the application RNG in the SDK lock without adding policy exceptions.
-
-See the [Directory slice handoff](../../progress/handoffs/SPEC-0013-M3-DIRECTORY.md)
-for canonical source, Unicode and artifact reproduction evidence.
-
-## M3 signed Directory bridge
-
-`Worker::start_directory_fixture` deploys the pinned Directory and Calendar code
-from explicit catalog/controller inputs. It uses the same `provider-execution`
-shell as Rust for all nine Directory/Calendar commands. The verified user calls
-Directory directly; contracts check domain permissions. The bridge decodes effects
-and errors and supplies the first ID from the version-1 locked native RNG stream.
-Ordinary execution captures inputs internally. `execute_directory_with_inputs`
-exists only for trusted comparisons in this standalone workspace, with no HTTP route.
-
-The [signed trace](../../services/mock-provider/src/domain/fixtures/directory-signed.json)
-contains 49 real signed calls, using disposable fixture keys. Both engines read
-it independently. Every step compares the complete M3 projection and actual shell
-history, including receipts, retained inputs, nonces, timestamps and event cursors.
-Additional tests cover signature/envelope rejection, request visibility, replay,
-query isolation, child rollback on SQLite failure, metering, restart and competing
-writers. Ordinary domain rejection commits only a failed receipt and nonce;
-unknown ABI/invariant/child-deployment failures abort without a shell write.
-
-The runtime, actual shell and outcome commit together. Raw mutation requests cannot
-write signed stores. Startup checks the fixture configuration, root, generation
-history, runtime identity and pinned Directory code. The added RNG packages match
-exact versions and checksums already in the app; see the [review](dependencies.md)
-and renewed exact-lock [policy record](policy/README.md). No exception was broadened.
-
-The working application still selects Rust. Other domains return `IncompleteCoverage`;
-no browser contract, provider selector or hybrid fallback is added. Scores/matching,
-Project/reference-controller integration, import capacity, performance and whole-provider
-promotion remain later gates. See the [M3 signed handoff](../../progress/handoffs/SPEC-0013-M3-SHELL.md).
-
-## M4 reputation and matching
-
-Directory now stores the separate exact worker/coordinator accumulators and the
-same validated score policy. Its signed bridge adds `SetScorePolicy`; root authority,
-receipt/nonces, replay and event kind match Rust. No reputation is fabricated on
-registration or settlement. Internal Project-controller contributions use committed
-minutes and current relative vote weights; replay does not add them again and
-policy edits leave past accumulators unchanged. Actual completed-project evaluation
-participants and authorization remain M6.
-
-The [M4 trace](../../services/mock-provider/src/domain/fixtures/matching-parity.json)
-contains 172 component actions replayed independently by native Rust and real WASM.
-It compares outcomes, exact policies and complete M3 projections including scores
-and reservations after each action. It exercises skill intersections, descriptive
-roles, relevant-mode scores, earlier-team preference, distinct slots, capacity,
-zero weights, qualifications/index edits and failure across multiple milestones.
-Sixty-four tied coordinator seeds also compare the following project ID. Seventy-nine
-workers exercise candidates beyond a short list. Dense skill entries avoid a
-packed-vector storage ceiling or a fixed search/truncation limit.
-
-Directory is the immutable reservation controller of its Calendar children. Only
-its fixed Project-controller capability can request matching/reservation. The worker
-can still change its own capacity. Direct external reserve calls are rejected;
-M3 fixture tests now use the same Directory controller path. Matching reserves
-all milestones in one nested transaction; competing SQLite workers observe committed
-capacity, and restart retains it. M5/M6 must connect real Project calls to these
-hooks before whole-provider parity can be claimed.
-
-The locked version-1 tie sampler preserves native behavior, including rand's documented
-minute default single-sample bias. This is parity evidence, not strict mathematical
-unbiasedness; changing it requires coordinated/versioned input semantics.
-
-The canonical build reuses the four exact RNG versions already reviewed in the app
-and SDK. The SDK/app locks and exceptions are unchanged. Updated immutable artifacts
-change candidate identity and require fresh private fixture databases. The fresh
-source archive reproduces both Directory and Calendar WASM/ABI. See the
-[M4 evidence](../../progress/handoffs/SPEC-0013-M4.md). Rust remains authoritative.
-
-The committed `fixtures/manifest.json` pins canonical source commit, toolchain,
-artifact hashes and per-contract dependency locks. Tests verify artifact and
-lock hashes before instantiation. With cargo-contract 5.0.3, Rust 1.88.0 and its
-WASM target installed and the manifest source commit available locally, reproduce the WASM and ABI from a local canonical checkout:
-
-```sh
-python3 tools/ink-sandbox/rebuild.py ../contracts --offline
-```
-
-Omit `--offline` to fetch missing locked build dependencies. This builds committed
-source in a disposable directory and compares the resulting WASM hash and ABI;
-it never edits the canonical checkout or refreshes committed artifacts. Native
-proof tests use Rust 1.96.1. Contract compilation is a separate artifact-build
-step, never part of provider startup.
-
-The runtime follows pallet-contracts 43's coherent dependency family rather than
-stock ink_sandbox 5.1.1's FRAME 32 family. Its minimal asset extension implements
-Kreivo extension 0, functions 0/1/2 (`Here(u32)` only), including exact u128/SCALE
-encoding, caller/address semantics, error status codes and `Preserve` transfers.
-Other extensions/assets fail explicitly. It does not emulate Kreivo's community
-upload permissions, XCM, block consensus or production transaction fees.
-
-Native execution/storage balances are technical fixture funds. Asset 1 balances
-are separate. In particular, `Preserve` requires a minimum asset balance; the
-legacy Project deliberately leaves one asset unit after payout. The current
-application permits spending the full visible balance. The M6 candidate implements the approved separate technical-reserve policy and
-checks full visible spending/payouts against actual asset balances. Legacy fixtures
-retain their original behavior; no user payout is reduced.
-
-The candidate now has a dedicated worker and a separate SQLite store. Typed
-call/instantiate requests have an eight-item queue, inputs/outputs bounded by
-`MAX_SIGNABLE_BYTES + 1024` (currently 263,168 bytes), separate 64 MiB shell and
-checkpoint limits, finite gas and bounded checkpoint reconstruction. Whole-state
-exports also have a 64 MiB archive/cumulative-cell limit. Public callers cannot
-upload WASM or supply runtime callbacks. The worker verifies
-compiled-in bundles and their build locks before opening candidate state.
-Queries run on discarded state. An expected revision and `BEGIN IMMEDIATE`
-serialize competing workers; the full runtime, opaque shell envelope and exact
-execution outcome commit in one SQLite transaction. The worker closes admission
-at shutdown, finishes any executing transaction and rejects queued work. Call
-`shutdown().await` to observe its join; dropping the owner signals cancellation
-and the worker observes/logs its result without blocking a Tokio core thread.
-A lost response never proves non-execution.
-
-Checkpoint version 2 includes sorted raw trie nodes (with child tries), root,
-runtime/configuration/lock identity, bundle-manifest identity and a corruption
-digest. Decoding bounds bytes, allocation, nodes and reference counts; restore
-checks node hashes and traverses every top-level and child key. Corrupt,
-unsupported or incompatible state rejects startup without resetting genesis.
-The old version-1 proof format was never a provider format and is not migrated.
-The existing Rust provider's JSON/SQLite format is unchanged.
-
-The worker uses the real `provider-execution` shell shared with the Rust provider.
-Current Directory and whole-provider tests verify signatures, replay, captured
-inputs, nonces, receipts and events committed with runtime state. Raw mutation
-admission rejects signed stores; mode, root, checkpoint and pinned code are checked
-on startup. The early Calendar-only fixture bridge has been removed. Its unique
-regressions now use the current Directory path; no public raw-contract endpoint
-or frontend behavior is added.
-
-The owner approved the exact [SDK exceptions](policy/README.md) for integration
-work on 2026-10-22. Check the expiring, exact-lock SDK policy separately:
-
-```sh
 bash scripts/verify.sh ink-sandbox-dependencies
 ```
 
-The root application graph adds only the shared shell crate; it acquires no SDK
-packages. Its existing advisory/license findings are not waived. The full signer
-remains in wallet/app tests; the shared verification shell uses the exact same
-Schnorrkel primitive and context without importing key derivation into the SDK.
+If `/tmp` uses RAM, set `TMPDIR` and `CARGO_TARGET_DIR` to directories on disk.
+Use the existing local secret files; do not put secret values in shell arguments.
+Configure `MOCK_ROOT_ACCOUNT_FILE`, `INTERNAL_SERVICE_TOKEN_FILE`, `BIND_ADDR`,
+`WHOLE_DATABASE_PATH` and `PROVIDER_AUTHORITY=rust|shadow|sandbox`, then run
+`whole-provider serve`. With no command, it serves. An empty destination gets
+explicit development genesis; an existing incompatible store fails startup.
 
-The candidate SQLite schema distinguishes raw and Directory signed modes.
-Earlier proof/candidate SQLite files without the mode column reject startup;
-these were never application provider data. Runtime/lock identity changes also
-reject old candidate checkpoints. At this earlier milestone, app SQLite/JSON
-was unchanged; the current R2b1 cohort instead requires the explicit transition
-linked at the start of this guide.
+| Authority | Business result | Comparison |
+|---|---|---|
+| `rust` | Native reference | Disabled |
+| `shadow` | Native reference | Execute and compare WASM independently |
+| `sandbox` | WASM contracts | Compare against the native reference |
 
-`NoRandomness` is still unused v5 host scaffolding, not matching entropy.
-Host-call weights are conservative finite proof limits, not production
-benchmarks. Passing tests establishes neither application parity nor the
-specified latency budgets. Complete domain, import/rollback and whole-provider
-candidate coverage is described below; promotion remains a separate decision.
+Authority is explicit and persisted. Comparison never silently substitutes an
+engine. `whole-provider diagnostics` reports the selected authority and complete
+comparison status. Raw fixture calls and test controllers are not public APIs.
+The native reference remains until the approved promotion/release gates are met.
 
-See [dependency review](dependencies.md) and the recorded implementation evidence
-in [the handoff](../../progress/handoffs/SPEC-0013.md) before promoting this runtime into
-the provider.
+## Where to read the code
 
-M5's explicit `DirectoryFixture { projects: true, .. }` adds the pinned v5
-Project factory and instances. Signed calls route to Directory for creation and
-policy changes, then directly to Project as the verified user. Address lookup
-and execution share one gas budget. Contracts own unpaid planning, proposals,
-revision checks, optional tracking tasks, estimates, cancellation and reasons.
-Directory owns the public registry, global IDs/task counter and catalog references.
-`marketplace_projection` is a private fixture diagnostic; it does not add an HTTP
-endpoint. Money/execution commands return `IncompleteCoverage` without a write.
-Legacy planning escrow cannot be cleared until money coverage exists.
+| Path | Purpose |
+|---|---|
+| [src/lib.rs](src/lib.rs), [assets.rs](src/assets.rs) | Runtime, unchanged resource caps and asset extension |
+| [src/worker.rs](src/worker.rs), [checkpoint.rs](src/checkpoint.rs) | Bounded worker queue, persistence, shutdown and complete child-trie checkpoints |
+| [src/worker/whole.rs](src/worker/whole.rs) | Authority selection and atomic comparison/commit |
+| [src/worker/directory.rs](src/worker/directory.rs), [projects.rs](src/worker/projects.rs) | Private signed ABI routing |
+| [src/worker/archive.rs](src/worker/archive.rs), [project_storage.rs](src/worker/project_storage.rs), [migration.rs](src/worker/migration.rs) | Ordinary ink cells, complete exports and fresh sealed imports |
+| [src/provider.rs](src/provider.rs), [src/bin/whole-provider.rs](src/bin/whole-provider.rs) | Existing provider interface and owner CLI |
+| [fixtures/manifest.json](fixtures/manifest.json) | Exact source, WASM/ABI and build-lock pins |
+| `tests/` | Signed parity, financial failure recovery, growth, import/restart, HTTP and rollback |
 
-The frozen 74-call native/VM trace compares complete catalog, worker, request,
-Project and reason projections plus the shared shell after every call. It covers
-retained task storage, failed counter allocation, policy capture, exact rounding,
-dates, optional tasks, permissions, revisions, reference cleanup and restart.
-Factory SQL-failure injection verifies that child creation, registration and the
-shell all roll back; competing workers replay a single successful commit. Direct
-contract calls check factory/ID capabilities and discarded query writes.
+The bundle contains three application contracts and one small private
+`sandbox-probe` for traps, nested reverts, gas exhaustion and persistence tests.
+Application rules live in the [canonical contracts repository](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime).
+The worker owns transport execution, not another copy of contract business logic.
 
+## Persistence and boundaries
 
-## M6 execution and money fixtures
+The shared shell verifies signatures, generation, nonce and idempotency. Each
+accepted execution captures its time and entropy once. Runtime effects, receipts,
+events and captured inputs commit together in SQLite. Failed database commits
+restore the previous checkpoint; exact retries preserve the original outcome.
+The worker queue is bounded at eight requests and shutdown observes in-flight work.
 
-`DirectoryFixture { projects: true, money: Some(mock_funding), .. }` enables
-explicit financial coverage. Directory owns visible integer KVN accounting and
-simulated Bramp requests. Genesis prefunds an invisible physical inventory;
-contracts separately provision each account/Project's technical minimum. The
-same Kreivo extension moves actual assets. Verified clients call Project directly
-for deposits, so the factory never pays on their behalf. Free balances, escrow,
-holds and visible minted supply conserve exactly, without a payout haircut.
-`Some(false)` disables the test-only funding command while keeping normal Bramp.
+Contracts use ordinary ink storage. All growing lists have individually addressed
+records; there is no custom paging library. Project operations still traverse
+history, so memory/gas remain finite. Existing caps include 16 KiB storage cells,
+192 KiB contract code, 16 WASM memory pages and 64 MiB archive/checkpoint budgets.
+No resource cap was increased for the simplification.
 
-Projects implement captured execution funding, full-team reservations, sequential
-milestones, delivery/rejection/resubmission, current and retained legacy settlement,
-final evaluations, formal disputes and frozen cancellation. Cases cannot resolve
-or unlock funds. The 129-call signed native/WASM trace, with 14 backward-clock abort probes, compares the complete
-marketplace, balances/issuance/requests, cases and shared shell after every call
-and across restart. Financial diagnostics read one SQL snapshot. Actual tests
-check physical balances/minima and supply, SQL rollback during multi-recipient
-settlement, competing full withdrawals, metered approval failure and private reads.
-A nested exhausted ink call may surface as an outer contract trap; either known
-metered failure commits only its failed receipt/nonce, with no business effects.
+The adapter owns descriptive content, URL validation, task text/progress and
+notifications. Contracts retain numeric terms, exact money, permissions, task IDs
+and assignees. Evidence uses fixed commitments. Required legacy URL preimages stay
+offchain for original signed replay and complete rollback; no URL parser runs
+inside the contracts. Legacy signed replay and metadata lowering remain supported;
+fresh legacy task-content writes are rejected because the API now owns those edits.
+[Architecture](../../docs/architecture.md) describes ownership.
 
-SPEC-0014 removes the URL validator from current execution. The three operational
-contracts are Directory (148,857 bytes), Calendar and Project (184,306 bytes).
-The adapter validates URLs and retains complete evidence; Project stores fixed
-hashes, plus record IDs for new commitments. Contracts never fetch references.
-Seven pinned artifacts remain: these three plus four earlier test fixtures.
-Broader fixture packaging cleanup is separate.
+## Import, backup and rollback
 
-The private SDK codec converts old signed URL references to tagged legacy hashes.
-An offchain checkpoint map retains at most 16,384 distinct legacy references,
-within the existing 64 MiB state budget. It preserves exact original bytes, including
-opaque digest fields. Missing or changed preimages fail explicitly. Import/export
-and rollback restore complete old references; old comment-only history remains
-unanchored. New commands retain their context-bound commitment fields directly.
-These changes add no dependency, service or policy exception.
-
-Configuring Project code permanently disables the early fixtures' fixed external
-controllers. Real hooks accept registered Projects; finance cannot be enabled
-before Project code configuration. Older isolated fixtures retain their
-explicit test capability. Unsupported component coverage still commits nothing.
-
-These component tests remain private fixture coverage. Complete import, sealed
-migration, retained-state capacity, current-state rollback and whole-provider
-selection are covered below. Formal performance acceptance and promotion remain
-open. Rust stays the application authority. M6 changes no public protocol,
-frontend flow or application storage format. See [M6 evidence](../../progress/handoffs/SPEC-0013-M6.md).
-
-## Complete retained-state migration candidate (M7)
-
-`Worker::import_archive` creates a fresh candidate store from the private typed
-`CoreArchiveV4`. Its caller must first validate the archive with the native bridge,
-pause writes, drain pending operations and reconcile uncertain outcomes. There is
-no HTTP import endpoint. `Worker::reopen` requires an existing sealed store;
-imports reject populated destinations and never regenerate incompatible state.
-The default application remains Rust.
-
-Directory alone creates dormant Calendar/Project instances. It imports balances,
-escrow, holds, histories, exact score accumulators, categories and task counters
-without replaying old operations, payments, events or evaluations. Historical
-evaluation markers explicitly prevent a second contribution; no old-policy vote
-hash is invented. Directory seals its import capability permanently and activates
-its children only after the complete archive matches. SQLite then commits the
-runtime and retained shell together.
-
-Directory imports natural typed records in batches of at most 64 records and
-8 KiB encoded input. Fixed headers declare child counts; separately keyed entries
-preserve qualifications, catalog references and project identities. Sealing
-checks completeness and uniqueness before activating children. Worker skill
-indexes are populated with each imported membership. Project receives a bounded
-encoded batch of natural records through Directory, decodes its concrete type
-and retains no byte buffer. Calendar also uses bounded typed records. Import uses the existing fixed `WHOLE_GAS` budget;
-`WholeConfiguration.gas_limit` continues to control subsequent signed execution.
-Finite gas/memory and archive/checkpoint admission still apply, and a failure
-commits no destination.
-
-`worker::archive` and its Project codec decode the pinned ordinary cells of all
-three operational contracts through pallet-contracts' read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
-legacy signed creation profiles are lowered before WASM; bounded core records
-retain their commitments without relaxing Kreivo's 16 memory pages or 192 KiB code limit. Complete reads
-have a cumulative 64 MiB cell budget and a 64 MiB archive limit. The existing
-runtime checkpoint and shell have separate 64 MiB caps. Admission/serialization
-failure commits no candidate state; it never truncates data or claims agreement.
-Successful whole-candidate writes must remain completely exportable before they
-commit. The `comparison` diagnostic compares complete archives and exact outcome
-classes; missing coverage or either missing export is `Incomplete`.
-
-The signed migration trace imports six historical snapshots, compares all fields
-after another 59 sandbox operations, preserves the near-limit legacy error
-priority and exports the **current** state for rollback. Rehearse the cross-engine
-rollback with ordinary commands (use fresh paths; the archive contains private
-provider data):
+Pause writes and drain/reconcile uncertain operations before changing authority or
+artifact cohort. Keep the configured root and provider generation. Preserve API,
+wallet and provider backups together; a provider archive is not a complete app backup.
+Use protected new file paths. The CLI refuses existing import/output destinations.
 
 ```sh
-sandbox_archive=$(mktemp)
-SANDBOX_ROLLBACK_OUTPUT="$sandbox_archive" cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked --test migration complete_shadow_trace_preserves_current_sandbox_writes_for_rollback
-SANDBOX_ROLLBACK_ARCHIVE="$sandbox_archive" cargo test -p mock-provider --all-features --locked --test migration rollback_current_wasm_state_accepts_new_native_work -- --ignored
-rm "$sandbox_archive"
+# Source stopped; WHOLE_DATABASE_PATH identifies its store.
+whole-provider export current.json
+# Use export-native instead when the source is native mock SQLite.
+
+# Set WHOLE_DATABASE_PATH to a fresh destination and choose its authority.
+whole-provider import current.json
+whole-provider diagnostics
+whole-provider export reopened.json
 ```
 
-The second test imports the observed WASM export into fresh native memory/SQLite,
-checks exact retained state, accepts a new native operation and reopens it. An old
-pre-cutover checkpoint is never a rollback source. Whole-provider HTTP composition
-and the gateway smoke flow are covered in M8 below. Formal performance acceptance,
-promotion and two observed stable release cycles remain open. These fixtures do
-not authorize promotion or a release.
+Compare the complete decoded archives before switching routing. Imports validate
+actual IDs, funds, capacity, history and replay state, then create dormant contracts
+using bounded typed batches. Contracts seal only after exact comparison; imports
+do not replay payments. A failure cannot publish a partial destination.
 
-## Calendar ordinary storage (SPEC-0015 R4 slice)
+Changes to the runtime or pinned bundle identity require fresh import. Renamed
+components do not reinterpret an existing physical checkpoint. Rollback exports
+**current** state after accepted writes into the frozen compatible predecessor;
+never restore a stale pre-cutover checkpoint. The explicit
+[task ownership procedure](../../docs/operations/task-cutover.md) handles paired
+API/core changes. Signed and archive format versions remain intentional.
 
-The operational `calendar-v5` uses standard ink! `Lazy` and `Mapping`, with fixed
-manual keys pinned by the fixture manifest. Its header is at most 138 bytes;
-a reservation is at most 47 bytes. Overrides, ordered indexes and per-week
-reserved totals have their own fixed-size cells. Calendar no longer depends on
-`storage-v5`. Directory and Project also use ordinary storage. R5 removes the
-unused helper from the canonical tree.
-No runtime, code, value, memory, input or gas limit is raised.
+## Reproduce and verify
 
-Replacing 1,000 retained overrides uses more metered resources than the former
-packed representation: this retained call fails under the component fixture's
-`GAS` budget and succeeds with the whole-provider's existing `WHOLE_GAS`. The
-suite preserves both cases, including complete state/history equality after the
-smaller-budget failure and reopen. This is a resource-cost regression, not a
-claim of identical gas usage; the separate ref-time/proof-size cause is not yet
-isolated. Contract dependencies stay pinned to committed Git revisions so
-independent builds reproduce their WASM and ABI.
-
-Whole-provider migration imports the definition and up to 64 typed overrides or
-reservations per call, preserves order and reservations, checks declared counts,
-and seals only after complete archive comparison. A bad later record reverts the
-entire batch and Directory staging. Normal reads and writes use the same ordinary
-cells; the public aggregate Calendar view is unchanged. Existing runtime databases
-remain tied to their original artifact identity: use the paused fresh-destination
-archive procedure, never substitute new WASM into an old checkpoint.
-
-The growth regression accumulates 1,000 reservations through ordinary calls and
-reopens them after a rejected edit; it also checks atomic failure of an oversized
-single call. The opt-in frozen-executable test targets current Directory and Calendar writes,
-complete export/import/reopen, exact signed replay and further signed work in
-Rust, Shadow and Sandbox against the immediately preceding accepted executable.
-The Project slice adds current Project task writes and further task membership
-work after rollback into the frozen Directory slice. Both sides use CoreArchiveV5;
-task content remains in the adapter. Set the frozen
-binary path and its recorded SHA-256:
+The rebuild tool archives the manifest's source commit from a canonical checkout,
+uses its exact build locks, and compares generated WASM and ABI. It publishes nothing:
 
 ```sh
-INK_STORAGE_PREDECESSOR=/ssd/frozen/whole-provider \
-INK_STORAGE_PREDECESSOR_SHA256=<recorded-sha256> \
-cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked \
-  --test storage_cohort -- --ignored --nocapture
+python3 tools/ink-sandbox/rebuild.py /path/to/contracts --offline
 ```
 
-It uses disposable SQLite files, local HTTP and Python's standard library. Keep
-`TMPDIR` and `CARGO_TARGET_DIR` on disk. It is a provider storage rollback proof;
-it does not establish the later API task cutover, browser readiness or production
-migration approval. The separate SDK dependency-policy gate still applies.
+The normal SDK gate checks formatting, compilation, strict Clippy, tests and build.
+The signed suites compare complete facts, receipts and histories with the native
+engine, including failure, restart, growth and reordered/shrunk collections.
 
-## Directory ordinary storage (accepted SPEC-0015 R4 slice)
+The frozen-predecessor test needs an independently preserved executable and hash:
 
-Directory and its embedded Bank use standard ink! `Mapping` and `StorageVec`.
-The packed header is at most 189 bytes. Worker headers are 155 bytes, historical
-request headers 107 bytes and reason records at most 123 bytes. Qualifications,
-request roles, proposal references, project layouts and growing ID indexes use
-individually addressed cells; no collection-sized blob or replacement storage
-library is involved. The public logical archive stays CoreArchiveV5.
-
-Typed-import regression checks include incomplete/duplicate/out-of-range records,
-late failure after a Bank write, child sealing rollback and exact checkpoint
-preservation. A retained request with 2,199 role IDs exceeds the component helper's
-16 MiB proof budget while sealing (123,470,991,092 ref-time units and 16,752,717
-proof bytes consumed before rejection). Import now uses the already existing
-whole-provider budget of 128 MiB; no runtime limits change. This records a real
-cost of individually stored cells, not identical resource usage to packed storage.
-
-The growth regression imports over 5,000 catalog IDs, then removes/reinserts an
-interior ID through signed Shadow execution and reopens the complete archive.
-Current candidate verification and review results are recorded in the
-[SPEC-0015 handoff](../../progress/handoffs/SPEC-0015.md). A test's presence alone
-does not establish a passing gate or authorize cohort activation.
-
-## Project ordinary storage (SPEC-0015 R4 candidate)
-
-Project uses standard Lazy/Mapping with a49-byte root and fixed domain records.
-Measured maximum encoded headers: Project222 bytes, Proposal142, Milestone81,
-Submission208, Reason123 and Dispute310. Requirements, skills, assignments, tasks,
-assignees and all rating lists have individual cells. Canonical dates use ten
-bytes with lossless conversion under the existing validation rule. The contract
-no longer depends on storage-v5 or its Text codec.
-
-The existing business rules consume one transient ProjectData tree. Persistence
-compares fixed cells, updates changed values and removes obsolete children after
-shrinking/removing/reordering lists. It does not create a second before-tree or
-serialized diff registry. Full history is still traversed; memory/gas constraints
-remain finite. ink!'s existing bump allocator does not free intermediate Vec
-allocations within a call, so child lists allocate once at their declared count.
-No allocator replacement or higher runtime limit is introduced.
-
-Directory forwards a registered child's import batch immediately. Project checks
-its Directory caller, dormant phase, DecodeAll, <=64 records/8192 bytes, declared
-parents/counts and duplicate positions. Finish reads every declared child; sealing
-activates the completed child. A late error reverts earlier writes. SDK tests
-exercise malformed/duplicate/out-of-range input, failed finish, unauthorized seal
-and exact checkpoint preservation, plus600-task WASM growth, parent reordering,
-shrink/removal/reuse and restart with exact native comparison. Frozen rollback,
-artifact reproduction and full-gate results are recorded in the ownership handoff;
-this candidate section alone is not an acceptance or activation claim.
-
-## Explicit whole-provider candidate (M8)
-
-The default application stays on its native executable. Build the isolated
-candidate with ordinary Cargo; no node, block production or startup build is
-required:
-
-```bash
-cargo build --release --manifest-path tools/ink-sandbox/Cargo.toml --locked --bin whole-provider
+```sh
+export INK_STORAGE_PREDECESSOR=/protected/preceding/whole-provider
+export INK_STORAGE_PREDECESSOR_SHA256=RECORDED_SHA256
+cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked --test storage_cohort -- --ignored
 ```
 
-`whole-provider` uses the existing private provider HTTP contract. Configure
-`MOCK_ROOT_ACCOUNT_FILE`, `INTERNAL_SERVICE_TOKEN_FILE`, `BIND_ADDR`,
-`WHOLE_DATABASE_PATH` and `PROVIDER_AUTHORITY=rust|shadow|sandbox`. Authority
-is fixed in store identity and defaults to `rust`. The candidate is a local mock
-with funding enabled; it does not connect to Kreivo. Whole-provider startup
-rejects a funding-disabled configuration because its retained native reference
-is compiled with `mock-seed`; earlier explicit contract fixtures still support
-the funding-disabled proof.
+It verifies current writes, predecessor import/reopen/replay and further work,
+incompatible checkpoint rejection, then fresh roll-forward. Its normal ignored
+status does not count as a passing rollback check.
 
-Rust executes only native rules. Shadow observes WASM beside native authority;
-sandbox observes native rules beside WASM authority. One captured input set and
-one SQLite transaction cover accepted primary state, reference state, receipts
-and comparison status. A primary infrastructure failure commits nothing. A
-reference failure or difference stops comparison and remains visible through
-`whole-provider diagnostics`; it never changes the primary or triggers a retry
-on another engine. Restart does not reset that status. Fresh current-state import
-is required to resume comparison.
+For the real wallet/adapter/PostgreSQL flows, first build the application binaries:
 
-The worker queue stays bounded at eight requests. Existing read models run on the
-worker over the selected primary archive. Fixture-only projections/raw queries
-reject whole-provider access. The shared HTTP routes and authorization policies
-are unchanged; private archives have no HTTP endpoint.
-
-For gateway compatibility, build the normal wallet/adapter binaries and run:
-
-```bash
+```sh
 python3 scripts/poc-e2e.py --storage sqlite \
   --provider-binary tools/ink-sandbox/target/release/whole-provider \
-  --provider-authority shadow
+  --provider-authority sandbox
 ```
 
-Repeat for `rust` and `sandbox`. The harness verifies that shadow/sandbox
-comparisons remain matched throughout the real signed REST lifecycle. These are
-explicit compatibility tests, not a promotion of application authority.
+Repeat for `rust` and `shadow`; matched comparisons are checked. Browser/frontend
+deployment requires its own walkthrough. Controlled engine timing is opt-in:
 
-### Offline cutover and current-state rollback
-
-These steps switch authorities within the current V5 cohort. For the explicit
-V4↔V5 content/ownership transition, use the [paired task procedure](../../docs/operations/task-cutover.md).
-A bundle change, including removal of unused fixtures, changes cohort identity:
-export and import into a fresh store; never reuse its physical checkpoint.
-
-Pause business writes, drain the adapter/provider queue and resolve unknown
-outcomes before export. Keep the source stopped until comparison and routing
-switch are complete. Use the same configured root throughout. Archives contain
-private data and replay history; keep them in a protected local directory.
-
-1. Set `WHOLE_DATABASE_PATH` to the stopped native SQLite database and run
-   `whole-provider export-native /protected/current.json`. The source opens read
-   only, validates its retained typed state and receives no seed or schema write.
-2. Set `WHOLE_DATABASE_PATH` to a new destination and choose the explicit authority.
-   Run `whole-provider import /protected/current.json`. Import validates the full
-   archive, restores/seals contracts and compares every field before readiness.
-3. Run `whole-provider diagnostics`, then start serving and check gateway behavior.
-   Keep both source data and the current archive until the change is verified.
-4. For rollback or mode changes, stop/drain the **current** provider and run
-   `whole-provider export /protected/after-writes.json`. Import that current archive
-   into a new store with `PROVIDER_AUTHORITY=rust`, or use the compatible native
-   archive bridge. Never restore the pre-cutover database after accepted writes.
-
-Both archive output and CLI import destinations require new files. Database and
-archive files created by the CLI use owner-only permissions on Unix. Existing
-legacy/unrelated databases, wrong roots/authorities, incompatible bundle/runtime
-identity and incomplete imports fail startup. No automatic fallback or overwrite
-occurs. Query exports discard all tentative runtime effects.
-
-The ordinary retained 512-skill repeat/remove/re-add workload now passes using
-fixed-width indexes and membership deltas. The finite whole-provider allowance
-is `2e12` reference time / `128 MiB` proof size; earlier explicit fixtures retain
-their original allowance. Kreivo value, memory and code caps remain unchanged.
-
-Opt-in engine timings use a fixed current-app four-milestone workload and omit
-transport polling. Ordinary samples alternate eligible worker/coordinator mode;
-the approval reserves workers and escrow for four milestones:
-
-```bash
+```sh
 cargo test --release --manifest-path tools/ink-sandbox/Cargo.toml --locked \
   --test performance whole_provider_engine_timings -- --ignored --nocapture
 ```
 
-Run on a controlled idle host, record CPU/memory limits and build profile, and
-compare against the approved startup/ordinary/approval budgets. A passing unit
-suite is not latency evidence. Two observed stable releases and owner-approved
-promotion remain necessary before retiring the native reference.
+Use an idle controlled host and record its resources/profile. A functional test
+pass is not latency acceptance. Current evidence belongs in the
+[review PR](https://github.com/abako-project/backend-v2/pull/24); historical milestone
+records remain in Git, not in the current setup instructions.

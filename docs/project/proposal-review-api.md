@@ -1,6 +1,6 @@
 # Proposal presentation and scoped review API
 
-BE-C1/BE-C2 was approved on 2026-10-09 and is implemented locally for frontend C5–C9. Specification: `specs/0007-proposal-review-presentation/spec.md`. These additions persist descriptive information in adapter-api/PostgreSQL; provider commands, assignments and payments are unchanged.
+See the [approved requirements](../../specs/0007-proposal-review-presentation/spec.md). These additions persist descriptive information in adapter-api/PostgreSQL; provider commands, assignments and payments are unchanged.
 
 ## Contract
 
@@ -19,15 +19,5 @@ Descriptions accept at most 2,000 UTF-8 bytes; comments 10,000 bytes, nonblank a
 
 Migration `0007_proposal_reviews.sql` adds append-only presentation versions and comments, scoped to provider instance/project/proposal. The startup migration is rerunnable. Advisory transaction locks and a unique author/request key serialize writes and exact retries. Comments retain immutable historical scope snapshots; status changes alone do not invalidate a matching presentation. The adapter does not provide a cross-service transaction or rollback: confirm provider commands before dependent descriptive writes and retry only the failed write.
 
-## Historical validation and local deployment (2026-10-09)
-
-This record predates the compensation amendment removing separate planning
-payments. Use [current status](project-context.md) for implemented business rules.
-
-79 workspace nextest tests passed using an isolated PostgreSQL, including permissions, CSRF, concurrent writes, stale revisions, retries, paging, restart/provider-instance isolation and unchanged provider state/payments. Two doctests, fmt, cargo check, strict Clippy, workspace build and the 79-operation OpenAPI check passed.
-
-The final adapter release image was built and deployed in the existing `abako-auth-review` Compose stack, without resetting application data or rebuilding/restarting provider and wallet. Frontend live checks verified descriptions, requested experience, task writes, review comments and separate planning/execution payments. The disposable test PostgreSQL was removed after validation.
-
-Existing dependency gates remain: cargo audit exits 0 with paste/proc-macro-error2 unmaintained warnings; cargo deny fails the existing CC0 license policy/advisories. Cargo.toml/Cargo.lock were not changed in this extension.
-
-This delivery excludes the existing unrelated `.gitignore` change and local review/handoff files. No additional backend worktree was created.
+Historical validation and deployment evidence remains in
+[Git history](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/docs/project/proposal-review-api.md).

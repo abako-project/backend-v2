@@ -2151,7 +2151,7 @@
           "Operations"
         ],
         "summary": "Read the caller's asynchronous operation",
-        "description": "Another principal's operation returns 404. Poll independently of SSE. OutcomeUnknown is unresolved, not rejected. Finalized requires exactly one receipt or taskResult, whose outcome establishes success or failure. Missing or conflicting results remain unresolved. Queued prepares consumers for future API tasks and does not imply signing or provider submission. Current writers remain provider-owned.",
+        "description": "Another principal's operation returns 404. Poll independently of SSE. OutcomeUnknown is unresolved, not rejected. Finalized requires exactly one receipt or taskResult, whose outcome establishes success or failure. Missing or conflicting results remain unresolved. Queued represents accepted API task work and does not imply signing or provider submission.",
         "security": [
           {
             "sessionCookie": []
@@ -7043,7 +7043,7 @@
           "Expired",
           "Queued"
         ],
-        "description": "202 is durable acceptance, not execution success. OutcomeUnknown is unresolved submission, never evidence of rejection. Queued is reserved for future API task work awaiting execution or an edit hold and asserts no signing or provider submission; current writers do not emit it. Submitted retains its possible signed provider submission meaning. Finalized requires exactly one receipt or taskResult; check that result outcome. Missing or conflicting results remain unresolved."
+        "description": "202 is durable acceptance, not execution success. OutcomeUnknown is unresolved submission, never evidence of rejection. Queued represents API task work awaiting execution or an edit hold and asserts no signing or provider submission. Submitted retains its possible signed provider submission meaning. Finalized requires exactly one receipt or taskResult; check that result outcome. Missing or conflicting results remain unresolved."
       },
       "Qualifications": {
         "type": "object",
@@ -7550,7 +7550,7 @@
             ]
           }
         },
-        "description": "Task tracking does not change contractual assignments, reservations, or payout amounts. Task IDs, reporter, and timestamps are provider-owned. Omitted dueAt and null both mean no due date.",
+        "description": "Task tracking does not change contractual assignments, reservations, or payout amounts. Task IDs and assignees are core-owned; task content and progress are API-owned. Omitted dueAt and null both mean no due date.",
         "examples": [
           {
             "title": "Implement first task",
@@ -8472,10 +8472,10 @@
                 "type": "null"
               }
             ],
-            "description": "Optional API task completion; omitted by all current writers. Finalized success requires exactly one known result: receipt or taskResult. Missing/conflicting results remain unresolved."
+            "description": "Optional API task completion; omitted for provider operations. Finalized success requires exactly one known result: receipt or taskResult. Missing/conflicting results remain unresolved."
           }
         },
-        "description": "Poll independently of SSE. Domain failure codes appear here or in receipt.outcome, after the original HTTP 202. Only owner can read. Future API-owned task work uses taskResult instead of a provider receipt. This release prepares readers only; current emitted payloads are unchanged.",
+        "description": "Poll independently of SSE. Domain failure codes appear here or in the result outcome, after the original HTTP 202. Only owner can read. API-only task edits use taskResult instead of a provider receipt.",
         "examples": [
           {
             "operationId": "0x01010101010101010101010101010101",
@@ -10955,7 +10955,7 @@
             "$ref": "#/components/schemas/UnixSeconds"
           }
         },
-        "description": "Consumer preparation for future API-owned task work. No task writer emits this form yet. Contains no provider receipt, nonce or event cursor.",
+        "description": "Result of an API-only task edit. Contains no provider receipt, nonce or event cursor.",
         "examples": [
           {
             "outcome": {
@@ -11026,7 +11026,7 @@
             "$ref": "#/components/schemas/AccountId32"
           }
         },
-        "description": "Future API task notification, distinguished by required source=AdapterTask. The provider generation scopes IDs only; no provider transaction or cursor is asserted. Current writers do not emit this form.",
+        "description": "API task notification, distinguished by required source=AdapterTask. The provider generation scopes IDs only; no provider transaction or cursor is asserted.",
         "examples": [
           {
             "source": "AdapterTask",

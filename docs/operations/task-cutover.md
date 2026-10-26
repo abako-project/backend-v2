@@ -3,8 +3,8 @@
 This is the explicit V4→V5 task migration described by
 [SPEC-0015](../../specs/0015-adapter-core-boundary/spec.md#execution-time-notification-audience-amendment-2026-10-26).
 V5 here identifies the private archive/engine format; contracts still use ink! v5.
-The [handoff](../../progress/handoffs/SPEC-0015.md) records actual verification and
-open gates. This procedure does not authorize production activation or deployment.
+Current verification is recorded in the [review PR](https://github.com/abako-project/backend-v2/pull/24).
+This procedure does not authorize production activation or deployment.
 
 ## Preparation
 

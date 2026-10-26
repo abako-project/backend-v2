@@ -8,7 +8,7 @@ The stack includes Nginx, a frontend, adapter-api, PostgreSQL, wallet and
 mock-provider. The gateway listens on localhost:8088. The adapter stores its data
 in PostgreSQL; custody and the default mock use separate SQLite stores. Migrations
 run at startup, and the mock initializes missing catalog entries. Keep the same
-secret/data set when restarting. See [data ownership](../architecture/data-ownership.md).
+secret/data set when restarting. See [data ownership](../architecture.md).
 
 ```sh
 docker compose -f infra/compose.yaml ps

@@ -13,7 +13,7 @@ smallest state needed to enforce those rules independently. Public REST/JSON/SSE
 views are assembled by the adapter; they are not contract storage schemas.
 
 Use ordinary ink! storage fields and `Mapping` entries for bounded core records.
-Remove `storage-v5` and its root-blob paging once consumers have migrated.
+Remove the custom root-blob paging helper once consumers have migrated.
 Keep ink! v5, one embedded runtime and the existing adapter/wallet/provider
 processes. Add no service, document framework, generic repository, storage engine
 or cross-database transaction coordinator.
@@ -21,33 +21,11 @@ or cross-database transaction coordinator.
 This proposal changes internal ownership and compatibility requirements from
 SPEC-0003/0006/0013. Their approved business rules remain authoritative until
 explicit amendments are approved. SPEC-0014's evidence commitments remain valid.
-Plan approval does not settle the stage-0 policy decisions below or approve
+The approved policy decisions are recorded below. Approval does not authorize
 unrelated permission changes, tighter public limits, historical
 record deletion, release publication or deployment.
 
-## What caused the current complexity
-
-The native mock's combined read/storage models were copied into contracts to
-preserve every accepted state. Project contains nested proposal, milestone,
-task, submission and reason histories. Calendar contains a growing reservation
-vector. Directory and Bank keep growing identifier vectors.
-
-Compatibility fixtures include a near-256 KiB worker display name, 22,000-byte
-catalog names, a 200,000-byte project description and an 80,000-byte proposal
-description. Those are deliberate stress fixtures, not measured production
-requirements. They demonstrate overly broad native admission; they do not
-justify storing presentation content onchain.
-
-Two problems need different fixes: move descriptive content to the adapter,
-and store legitimate growing collections as individually addressed records.
-Even compact records eventually exceed a cell limit when packed into one vector.
-Removing strings alone will not remove that aggregate growth.
-
-Evidence: `services/mock-provider/src/domain/financial_parity.rs`,
-`tools/ink-sandbox/tests/capacity.rs`, canonical `projects-v5/types.rs`,
-`projects-v5/lib.rs`, `directory-v5/lib.rs` and `calendar-v5/lib.rs`.
-
-## Proposed ownership
+## Ownership
 
 | Data or rule | Owner after migration | Contract requirement |
 |---|---|---|
@@ -108,62 +86,6 @@ introducing a universal content store.
   Existing long descriptions can remain intact in PostgreSQL. Core bounds must
   come from real workflows and size measurements, not invented truncation rules.
 
-## Staged delivery
-
-Estimates are working days for implementation and review, not release promises.
-Allow roughly four to six weeks overall; measure and adjust after stage 0.
-Every runtime release must pass the existing frontend flows before handoff.
-Astra xhigh reviews each exact implementation milestone before acceptance.
-Publishing/deploying each release remains a separate owner action.
-
-| Stage | Scope and estimate | Working result / exit check |
-|---|---|---|
-| 0: agree boundaries | 1–2 days | Field/rule inventory, actual SCALE sizes for representative and retained fixtures, proposed bounds and resolved decisions below. Approved amendments before dependent implementation. No runtime change. |
-| R1: adapter copies and public composition | 3–4 days | Add explicit context tables/columns only where needed; idempotently backfill current provider data and compare assembled views. Provider remains authoritative during this stage. Existing frontend, old data and rollback still work. |
-| R2: metadata ownership | 4–6 days | Adapter becomes the writer for descriptive fields. Extend compact commands and versioned commitments for agreed documents, keeping numeric/lifecycle checks in both native and WASM core. Route reads through adapter composition. Large text round trips without entering contract state; task workflow is unchanged. |
-| R3: adapter task workflow | 4–6 days | Move narrative/progress and nonfinancial content workflow into the adapter. Keep IDs, the allocator and assignees in core: creation/deletion and membership edits use real provider receipts; local edits use truthful task results. Preserve aliases, authors/timestamps, execution-time notification membership and immutable case context. Demonstrate task content cannot alter money, reservations or reputation. |
-| R4: ordinary ink! core storage | 5–8 days | Replace root blobs and growing vectors with standard fields and keyed mappings. Use bounded typed queries/import records. Update native core/SDK codecs to the smaller model, rebuild the three v5 artifacts, migrate into fresh sealed contracts and prove current-state rollback to the immediately preceding compatible release. No paging helper remains in current execution. |
-| R5: remove transitional code | 2–3 days | Verify backfill completeness, then remove obsolete provider metadata/task storage and adapter fallback, custom paging/text codecs, duplicate full-view ABI conversion and unused compiled fixture wiring. Keep unique regressions as tests. Document final ownership and backup/restore. |
-
-R1 can be released without changing authority. R2/R3 need migration and compatible
-native/WASM command handling before serving the changed write paths. Each stage
-must work with the authority modes it advertises; an incomplete candidate remains
-private, not silently bypassed. R4 is the deliberate storage-cohort transition;
-retain R3 as its compatible rollback target. Avoid an all-versions conversion
-framework. R5 does not retire the native financial reference or waive the existing
-promotion/two-observed-release gates.
-
-Split R2 by profile/project content versus proposal documents if actual review
-scope exceeds one week. Split R4 by contract if that gives independently complete,
-working cohorts; never publish a mixed layout that cannot export or roll back.
-
-## Stage 0 decisions required before dependent implementation
-
-1. **Task authority and freeze ordering.** Recommended: task workflow becomes
-   adapter-owned, preserving the coordinator/assignee/client permission matrix
-   and immutable case context. Today its exact ordering with a dispute freeze
-   comes from one provider transaction. Two databases do not preserve that
-   property automatically. Specify task edits racing cancellation/dispute,
-   pending operations, snapshot capture and recovery before R3. Explicitly approve
-   any changed ordering/trust guarantee. Do not invent a distributed lock service
-   or an onchain task guard merely to claim the old atomicity was preserved.
-2. **Catalog naming.** Current rules normalize Unicode skill names, reject
-   duplicates and fix coordinator role ID 1. Keep those rules until an approved
-   compact representation preserves them. Moving labels or accepting a supplied
-   hash alone does not prove normalization/uniqueness. Resolve new-name bounds
-   and legacy long labels before removing their paging path.
-3. **Real core bounds.** Measure per-record and per-command encoding after text
-   removal. Define any business limits needed for milestones, requirements,
-   qualifications and dates. Prefer keyed membership/reservation records over
-   arrays that grow with all users/history. No limit increases or silent drops.
-4. **Deployment data and rollback scope.** Identify active environments, pending
-   operations and retained data to preserve. Use one concrete supported migration
-   and compatible rollback path. New adapter-only operations must not fabricate
-   provider nonces/receipts/events or collide with existing public SSE cursors.
-
-These are design gates, not permission to guess missing rules. Independent R1
-planning can proceed while they are resolved; affected implementation cannot.
-
 ## Acceptance
 
 Record before/after field ownership, encoded record/input sizes and the custom
@@ -186,16 +108,16 @@ adapter persistence/round-trip tests instead of requirements for giant WASM
 storage values; do not retain onchain fields solely to match old full-view dumps.
 
 Use applicable `ci/README.md` app/SDK gates and the unchanged dependency policy.
-Reproduce changed v5 WASM from committed source. At R4, inspect final dependencies
-and artifacts to verify current contracts use standard ink! storage and no
-`storage-v5`; compare warm engine latency and storage work on a controlled host.
+Reproduce changed v5 WASM from committed source. Inspect final dependencies
+and artifacts to verify current contracts use standard ink! storage with no
+custom paging helper; compare warm engine latency and storage work on a controlled host.
 Do not represent prior paging-candidate timing as evidence for this design.
 
 The final shape is the existing adapter for app content/workflow, wallet for
 signing and a small contract-backed core for enforceable business facts, with
 three operational contract types and no custom storage system.
 
-## Stage-0 policy decisions approved 2026-10-23
+## Policy decisions approved 2026-10-23
 
 Owner selected API snapshot and edit hold. Task policy: the adapter captures an immutable snapshot of confirmed task data
 when accepting a dispute request. Subsequent task operations wait while that
@@ -235,7 +157,7 @@ transaction across signing or core submission.
 The owner subsequently approved retaining task IDs and assignees in core,
 including on-chain creation/deletion for unassigned tasks. Core retains the actual
 global allocator, contextual task identity and membership; the adapter owns
-narrative, progress and other descriptive fields. This supersedes R3's provisional
+narrative, progress and other descriptive fields. This supersedes the provisional
 API allocator/CRUD ownership, avoiding a second reservation/recovery protocol.
 Retain existing IDs and error/permission rules. Keep provider receipts for core
 operations and truthful API task results for local edits. A task creation's
@@ -246,3 +168,23 @@ existing storage-ID field.
 No generation is activated by this amendment and frontend adoption remains a
 cutover prerequisite. Existing API-only execution fixtures do not establish
 compliance with this new membership requirement.
+
+## Current task visibility and result rules
+
+These consolidate the approved task decisions formerly recorded in the staged
+reader notes; they do not change behavior. Planning disputes preserve task editing.
+A pending milestone dispute/cancellation holds subsequent task edits while its
+outcome is uncertain. A confirmed freeze rejects later edits; a failed operation
+releases its hold. Unresolved membership changes block snapshot admission.
+
+Task-assignee visibility and Project event audiences are distinct from contractual
+participants, private-channel access and evaluation eligibility. Membership is
+confirmed in core; notification recipients reflect core execution. API task changes,
+results and notifications commit together. They use no invented provider receipt
+or cursor. Completed operations have exactly one result source, receipt or
+`taskResult`; missing/conflicting results remain unresolved. Both notification
+sources share the outer notification ID for SSE resume and read state.
+
+Metadata ownership and context binding are documented in [creation metadata](creation-metadata.md),
+[proposal metadata](proposal-metadata.md) and [catalog/lifecycle metadata](catalog-metadata.md).
+The data-only codecs and committed vectors define the exact signed byte encodings.

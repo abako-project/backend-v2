@@ -40,21 +40,23 @@ python3 scripts/poc-e2e.py
 These are API checks. Browser behavior and the external frontend require a
 separate walkthrough.
 
-## ink! v5 compatibility proof
+## Embedded contract provider
+
+The SDK is a separate workspace. Its functional gate and dependency-policy gate
+are explicit:
 
 ```sh
 bash scripts/verify.sh ink-sandbox
+bash scripts/verify.sh ink-sandbox-dependencies
 ```
 
-This separate native workspace checks the pinned v5 WASM against the proposed
-FRAME runtime. It runs formatting, check, strict Clippy, tests and build with its
-own lockfile. It also exercises the shared signed-operation shell against real
-WASM fixtures. It needs neither PostgreSQL nor a node nor cargo-contract at test
-runtime. The path-filtered `ink! v5 compatibility` workflow runs it only when the
-proof or its verification command changes; normal app builds keep their current
-dependency graph. It does not establish application parity or enable a provider
-switch. Source rebuilds use the pinned contract toolchain separately; see the
-[proof guide](../tools/ink-sandbox/README.md).
+The first checks formatting, all targets/features, strict Clippy, tests, doctests
+and build. The second enforces the existing exact-lock/expiring policy; its known
+security finding remains unwaived. See the [runtime guide](../tools/ink-sandbox/README.md)
+for artifact reproduction, real-service tests and explicit frozen-predecessor
+rollback. The opt-in timing test needs a controlled idle host; an ignored test is
+not acceptance evidence. Keep build output and temporary databases on disk if
+`/tmp` is RAM-backed. Record current results in the PR.
 
 ## Container and gateway checks
 
