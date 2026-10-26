@@ -34,6 +34,8 @@ struct Effect {
     kind: DomainEventKind,
     entity_id: Option<EntityId>,
     recipients: Vec<AccountId32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    allocated_task_id: Option<u32>,
 }
 
 fn account(n: u8) -> Account {

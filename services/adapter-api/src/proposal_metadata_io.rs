@@ -6,7 +6,7 @@ use crate::{
 use generated_contracts::{
     AccountId32, EntityId, PayloadHash, ProviderInstanceId,
     provider_core::{
-        CoreSnapshotV4, ProposalContentReferenceV1, ProposalContentV1, ProposalCore,
+        CoreSnapshotV5, ProposalContentReferenceV1, ProposalContentV1, ProposalCore,
         ProposalMetadataHeaderV1, ProposalMetadataRecordV1,
     },
 };
@@ -51,7 +51,7 @@ impl Selected {
         Ok(())
     }
 }
-fn selected(snapshot: CoreSnapshotV4) -> Result<BTreeMap<PayloadHash, Selected>, Error> {
+fn selected(snapshot: CoreSnapshotV5) -> Result<BTreeMap<PayloadHash, Selected>, Error> {
     let mut all = BTreeMap::new();
     for project in snapshot.projects {
         for proposal in project.proposals {

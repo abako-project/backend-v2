@@ -1,4 +1,5 @@
 //! Successful compact proposal writes, current-state rollback and real replay.
+mod support;
 use generated_contracts::{provider_core::*, *};
 use ink_v5_compatibility::{
     WHOLE_GAS,
@@ -7,7 +8,7 @@ use ink_v5_compatibility::{
 use parity_scale_codec::Encode;
 use provider_execution::{
     ExecutionInputs,
-    migration::{CoreArchiveV3, CoreArchiveV4},
+    migration::{CoreArchiveV3, CoreArchiveV5},
 };
 use sp_core::{Pair, sr25519};
 use std::{
@@ -22,7 +23,7 @@ fn account(seed: u8) -> AccountId32 {
 fn actor(account_id: AccountId32) -> u8 {
     (1..=10).find(|seed| account(*seed) == account_id).unwrap()
 }
-fn config(core: &CoreArchiveV4) -> WholeConfiguration {
+fn config(core: &CoreArchiveV5) -> WholeConfiguration {
     WholeConfiguration {
         root: core.checkpoint.info.root_account,
         generation: core.checkpoint.info.provider_instance_id,
@@ -31,7 +32,7 @@ fn config(core: &CoreArchiveV4) -> WholeConfiguration {
     }
 }
 fn signed(
-    core: &CoreArchiveV4,
+    core: &CoreArchiveV5,
     actor: u8,
     op: u8,
     command: ProviderCommand,
@@ -56,7 +57,8 @@ fn signed(
 }
 struct Run {
     worker: Worker,
-    core: CoreArchiveV4,
+    core: CoreArchiveV5,
+    tasks: support::TaskContent,
     records: BTreeMap<PayloadHash, ProposalMetadataRecordV1>,
     calls: Vec<SignedContractCallV1>,
     receipts: Vec<OperationReceipt>,
@@ -158,7 +160,10 @@ fn ndjson<T: serde::Serialize>(
 }
 fn export(run: &Run, old: &CoreArchiveV3, next: &[SignedContractCallV1], directory: &Path) {
     std::fs::create_dir_all(directory).unwrap();
-    json(&directory.join("core.json"), &run.core);
+    json(
+        &directory.join("core.json"),
+        &run.tasks.restore(run.core.clone()),
+    );
     json(&directory.join("predecessor.json"), old);
     json(&directory.join("calls.json"), &run.calls);
     json(&directory.join("receipts.json"), &run.receipts);
@@ -171,7 +176,9 @@ fn export(run: &Run, old: &CoreArchiveV3, next: &[SignedContractCallV1], directo
         },
         run.selected().values(),
     );
-    let root_records = mock_provider::migration::recover_legacy_creations(&run.core).unwrap();
+    let root_records =
+        mock_provider::migration::recover_legacy_creations(&run.tasks.restore(run.core.clone()))
+            .unwrap();
     ndjson(
         &directory.join("creation.ndjson"),
         &CreationMetadataHeaderV1 {
@@ -211,7 +218,7 @@ async fn rehearsal() {
         .into_iter()
         .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
         .collect();
-    let mut definition = project.proposals[0]
+    let mut definition = ProposalCore::from(project.proposals[0].clone())
         .definition(&records[&project.proposals[0].content.hash()])
         .unwrap();
     definition.title = "Committed\0proposal".into();
@@ -225,6 +232,7 @@ async fn rehearsal() {
         }
         milestone.requirements[0].budget = Money::new(100);
     }
+    let (core, tasks) = support::TaskContent::split(core);
     let path = std::env::temp_dir().join(format!("proposal-success-{}.sqlite", std::process::id()));
     let worker = Worker::import_whole(
         path.clone(),
@@ -237,6 +245,7 @@ async fn rehearsal() {
     let mut run = Run {
         worker,
         core,
+        tasks,
         records,
         calls: vec![],
         receipts: vec![],
@@ -441,7 +450,7 @@ async fn rehearsal() {
     )
     .await;
     let legacy = previous.checkpoint.projects[&project_id].proposals[0].clone();
-    let legacy_definition = legacy
+    let legacy_definition = ProposalCore::from(legacy.clone())
         .definition(&run.records[&legacy.content.hash()])
         .unwrap();
     run.call(
@@ -466,7 +475,9 @@ async fn rehearsal() {
         ExecutionOutcome::Failed("coordinator_required".into()),
     )
     .await;
-    let recovered = mock_provider::migration::recover_legacy_proposals(&run.core).unwrap();
+    let recovered =
+        mock_provider::migration::recover_legacy_proposals(&run.tasks.restore(run.core.clone()))
+            .unwrap();
     for op in [207, 208] {
         assert!(recovered.iter().any(|r|matches!(r.provenance,ProposalProvenanceV1::Operation{operation_id,..} if operation_id==OperationId::from_bytes([op;16]))));
     }
@@ -551,7 +562,7 @@ async fn rehearsal() {
         .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
         .collect();
     let old = mock_provider::migration::to_predecessor(
-        run.core.clone(),
+        run.tasks.restore(run.core.clone()),
         &catalog_records,
         &reason_records,
     )
@@ -580,7 +591,8 @@ async fn rehearsal() {
         current_proposal.encoded_size(),
         compact_input
     );
-    let restored_definition = restored
+    let restored_core = ProposalCore::from(restored.clone());
+    let restored_definition = restored_core
         .definition(&records[&restored.content.hash()])
         .unwrap();
     assert_eq!(restored_definition.title, definition.title);
@@ -617,7 +629,7 @@ async fn rehearsal() {
     let mut missing = records.clone();
     missing.remove(&selected_ref.hash());
     assert!(
-        restored
+        restored_core
             .definition(missing.get(&selected_ref.hash()).unwrap_or(change))
             .is_err()
     );
@@ -625,7 +637,7 @@ async fn rehearsal() {
     tampered.get_mut(&selected_ref.hash()).unwrap().content =
         ProposalContentV1::ChangeRequest("wrong kind".into());
     assert!(
-        restored
+        restored_core
             .definition(&tampered[&selected_ref.hash()])
             .is_err()
     );

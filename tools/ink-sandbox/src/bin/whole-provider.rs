@@ -7,7 +7,7 @@ use ink_v5_compatibility::{
     worker::{Authority, MAX_SHELL, WholeConfiguration, Worker},
 };
 use mock_provider::{Provider, ReferenceState, router_with_provider};
-use provider_execution::migration::{CoreArchiveV4, CoreCheckpointV4};
+use provider_execution::migration::{CoreArchiveV5, CoreCheckpointV5};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::{
     env,
@@ -20,7 +20,7 @@ type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 fn secret(name: &str) -> Result<String> {
     Ok(fs::read_to_string(env::var(name)?)?.trim().to_owned())
 }
-fn configuration(archive: &CoreArchiveV4, root: AccountId32) -> Result<WholeConfiguration> {
+fn configuration(archive: &CoreArchiveV5, root: AccountId32) -> Result<WholeConfiguration> {
     if archive.checkpoint.info.root_account != root {
         return Err("configured root differs from retained root".into());
     }
@@ -31,7 +31,7 @@ fn configuration(archive: &CoreArchiveV4, root: AccountId32) -> Result<WholeConf
         gas_limit: WHOLE_GAS,
     })
 }
-fn load_archive(path: &Path) -> Result<CoreArchiveV4> {
+fn load_archive(path: &Path) -> Result<CoreArchiveV5> {
     let file = fs::File::open(path)?;
     let mut bytes = Vec::new();
     file.take(MAX_SHELL as u64 + 1).read_to_end(&mut bytes)?;
@@ -68,7 +68,7 @@ fn reserve_database(path: &Path) -> Result<()> {
     options.open(path)?.sync_all()?;
     Ok(())
 }
-async fn stored_archive(path: &Path, native: bool, root: AccountId32) -> Result<CoreArchiveV4> {
+async fn stored_archive(path: &Path, native: bool, root: AccountId32) -> Result<CoreArchiveV5> {
     let pool = SqlitePoolOptions::new()
         .max_connections(1)
         .connect_with(SqliteConnectOptions::new().filename(path).read_only(true))
@@ -80,11 +80,11 @@ async fn stored_archive(path: &Path, native: bool, root: AccountId32) -> Result<
     };
     let bytes: Vec<u8> = sqlx::query_scalar(query).fetch_one(&pool).await?;
     pool.close().await;
-    tokio::task::spawn_blocking(move || -> Result<CoreArchiveV4> {
+    tokio::task::spawn_blocking(move || -> Result<CoreArchiveV5> {
         let archive = if native {
-            CoreArchiveV4 {
-                version: 4,
-                checkpoint: serde_json::from_slice::<CoreCheckpointV4>(&bytes)?,
+            CoreArchiveV5 {
+                version: 5,
+                checkpoint: serde_json::from_slice::<CoreCheckpointV5>(&bytes)?,
             }
         } else {
             serde_json::from_slice(&bytes)?

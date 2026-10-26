@@ -12,7 +12,7 @@ use generated_contracts::{
     },
 };
 use provider_execution::migration::{
-    CoreArchiveV3, CoreArchiveV4, CoreCheckpointV3, CoreCheckpointV4,
+    CoreArchiveV3, CoreArchiveV4, CoreArchiveV5, CoreCheckpointV3, CoreCheckpointV4,
 };
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -250,11 +250,7 @@ pub fn from_predecessor(
             engine_version: 4,
         },
     };
-    Ok((
-        ReferenceState::from_archive(root, current)?.archive()?,
-        records,
-        reason_records,
-    ))
+    Ok((validate_v4(root, current)?, records, reason_records))
 }
 fn catalog<'a>(
     records: &'a BTreeMap<PayloadHash, CatalogMetadataRecordV1>,
@@ -279,9 +275,7 @@ pub fn to_predecessor(
     catalog_records: &BTreeMap<PayloadHash, CatalogMetadataRecordV1>,
     reason_records: &BTreeMap<PayloadHash, ReasonMetadataRecordV1>,
 ) -> Result<CoreArchiveV3> {
-    let saved = ReferenceState::from_archive(archive.checkpoint.info.root_account, archive)?
-        .archive()?
-        .checkpoint;
+    let saved = validate_v4(archive.checkpoint.info.root_account, archive)?.checkpoint;
     let generation = saved.info.provider_instance_id;
     let root = saved.info.root_account;
     let request_context: Vec<_> = saved.skill_requests.values().cloned().collect();
@@ -412,6 +406,13 @@ pub fn to_predecessor(
 /// Recover only successful legacy operations selected by current core refs.
 /// Compact operation preimages still require the API's backup/export.
 pub fn recover_legacy_proposals(archive: &CoreArchiveV4) -> Result<Vec<ProposalMetadataRecordV1>> {
+    let (core, _) = compact_tasks(archive.checkpoint.info.root_account, archive.clone())?;
+    recover_current_proposals(&core)
+}
+
+/// Recover selected metadata directly from current compact core history.
+/// Task content is neither read nor reconstructed.
+pub fn recover_current_proposals(archive: &CoreArchiveV5) -> Result<Vec<ProposalMetadataRecordV1>> {
     let saved =
         ReferenceState::from_archive(archive.checkpoint.info.root_account, archive.clone())?
             .archive()?
@@ -473,6 +474,13 @@ pub fn recover_legacy_proposals(archive: &CoreArchiveV4) -> Result<Vec<ProposalM
 /// Reconstruct successful legacy creation preimages from retained owner history.
 /// This is recovery for direct legacy calls; normal API writes stage before signing.
 pub fn recover_legacy_creations(archive: &CoreArchiveV4) -> Result<Vec<CreationMetadataRecordV1>> {
+    let (core, _) = compact_tasks(archive.checkpoint.info.root_account, archive.clone())?;
+    recover_current_creations(&core)
+}
+
+/// Recover selected metadata directly from current compact core history.
+/// Task content is neither read nor reconstructed.
+pub fn recover_current_creations(archive: &CoreArchiveV5) -> Result<Vec<CreationMetadataRecordV1>> {
     let validated =
         ReferenceState::from_archive(archive.checkpoint.info.root_account, archive.clone())?
             .archive()?;
@@ -529,6 +537,13 @@ pub fn recover_legacy_creations(archive: &CoreArchiveV4) -> Result<Vec<CreationM
 /// Recover selected seed/legacy catalog preimages only. Compact writes and
 /// migration refs still require the API's owner backup, never guessed values.
 pub fn recover_legacy_catalog(archive: &CoreArchiveV4) -> Result<Vec<CatalogMetadataRecordV1>> {
+    let (core, _) = compact_tasks(archive.checkpoint.info.root_account, archive.clone())?;
+    recover_current_catalog(&core)
+}
+
+/// Recover selected metadata directly from current compact core history.
+/// Task content is neither read nor reconstructed.
+pub fn recover_current_catalog(archive: &CoreArchiveV5) -> Result<Vec<CatalogMetadataRecordV1>> {
     let saved =
         ReferenceState::from_archive(archive.checkpoint.info.root_account, archive.clone())?
             .archive()?
@@ -572,6 +587,13 @@ pub fn recover_legacy_catalog(archive: &CoreArchiveV4) -> Result<Vec<CatalogMeta
 }
 /// Recover selected successful legacy lifecycle text, preserving actual order.
 pub fn recover_legacy_reasons(archive: &CoreArchiveV4) -> Result<Vec<ReasonMetadataRecordV1>> {
+    let (core, _) = compact_tasks(archive.checkpoint.info.root_account, archive.clone())?;
+    recover_current_reasons(&core)
+}
+
+/// Recover selected metadata directly from current compact core history.
+/// Task content is neither read nor reconstructed.
+pub fn recover_current_reasons(archive: &CoreArchiveV5) -> Result<Vec<ReasonMetadataRecordV1>> {
     let saved =
         ReferenceState::from_archive(archive.checkpoint.info.root_account, archive.clone())?
             .archive()?
@@ -617,7 +639,7 @@ pub fn restore_tasks(
 ) -> Result<CoreArchiveV4> {
     tasks.validate()?;
     let original = serde_json::to_vec(&archive).map_err(|_| Error::internal())?;
-    let mut restored = ReferenceState::from_archive(root, archive.clone())?.archive()?;
+    let mut restored = validate_v4(root, archive.clone())?;
     require(
         serde_json::to_vec(&restored).map_err(|_| Error::internal())? == original,
         "task_restore_normalization",
@@ -651,7 +673,7 @@ pub fn restore_tasks(
     }
     require(records.is_empty(), "task_restore_context")?;
     restored.checkpoint.next_task_id = tasks.next_task_id;
-    let restored = ReferenceState::from_archive(root, restored)?.archive()?;
+    let restored = validate_v4(root, restored)?;
     let mut unchanged = restored.clone();
     for (id, project) in &mut unchanged.checkpoint.projects {
         let old = &archive.checkpoint.projects[id];
@@ -674,4 +696,48 @@ pub fn restore_tasks(
         "task_restore_non_task_change",
     )?;
     Ok(restored)
+}
+
+/// Validate predecessor facts through the one current engine, then reattach the
+/// exact exported content. This is an exchange helper, not a legacy executor.
+fn validate_v4(root: AccountId32, archive: CoreArchiveV4) -> Result<CoreArchiveV4> {
+    let (core, tasks) = provider_execution::migration::CoreArchiveV5::from_v4(archive)?;
+    let core = ReferenceState::from_archive(root, core)?.archive()?;
+    Ok(core.into_v4(tasks)?)
+}
+
+/// Explicit V4→V5 owner exchange. The returned tasks must be durably prepared in
+/// the adapter before the compact archive can serve public task requests.
+pub fn compact_tasks(
+    root: AccountId32,
+    archive: CoreArchiveV4,
+) -> Result<(
+    provider_execution::migration::CoreArchiveV5,
+    generated_contracts::provider_core::TaskStateV1,
+)> {
+    let original = serde_json::to_value(&archive).map_err(|_| Error::internal())?;
+    let (core, tasks) = provider_execution::migration::CoreArchiveV5::from_v4(archive)?;
+    let core = ReferenceState::from_archive(root, core)?.archive()?;
+    require(
+        serde_json::to_value(core.clone().into_v4(tasks.clone())?)
+            .map_err(|_| Error::internal())?
+            == original,
+        "task_migration_normalization",
+    )?;
+    Ok((core, tasks))
+}
+
+/// Paired V5→V4 rollback from current core facts and API-owned content.
+pub fn restore_task_content(
+    root: AccountId32,
+    archive: provider_execution::migration::CoreArchiveV5,
+    tasks: generated_contracts::provider_core::TaskStateV1,
+) -> Result<CoreArchiveV4> {
+    let exact = serde_json::to_value(&archive).map_err(|_| Error::internal())?;
+    let core = ReferenceState::from_archive(root, archive)?.archive()?;
+    require(
+        serde_json::to_value(&core).map_err(|_| Error::internal())? == exact,
+        "task_restore_normalization",
+    )?;
+    Ok(core.into_v4(tasks)?)
 }

@@ -5,7 +5,8 @@ use generated_contracts::{
     AccountId32, CompensationPolicy, Dispute, DomainEvent, EntityId, Money, OperationId,
     ProviderInfo, ScorePolicy,
     provider_core::{
-        CatalogEntryCore, ProjectCore, ReasonCore, SkillMetadataCore, SkillRequestCore, WorkerCore,
+        CatalogEntryCore, ProjectCoreV4, ReasonCore, SkillMetadataCore, SkillRequestCore,
+        WorkerCore,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -41,7 +42,7 @@ pub struct CoreCheckpointV4 {
     /// All workers, calendars, reservations and exact score accumulators.
     pub workers: BTreeMap<AccountId32, WorkerCore>,
     /// All Projects and their retained nested histories.
-    pub projects: BTreeMap<EntityId, ProjectCore>,
+    pub projects: BTreeMap<EntityId, ProjectCoreV4>,
     /// Visible free asset balances, including retained zero entries.
     pub balances: BTreeMap<AccountId32, Money>,
     /// Next signed operation nonce per origin.

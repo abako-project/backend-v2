@@ -1,0 +1,927 @@
+{
+  "replacements": [
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x96969696969696969696969696969696"
+              },
+              "milestoneId": "0xd6898651df485b549fc08bf7695824c0",
+              "projectId": "0x8d3206141b5add1921776ae488916b66",
+              "rejectedSubmissionId": "0xaafc3ca25345f1c180d541c7365e1075"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 17,
+          "operationId": "0x38383838383838383838383838383838",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x2afafac04bee6572fd53c19ad1c8372d03b8486766e2f6b02f9a583f5ffd7910313b2f563a02494d9b849743985422ae043268d7c461e0f545ecc70f8d23b08a"
+      },
+      "step": 55
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x97979797979797979797979797979797"
+              },
+              "milestoneId": "0xd6898651df485b549fc08bf7695824c0",
+              "projectId": "0x8d3206141b5add1921776ae488916b66",
+              "submissionId": "0xaafc3ca25345f1c180d541c7365e1075"
+            },
+            "type": "RejectMilestoneCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 18,
+          "operationId": "0x39393939393939393939393939393939",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x0c9e8a71de5fce0682a9065b95183ecf8931128ac561ebf3cdc317a4a6c62764be105bafda5eac36d429abcf87d0746822760ffa87dcdb761a44458a8e76c984"
+      },
+      "step": 56
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x96969696969696969696969696969696"
+              },
+              "milestoneId": "0xd6898651df485b549fc08bf7695824c0",
+              "projectId": "0x8d3206141b5add1921776ae488916b66",
+              "rejectedSubmissionId": "0xaafc3ca25345f1c180d541c7365e1075"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 19,
+          "operationId": "0x3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x604a82e5f784b1919d25abf8f95bc7ec9782008a767fe68b1dea002f1cb58c1ad1fcf16c9e785a51d7b4d09d7756655947339d6b8471378f2f76c06ef33cf48b"
+      },
+      "step": 58
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e"
+              },
+              "milestoneId": "0x7eb50c03716213b4b0d396b4b946f0ae",
+              "projectId": "0x8d3206141b5add1921776ae488916b66",
+              "workerRatings": null
+            },
+            "type": "SubmitMilestoneCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 19,
+          "operationId": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xb60165a70bf26800afb67c44f3658fd8d646afeaaba7e45f92ed4b25bd43a44c052bbfaf8a558cbdc0a57c7902c2592a9a01978f2716259e3ccd8cd222f55885"
+      },
+      "step": 61
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x50505050505050505050505050505050"
+              },
+              "milestoneId": "0x038d9a259e652b4e2c6243211fa0acb1",
+              "projectId": "0x5c0303235d2c0d4cc6f7426feb81674c",
+              "submissionId": "0xb3f91ca8ede66b18989fc9ed8cacdf20"
+            },
+            "type": "RejectMilestoneCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 29,
+          "operationId": "0x50505050505050505050505050505050",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x6aef04b2c117396a0f5839fd1caf3597b9cbafde101064e0fa0116ae8a9e615b66777dde63c7389f9f653d0c97350c09d71e9af822f52c70ce7c7eba87be308a"
+      },
+      "step": 79
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x51515151515151515151515151515151"
+              },
+              "milestoneId": "0x038d9a259e652b4e2c6243211fa0acb1",
+              "projectId": "0x5c0303235d2c0d4cc6f7426feb81674c",
+              "workerRatings": [
+                {
+                  "score": 5,
+                  "worker": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f"
+                }
+              ]
+            },
+            "type": "SubmitMilestoneCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 25,
+          "operationId": "0x51515151515151515151515151515151",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x0e6a187cceba18c7b5711547a6a1ef5dbe193bc9340d5d07284e8a2cf4ed17509a162100256a674891c572eb78d9d61a1445dc1003504edb56e17c985dcc938a"
+      },
+      "step": 80
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0xa0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0"
+              },
+              "milestoneId": "0x1ddcba8ae2bc9e27575048f0b231f397",
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922",
+              "submissionId": "0x53a19fce4833653f00a37816fb878119"
+            },
+            "type": "RejectMilestoneCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 35,
+          "operationId": "0x5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c5c",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xbe16e739f824ecfb5765d791105aba9de54094aab716e25ce16ec06a6ab06b67420fe5821316d13aa820ba6a53da689fd3ccdd4bbcb8da3532e41fc6e2856584"
+      },
+      "step": 91
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+              },
+              "milestoneId": "0x1ddcba8ae2bc9e27575048f0b231f397",
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922",
+              "rejectedSubmissionId": "0x53a19fce4833653f00a37816fb878119"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 6,
+          "operationId": "0x5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d5d",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x2eefc09594eed33b7f8f1de54626330ab1e309a71d6133ace5a550bf324b2242d3e2b1ec9bcea82759536354edad9eec4a4f60c313b5c92d242fef1b5cc3e48e"
+      },
+      "step": 92
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+              },
+              "milestoneId": "0x1ddcba8ae2bc9e27575048f0b231f397",
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922",
+              "rejectedSubmissionId": "0x53a19fce4833653f00a37816fb878119"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 36,
+          "operationId": "0x5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x48f83b8c564fd941c07d6c6964b3a28c2e665be724d5c5bc7e53eb6219d0bc36c656856255bb2ab3629280bade7edabbaab433121c636ee15afc393c57e0c989"
+      },
+      "step": 93
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+              },
+              "milestoneId": "0x1ddcba8ae2bc9e27575048f0b231f397",
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922",
+              "rejectedSubmissionId": "0x53a19fce4833653f00a37816fb878119"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 36,
+          "operationId": "0x5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xda66ed72e40a5574945495fd9516a7adb3471714eb0ba2a294f831d25fd0990f812f0d1344e52c9ddaf2eaf06e5ecb28530e78f981580c2983624dfc1ede7880"
+      },
+      "step": 94
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "disputeId": "0xd167b12c569a77fc8fe548a8afc35f7d",
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x65656565656565656565656565656565"
+              },
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922"
+            },
+            "type": "RespondDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 39,
+          "operationId": "0x65656565656565656565656565656565",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x8c2f0a9e6b4690fd657277fa3407908c5e5d3c2dace3fc9cacab792ff8bd7202b02287b614d7416193b7f52c95a02a093d646d8a44f284c2c9ee93d375785c8b"
+      },
+      "step": 100
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "disputeId": "0xd167b12c569a77fc8fe548a8afc35f7d",
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x66666666666666666666666666666666"
+              },
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922"
+            },
+            "type": "RespondDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 7,
+          "operationId": "0x66666666666666666666666666666666",
+          "origin": "0x8ee504148e75c34e8f051899b3c6e4241ff18dc1c9211260b6a6a434bedb485f",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x9610be1d1ee63907483fc05dbb90128fb8ac776741dcc699eb3ac177e038774422f26a0d595ff67459a26642fdb16aed82c4f8a8bbe95e96e4106150c7bcac8a"
+      },
+      "step": 101
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "disputeId": "0xd167b12c569a77fc8fe548a8afc35f7d",
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x67676767676767676767676767676767"
+              },
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922"
+            },
+            "type": "RespondDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 16,
+          "operationId": "0x67676767676767676767676767676767",
+          "origin": "0x189dac29296d31814dc8c56cf3d36a0543372bba7538fa322a4aebfebc39e056",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x72e970aabeffe9c88124040f010b529c21acd3ed5b18b718deff005fefb7280fe1d2e3e1d9538d40583390fb695da0404fd35ceb8f0f1858a5ed266acc1fc08e"
+      },
+      "step": 102
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "disputeId": "0xd167b12c569a77fc8fe548a8afc35f7d",
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x68686868686868686868686868686868"
+              },
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922"
+            },
+            "type": "RespondDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 33,
+          "operationId": "0x68686868686868686868686868686868",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x3c893c04a3d4a0d427ee2e90c73e76698a084a2911861061334556061f6a132ee8bab7029c2b7f914c303e118606e2b80aa7997157693c633ff39825604dbc8a"
+      },
+      "step": 103
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "disputeId": "0xd167b12c569a77fc8fe548a8afc35f7d",
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x69696969696969696969696969696969"
+              },
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922"
+            },
+            "type": "RespondDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 34,
+          "operationId": "0x69696969696969696969696969696969",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x02db31c4c740cd31b410e6568ef64d5b3d868a92016b7f2b92d486f21f11175dee93fad7b6681457fd519a934138beb27a02861a21ef497e538681ff415ff18b"
+      },
+      "step": 104
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0xa1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+              },
+              "milestoneId": "0x1ddcba8ae2bc9e27575048f0b231f397",
+              "projectId": "0xe86aebd9e4495c0f3061e9dd96439922",
+              "rejectedSubmissionId": "0x53a19fce4833653f00a37816fb878119"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 40,
+          "operationId": "0x6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a6a",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xc230400124fe70345271be74873f4daf872451741d5b5f4604a8ecb8928d4a1aaf8b40139465fcd4375de523c7434e94e71705c3759f0d6c9181ffaaf96dc48b"
+      },
+      "step": 105
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x73737373737373737373737373737373"
+              },
+              "milestoneId": "0x68464e9a1229bcdd4e6aff47b715a630",
+              "projectId": "0x773fa264ddce3a1940201cbb65bd399d",
+              "submissionId": "0x9191df5f711c6bc14fcfe55bb55bcf3f"
+            },
+            "type": "RejectMilestoneCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 44,
+          "operationId": "0x73737373737373737373737373737373",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xf0e5149fa856142798b0e4d15115a3a562fbc0e38a2bdc7141a33650afa0af7887f3fe0250541ae8000fb3084e3c3e3882b5eb5af01aaff70e9ef410348f2c85"
+      },
+      "step": 114
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x74747474747474747474747474747474"
+              },
+              "milestoneId": "0x68464e9a1229bcdd4e6aff47b715a630",
+              "projectId": "0x773fa264ddce3a1940201cbb65bd399d",
+              "rejectedSubmissionId": "0x9191df5f711c6bc14fcfe55bb55bcf3f"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 38,
+          "operationId": "0x74747474747474747474747474747474",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xb8f85ce15b0be08d794f36282e493045dfeb28a2bbeec21f9ef1b5dc6568e561946852c08ef7cbfc69c5781299c812dcb14fae2cf73aeb009886faeb60228180"
+      },
+      "step": 115
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x75757575757575757575757575757575"
+              },
+              "milestoneId": "0x68464e9a1229bcdd4e6aff47b715a630",
+              "projectId": "0x773fa264ddce3a1940201cbb65bd399d",
+              "rejectedSubmissionId": "0x9191df5f711c6bc14fcfe55bb55bcf3f"
+            },
+            "type": "OpenDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 38,
+          "operationId": "0x75757575757575757575757575757575",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x4adb2d6cac157a1954a7b6b0e236090c8402901baf2495aeb007e6cc29c1c24b3e7d290954fb611a985c2cba50efc7235ea1609d06fffbf6f0373f21f4930e8f"
+      },
+      "step": 116
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "disputeId": "0x59475fd64e94a3d0a4080f39a2f85642",
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x76767676767676767676767676767676"
+              },
+              "projectId": "0x773fa264ddce3a1940201cbb65bd399d"
+            },
+            "type": "RespondDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 45,
+          "operationId": "0x76767676767676767676767676767676",
+          "origin": "0xc2e2bd71e04a6af2897c3414d6fd403477245060fd22daaa412ff51b83c0c22e",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0x3a20f0bae79f638a391ef1117cddecbd62b6207e39437aa8b291e78a1a7a60239b7b19a4da417187a6511f45c0e7c5f2d88591dfbf6aaaab7c50f3dc0d793e89"
+      },
+      "step": 117
+    },
+    {
+      "signed": {
+        "call": {
+          "command": {
+            "data": {
+              "disputeId": "0xd167b12c569a77fc8fe548a8afc35f7d",
+              "evidence": {
+                "hash": "0x5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b5b",
+                "recordId": "0x77777777777777777777777777777777"
+              },
+              "projectId": "0x8d3206141b5add1921776ae488916b66"
+            },
+            "type": "RespondDisputeCommitted"
+          },
+          "expiresAt": 10000,
+          "nonce": 39,
+          "operationId": "0x77777777777777777777777777777777",
+          "origin": "0x1a4fee48c1ba1a48e8cd43782a8485d635aa91cfb82cbb477f0c1c576bc4031c",
+          "payloadVersion": 2,
+          "providerInstanceId": "0x6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d6d",
+          "signingDomain": [
+            75,
+            85,
+            78,
+            86,
+            69,
+            78,
+            79,
+            45,
+            77,
+            79,
+            67,
+            75,
+            45,
+            86,
+            49,
+            33
+          ]
+        },
+        "signature": "0xe0cdb4885fdc6c94f572ca2a30474e79a23962a8d05d01d539f8d2a9f5f9654c97a4ce23eee6cf34cd6431a5372bd97eed036339118325275b1be97c9cee6e88"
+      },
+      "step": 118
+    }
+  ],
+  "version": 1
+}

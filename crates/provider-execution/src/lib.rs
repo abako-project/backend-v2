@@ -114,6 +114,8 @@ pub struct Effect {
     pub entity_id: Option<EntityId>,
     /// Recipient identities; storage/adapter retain projection ownership.
     pub recipients: BTreeSet<AccountId32>,
+    /// Private allocation committed atomically with a successful compact creation.
+    pub allocated_task_id: Option<u32>,
 }
 impl Effect {
     /// Construct an effect with one recipient; engines may add others.
@@ -123,6 +125,7 @@ impl Effect {
             kind,
             entity_id,
             recipients: BTreeSet::from([recipient]),
+            allocated_task_id: None,
         }
     }
 }
@@ -253,11 +256,13 @@ impl Shell {
             require(record.bytes == verified.bytes, "idempotency_conflict")?;
             return Ok(Some(record.receipt.clone()));
         }
-        // This predecessor can preserve/replay compact task history but cannot
-        // execute its successor's commands. Replay above remains authoritative.
+        // V5 retains exact replay but does not execute content-bearing task requests.
+        // The adapter must retain that intent and submit a compact core command.
         if matches!(
             call.command,
-            ProviderCommand::CreateTaskCore { .. } | ProviderCommand::SetTaskAssigneesCore { .. }
+            ProviderCommand::CreateTask { .. }
+                | ProviderCommand::EditTask { .. }
+                | ProviderCommand::UpdateTaskProgress { .. }
         ) {
             return Err(Error::unavailable());
         }
@@ -320,8 +325,24 @@ impl Shell {
                 && !self.receipts.contains_key(&call.operation_id),
             "stale_execution",
         )?;
-        let (outcome, entity_id, cursor) = match transition {
+        let (outcome, entity_id, cursor, allocated_task_id) = match transition {
             Ok(effect) => {
+                let compact_create = matches!(call.command, ProviderCommand::CreateTaskCore { .. });
+                if compact_create != effect.allocated_task_id.is_some()
+                    || effect
+                        .allocated_task_id
+                        .is_some_and(|id| id == 0 || id == u32::MAX)
+                {
+                    return Err(Error::unavailable());
+                }
+                if let ProviderCommand::CreateTaskCore {
+                    task_storage_id, ..
+                } = &call.command
+                    && (effect.entity_id != Some(*task_storage_id)
+                        || effect.kind != DomainEventKind::TaskCreated)
+                {
+                    return Err(Error::unavailable());
+                }
                 let cursor = old_cursor.checked_add(1).ok_or_else(Error::unavailable)?;
                 self.events.push(DomainEvent {
                     provider_instance_id: self.info.provider_instance_id,
@@ -344,9 +365,14 @@ impl Shell {
                     occurred_at: inputs.now,
                     origin: Some(call.origin),
                 });
-                (ExecutionOutcome::Success, effect.entity_id, Some(cursor))
+                (
+                    ExecutionOutcome::Success,
+                    effect.entity_id,
+                    Some(cursor),
+                    effect.allocated_task_id,
+                )
             }
-            Err(code) => (ExecutionOutcome::Failed(code.into()), None, None),
+            Err(code) => (ExecutionOutcome::Failed(code.into()), None, None, None),
         };
         let receipt = OperationReceipt {
             operation_id: call.operation_id,
@@ -366,7 +392,7 @@ impl Shell {
                 bytes,
                 inputs: Some(inputs),
                 receipt: receipt.clone(),
-                allocated_task_id: None,
+                allocated_task_id,
             },
         );
         Ok(receipt)
@@ -384,6 +410,7 @@ impl Shell {
                 "invalid_event_state",
             )?;
         }
+        let mut task_allocations = BTreeSet::new();
         for (id, recorded) in &self.receipts {
             if let Some(inputs) = &recorded.inputs {
                 require(
@@ -404,6 +431,13 @@ impl Shell {
                 },
                 "invalid_task_allocation_state",
             )?;
+            if created_task {
+                let allocation = self.task_allocation(*id)?.ok_or_else(Error::unavailable)?;
+                require(
+                    task_allocations.insert(allocation.task_id),
+                    "duplicate_task_allocation",
+                )?;
+            }
             require(
                 call.operation_id == *id
                     && recorded.receipt.operation_id == *id
@@ -503,7 +537,7 @@ mod tests {
         Ok(())
     }
     #[test]
-    fn task_history_bridge_preserves_allocation_and_replay_without_enabling_execution()
+    fn task_completion_records_allocation_atomically_and_replay_preserves_it()
     -> std::result::Result<(), Box<dyn std::error::Error>> {
         let root = AccountId32::from_bytes([1; 32]);
         let mut shell = Shell::new(root)?;
@@ -514,42 +548,48 @@ mod tests {
             assignees: Vec::new(),
         };
         verified.bytes = verified.call.signable_bytes()?;
-        let before = (shell.receipts.len(), shell.events.len(), shell.nonce(root));
-        let unsupported = shell
-            .prepare(verified.clone(), UnixSeconds::new(100))
-            .err()
-            .ok_or_else(Error::unavailable)?;
-        assert_eq!(unsupported.code(), "provider_unavailable");
-        assert!(unsupported.is_infrastructure());
+        let before = (
+            shell.receipts.len(),
+            shell.events.len(),
+            shell.nonce(verified.call.origin),
+        );
+        let pending = prepared(&shell, verified.clone())?;
+        let mut effect = Effect::new(
+            DomainEventKind::TaskCreated,
+            Some(EntityId::from_bytes([3; 16])),
+            root,
+        );
+        assert!(
+            shell
+                .complete(
+                    pending,
+                    Ok(Effect::new(
+                        DomainEventKind::TaskCreated,
+                        Some(EntityId::from_bytes([3; 16])),
+                        root
+                    ))
+                )
+                .is_err()
+        );
         assert_eq!(
-            (shell.receipts.len(), shell.events.len(), shell.nonce(root)),
+            (
+                shell.receipts.len(),
+                shell.events.len(),
+                shell.nonce(verified.call.origin)
+            ),
             before
         );
-        // Reader fixture for successor history, not evidence of task execution.
-        let pending = PreparedExecution {
-            verified: verified.clone(),
-            inputs: ExecutionInputs {
-                version: 1,
-                now: UnixSeconds::new(100),
-                seed: [7; 32],
-            },
-            cursor: 0,
-            next_nonce: 1,
-        };
-        let receipt = shell.complete(
-            pending,
-            Ok(Effect::new(
-                DomainEventKind::TaskCreated,
-                Some(EntityId::from_bytes([3; 16])),
-                root,
-            )),
-        )?;
-        let recorded = shell
-            .receipts
-            .get_mut(&receipt.operation_id)
-            .ok_or_else(Error::unavailable)?;
-        assert!(recorded.allocated_task_id.is_none());
-        recorded.allocated_task_id = Some(7);
+        effect.allocated_task_id = Some(7);
+        let pending = prepared(&shell, verified.clone())?;
+        let receipt = shell.complete(pending, Ok(effect))?;
+        assert_eq!(
+            shell
+                .receipts
+                .get(&receipt.operation_id)
+                .ok_or_else(Error::unavailable)?
+                .allocated_task_id,
+            Some(7)
+        );
         shell.validate(root)?;
         let reopened = shell.clone();
         assert!(matches!(
@@ -610,31 +650,10 @@ mod tests {
             assignees: Vec::new(),
         };
         verified.bytes = verified.call.signable_bytes()?;
-        // Retained successor-history fixture. No task business execution is asserted.
-        let pending = PreparedExecution {
-            verified,
-            inputs: ExecutionInputs {
-                version: 1,
-                now: UnixSeconds::new(100),
-                seed: [7; 32],
-            },
-            cursor: 0,
-            next_nonce: 1,
-        };
-        let receipt = shell.complete(
-            pending,
-            Ok(Effect::new(
-                DomainEventKind::TaskCreated,
-                Some(storage),
-                root,
-            )),
-        )?;
-        assert!(shell.task_allocation(receipt.operation_id)?.is_none());
-        shell
-            .receipts
-            .get_mut(&receipt.operation_id)
-            .ok_or_else(Error::unavailable)?
-            .allocated_task_id = Some(7);
+        let pending = prepared(&shell, verified)?;
+        let mut effect = Effect::new(DomainEventKind::TaskCreated, Some(storage), root);
+        effect.allocated_task_id = Some(7);
+        let receipt = shell.complete(pending, Ok(effect))?;
         let result = shell
             .task_allocation(receipt.operation_id)?
             .ok_or_else(Error::unavailable)?;

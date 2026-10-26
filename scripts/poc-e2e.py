@@ -96,7 +96,9 @@ class Client:
                 if expected_status != "Finalized":
                     require(operation["receipt"] is None, "adapter admission fabricated a provider receipt")
                     return operation
-                receipt = operation["receipt"]
+                require((operation.get("receipt") is None) != (operation.get("taskResult") is None),
+                        "finality must have exactly one real result source")
+                receipt = operation.get("receipt") or operation.get("taskResult")
                 require(receipt["outcome"]["type"] == expected_outcome,
                         f"expected {expected_outcome}, got {receipt['outcome'].get('type')}: "
                         f"{receipt['outcome'].get('code')}")
@@ -335,7 +337,9 @@ def exercise(base, admin_password, proxy):
     task_id = milestone["taskStorage"]["tasks"][0]["taskId"]
     task["assignees"] = [worker_account]
     coordinator.command("PUT", storage_path + "/tasks/" + str(task_id), task)
-    worker.command("PATCH", storage_path + f"/tasks/{task_id}/progress", {"status": "Done", "loggedMinutes": 999})
+    progress = worker.command("PATCH", storage_path + f"/tasks/{task_id}/progress", {"status": "Done", "loggedMinutes": 999})
+    require(progress["receipt"] is None and progress["taskResult"]["outcome"]["type"] == "Success",
+            "local progress fabricated a core receipt")
     milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
     submission = coordinator.command("POST", milestone_path + "/request-completion", {
         "deliverable": {"url": "https://example.test/delivery"},

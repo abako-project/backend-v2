@@ -57,6 +57,13 @@ ProjectCore {
     proposals: Vec<super::ProposalCore>, execution_escrow: Money, cancelled: bool,
     completed: bool, evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId>
 });
+core_dto!(/// Project business facts. Proposal/task children move in subsequent slices.
+ProjectCoreV4 {
+    project_id: EntityId, created_at: Option<UnixSeconds>, client: AccountId32,
+    coordinator: AccountId32, content: MetadataReferenceV1, planning: PlanningView,
+    proposals: Vec<super::ProposalCoreV4>, execution_escrow: Money, cancelled: bool,
+    completed: bool, evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId>
+});
 core_dto!(/// Retained V2 predecessor fields; data exchange only, never a second engine.
 ProjectCoreV2 {
     project_id: EntityId, created_at: Option<UnixSeconds>, client: AccountId32,
@@ -67,12 +74,12 @@ ProjectCoreV2 {
 core_dto!(/// Private generation snapshot; the adapter assembles public views.
 CoreSnapshotV3 {
     schema_version: u16, info: ProviderInfo, catalog: CatalogView,
-    workers: Vec<WorkerCore>, projects: Vec<ProjectCore>, balances: Vec<BalanceView>
+    workers: Vec<WorkerCore>, projects: Vec<ProjectCoreV4>, balances: Vec<BalanceView>
 });
 core_dto!(/// Private current core snapshot; catalog presentation stays in the API.
 CoreSnapshotV4 {
     schema_version: u16, info: ProviderInfo, catalog: super::CatalogCore,
-    workers: Vec<WorkerCore>, projects: Vec<ProjectCore>, balances: Vec<BalanceView>
+    workers: Vec<WorkerCore>, projects: Vec<ProjectCoreV4>, balances: Vec<BalanceView>
 });
 
 impl WorkerCore {
@@ -118,3 +125,9 @@ impl ProjectCore {
         }
     }
 }
+
+core_dto!(/// Current core facts, with task identity and membership only.
+CoreSnapshotV5 {
+    schema_version: u16, info: ProviderInfo, catalog: super::CatalogCore,
+    workers: Vec<WorkerCore>, projects: Vec<ProjectCore>, balances: Vec<BalanceView>
+});

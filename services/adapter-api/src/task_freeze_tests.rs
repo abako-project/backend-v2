@@ -123,11 +123,8 @@ async fn task_freeze_failed_receipt_releases_and_retains_original_snapshot() -> 
     c.fake.lock().await.next_outcome = Some(ExecutionOutcome::Failed("project_completed".into()));
     finish_provider(&c, id, &c.owner).await?;
     assert_eq!(state(&c, id).await?, ("Released".into(), snapshot.clone()));
-    c.step().await?;
-    assert_eq!(
-        outcome(&operations::read(&c.app, &c.owner, task).await?)?,
-        &ExecutionOutcome::Success
-    );
+    let completed = finish_provider(&c, task, &c.owner).await?;
+    assert_eq!(outcome(&completed)?, &ExecutionOutcome::Success);
     assert_eq!(c.counter().await?, 10);
     assert_eq!(state(&c, id).await?.1, snapshot);
     let captured: Vec<TaskStorageRecordV1> = serde_json::from_str(&snapshot)?;
@@ -683,12 +680,11 @@ async fn task_freeze_explicit_first_http_rejection_releases_despite_submission_m
         .await?
     );
     assert_eq!(state(&c, id).await?.0, "Released");
-    c.step().await?;
-    assert_eq!(
-        outcome(&operations::read(&c.app, &c.owner, task).await?)?,
-        &ExecutionOutcome::Success
-    );
-    assert!(c.fake.lock().await.receipts.is_empty());
+    c.fake.lock().await.rejection_status = None;
+    let completed = finish_provider(&c, task, &c.owner).await?;
+    assert_eq!(outcome(&completed)?, &ExecutionOutcome::Success);
+    assert!(!c.fake.lock().await.receipts.contains_key(&id));
+    assert!(c.fake.lock().await.receipts.contains_key(&task));
     c.internal.finish().await?;
     Ok(())
 }
@@ -741,7 +737,7 @@ async fn task_freeze_finality_sql_failure_rolls_back_and_reconciles_without_resu
         let view = operations::read(&c.app, &c.owner, id).await?;
         assert_eq!(view.status, ProviderOperationStatus::Submitted);
         assert!(view.receipt.is_none());
-        assert_eq!(c.fake.lock().await.submissions, 1);
+        assert_eq!(c.fake.lock().await.submissions, 2);
         assert!(c.fake.lock().await.receipts.contains_key(&id));
         sqlx::raw_sql("DROP TRIGGER fail_freeze_finality ON task_freezes;")
             .execute(&c.app.db)
@@ -768,8 +764,8 @@ async fn task_freeze_finality_sql_failure_rolls_back_and_reconciles_without_resu
                 snapshot
             )
         );
-        assert_eq!(c.fake.lock().await.submissions, 1);
-        c.step().await?;
+        assert_eq!(c.fake.lock().await.submissions, 2);
+        c.finish(&c.owner, task).await?;
         assert_eq!(
             outcome(&operations::read(&c.app, &c.owner, task).await?)?,
             &if success {

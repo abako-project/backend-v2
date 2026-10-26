@@ -1,11 +1,12 @@
 //! Full retained-state comparison, fresh sealed imports and current-state export.
+mod support;
 use generated_contracts::*;
 use ink_v5_compatibility::{
     GAS,
     worker::{Error, WholeConfiguration, Worker},
 };
 use parity_scale_codec::{DecodeAll, Encode};
-use provider_execution::migration::CoreArchiveV4;
+use provider_execution::migration::CoreArchiveV5;
 use serde::Deserialize;
 use sp_core::{H256, hashing::sha2_256};
 use std::{
@@ -29,11 +30,11 @@ struct Retained {
 }
 fn reference() -> Reference {
     serde_json::from_str(include_str!(
-        "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
+        "../../../services/mock-provider/src/domain/fixtures/migration-signed-v5.json"
     ))
     .unwrap()
 }
-fn config(archive: &CoreArchiveV4) -> WholeConfiguration {
+fn config(archive: &CoreArchiveV5) -> WholeConfiguration {
     WholeConfiguration {
         root: archive.checkpoint.info.root_account,
         generation: archive.checkpoint.info.provider_instance_id,
@@ -81,7 +82,7 @@ fn run(future: impl std::future::Future<Output = ()>) {
 fn retained_archives_import_exactly_restart_and_never_replace_populated_stores() {
     run(async {
         for retained in reference().archives {
-            let archive: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+            let archive: CoreArchiveV5 = serde_json::from_str(&retained.archive).unwrap();
             let configuration = config(&archive);
             let db = Database::new();
             let worker =
@@ -123,14 +124,14 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
             .iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let archive: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+        let archive: CoreArchiveV5 = serde_json::from_str(&retained.archive).unwrap();
         let db = Database::new();
         let configuration = config(&archive);
         let worker = Worker::import_archive(db.0.clone(), archive, configuration.clone())
             .await
             .unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
         ))
         .unwrap();
         for (index, step) in trace["steps"]
@@ -156,10 +157,12 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
                     "outcome step {index}"
                 );
             } else {
-                assert!(
-                    matches!(result, Err(Error::Invariant(_))),
-                    "infrastructure outcome step {index}: {result:?}"
-                );
+                let code = match &result {
+                    Err(Error::Invariant(code)) => *code,
+                    Err(Error::Shell(error)) if error.is_infrastructure() => error.code(),
+                    other => panic!("infrastructure outcome step {index}: {other:?}"),
+                };
+                assert_eq!(code, step["outcome"]["error"].as_str().unwrap());
             }
             let exported = worker
                 .client()
@@ -184,7 +187,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
             .result()
             .await
             .unwrap();
-        let expected: CoreArchiveV4 =
+        let expected: CoreArchiveV5 =
             serde_json::from_str(&reference.archives.last().unwrap().archive).unwrap();
         use ink_v5_compatibility::worker::comparison::*;
         let last: SignedContractCallV1 = serde_json::from_value(
@@ -224,7 +227,7 @@ fn complete_shadow_trace_preserves_current_sandbox_writes_for_rollback() {
 #[test]
 fn missing_incompatible_and_failed_imports_never_regenerate_state() {
     run(async {
-        let original: CoreArchiveV4 =
+        let original: CoreArchiveV5 =
             serde_json::from_str(&reference().archives[0].archive).unwrap();
         let configuration = config(&original);
         let db = Database::new();
@@ -234,7 +237,7 @@ fn missing_incompatible_and_failed_imports_never_regenerate_state() {
                 .is_err()
         );
         let mut invalid = original.clone();
-        invalid.version = 5;
+        invalid.version = 6;
         assert!(
             Worker::import_archive(db.0.clone(), invalid, configuration.clone())
                 .await
@@ -260,7 +263,7 @@ fn missing_incompatible_and_failed_imports_never_regenerate_state() {
 fn retained_score_overflow_precedes_missing_modern_worker_ratings() {
     run(async {
         for case in reference().priority_cases {
-            let archive: CoreArchiveV4 =
+            let archive: CoreArchiveV5 =
                 serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
             let configuration = config(&archive);
             let db = Database::new();
@@ -297,7 +300,7 @@ fn retained_score_overflow_precedes_missing_modern_worker_ratings() {
     })
 }
 
-fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV4) {
+fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV5) {
     use frame_support::traits::fungibles::Inspect;
     use ink_v5_compatibility::{Account, Assets, Contracts, checkpoint::Checkpoint};
     let shell: serde_json::Value = serde_json::from_slice(&stored.2).unwrap();
@@ -350,7 +353,7 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
             Account,
             worker::{Action, Invocation, Status},
         };
-        let archive: CoreArchiveV4 =
+        let archive: CoreArchiveV5 =
             serde_json::from_str(&reference().archives[0].archive).unwrap();
         let configuration = config(&archive);
         let db = Database::new();
@@ -423,6 +426,7 @@ fn retained_large_catalog_label_is_completely_importable_and_exportable() {
         let (archive, records, reasons) =
             mock_provider::migration::from_predecessor(&original, old.checkpoint.info.root_account)
                 .unwrap();
+        let (archive, tasks) = support::TaskContent::split(archive);
         let records = records
             .into_iter()
             .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
@@ -444,7 +448,8 @@ fn retained_large_catalog_label_is_completely_importable_and_exportable() {
             .map(|r| (mock_provider::migration::source_hash(&r.hash_input()), r))
             .collect();
         let restored =
-            mock_provider::migration::to_predecessor(current, &records, &reasons).unwrap();
+            mock_provider::migration::to_predecessor(tasks.restore(current), &records, &reasons)
+                .unwrap();
         assert_eq!(serde_json::to_vec(&restored).unwrap(), original);
     })
 }
@@ -457,7 +462,7 @@ async fn retained_case_with_gas(
     output: Option<&str>,
     gas: frame_support::weights::Weight,
 ) {
-    let archive: CoreArchiveV4 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
+    let archive: CoreArchiveV5 = serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
     let mut configuration = config(&archive);
     configuration.gas_limit = gas;
     let db = Database::new();
@@ -517,7 +522,7 @@ fn retained_aggregates_above_the_single_call_limit_keep_working() {
 fn calendar_replacement_at_component_budget_preserves_state_and_reopens() {
     run(async {
         let case = reference().aggregate_cases.remove(2);
-        let archive: CoreArchiveV4 =
+        let archive: CoreArchiveV5 =
             serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
         let configuration = config(&archive);
         assert_eq!(configuration.gas_limit, GAS);
@@ -582,7 +587,7 @@ fn retained_positive_planning_escrow_pays_and_freezes_with_complete_backing() {
 fn ordinary_retained_qualification_capacity_matches_native() {
     run(async {
         let source = reference().aggregate_cases.remove(2);
-        let archive: CoreArchiveV4 =
+        let archive: CoreArchiveV5 =
             serde_json::from_str(source["archive"].as_str().unwrap()).unwrap();
         let mut configuration = config(&archive);
         configuration.gas_limit = ink_v5_compatibility::WHOLE_GAS;
@@ -591,7 +596,7 @@ fn ordinary_retained_qualification_capacity_matches_native() {
             .await
             .unwrap();
         let steps: Vec<serde_json::Value> = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/qualification-capacity-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/qualification-capacity-signed-v5.json"
         ))
         .unwrap();
         for (index, step) in steps.into_iter().enumerate() {
@@ -633,12 +638,12 @@ fn ordinary_retained_qualification_capacity_matches_native() {
 #[test]
 fn whole_resource_failure_preserves_runtime_shell_and_retry_after_restart() {
     run(async {
-        let archive: CoreArchiveV4 =
+        let archive: CoreArchiveV5 =
             serde_json::from_str(&reference().archives[0].archive).unwrap();
         let mut configuration = config(&archive);
         configuration.gas_limit = frame_support::weights::Weight::from_parts(1, 1);
         let trace: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
         ))
         .unwrap();
         let signed: SignedContractCallV1 =
@@ -702,9 +707,9 @@ fn whole_modes_serialize_primary_reference_replay_and_restart() {
             .iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV5 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
         ))
         .unwrap();
         for authority in [Authority::Rust, Authority::Shadow, Authority::Sandbox] {
@@ -843,9 +848,9 @@ fn whole_reference_storage_failure_competition_and_incomplete_shadow_are_explici
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV5 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
         ))
         .unwrap();
         let call: SignedContractCallV1 =
@@ -987,7 +992,7 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV5 = serde_json::from_str(&retained.archive).unwrap();
         let configuration = config(&initial);
         let unsupported = Database::new();
         let mut disabled = configuration.clone();
@@ -1064,7 +1069,7 @@ fn whole_startup_rejects_legacy_storage_and_invalid_envelopes_without_changes() 
         assert_eq!(tables, 1);
         pool.close().await;
         let trace: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
         ))
         .unwrap();
         let call: SignedContractCallV1 =
@@ -1130,9 +1135,9 @@ fn whole_differences_persist_without_substituting_either_primary() {
             .into_iter()
             .find(|a| a.before_step == 70)
             .unwrap();
-        let initial: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+        let initial: CoreArchiveV5 = serde_json::from_str(&retained.archive).unwrap();
         let trace: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
         ))
         .unwrap();
         for authority in [Authority::Shadow, Authority::Sandbox] {
@@ -1263,7 +1268,7 @@ fn whole_differences_persist_without_substituting_either_primary() {
 fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback() {
     run(async {
         use ink_v5_compatibility::worker::Authority;
-        let initial: CoreArchiveV4 = serde_json::from_str(
+        let initial: CoreArchiveV5 = serde_json::from_str(
             &reference()
                 .archives
                 .into_iter()
@@ -1274,7 +1279,7 @@ fn evidence_commitments_match_native_with_legacy_history_and_lossless_rollback()
         .unwrap();
         let configuration = config(&initial);
         let trace: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+            "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
         ))
         .unwrap();
         let overlay: serde_json::Value = serde_json::from_str(include_str!(
@@ -1440,7 +1445,7 @@ fn task_state_exports_actual_selected_counter_and_preserves_exhaustion() {
             .find(|a| a.before_step == 70)
             .unwrap();
         for counter in [99, u32::MAX] {
-            let mut archive: CoreArchiveV4 = serde_json::from_str(&retained.archive).unwrap();
+            let mut archive: CoreArchiveV5 = serde_json::from_str(&retained.archive).unwrap();
             archive.checkpoint.next_task_id = counter;
             let configuration = config(&archive);
             let expected =

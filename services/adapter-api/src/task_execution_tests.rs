@@ -10,7 +10,6 @@ struct Cohort {
     app: Arc<App>,
     internal: Server,
     fake: Arc<Mutex<Fake>>,
-    task_source: Arc<Mutex<Option<TaskStateV1>>>,
     owner: Session,
     owner_cookie: String,
     worker: Session,
@@ -69,7 +68,8 @@ impl Cohort {
         project.coordinator = owner.view.account_id;
         project.client = client.view.account_id;
         project.proposals[0].status = ProposalStatus::Draft;
-        let core = stage_project(&app, info().provider_instance_id, project.clone()).await?;
+        let core =
+            stage_project_without_tasks(&app, info().provider_instance_id, project.clone()).await?;
         let mut known = content_copies::source_worker()?;
         known.account = worker.view.account_id;
         let known = stage_worker(&app, info().provider_instance_id, known).await?;
@@ -89,7 +89,7 @@ impl Cohort {
         *task_source.lock().await = Some(state);
         crate::task_state::backfill(&app).await?;
         if api_owned {
-            // Test-only cutover fixture. There is no production activation CLI.
+            // Explicit test-only ownership fixture; production uses verified activation.
             sqlx::query("UPDATE task_generations SET api_owned=TRUE")
                 .execute(&app.db)
                 .await?;
@@ -103,7 +103,6 @@ impl Cohort {
             app,
             internal,
             fake,
-            task_source,
             owner,
             owner_cookie,
             worker,
@@ -142,8 +141,22 @@ impl Cohort {
     }
     async fn run(&self, actor: &Session, command: ProviderCommand) -> Result<OperationView, Error> {
         let id = self.queue(actor, command).await?;
-        self.step().await?;
-        operations::read(&self.app, actor, id).await
+        self.finish(actor, id).await
+    }
+    async fn finish(&self, actor: &Session, id: OperationId) -> Result<OperationView, Error> {
+        for _ in 0..16 {
+            let view = operations::read(&self.app, actor, id).await?;
+            if matches!(
+                view.status,
+                ProviderOperationStatus::Finalized
+                    | ProviderOperationStatus::Rejected
+                    | ProviderOperationStatus::Expired
+            ) {
+                return Ok(view);
+            }
+            core_recovery::step(&self.app).await?;
+        }
+        Err(Error::Internal)
     }
     async fn tasks(&self) -> Result<Vec<TaskView>, Error> {
         let payloads: Vec<String> =
@@ -165,16 +178,14 @@ impl Cohort {
 }
 fn outcome(operation: &OperationView) -> Result<&ExecutionOutcome, Box<dyn std::error::Error>> {
     assert_eq!(operation.status, ProviderOperationStatus::Finalized);
-    assert!(operation.receipt.is_none());
-    Ok(&operation
-        .task_result
-        .as_ref()
-        .ok_or("task result missing")?
-        .outcome)
+    match (&operation.receipt, &operation.task_result) {
+        (Some(receipt), None) => Ok(&receipt.outcome),
+        (None, Some(result)) => Ok(&result.outcome),
+        _ => Err("finalized task must have exactly one result source".into()),
+    }
 }
 #[tokio::test]
-async fn task_executor_requires_explicit_ownership_and_keeps_public_admission_legacy() -> TestResult
-{
+async fn task_executor_requires_explicit_content_ownership_before_public_admission() -> TestResult {
     let c = Cohort::new(false).await?;
     let id = c.queue(&c.owner, c.create()).await?;
     assert!(operations::claim_work(&c.app).await?.is_none());
@@ -188,22 +199,22 @@ async fn task_executor_requires_explicit_ownership_and_keeps_public_admission_le
         .bind(id.to_string())
         .execute(&c.app.db)
         .await?;
-    let op = operations::enqueue(&c.app, &c.owner, c.create(), None).await?;
-    assert_eq!(op.status, ProviderOperationStatus::AwaitingSignature);
-    let row = sqlx::query("SELECT task_operation,task_result_json FROM operations")
-        .fetch_one(&c.app.db)
-        .await?;
-    assert!(!row.try_get::<bool, _>("task_operation")?);
-    assert!(
-        row.try_get::<Option<String>, _>("task_result_json")?
-            .is_none()
+    assert!(matches!(
+        operations::enqueue(&c.app, &c.owner, c.create(), None).await,
+        Err(Error::Conflict("task_state_provider_owned"))
+    ));
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM operations")
+            .fetch_one(&c.app.db)
+            .await?,
+        0
     );
     c.internal.finish().await?;
     Ok(())
 }
 #[tokio::test]
-async fn task_executor_commits_crud_results_and_post_change_audience_without_core_effects()
--> TestResult {
+async fn task_executor_uses_core_receipts_for_identity_and_api_results_for_progress() -> TestResult
+{
     let c = Cohort::new(true).await?;
     let before = c.fake.lock().await.snapshot.clone();
     let created = c.run(&c.owner, c.create()).await?;
@@ -213,15 +224,14 @@ async fn task_executor_commits_crud_results_and_post_change_audience_without_cor
     assert_eq!(c.counter().await?, 10);
     assert_eq!(original.reporter, c.owner.view.account_id);
     assert_eq!(original.task, c.definition);
-    let page = notifications::page(&c.app, c.worker.view.account_id, 0).await?;
-    assert_eq!(page.notifications.len(), 1);
-    let NotificationEvent::Task(event) = &page.notifications[0].event else {
-        return Err("task event".into());
-    };
-    assert_eq!(event.operation_id, created.operation_id);
-    assert_eq!(event.kind, TaskEventKind::Created);
-    assert!(event.recipients.contains(&c.client.view.account_id));
-    assert!(event.recipients.contains(&c.owner.view.account_id));
+    assert!(created.receipt.is_some());
+    assert!(created.task_result.is_none());
+    assert!(
+        notifications::page(&c.app, c.worker.view.account_id, 0)
+            .await?
+            .notifications
+            .is_empty()
+    );
     let progress = TaskProgressRequest {
         status: TaskStatus::Done,
         logged_minutes: Minutes::new(125),
@@ -239,6 +249,8 @@ async fn task_executor_commits_crud_results_and_post_change_audience_without_cor
             )
             .await?;
         assert_eq!(outcome(&updated)?, &ExecutionOutcome::Success);
+        assert!(updated.receipt.is_none());
+        assert!(updated.task_result.is_some());
     }
     let mut edited = c.definition.clone();
     edited.title = "Edited\0title".into();
@@ -265,7 +277,7 @@ async fn task_executor_commits_crud_results_and_post_change_audience_without_cor
             .await?
             .notifications
             .len(),
-        3
+        2
     );
     let deleted = c
         .run(
@@ -282,10 +294,13 @@ async fn task_executor_commits_crud_results_and_post_change_audience_without_cor
     assert!(c.tasks().await?.is_empty());
     assert_eq!(c.counter().await?, 10);
     assert_eq!(c.fake.lock().await.snapshot, before);
-    assert!(c.fake.lock().await.jobs.is_empty());
-    assert!(c.fake.lock().await.nonces.is_empty());
-    assert_eq!(c.fake.lock().await.submissions, 0);
-    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT count(*) FROM operations WHERE signable_payload IS NOT NULL OR signed_json IS NOT NULL OR receipt_json IS NOT NULL OR possibly_submitted").fetch_one(&c.app.db).await?,0);
+    assert_eq!(c.fake.lock().await.jobs.len(), 3);
+    assert_eq!(
+        c.fake.lock().await.nonces.get(&c.owner.view.account_id),
+        Some(&3)
+    );
+    assert_eq!(c.fake.lock().await.submissions, 3);
+    assert_eq!(sqlx::query_scalar::<_,i64>("SELECT count(*) FROM operations WHERE signable_payload IS NOT NULL OR signed_json IS NOT NULL OR receipt_json IS NOT NULL OR possibly_submitted").fetch_one(&c.app.db).await?,3);
     assert!(matches!(
         crate::task_state::backfill(&c.app).await,
         Err(Error::Conflict("task_state_api_owned"))
@@ -299,7 +314,7 @@ async fn task_executor_commits_crud_results_and_post_change_audience_without_cor
     Ok(())
 }
 #[tokio::test]
-async fn task_executor_preserves_permissions_freeze_revision_and_checked_allocator() -> TestResult {
+async fn task_executor_preserves_api_permissions_and_core_rejections() -> TestResult {
     let c = Cohort::new(true).await?;
     let bad = c.run(&c.worker, c.create()).await?;
     assert_eq!(
@@ -349,12 +364,14 @@ async fn task_executor_preserves_permissions_freeze_revision_and_checked_allocat
         task_id: 9,
         expected_revision: revision,
     };
+    c.fake.lock().await.next_outcome = Some(ExecutionOutcome::Failed("revision_conflict".into()));
     let bad = c.run(&c.owner, delete(99)).await?;
     assert_eq!(
         outcome(&bad)?,
         &ExecutionOutcome::Failed("revision_conflict".into())
     );
     c.fake.lock().await.snapshot.projects[0].proposals[0].status = ProposalStatus::Approved;
+    c.fake.lock().await.next_outcome = Some(ExecutionOutcome::Failed("proposal_not_draft".into()));
     let bad = c.run(&c.owner, delete(1)).await?;
     assert_eq!(
         outcome(&bad)?,
@@ -378,6 +395,7 @@ async fn task_executor_preserves_permissions_freeze_revision_and_checked_allocat
     sqlx::query("UPDATE task_generations SET next_task_id=4294967295")
         .execute(&c.app.db)
         .await?;
+    c.fake.lock().await.next_outcome = Some(ExecutionOutcome::Failed("task_keys_exhausted".into()));
     let bad = c.run(&c.owner, c.create()).await?;
     assert_eq!(
         outcome(&bad)?,
@@ -391,11 +409,22 @@ async fn task_executor_preserves_permissions_freeze_revision_and_checked_allocat
 #[tokio::test]
 async fn task_executor_rolls_back_notification_failure_and_retries_exact_operation() -> TestResult {
     let c = Cohort::new(true).await?;
+    c.run(&c.owner, c.create()).await?;
+    let edit = ProviderCommand::UpdateTaskProgress {
+        project_id: c.project.project_id,
+        task_storage_id: c.storage(),
+        task_id: 9,
+        progress: TaskProgressRequest {
+            status: TaskStatus::Done,
+            logged_minutes: Minutes::new(13),
+        },
+    };
+    let original = c.tasks().await?;
     sqlx::raw_sql("CREATE FUNCTION reject_task_notification() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected notification failure'; END; $$; CREATE TRIGGER reject_task_notification BEFORE INSERT ON notifications FOR EACH ROW EXECUTE FUNCTION reject_task_notification();").execute(&c.app.db).await?;
-    let id = c.queue(&c.owner, c.create()).await?;
+    let id = c.queue(&c.owner, edit.clone()).await?;
     c.step().await?;
-    assert!(c.tasks().await?.is_empty());
-    assert_eq!(c.counter().await?, 9);
+    assert_eq!(c.tasks().await?, original);
+    assert_eq!(c.counter().await?, 10);
     assert_eq!(
         operations::read(&c.app, &c.owner, id).await?.status,
         ProviderOperationStatus::Queued
@@ -415,7 +444,7 @@ async fn task_executor_rolls_back_notification_failure_and_retries_exact_operati
     assert_eq!(c.tasks().await?[0].task_id, 9);
     assert_eq!(c.counter().await?, 10);
     assert!(operations::claim_work(&c.app).await?.is_none());
-    let replay = operations::enqueue(&c.app, &c.owner, c.create(), Some(id)).await?;
+    let replay = operations::enqueue(&c.app, &c.owner, edit, Some(id)).await?;
     assert_eq!(replay.status, ProviderOperationStatus::Finalized);
     let reopened = App::new(test_config(c.app.config.database_url.clone(), &c.internal)?).await?;
     assert_eq!(operations::read(&reopened, &c.owner, id).await?, done);
@@ -448,7 +477,16 @@ async fn task_executor_serializes_global_ids_and_fences_stale_leases() -> TestRe
     crate::task_execution::process(&c.app, stale).await?;
     assert!(c.tasks().await?.is_empty());
     crate::task_execution::process(&c.app, fresh).await?;
-    c.step().await?;
+    assert_eq!(c.counter().await?, 9); // Classification cannot reserve an ID in PostgreSQL.
+    c.finish(&c.owner, second).await?;
+    assert_eq!(
+        outcome(&operations::read(&c.app, &c.owner, first).await?)?,
+        &ExecutionOutcome::Success
+    );
+    assert_eq!(
+        outcome(&operations::read(&c.app, &c.owner, second).await?)?,
+        &ExecutionOutcome::Success
+    );
     assert_eq!(
         c.tasks()
             .await?
@@ -457,47 +495,8 @@ async fn task_executor_serializes_global_ids_and_fences_stale_leases() -> TestRe
             .collect::<Vec<_>>(),
         vec![9, 10]
     );
-    assert_eq!(
-        outcome(&operations::read(&c.app, &c.owner, second).await?)?,
-        &ExecutionOutcome::Success
-    );
-    // Different wallets may be claimed concurrently, but share one checked allocator.
-    let a = c.queue(&c.owner, c.create()).await?;
-    let b = c.queue(&c.worker, c.create()).await?;
-    sqlx::query("UPDATE operations SET account_id=$1 WHERE operation_id=$2")
-        .bind(c.owner.view.account_id.to_string())
-        .bind(b.to_string())
-        .execute(&c.app.db)
-        .await?;
-    let Some(operations::Work::Task(a_job)) = operations::claim_work(&c.app).await? else {
-        return Err("a".into());
-    };
-    let Some(operations::Work::Task(b_job)) = operations::claim_work(&c.app).await? else {
-        return Err("b".into());
-    };
-    let (a_result, b_result) = tokio::join!(
-        crate::task_execution::process(&c.app, a_job),
-        crate::task_execution::process(&c.app, b_job)
-    );
-    a_result?;
-    b_result?;
-    assert_eq!(
-        outcome(&operations::read(&c.app, &c.owner, a).await?)?,
-        &ExecutionOutcome::Success
-    );
-    assert_eq!(
-        outcome(&operations::read(&c.app, &c.worker, b).await?)?,
-        &ExecutionOutcome::Success
-    );
-    assert_eq!(c.counter().await?, 13);
-    let mut ids = c
-        .tasks()
-        .await?
-        .iter()
-        .map(|t| t.task_id)
-        .collect::<Vec<_>>();
-    ids.sort_unstable();
-    assert_eq!(ids, vec![9, 10, 11, 12]);
+    assert_eq!(c.counter().await?, 11);
+    assert_eq!(c.fake.lock().await.next_task_id, 11);
     c.internal.finish().await?;
     Ok(())
 }
@@ -507,6 +506,7 @@ async fn task_executor_first_writes_on_two_projects_share_allocator_without_lock
 -> TestResult {
     let c = Cohort::new(true).await?;
     let mut second = c.fake.lock().await.snapshot.projects[0].clone();
+    second.coordinator = c.worker.view.account_id;
     second.project_id = EntityId::from_bytes([41; 16]);
     second.proposals[0].proposal_id = EntityId::from_bytes([42; 16]);
     second.proposals[0].milestones[0].milestone_id = EntityId::from_bytes([43; 16]);
@@ -530,12 +530,6 @@ async fn task_executor_first_writes_on_two_projects_share_allocator_without_lock
             },
         )
         .await?;
-    // Distinct wallet lanes, both authorized by the same confirmed coordinator.
-    sqlx::query("UPDATE operations SET account_id=$1 WHERE operation_id=$2")
-        .bind(c.owner.view.account_id.to_string())
-        .bind(other.to_string())
-        .execute(&c.app.db)
-        .await?;
     let Some(operations::Work::Task(a)) = operations::claim_work(&c.app).await? else {
         return Err("a".into());
     };
@@ -558,6 +552,9 @@ async fn task_executor_first_writes_on_two_projects_share_allocator_without_lock
     a?;
     b?;
     key_share.commit().await?;
+    assert_eq!(c.counter().await?, 9);
+    c.finish(&c.owner, first).await?;
+    c.finish(&c.worker, other).await?;
     assert_eq!(
         outcome(&operations::read(&c.app, &c.owner, first).await?)?,
         &ExecutionOutcome::Success
@@ -578,7 +575,7 @@ async fn task_executor_first_writes_on_two_projects_share_allocator_without_lock
 }
 
 #[tokio::test]
-async fn task_executor_corrupt_sibling_audience_rolls_back_target_edit() -> TestResult {
+async fn task_executor_uses_core_audience_despite_corrupt_sibling_projection() -> TestResult {
     let c = Cohort::new(true).await?;
     c.run(&c.owner, c.create()).await?;
     let sibling_id = EntityId::from_bytes([46; 16]);
@@ -588,6 +585,7 @@ async fn task_executor_corrupt_sibling_audience_rolls_back_target_edit() -> Test
         sibling.milestone_id = EntityId::from_bytes([45; 16]);
         sibling.task_storage.milestone_id = sibling.milestone_id;
         sibling.task_storage.task_storage_id = sibling_id;
+        sibling.task_storage.tasks.clear();
         fake.snapshot.projects[0].proposals[0]
             .milestones
             .push(sibling);
@@ -614,7 +612,7 @@ async fn task_executor_corrupt_sibling_audience_rolls_back_target_edit() -> Test
         .execute(&c.app.db)
         .await?;
     let mut task = c.definition.clone();
-    task.title = "must roll back".into();
+    task.title = "local edit".into();
     let id = c
         .queue(
             &c.owner,
@@ -630,16 +628,18 @@ async fn task_executor_corrupt_sibling_audience_rolls_back_target_edit() -> Test
     let after: Vec<String> = sqlx::query_scalar("SELECT payload FROM task_items ORDER BY task_id")
         .fetch_all(&c.app.db)
         .await?;
-    assert_eq!(before, after);
+    assert_eq!(before[1], after[1]);
+    let edited: TaskView = serde_json::from_str(&after[0])?;
+    assert_eq!(edited.task.title, "local edit");
     assert_eq!(c.counter().await?, 11);
     let op = operations::read(&c.app, &c.owner, id).await?;
-    assert_eq!(op.status, ProviderOperationStatus::Queued);
-    assert!(op.task_result.is_none());
+    assert_eq!(outcome(&op)?, &ExecutionOutcome::Success);
+    assert!(op.receipt.is_none());
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM notifications")
             .fetch_one(&c.app.db)
             .await?,
-        notifications
+        notifications + 3
     );
     assert!(
         notifications::page(&c.app, outsider, 0)
@@ -711,7 +711,7 @@ async fn task_executor_preserves_native_error_order_for_combined_invalid_request
     let bad = c.run(&c.owner, create(c.definition.clone())).await?;
     assert_eq!(
         outcome(&bad)?,
-        &ExecutionOutcome::Failed("task_keys_exhausted".into())
+        &ExecutionOutcome::Failed("task_storage_not_found".into())
     );
     assert!(c.tasks().await?.is_empty());
     c.internal.finish().await?;
@@ -785,5 +785,5 @@ mod freezes;
 #[path = "task_view_tests.rs"]
 mod views;
 
-#[path = "task_rollback_tests.rs"]
-mod rollback;
+#[path = "task_core_recovery_tests.rs"]
+pub(super) mod core_recovery;

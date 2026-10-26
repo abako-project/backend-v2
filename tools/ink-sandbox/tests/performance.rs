@@ -5,7 +5,10 @@ use ink_v5_compatibility::{
     worker::{Authority, WholeConfiguration, Worker},
 };
 use mock_provider::ReferenceState;
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV4};
+use provider_execution::{
+    ExecutionInputs, VerifiedCall,
+    migration::{CoreArchiveV4, CoreArchiveV5},
+};
 use serde_json::Value;
 use sp_core::{Pair, sr25519};
 use std::time::Instant;
@@ -54,7 +57,7 @@ fn prepare(
     assert_eq!(receipt.outcome, ExecutionOutcome::Success);
     (state, receipt)
 }
-fn fixture() -> (CoreArchiveV4, SignedContractCallV1) {
+fn fixture() -> (CoreArchiveV5, SignedContractCallV1) {
     let fixture: Value = serde_json::from_str(include_str!(
         "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
     ))
@@ -70,6 +73,7 @@ fn fixture() -> (CoreArchiveV4, SignedContractCallV1) {
             .unwrap(),
     )
     .unwrap();
+    let archive = CoreArchiveV5::from_v4(archive).unwrap().0;
     let root = archive.checkpoint.info.root_account;
     assert_eq!(
         root,

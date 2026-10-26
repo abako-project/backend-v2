@@ -1,5 +1,5 @@
 use generated_contracts::provider_core::CoreDisputeView;
-use generated_contracts::provider_core::{CoreSnapshotV4, ReasonPageV1, SkillRequestCore};
+use generated_contracts::provider_core::{CoreSnapshotV5, ReasonPageV1, SkillRequestCore};
 use std::sync::Arc;
 
 use generated_contracts::{
@@ -82,7 +82,7 @@ impl Provider {
     pub async fn sqlite_from_archive(
         url: &str,
         root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV4,
+        archive: provider_execution::migration::CoreArchiveV5,
     ) -> Result<Self> {
         Self::open_sqlite(url, root, Some(archive)).await
     }
@@ -91,7 +91,7 @@ impl Provider {
     async fn open_sqlite(
         url: &str,
         root: AccountId32,
-        archive: Option<provider_execution::migration::CoreArchiveV4>,
+        archive: Option<provider_execution::migration::CoreArchiveV5>,
     ) -> Result<Self> {
         use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
         use std::{str::FromStr, time::Duration};
@@ -169,7 +169,7 @@ impl Provider {
 
     /// Complete private archive for a paused migration; no HTTP route exposes it.
     /// The caller must drain writes before taking the cutover archive.
-    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV4> {
+    pub async fn archive(&self) -> Result<provider_execution::migration::CoreArchiveV5> {
         let state = self.read().await?;
         tokio::task::spawn_blocking(move || state.archive())
             .await
@@ -181,7 +181,7 @@ impl Provider {
     #[cfg(feature = "storage-memory")]
     pub async fn memory_from_archive(
         root: AccountId32,
-        archive: provider_execution::migration::CoreArchiveV4,
+        archive: provider_execution::migration::CoreArchiveV5,
     ) -> Result<Self> {
         let state = tokio::task::spawn_blocking(move || State::from_archive(archive, root))
             .await
@@ -279,11 +279,11 @@ impl Provider {
         Ok(self.read().await?.nonce(account))
     }
     /// Read-only internal snapshot; the adapter must filter private project data.
-    pub async fn snapshot(&self) -> Result<CoreSnapshotV4> {
+    pub async fn snapshot(&self) -> Result<CoreSnapshotV5> {
         Ok(self.read().await?.snapshot())
     }
     /// Atomic task inventory and retained global allocator from one owned state.
-    pub async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskStateV1> {
+    pub async fn task_state(&self) -> Result<generated_contracts::provider_core::TaskStateV2> {
         let state = self.read().await?;
         tokio::task::spawn_blocking(move || state.task_state())
             .await

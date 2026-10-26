@@ -148,6 +148,7 @@ pub(crate) async fn compose(
     coordinator: AccountId32,
     client: AccountId32,
     proposal: ProposalCore,
+    tasks: Vec<generated_contracts::TaskStorageView>,
 ) -> Result<ProposalView, Error> {
     let selected = record(
         app,
@@ -184,7 +185,7 @@ pub(crate) async fn compose(
     };
     tokio::task::spawn_blocking(move || {
         proposal
-            .into_view(definition, change)
+            .into_view(definition, change, tasks)
             .map_err(|_| Error::Dependency)
     })
     .await?

@@ -207,7 +207,7 @@ pub(super) struct Milestone {
     pub(super) status: Option<g::MilestoneStatus>,
     pub(super) assignments: Vec<g::AssignmentView>,
     pub(super) worker_ratings: Vec<g::WorkerRating>,
-    pub(super) task_storage: g::TaskStorageView,
+    pub(super) task_storage: g::provider_core::TaskStorageCore,
     pub(super) frozen: bool,
     pub(super) submissions: Vec<Submission>,
 }

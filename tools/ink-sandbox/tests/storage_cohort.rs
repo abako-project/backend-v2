@@ -1,5 +1,6 @@
 //! Explicit current-state handoff to a frozen preceding executable, not a rebuild
 //! of the same source under a different authority flag.
+mod support;
 use generated_contracts::*;
 use ink_v5_compatibility::{
     WHOLE_GAS,
@@ -59,6 +60,7 @@ fn current_calendar_writes_restore_into_frozen_predecessor_in_all_authorities() 
             .unwrap(),
     )
     .unwrap();
+    let (initial, tasks) = support::TaskContent::split(initial);
     let (origin, retained) = initial
         .checkpoint
         .workers
@@ -159,14 +161,27 @@ fn current_calendar_writes_restore_into_frozen_predecessor_in_all_authorities() 
             read(&current),
             serde_json::to_value(reference.archive().unwrap()).unwrap()
         );
+        let predecessor_archive = directory.join("current-v4.json");
+        fs::write(
+            &predecessor_archive,
+            serde_json::to_vec(&tasks.restore(reference.archive().unwrap())).unwrap(),
+        )
+        .unwrap();
         let restored = directory.join("preceding.sqlite");
-        cli(predecessor, &restored, &root, name, "import", &current);
+        cli(
+            predecessor,
+            &restored,
+            &root,
+            name,
+            "import",
+            &predecessor_archive,
+        );
         for phase in ["first", "reopened"] {
             let exported = directory.join(format!("preceding-{phase}.json"));
             cli(predecessor, &restored, &root, name, "export", &exported);
             assert_eq!(
                 read(&exported),
-                read(&current),
+                read(&predecessor_archive),
                 "{name}/{phase}: complete state/history changed"
             );
         }
@@ -221,7 +236,7 @@ fn current_calendar_writes_restore_into_frozen_predecessor_in_all_authorities() 
         assert_eq!(receipts[1], fresh_expected);
         assert_eq!(
             read(&after_path),
-            serde_json::to_value(reference.archive().unwrap()).unwrap(),
+            serde_json::to_value(tasks.restore(reference.archive().unwrap())).unwrap(),
             "{name}: replay/further work changed unrelated state or history"
         );
         println!(

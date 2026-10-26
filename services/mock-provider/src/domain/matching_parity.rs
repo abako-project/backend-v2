@@ -129,7 +129,7 @@ fn transition(engine: &mut RustEngine, action: &Action) -> crate::Result<Value> 
                     status: None,
                     assignments: vec![],
                     worker_ratings: vec![],
-                    task_storage: TaskStorageView {
+                    task_storage: generated_contracts::provider_core::TaskStorageCore {
                         task_storage_id: *id,
                         milestone_id: *id,
                         tasks: vec![],

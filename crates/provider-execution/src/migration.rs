@@ -4,6 +4,8 @@ mod core;
 pub use core::{CoreArchiveV2, CoreCheckpointV2};
 mod core_v3;
 pub use core_v3::{CoreArchiveV3, CoreCheckpointV3};
+mod core_v5;
+pub use core_v5::{CoreArchiveV5, CoreCheckpointV5};
 mod core_v4;
 pub use core_v4::{CoreArchiveV4, CoreCheckpointV4};
 

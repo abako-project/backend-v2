@@ -1,15 +1,14 @@
-use generated_contracts::provider_core::ProjectCore;
 use generated_contracts::provider_core::{
     MilestoneCore, ProposalContentReferenceV1, ProposalCore, ProposalTerms,
 };
+use generated_contracts::provider_core::{ProjectCore, TaskCore, TaskStorageCore};
 use std::collections::BTreeSet;
 
 use chrono::{Duration, NaiveDate, Weekday};
 
 use generated_contracts::{
     AccountId32, DeliveryPreference, DomainEventKind, EntityId, MilestoneStatus, Money,
-    PlanningStatus, ProposalStatus, ProviderCommand, TaskStorageView, TaskView, TeamRating,
-    UnixSeconds,
+    PlanningStatus, ProposalStatus, ProviderCommand, TeamRating, UnixSeconds,
 };
 
 use super::{Effect, RecordedReason, RustEngine, add_rating};
@@ -193,11 +192,10 @@ impl RustEngine {
             | ProviderCommand::DisputePlanningCore { .. } => {
                 self.lifecycle_command(project, origin, command, now)
             }
-            ProviderCommand::CreateTask { .. }
+            ProviderCommand::CreateTaskCore { .. }
             | ProviderCommand::DeleteTask { .. }
-            | ProviderCommand::EditTask { .. }
-            | ProviderCommand::UpdateTaskProgress { .. } => {
-                self.task_command(project, origin, command, now)
+            | ProviderCommand::SetTaskAssigneesCore { .. } => {
+                return self.task_command(project, origin, command);
             }
             ProviderCommand::RequestMilestoneCompletionWithoutDeliverable { .. }
             | ProviderCommand::RequestMilestoneCompletion { .. }
@@ -550,8 +548,8 @@ impl RustEngine {
         project: &mut ProjectCore,
         origin: AccountId32,
         command: &ProviderCommand,
-        now: UnixSeconds,
-    ) -> Result<Transition> {
+    ) -> Result<Effect> {
+        let mut allocated = None;
         let (kind, storage_id) = match command {
             ProviderCommand::DeleteTask {
                 task_storage_id,
@@ -587,62 +585,43 @@ impl RustEngine {
                 storage.tasks.retain(|t| t.task_id != *task_id);
                 (DomainEventKind::TaskDeleted, *task_storage_id)
             }
-            ProviderCommand::CreateTask {
+            ProviderCommand::CreateTaskCore {
                 task_storage_id,
-                task,
+                assignees,
                 ..
             } => {
                 coordinator(project, origin)?;
-                self.task_assignees(task)?;
+                self.task_assignees(assignees)?;
                 let task_id = self.next_task_id;
                 self.next_task_id = task_id
                     .checked_add(1)
                     .ok_or_else(|| Error::domain("task_keys_exhausted"))?;
                 storage_mut(project, *task_storage_id)?
                     .tasks
-                    .push(TaskView {
+                    .push(TaskCore {
                         task_id,
-                        reporter: origin,
-                        created_at: now,
-                        updated_at: now,
-                        task: task.clone(),
+                        assignees: assignees.clone(),
                     });
+                allocated = Some(task_id);
                 (DomainEventKind::TaskCreated, *task_storage_id)
             }
-            ProviderCommand::EditTask {
+            ProviderCommand::SetTaskAssigneesCore {
                 task_storage_id,
                 task_id,
-                task,
+                assignees,
                 ..
             } => {
                 coordinator(project, origin)?;
-                self.task_assignees(task)?;
+                self.task_assignees(assignees)?;
                 let current = task_mut(project, *task_storage_id, *task_id)?;
-                current.task = task.clone();
-                current.updated_at = now;
-                (DomainEventKind::TaskUpdated, *task_storage_id)
-            }
-            ProviderCommand::UpdateTaskProgress {
-                task_storage_id,
-                task_id,
-                progress,
-                ..
-            } => {
-                require(origin != project.client, "client_read_only")?;
-                let is_coordinator = project.coordinator == origin;
-                let current = task_mut(project, *task_storage_id, *task_id)?;
-                require(
-                    is_coordinator || current.task.assignees.contains(&origin),
-                    "task_assignee_required",
-                )?;
-                current.task.status = progress.status;
-                current.task.logged_minutes = progress.logged_minutes;
-                current.updated_at = now;
+                current.assignees.clone_from(assignees);
                 (DomainEventKind::TaskUpdated, *task_storage_id)
             }
             _ => return Err(Error::bad("invalid_project_message")),
         };
-        Ok((kind, Some(storage_id)))
+        let mut effect = Effect::new(kind, Some(storage_id), origin);
+        effect.allocated_task_id = allocated;
+        Ok(effect)
     }
 
     fn milestone_command(
@@ -873,7 +852,7 @@ pub(super) fn milestone_mut(project: &mut ProjectCore, id: EntityId) -> Result<&
         .ok_or_else(|| Error::domain("milestone_not_found"))
 }
 
-fn storage_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut TaskStorageView> {
+fn storage_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut TaskStorageCore> {
     project
         .proposals
         .iter_mut()
@@ -883,7 +862,7 @@ fn storage_mut(project: &mut ProjectCore, id: EntityId) -> Result<&mut TaskStora
         .ok_or_else(|| Error::domain("task_storage_not_found"))
 }
 
-fn task_mut(project: &mut ProjectCore, storage: EntityId, id: u32) -> Result<&mut TaskView> {
+fn task_mut(project: &mut ProjectCore, storage: EntityId, id: u32) -> Result<&mut TaskCore> {
     storage_mut(project, storage)?
         .tasks
         .iter_mut()
@@ -926,7 +905,7 @@ fn make_milestones(
                     assignments: Vec::new(),
                     worker_ratings: Vec::new(),
                     submissions: Vec::new(),
-                    task_storage: TaskStorageView {
+                    task_storage: TaskStorageCore {
                         task_storage_id: context.random_id(),
                         milestone_id,
                         tasks: Vec::new(),

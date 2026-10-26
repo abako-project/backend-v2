@@ -123,8 +123,7 @@ async fn api_task_views_grant_and_remove_task_only_access_without_r1_copies() ->
         StatusCode::NOT_FOUND
     );
     let history = notifications::page(&c.app, c.worker.view.account_id, 0).await?;
-    assert_eq!(history.notifications.len(), 1);
-    assert!(history.notifications[0].project_title.is_none());
+    assert!(history.notifications.is_empty());
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM project_content_copies")
             .fetch_one(&c.app.db)
@@ -134,7 +133,8 @@ async fn api_task_views_grant_and_remove_task_only_access_without_r1_copies() ->
     assert!(
         c.fake.lock().await.snapshot.projects[0].proposals[0].milestones[0]
             .task_storage
-            .tasks
+            .tasks[0]
+            .assignees
             .is_empty()
     );
     server.finish().await?;
@@ -171,10 +171,9 @@ async fn api_task_progress_uses_current_membership_but_money_authorization_stays
         expected_revision: 1,
     };
     operations::authorize(&c.app, &c.client, &approval).await?;
-    assert!(matches!(
-        operations::authorize(&c.app, &c.owner, &command).await,
-        Err(Error::Dependency)
-    ));
+    // Task authorization is a core fact; malformed API text blocks execution,
+    // not the actor matrix (covered separately by preflight recovery tests).
+    operations::authorize(&c.app, &c.owner, &command).await?;
     c.internal.finish().await?;
     Ok(())
 }
@@ -240,57 +239,50 @@ async fn api_task_view_corruption_isolated_from_unrelated_projects_and_durable_h
         )
         .await?
         .status(),
-        StatusCode::SERVICE_UNAVAILABLE
+        StatusCode::NOT_FOUND
     );
     sqlx::query("UPDATE task_items SET payload='not JSON' WHERE task_id=9")
         .execute(&c.app.db)
         .await?;
     let history = notifications::page(&c.app, c.worker.view.account_id, 0).await?;
-    assert_eq!(history.notifications.len(), 1);
-    assert!(history.notifications[0].project_title.is_none());
+    assert!(history.notifications.is_empty());
     server.finish().await?;
     c.internal.finish().await?;
     Ok(())
 }
 
 #[tokio::test]
-async fn api_task_views_ignore_stale_provider_tasks_and_validate_storage_context() -> TestResult {
+async fn api_task_views_use_core_membership_and_validate_content_context() -> TestResult {
     let c = Cohort::new(true).await?;
     c.run(&c.owner, c.create()).await?;
     let original = c.tasks().await?[0].clone();
     c.fake.lock().await.snapshot.projects[0].proposals[0].milestones[0]
         .task_storage
-        .tasks = vec![TaskView {
-        task_id: 1,
-        task: TaskDefinition {
-            assignees: vec![c.client.view.account_id],
-            ..c.definition.clone()
-        },
-        ..original.clone()
+        .tasks = vec![generated_contracts::provider_core::TaskCore {
+        task_id: original.task_id,
+        assignees: vec![c.client.view.account_id],
     }];
-    assert_eq!(
-        project(&c, c.worker.view.account_id)
-            .await?
-            .ok_or("worker access")?
-            .proposals[0]
-            .milestones[0]
-            .task_storage
-            .tasks,
-        vec![original]
-    );
+    assert!(project(&c, c.worker.view.account_id).await?.is_none());
     let stranger = AccountId32::from_bytes([37; 32]);
     c.fake.lock().await.snapshot.projects[0].proposals[0].milestones[0]
         .task_storage
         .tasks[0]
-        .task
         .assignees = vec![stranger];
-    assert!(project(&c, stranger).await?.is_none());
+    let selected = project(&c, stranger)
+        .await?
+        .ok_or("core grants membership")?;
+    let content =
+        crate::task_views::content(&c.app, info().provider_instance_id, selected.clone()).await?;
+    assert_eq!(
+        content.storages[0].storage.tasks[0].task.assignees,
+        vec![stranger]
+    );
     sqlx::query("UPDATE task_storages SET milestone_id=$1")
         .bind(EntityId::from_bytes([38; 16]).to_string())
         .execute(&c.app.db)
         .await?;
     assert!(matches!(
-        project(&c, c.owner.view.account_id).await,
+        crate::task_views::content(&c.app, info().provider_instance_id, selected).await,
         Err(Error::Dependency)
     ));
     c.internal.finish().await?;
@@ -310,20 +302,20 @@ async fn blocked_task_reader(c: &Cohort) -> Result<(), Error> {
 async fn api_task_views_keep_one_pg_snapshot_during_an_atomic_task_commit() -> TestResult {
     let c = Cohort::new(true).await?;
     c.run(&c.owner, c.create()).await?;
-    let mut next = c.tasks().await?[0].clone();
-    next.task_id = 10;
+    let original = c.tasks().await?[0].clone();
+    let mut next = original.clone();
+    next.task.title = "Updated text".into();
+    let core = c.fake.lock().await.snapshot.projects[0].clone();
     let mut publisher = c.app.db.begin().await?;
     sqlx::query("LOCK TABLE task_items IN ACCESS EXCLUSIVE MODE")
         .execute(&mut *publisher)
         .await?;
-    let read = project(&c, c.owner.view.account_id);
+    let read = crate::task_views::content(&c.app, info().provider_instance_id, core.clone());
     let publish = async {
         let blocked = blocked_task_reader(&c).await;
         if blocked.is_ok() {
-            sqlx::query("INSERT INTO task_items(provider_instance_id,task_id,task_storage_id,ordinal,payload,assignees) VALUES($1,10,$2,1,$3,$4)")
-                .bind(info().provider_instance_id.to_string()).bind(c.storage().to_string()).bind(serde_json::to_string(&next)?)
-                .bind(next.task.assignees.iter().map(ToString::to_string).collect::<Vec<_>>()).execute(&mut *publisher).await?;
-            sqlx::query("UPDATE task_generations SET next_task_id=11,task_count=task_count+1")
+            sqlx::query("UPDATE task_items SET payload=$1 WHERE task_id=9")
+                .bind(serde_json::to_string(&next)?)
                 .execute(&mut *publisher)
                 .await?;
         }
@@ -332,23 +324,14 @@ async fn api_task_views_keep_one_pg_snapshot_during_an_atomic_task_commit() -> T
     };
     let (view, committed) = tokio::join!(read, publish);
     committed?;
+    assert_eq!(view?.storages[0].storage.tasks[0], original);
     assert_eq!(
-        view?.ok_or("visible")?.proposals[0].milestones[0]
-            .task_storage
-            .tasks
-            .len(),
-        1
-    );
-    assert_eq!(
-        project(&c, c.owner.view.account_id)
+        crate::task_views::content(&c.app, info().provider_instance_id, core)
             .await?
-            .ok_or("visible")?
-            .proposals[0]
-            .milestones[0]
-            .task_storage
-            .tasks
-            .len(),
-        2
+            .storages[0]
+            .storage
+            .tasks[0],
+        next
     );
     c.internal.finish().await?;
     Ok(())
@@ -605,8 +588,8 @@ async fn api_frozen_views_reject_receipt_and_snapshot_context_mismatches() -> Te
 }
 
 #[tokio::test]
-async fn api_frozen_views_fail_closed_for_unreconciled_cases_and_preserve_provider_mode()
--> TestResult {
+async fn api_frozen_views_fail_closed_and_cannot_reenable_predecessor_task_fallback() -> TestResult
+{
     let (c, _, id, _) = case_fixture().await?;
     sqlx::query("DELETE FROM task_freezes")
         .execute(&c.app.db)
@@ -618,15 +601,8 @@ async fn api_frozen_views_fail_closed_for_unreconciled_cases_and_preserve_provid
     sqlx::query("UPDATE task_generations SET api_owned=FALSE")
         .execute(&c.app.db)
         .await?;
-    assert!(
-        crate::disputes::public_read(&c.app, id)
-            .await?
-            .milestone
-            .task_storage
-            .tasks
-            .is_empty()
-    );
-    assert!(project(&c, c.worker.view.account_id).await?.is_none());
+    assert!(crate::disputes::public_read(&c.app, id).await.is_err());
+    assert!(project(&c, c.worker.view.account_id).await?.is_some());
     let server = Server::start(http::router(c.app.clone())).await?;
     assert_eq!(
         get(
@@ -636,13 +612,13 @@ async fn api_frozen_views_fail_closed_for_unreconciled_cases_and_preserve_provid
         )
         .await?
         .status(),
-        StatusCode::OK
+        StatusCode::SERVICE_UNAVAILABLE
     );
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM project_content_copies")
             .fetch_one(&c.app.db)
             .await?,
-        1
+        0
     );
     server.finish().await?;
     c.internal.finish().await?;
@@ -658,7 +634,8 @@ async fn api_task_view_namespace_and_new_empty_storage_reads_do_not_reuse_old_ta
     // Explicit candidate namespace fixture, not a cutover or a source fingerprint.
     sqlx::query("INSERT INTO task_generations(provider_instance_id,next_task_id,source_hash,storage_count,task_count,api_owned) VALUES($1,99,$2,0,0,TRUE)")
         .bind(generation.to_string()).bind(vec![0u8;32]).execute(&c.app.db).await?;
-    let core = c.fake.lock().await.snapshot.projects[0].clone();
+    let mut core = c.fake.lock().await.snapshot.projects[0].clone();
+    core.proposals[0].milestones[0].task_storage.tasks.clear();
     let (other, owned) =
         crate::task_views::project(&c.app, generation, core, c.owner.view.account_id).await?;
     assert!(owned);
@@ -690,9 +667,14 @@ async fn api_task_view_namespace_and_new_empty_storage_reads_do_not_reuse_old_ta
     );
     // A nonempty provider storage with no verified API context cannot fall back.
     let mut core = c.fake.lock().await.snapshot.projects[0].clone();
-    core.proposals[0].milestones[0].task_storage.tasks = c.tasks().await?;
+    core.proposals[0].milestones[0].task_storage.tasks = c
+        .tasks()
+        .await?
+        .iter()
+        .map(generated_contracts::provider_core::TaskCore::from)
+        .collect();
     assert!(matches!(
-        crate::task_views::project(&c.app, generation, core, c.owner.view.account_id).await,
+        crate::task_views::content(&c.app, generation, core).await,
         Err(Error::Dependency)
     ));
     c.internal.finish().await?;

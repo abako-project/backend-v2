@@ -9,7 +9,7 @@ use generated_contracts::{
     CatalogKind, PayloadHash,
     provider_core::{
         CatalogContentV1, CatalogMetadataHeaderV1, CatalogMetadataRecordV1, CatalogReferenceV1,
-        CoreSnapshotV4, SkillRequestCore,
+        CoreSnapshotV5, SkillRequestCore,
     },
 };
 use std::{
@@ -19,7 +19,7 @@ use std::{
     path::PathBuf,
 };
 struct Selection {
-    snapshot: CoreSnapshotV4,
+    snapshot: CoreSnapshotV5,
     requests: Vec<SkillRequestCore>,
     references: BTreeMap<PayloadHash, CatalogReferenceV1>,
 }

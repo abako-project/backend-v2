@@ -4,7 +4,7 @@ use crate::state::{App, Error, hash};
 use generated_contracts::{
     AccountId32, PayloadHash,
     provider_core::{
-        CoreSnapshotV4, CreationMetadataHeaderV1, CreationMetadataRecordV1, MetadataEntityV1,
+        CoreSnapshotV5, CreationMetadataHeaderV1, CreationMetadataRecordV1, MetadataEntityV1,
         MetadataReferenceV1,
     },
 };
@@ -27,7 +27,7 @@ pub(crate) async fn reconciled(app: &App) -> Result<(), Error> {
     }
     Ok(())
 }
-fn selected(snapshot: CoreSnapshotV4) -> Result<Selected, Error> {
+fn selected(snapshot: CoreSnapshotV5) -> Result<Selected, Error> {
     let mut selected = BTreeMap::new();
     for worker in snapshot.workers {
         let key = worker.content.hash();

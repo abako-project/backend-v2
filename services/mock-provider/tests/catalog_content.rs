@@ -105,7 +105,7 @@ async fn compact_catalog_retains_incarnation_roles_history_and_exact_v3_restore(
     );
     let archive = provider.archive().await?;
     assert_eq!(archive.checkpoint.skill_metadata[&1].origin, seed_origin);
-    let old = migration::to_predecessor(archive, &documents, &BTreeMap::new())?;
+    let old = migration::to_predecessor(without_tasks(archive)?, &documents, &BTreeMap::new())?;
     assert_eq!(old.checkpoint.skill_metadata[&1].category, "software");
     assert!(old.checkpoint.skills[&1].name.contains('\0'));
     apply(
@@ -131,7 +131,7 @@ async fn compact_catalog_retains_incarnation_roles_history_and_exact_v3_restore(
     assert_ne!(archive.checkpoint.skill_metadata[&1].origin, seed_origin);
     assert!(archive.checkpoint.skill_metadata[&1].role_ids.is_empty());
     assert_eq!(
-        migration::to_predecessor(archive, &documents, &BTreeMap::new())?
+        migration::to_predecessor(without_tasks(archive)?, &documents, &BTreeMap::new())?
             .checkpoint
             .skill_metadata[&1]
             .category,
@@ -203,7 +203,7 @@ async fn compact_catalog_retains_incarnation_roles_history_and_exact_v3_restore(
     let archive = provider.archive().await?;
     assert_eq!(archive.checkpoint.skill_metadata[&skill_id].origin, origin);
     assert_eq!(archive.checkpoint.skill_metadata[&skill_id].role_ids, [1]);
-    let old = migration::to_predecessor(archive, &documents, &BTreeMap::new())?;
+    let old = migration::to_predecessor(without_tasks(archive)?, &documents, &BTreeMap::new())?;
     assert_eq!(
         old.checkpoint.skill_requests[&request_id].name,
         "New  Skill"
@@ -239,7 +239,7 @@ async fn compact_catalog_retains_incarnation_roles_history_and_exact_v3_restore(
         archive.checkpoint.skill_requests[&request_id].status,
         SkillRequestStatus::Approved
     );
-    migration::to_predecessor(archive, &documents, &BTreeMap::new())?;
+    migration::to_predecessor(without_tasks(archive)?, &documents, &BTreeMap::new())?;
     apply(
         &provider,
         &root,
@@ -297,6 +297,20 @@ async fn compact_catalog_retains_incarnation_roles_history_and_exact_v3_restore(
         archive.checkpoint.skill_requests[&pending].status,
         SkillRequestStatus::Pending
     );
-    migration::to_predecessor(archive, &documents, &BTreeMap::new())?;
+    migration::to_predecessor(without_tasks(archive)?, &documents, &BTreeMap::new())?;
     Ok(())
+}
+
+// This catalog-only scenario never creates a project or a task storage.
+fn without_tasks(
+    core: provider_execution::migration::CoreArchiveV5,
+) -> Result<provider_execution::migration::CoreArchiveV4, Box<dyn std::error::Error>> {
+    assert!(core.checkpoint.projects.is_empty());
+    let tasks = TaskStateV1 {
+        schema_version: 1,
+        generation: core.checkpoint.info.provider_instance_id,
+        next_task_id: core.checkpoint.next_task_id,
+        storages: vec![],
+    };
+    Ok(core.into_v4(tasks)?)
 }

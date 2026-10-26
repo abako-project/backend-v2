@@ -1,10 +1,11 @@
 //! Actual compact catalog/reason execution, native/WASM comparison and V3 restore.
+mod support;
 use generated_contracts::{provider_core::*, *};
 use ink_v5_compatibility::{
     WHOLE_GAS,
     worker::{Authority, WholeConfiguration, Worker},
 };
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV4};
+use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV5};
 use sp_core::{Pair, sr25519};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -18,7 +19,7 @@ fn account(seed: u8) -> AccountId32 {
 fn actor(value: AccountId32) -> u8 {
     (1..=10).find(|seed| account(*seed) == value).unwrap()
 }
-fn signed(core: &CoreArchiveV4, who: u8, op: u8, command: ProviderCommand) -> SignedContractCallV1 {
+fn signed(core: &CoreArchiveV5, who: u8, op: u8, command: ProviderCommand) -> SignedContractCallV1 {
     let call = UnsignedContractCallV1::new(
         core.checkpoint.info.provider_instance_id,
         OperationId::from_bytes([op; 16]),
@@ -39,7 +40,8 @@ fn signed(core: &CoreArchiveV4, who: u8, op: u8, command: ProviderCommand) -> Si
 }
 struct Run {
     worker: Worker,
-    core: CoreArchiveV4,
+    core: CoreArchiveV5,
+    tasks: support::TaskContent,
     catalog: BTreeMap<PayloadHash, CatalogMetadataRecordV1>,
     reasons: BTreeMap<PayloadHash, ReasonMetadataRecordV1>,
     calls: Vec<SignedContractCallV1>,
@@ -118,8 +120,12 @@ impl Run {
         receipt
     }
     fn restore(&self) -> provider_execution::migration::CoreArchiveV3 {
-        mock_provider::migration::to_predecessor(self.core.clone(), &self.catalog, &self.reasons)
-            .unwrap()
+        mock_provider::migration::to_predecessor(
+            self.tasks.restore(self.core.clone()),
+            &self.catalog,
+            &self.reasons,
+        )
+        .unwrap()
     }
 }
 fn private_json(path: &Path, value: &impl serde::Serialize) {
@@ -159,7 +165,10 @@ fn export(run: &Run, path: &Path) {
     std::fs::create_dir_all(path).unwrap();
     let saved = &run.core.checkpoint;
     let generation = saved.info.provider_instance_id;
-    private_json(&path.join("core.json"), &run.core);
+    private_json(
+        &path.join("core.json"),
+        &run.tasks.restore(run.core.clone()),
+    );
     private_json(&path.join("predecessor.json"), &run.restore());
     private_json(&path.join("calls.json"), &run.calls);
     private_json(&path.join("receipts.json"), &run.receipts);
@@ -219,7 +228,7 @@ fn export(run: &Run, path: &Path) {
             schema_version: 1,
             generation,
         },
-        mock_provider::migration::recover_legacy_creations(&run.core)
+        mock_provider::migration::recover_legacy_creations(&run.tasks.restore(run.core.clone()))
             .unwrap()
             .iter(),
     );
@@ -229,7 +238,7 @@ fn export(run: &Run, path: &Path) {
             schema_version: 1,
             generation,
         },
-        mock_provider::migration::recover_legacy_proposals(&run.core)
+        mock_provider::migration::recover_legacy_proposals(&run.tasks.restore(run.core.clone()))
             .unwrap()
             .iter(),
     );
@@ -276,6 +285,7 @@ fn scenario(authorities: &[Authority], reason_bytes: usize, owner_export: bool) 
             let client = actor(initial.checkpoint.projects[&project].client);
             let requester = actor(*initial.checkpoint.workers.first_key_value().unwrap().0);
             for (index, authority) in authorities.iter().copied().enumerate() {
+                let (initial, tasks) = support::TaskContent::split(initial.clone());
                 let path = std::env::temp_dir().join(format!(
                     "catalog-v4-{}-{reason_bytes}-{index}.sqlite",
                     std::process::id()
@@ -293,6 +303,7 @@ fn scenario(authorities: &[Authority], reason_bytes: usize, owner_export: bool) 
                 let mut run = Run {
                     worker,
                     core: initial.clone(),
+                    tasks,
                     catalog: catalog
                         .iter()
                         .cloned()

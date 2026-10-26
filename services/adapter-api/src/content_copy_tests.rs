@@ -43,7 +43,7 @@ pub(super) fn source_worker() -> Result<WorkerView, Box<dyn std::error::Error>> 
 }
 
 #[tokio::test]
-async fn provider_content_copies_preserve_large_values_scope_and_concurrent_versions() -> TestResult
+async fn project_composition_preserves_metadata_versions_and_current_api_task_content() -> TestResult
 {
     let fake = fake()?;
     let internal = Server::start(internal(fake.clone())).await?;
@@ -69,7 +69,16 @@ async fn provider_content_copies_preserve_large_values_scope_and_concurrent_vers
             stage_project(&app, generation, newer.clone()).await?
         ),
     )?;
-    assert_eq!(old, original);
+    let mut expected_old = original.clone();
+    expected_old.proposals[0].milestones[0].task_storage.tasks[0]
+        .task
+        .title
+        .clone_from(
+            &newer.proposals[0].milestones[0].task_storage.tasks[0]
+                .task
+                .title,
+        );
+    assert!(old == expected_old);
     assert_eq!(new, newer);
     assert_eq!(
         crate::project_content::compose(
@@ -93,20 +102,7 @@ async fn provider_content_copies_preserve_large_values_scope_and_concurrent_vers
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM project_content_copies")
         .fetch_one(&app.db)
         .await?;
-    assert_eq!(count, 3);
-    let payloads: Vec<String> = sqlx::query_scalar("SELECT payload FROM project_content_copies")
-        .fetch_all(&app.db)
-        .await?;
-    for payload in payloads {
-        let payload: Value = serde_json::from_str(&payload)?;
-        assert!(payload.get("client").is_none());
-        assert!(payload.get("executionEscrow").is_none());
-        assert!(
-            payload["proposals"][0]["milestones"][0]
-                .get("assignments")
-                .is_none()
-        );
-    }
+    assert_eq!(count, 0);
     let mut worker = source_worker()?;
     worker.display_name = format!("\0{}", "n".repeat(MAX_SIGNABLE_BYTES - 201));
     let expected = worker.clone();
@@ -124,15 +120,13 @@ async fn provider_content_copies_preserve_large_values_scope_and_concurrent_vers
         .fetch_one(&app.db)
         .await?;
     assert_eq!(count, 1);
-    sqlx::query("UPDATE project_content_copies SET payload=jsonb_set(payload::jsonb,'{title}','\"tampered\"')::text WHERE provider_instance_id=$1")
-        .bind(generation.to_string()).execute(&app.db).await?;
+    sqlx::query("UPDATE task_items SET payload='tampered' WHERE provider_instance_id=$1")
+        .bind(generation.to_string())
+        .execute(&app.db)
+        .await?;
     assert!(matches!(
-        crate::project_content::compose(
-            &app,
-            generation,
-            stage_project(&app, generation, original.clone()).await?
-        )
-        .await,
+        crate::project_content::compose(&app, generation, core_project(&original, generation)?.0)
+            .await,
         Err(Error::Dependency)
     ));
     // Other generations and the provider source remain independent.
@@ -252,7 +246,7 @@ async fn provider_content_copies_preserve_public_views_visibility_and_read_only_
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM project_content_copies")
         .fetch_one(&app.db)
         .await?;
-    assert_eq!(count, 1);
+    assert_eq!(count, 0);
     assert_eq!(
         fake.lock().await.snapshot.projects,
         vec![core_project(&project, info().provider_instance_id)?.0]
@@ -266,8 +260,7 @@ async fn provider_content_copies_preserve_public_views_visibility_and_read_only_
 }
 
 #[tokio::test]
-async fn provider_content_copies_failed_insert_does_not_change_source_and_retry_backfills()
--> TestResult {
+async fn obsolete_project_copy_writes_are_not_required_for_current_views() -> TestResult {
     let fake = fake()?;
     let internal = Server::start(internal(fake.clone())).await?;
     let app = app(&internal).await?;
@@ -287,7 +280,7 @@ async fn provider_content_copies_failed_insert_does_not_change_source_and_retry_
             stage_project(&app, info().provider_instance_id, project.clone()).await?
         )
         .await
-        .is_err()
+        .is_ok()
     );
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM project_content_copies")
         .fetch_one(&app.db)
@@ -348,8 +341,10 @@ async fn provider_content_copies_cannot_block_raw_task_write_aliases() -> TestRe
         stage_project(&app, info().provider_instance_id, project.clone()).await?,
     )
     .await?;
-    sqlx::query("UPDATE project_content_copies SET payload=jsonb_set(payload::jsonb,'{title}','\"tampered\"')::text").execute(&app.db).await?;
-    let before: String = sqlx::query_scalar("SELECT payload FROM project_content_copies")
+    sqlx::query("UPDATE task_items SET payload='tampered'")
+        .execute(&app.db)
+        .await?;
+    let before: String = sqlx::query_scalar("SELECT payload FROM task_items")
         .fetch_one(&app.db)
         .await?;
     let server = Server::start(crate::http::router(app.clone())).await?;
@@ -431,10 +426,10 @@ async fn provider_content_copies_cannot_block_raw_task_write_aliases() -> TestRe
             "{method} aliases must queue identical native commands"
         );
     }
-    let after: String = sqlx::query_scalar("SELECT payload FROM project_content_copies")
+    let after: String = sqlx::query_scalar("SELECT payload FROM task_items")
         .fetch_one(&app.db)
         .await?;
-    assert_eq!(before, after, "writes must not touch the presentation copy");
+    assert_eq!(before, after, "writes must not touch the API task payload");
     assert_eq!(
         fake.lock().await.snapshot.projects,
         vec![core_project(&project, info().provider_instance_id)?.0]

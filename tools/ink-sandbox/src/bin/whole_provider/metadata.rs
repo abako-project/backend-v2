@@ -1,5 +1,5 @@
-//! Offline V3↔V4 owner-file exchange. The binary has one current business engine.
-use super::{Result, load_archive, write_archive};
+//! Explicit historical owner exchange and current metadata recovery. One business engine.
+use super::{Result, write_archive};
 use generated_contracts::{
     AccountId32, PayloadHash, ProviderInstanceId,
     provider_core::{
@@ -16,6 +16,33 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     path::Path,
 };
+fn read_archive(path: &Path) -> Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    File::open(path)?
+        .take(MAX_SHELL as u64 + 1)
+        .read_to_end(&mut bytes)?;
+    if bytes.len() > MAX_SHELL {
+        return Err("archive exceeds limit".into());
+    }
+    Ok(bytes)
+}
+// Historical catalog downgrade decodes V4 only. Recovery supports explicitly
+// versioned V4 and V5 inputs, without inventing task content for a V5 archive.
+fn recovery_archive(
+    path: &Path,
+    root: AccountId32,
+) -> Result<provider_execution::migration::CoreArchiveV5> {
+    #[derive(serde::Deserialize)]
+    struct Version {
+        version: u32,
+    }
+    let bytes = read_archive(path)?;
+    match serde_json::from_slice::<Version>(&bytes)?.version {
+        4 => Ok(migration::compact_tasks(root, serde_json::from_slice(&bytes)?)?.0),
+        5 => Ok(serde_json::from_slice(&bytes)?),
+        _ => Err("unsupported recovery archive version".into()),
+    }
+}
 fn output_file(path: &Path) -> Result<File> {
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);
@@ -107,7 +134,7 @@ pub(super) fn run(args: &[String], root: AccountId32) -> Result<()> {
             write_metadata(Path::new(reason_output),reason_header(generation),&reasons)?;
         }
         [command,source,catalog_path,reason_path,output] if command=="downgrade"=>{
-            let core=load_archive(Path::new(source))?;if core.checkpoint.info.root_account!=root{return Err("configured root differs from retained root".into());}
+            let core:provider_execution::migration::CoreArchiveV4=serde_json::from_slice(&read_archive(Path::new(source))?)?;if core.checkpoint.info.root_account!=root{return Err("configured root differs from retained root".into());}
             let generation=core.checkpoint.info.provider_instance_id;
             let catalog=read_metadata(Path::new(catalog_path),|h:CatalogMetadataHeaderV1|h.schema_version==1&&h.generation==generation,|r:&CatalogMetadataRecordV1|(r.generation==generation).then(||migration::source_hash(&r.hash_input())))?;
             let reasons=read_metadata(Path::new(reason_path),|h:ReasonMetadataHeaderV1|h.schema_version==1&&h.generation==generation,|r:&ReasonMetadataRecordV1|(r.generation==generation).then(||migration::source_hash(&r.hash_input())))?;
@@ -118,13 +145,13 @@ pub(super) fn run(args: &[String], root: AccountId32) -> Result<()> {
             write_archive(Path::new(output),&migration::to_predecessor(core,&catalog,&reasons)?)?;
         }
         [command,source,output] if matches!(command.as_str(),"recover-creation-metadata"|"recover-proposal-metadata"|"recover-catalog-metadata"|"recover-reason-metadata")=>{
-            let core=load_archive(Path::new(source))?;if core.checkpoint.info.root_account!=root{return Err("configured root differs from retained root".into());}
+            let core=recovery_archive(Path::new(source),root)?;if core.checkpoint.info.root_account!=root{return Err("configured root differs from retained root".into());}
             let generation=core.checkpoint.info.provider_instance_id;let output=Path::new(output);
             match command.as_str(){
-                "recover-creation-metadata"=>write_metadata(output,CreationMetadataHeaderV1{schema_version:1,generation},&migration::recover_legacy_creations(&core)?)?,
-                "recover-proposal-metadata"=>write_metadata(output,ProposalMetadataHeaderV1{schema_version:1,generation},&migration::recover_legacy_proposals(&core)?)?,
-                "recover-catalog-metadata"=>write_metadata(output,catalog_header(generation),&migration::recover_legacy_catalog(&core)?)?,
-                _=>write_metadata(output,reason_header(generation),&migration::recover_legacy_reasons(&core)?)?,
+                "recover-creation-metadata"=>write_metadata(output,CreationMetadataHeaderV1{schema_version:1,generation},&migration::recover_current_creations(&core)?)?,
+                "recover-proposal-metadata"=>write_metadata(output,ProposalMetadataHeaderV1{schema_version:1,generation},&migration::recover_current_proposals(&core)?)?,
+                "recover-catalog-metadata"=>write_metadata(output,catalog_header(generation),&migration::recover_current_catalog(&core)?)?,
+                _=>write_metadata(output,reason_header(generation),&migration::recover_current_reasons(&core)?)?,
             }
         }
         _=>return Err("usage: whole-provider upgrade V3 V4 CATALOG REASONS | downgrade V4 CATALOG REASONS V3 | recover-{creation,proposal,catalog,reason}-metadata CORE OUTPUT".into()),

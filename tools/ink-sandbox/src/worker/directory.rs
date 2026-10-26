@@ -123,6 +123,7 @@ struct ContractEffect {
     kind: DomainEventKind,
     entity_id: Option<EntityId>,
     recipients: Vec<AccountId32>,
+    allocated_task_id: Option<u32>,
 }
 fn account(value: AccountId32) -> Account {
     Account::new(value.into_bytes())
@@ -392,6 +393,7 @@ fn transition(outcome: &Outcome) -> Result<Result<Effect, &'static str>, Error> 
                         kind: effect.kind,
                         entity_id: effect.entity_id,
                         recipients,
+                        allocated_task_id: effect.allocated_task_id,
                     }))
                 }
                 (Status::Reverted, Err(code)) => Ok(Err(domain_error(&code)?)),
@@ -518,7 +520,7 @@ pub(super) struct Applied {
     pub(super) state: State,
     pub(super) receipt: OperationReceipt,
     pub(super) outcome: Outcome,
-    pub(super) archive: Option<provider_execution::migration::CoreArchiveV4>,
+    pub(super) archive: Option<provider_execution::migration::CoreArchiveV5>,
 }
 pub(super) enum Evaluation {
     Replay(OperationReceipt),
@@ -974,6 +976,7 @@ mod tests {
             DomainEventKind::WorkerRegistered,
             Some(EntityId::from_bytes([1; 16])),
             vec![AccountId32::from_bytes([2; 32])],
+            None::<u32>,
         );
         let success = Result::<Result<_, String>, u8>::Ok(Ok(effect)).encode();
         assert!(matches!(
@@ -986,6 +989,7 @@ mod tests {
             DomainEventKind::WorkerRegistered,
             None::<EntityId>,
             vec![AccountId32::from_bytes([2; 32]); 2],
+            None::<u32>,
         )))
         .encode();
         for (status, data) in [

@@ -1,4 +1,4 @@
-//! Verified staging of actual task state. Public task routes remain provider-owned.
+//! Verified task-content preparation and ownership activation against actual core identities.
 use crate::state::{App, Error, hash, parse};
 use generated_contracts::{
     EntityId, ProviderInstanceId, TaskStorageView, TaskView,
@@ -264,4 +264,174 @@ pub(crate) async fn write(state: TaskStateV1, path: PathBuf) -> Result<(), Error
         Ok(())
     })
     .await?
+}
+
+/// Paused predecessor preparation. A crash leaves ownership unchanged; retry
+/// verifies both the task copy and immutable historical-case records.
+pub(crate) async fn prepare_cutover(app: &App) -> Result<(), Error> {
+    backfill(app).await?;
+    let mut tx = app.db.begin().await?;
+    crate::task_rollback::paused(&mut tx).await?;
+    let info: generated_contracts::ProviderInfo =
+        app.get(&app.config.provider_url, "/internal/info").await?;
+    let stored = read(&mut tx, info.provider_instance_id)
+        .await?
+        .ok_or(Error::Dependency)?;
+    let (state, digest) = tokio::task::spawn_blocking(move || {
+        let digest = fingerprint(&stored.state)?;
+        if digest.as_slice() != stored.fingerprint {
+            return Err(Error::Dependency);
+        }
+        Ok::<_, Error>((stored.state, digest))
+    })
+    .await??;
+    crate::task_migration::capture(app, &mut tx, state, digest).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Explicit owner cutover after the matching V5 archive has been imported.
+/// Both API ingress/workers and direct core writers must remain paused.
+pub(crate) async fn activate(app: &App) -> Result<(), Error> {
+    let mut tx = app.db.begin().await?;
+    crate::task_rollback::paused(&mut tx).await?;
+    let core: generated_contracts::provider_core::TaskStateV2 =
+        crate::task_rollback::fetch_target(app, "/internal/task-state").await?;
+    let snapshot = app.snapshot().await?;
+    let generation = core.generation;
+    if snapshot.info.provider_instance_id != generation {
+        return Err(Error::Dependency);
+    }
+    let stored = read(&mut tx, generation).await?.ok_or(Error::NotFound)?;
+    let owned: bool = sqlx::query_scalar(
+        "SELECT api_owned FROM task_generations WHERE provider_instance_id=$1 FOR UPDATE",
+    )
+    .bind(generation.to_string())
+    .fetch_one(&mut *tx)
+    .await?;
+    let next = core.next_task_id;
+    tokio::task::spawn_blocking(move || {
+        // A prepared generation must still match its exact predecessor copy.
+        // Completed retries verify the current context without requiring the
+        // original content fingerprint to describe mutable API text.
+        if !owned && fingerprint(&stored.state)?.as_slice() != stored.fingerprint {
+            return Err(Error::Dependency);
+        }
+        crate::task_rollback::verify_core(&stored.state, &core)
+    })
+    .await??;
+    crate::task_migration::verify_inventory(
+        &mut tx,
+        generation,
+        snapshot
+            .projects
+            .iter()
+            .filter_map(|p| p.active_dispute_id)
+            .collect(),
+    )
+    .await?;
+    for project in snapshot.projects {
+        if let Some(id) = project.active_dispute_id {
+            let case = crate::disputes::read(app, id).await?;
+            let proposal = project
+                .proposals
+                .iter()
+                .find(|p| {
+                    p.milestones.iter().any(|m| {
+                        m.milestone_id == case.dispute.milestone_id && *m == case.milestone
+                    })
+                })
+                .ok_or(Error::Dependency)?;
+            if case.dispute.project_id != project.project_id
+                || case.dispute.dispute_id != id
+                || proposal.revision != case.dispute.proposal_revision
+            {
+                return Err(Error::Dependency);
+            }
+            crate::task_freezes::accepted_case(
+                &mut tx,
+                generation,
+                proposal.proposal_id,
+                next,
+                case,
+            )
+            .await?;
+        }
+    }
+    sqlx::query("UPDATE task_generations SET api_owned=TRUE WHERE provider_instance_id=$1")
+        .bind(generation.to_string())
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Initialize only an untouched V5 development generation before API ingress.
+/// The provider must be quiescent during startup; `PostgreSQL` locks do not fence
+/// direct core callers. Populated/prepared generations require explicit cutover.
+pub(crate) async fn initialize_empty(app: &App) -> Result<(), Error> {
+    let state: generated_contracts::provider_core::TaskStateV2 = app
+        .get(&app.config.provider_url, "/internal/task-state")
+        .await?;
+    let state = tokio::task::spawn_blocking(move || {
+        state.validate().map_err(|_| Error::Dependency)?;
+        Ok::<_, Error>(state)
+    })
+    .await??;
+    let generation = state.generation;
+    let mut tx = app.db.begin().await?;
+    sqlx::query("SELECT pg_advisory_xact_lock(621009)")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("SELECT pg_advisory_xact_lock(621007)")
+        .execute(&mut *tx)
+        .await?;
+    let owned: Option<bool> = sqlx::query_scalar(
+        "SELECT api_owned FROM task_generations WHERE provider_instance_id=$1 FOR UPDATE",
+    )
+    .bind(generation.to_string())
+    .fetch_optional(&mut *tx)
+    .await?;
+    if owned == Some(true) {
+        tx.commit().await?;
+        return Ok(());
+    }
+    if owned.is_some()
+        || state.next_task_id != 1
+        || state.has_task_history
+        || state
+            .storages
+            .iter()
+            .any(|record| !record.storage.tasks.is_empty())
+    {
+        return Err(Error::Conflict("task_cutover_required"));
+    }
+    let pending: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM operations WHERE status NOT IN ('Finalized','Rejected','Expired') OR task_operation OR task_project_id IS NOT NULL OR (possibly_submitted AND status IN ('Rejected','Expired') AND NOT(status='Rejected' AND error_code IS NOT DISTINCT FROM 'provider_rejected'))) OR EXISTS(SELECT 1 FROM task_freezes)")
+        .fetch_one(&mut *tx).await?;
+    if pending {
+        return Err(Error::Conflict("task_cutover_required"));
+    }
+    let snapshot = app.snapshot().await?;
+    if snapshot.info.provider_instance_id != generation
+        || snapshot
+            .projects
+            .iter()
+            .any(|project| project.active_dispute_id.is_some())
+        || !state.storages.is_empty()
+    {
+        return Err(Error::Conflict("task_cutover_required"));
+    }
+    // A new generation has no source task rows. Its empty provenance is explicit;
+    // this is never used as a checksum for later mutable content.
+    let empty = TaskStateV1 {
+        schema_version: 1,
+        generation,
+        next_task_id: 1,
+        storages: Vec::new(),
+    };
+    let digest = fingerprint(&empty)?;
+    sqlx::query("INSERT INTO task_generations(provider_instance_id,next_task_id,source_hash,storage_count,task_count,api_owned) VALUES($1,1,$2,0,0,TRUE)")
+        .bind(generation.to_string()).bind(digest.as_slice()).execute(&mut *tx).await?;
+    tx.commit().await?;
+    Ok(())
 }

@@ -28,6 +28,8 @@ mod submission_presentations;
 mod task_execution;
 mod task_freezes;
 mod task_history;
+mod task_materialization;
+mod task_migration;
 mod task_rollback;
 mod task_state;
 mod task_views;
@@ -50,6 +52,7 @@ async fn main() -> Result<(), Error> {
     if owner_command(&app, &arguments).await? {
         return Ok(());
     }
+    task_state::initialize_empty(&app).await?;
     auth::bootstrap(&app).await?;
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
     let (stop, stopping) = watch::channel(false);
@@ -99,60 +102,65 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn owner_command(app: &App, arguments: &[String]) -> Result<bool, Error> {
-    match arguments {
+    let handled = match arguments {
         [] => Ok(false),
         [command] if command == "check-provider-cutover" => {
             creation_metadata_io::reconciled(app).await?;
             tracing::info!("Provider cutover queue is reconciled");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "import-catalog-metadata" => {
             let records = catalog_metadata_io::import(app, path.into()).await?;
             tracing::info!(records, "catalog metadata imported and verified");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "export-catalog-metadata" => {
             let records = catalog_metadata_io::export(app, path.into()).await?;
             tracing::info!(records, "catalog metadata exported and verified");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "import-reason-metadata" => {
             let records = reason_metadata_io::import(app, path.into()).await?;
             tracing::info!(records, "reason metadata imported and verified");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "export-reason-metadata" => {
             let records = reason_metadata_io::export(app, path.into()).await?;
             tracing::info!(records, "reason metadata exported and verified");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "import-proposal-metadata" => {
             let records = proposal_metadata_io::import(app, path.into()).await?;
             tracing::info!(records, "Proposal metadata imported and verified");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "export-proposal-metadata" => {
             let records = proposal_metadata_io::export(app, path.into()).await?;
             tracing::info!(records, "Proposal metadata exported and verified");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "import-creation-metadata" => {
             let records = creation_metadata_io::import(app, path.into()).await?;
             tracing::info!(records, "Creation metadata imported and verified");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "export-creation-metadata" => {
             let records = creation_metadata_io::export(app, path.into()).await?;
             tracing::info!(records, "Creation metadata exported and verified");
-            app.db.close().await;
+            Ok(true)
+        }
+        [command] if command == "prepare-task-cutover" => {
+            task_state::prepare_cutover(app).await?;
+            tracing::info!(
+                "Predecessor task content and historical cases verified; ownership unchanged"
+            );
+            Ok(true)
+        }
+        [command] if command == "activate-task-content" => {
+            task_state::activate(app).await?;
+            tracing::info!(
+                "Compact core and prepared API task context verified; API content ownership active"
+            );
             Ok(true)
         }
         [command] if command == "backfill-task-state" => {
@@ -162,35 +170,34 @@ async fn owner_command(app: &App, arguments: &[String]) -> Result<bool, Error> {
                 tasks,
                 "Provider task state copied and verified; ownership unchanged"
             );
-            app.db.close().await;
             Ok(true)
         }
         [command, generation, path] if command == "export-prepared-tasks" => {
             task_state::export(app, state::parse(generation)?, path.into()).await?;
             tracing::info!("Prepared task state exported; no ownership or signature asserted");
-            app.db.close().await;
             Ok(true)
         }
         [command, generation, path] if command == "export-current-tasks" => {
             task_rollback::export(app, state::parse(generation)?, path.into()).await?;
             tracing::info!("Current task restore projection exported; ownership unchanged");
-            app.db.close().await;
             Ok(true)
         }
         [command, path] if command == "complete-task-rollback" => {
             task_rollback::complete(app, path.into()).await?;
             tracing::info!("Task rollback readback verified; provider owns tasks");
-            app.db.close().await;
             Ok(true)
         }
         [command] if command == "backfill-provider-content" => {
             let (workers, projects) = backfill_content(app).await?;
             tracing::info!(workers, projects, "Provider content copies verified");
-            app.db.close().await;
             Ok(true)
         }
         _ => Err(Error::Config),
+    }?;
+    if handled {
+        app.db.close().await;
     }
+    Ok(handled)
 }
 
 async fn shutdown() -> Result<(), Error> {

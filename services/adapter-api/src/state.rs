@@ -3,7 +3,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshotV4};
+use generated_contracts::{ApiError, PayloadHash, provider_core::CoreSnapshotV5};
 use serde::{Serialize, de::DeserializeOwned};
 use sha2::{Digest, Sha256};
 use sqlx::{PgPool, postgres::PgPoolOptions};
@@ -224,6 +224,7 @@ impl App {
             include_str!("../migrations/0020_task_execution.sql"),
             include_str!("../migrations/0021_task_freezes.sql"),
             include_str!("../migrations/0022_task_core_intent.sql"),
+            include_str!("../migrations/0023_task_migration_cases.sql"),
         ] {
             sqlx::raw_sql(script).execute(&mut *migration).await?;
         }
@@ -279,11 +280,11 @@ impl App {
             .map_err(|_| Error::Dependency)?;
         decode_response(response).await
     }
-    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshotV4, Error> {
-        let snapshot: CoreSnapshotV4 = self
+    pub(crate) async fn snapshot(&self) -> Result<CoreSnapshotV5, Error> {
+        let snapshot: CoreSnapshotV5 = self
             .get(&self.config.provider_url, "/internal/snapshot")
             .await?;
-        if snapshot.schema_version != 4 {
+        if snapshot.schema_version != 5 {
             return Err(Error::Dependency);
         }
         Ok(snapshot)

@@ -83,9 +83,7 @@ impl RustEngine {
                             && milestone.task_storage.milestone_id == milestone.milestone_id,
                         "invalid_storage_state",
                     )?;
-                    for task in &milestone.task_storage.tasks {
-                        task.task.validate()?;
-                    }
+                    validate_task_members(&milestone.task_storage)?;
                     if milestone.status.is_some() {
                         require(
                             milestone.assignments.len() == milestone.definition.requirements.len(),
@@ -184,4 +182,16 @@ fn validate_execution_sequence(
             && (!project.completed || !project.cancelled),
         "invalid_project_state",
     )
+}
+
+fn validate_task_members(
+    storage: &generated_contracts::provider_core::TaskStorageCore,
+) -> Result<()> {
+    for task in &storage.tasks {
+        require(
+            task.assignees.iter().collect::<BTreeSet<_>>().len() == task.assignees.len(),
+            "invalid_task_state",
+        )?;
+    }
+    Ok(())
 }

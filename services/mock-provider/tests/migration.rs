@@ -58,7 +58,7 @@ async fn fresh_import_retains_generation_and_never_replaces_existing_state() -> 
     );
     let invalid = Database::new()?;
     let mut unsupported = original.clone();
-    unsupported.version = 5;
+    unsupported.version = 6;
     assert!(
         Provider::sqlite_from_archive(&invalid.url(), root, unsupported)
             .await
@@ -128,7 +128,7 @@ async fn unsupported_destination_format_is_never_overwritten() -> TestResult {
 async fn rollback_current_wasm_state_accepts_new_native_work() -> TestResult {
     use generated_contracts::*;
     let bytes = tokio::fs::read(std::env::var("SANDBOX_ROLLBACK_ARCHIVE")?).await?;
-    let archive: provider_execution::migration::CoreArchiveV4 = serde_json::from_slice(&bytes)?;
+    let archive: provider_execution::migration::CoreArchiveV5 = serde_json::from_slice(&bytes)?;
     let root = archive.checkpoint.info.root_account;
     let source_events = archive.checkpoint.events.len();
     let source_nonce = archive

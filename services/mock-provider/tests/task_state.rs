@@ -1,6 +1,6 @@
 //! The task migration export stays private and does not execute a command.
 #![cfg(feature = "storage-memory")]
-use generated_contracts::{AccountId32, provider_core::TaskStateV1};
+use generated_contracts::{AccountId32, provider_core::TaskStateV2};
 use mock_provider::Provider;
 
 #[tokio::test]
@@ -49,10 +49,11 @@ async fn task_state_http_requires_service_identity_and_leaves_shell_unchanged()
     );
     let response = client.get(&url).bearer_auth(token).send().await?;
     assert_eq!(response.status(), reqwest::StatusCode::OK);
-    let state = response.json::<TaskStateV1>().await?;
+    let state = response.json::<TaskStateV2>().await?;
     state.validate()?;
     assert_eq!(state.generation, info.provider_instance_id);
     assert_eq!(state.next_task_id, 1);
+    assert!(!state.has_task_history);
     assert!(state.storages.is_empty());
     assert_eq!(provider.info().await?, info);
     assert_eq!(provider.nonce(root).await?.nonce, 0);

@@ -233,23 +233,20 @@ fn command_input(
         ProviderCommand::QuotePlanning { .. } | ProviderCommand::AcceptPlanningQuote { .. } => {
             input("removed_planning_price", ())
         }
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             task_storage_id,
-            task,
+            assignees,
             ..
-        } => input("create_task", (task_storage_id, task)),
-        ProviderCommand::EditTask {
-            task_storage_id,
-            task_id,
-            task,
-            ..
-        } => input("edit_task", (task_storage_id, task_id, task)),
-        ProviderCommand::UpdateTaskProgress {
+        } => input("create_task_core", (task_storage_id, assignees)),
+        ProviderCommand::SetTaskAssigneesCore {
             task_storage_id,
             task_id,
-            progress,
+            assignees,
             ..
-        } => input("update_task_progress", (task_storage_id, task_id, progress)),
+        } => input(
+            "set_task_assignees_core",
+            (task_storage_id, task_id, assignees),
+        ),
         ProviderCommand::DeleteTask {
             task_storage_id,
             task_id,

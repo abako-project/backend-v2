@@ -4,7 +4,7 @@ use generated_contracts::provider_core::{
     CatalogEntryCore, CatalogReferenceV1, ReasonCore, ReasonReferenceV1, SkillRequestCore,
 };
 use generated_contracts::*;
-use provider_execution::migration::CoreArchiveV4;
+use provider_execution::migration::CoreArchiveV5;
 use std::collections::BTreeSet;
 
 const CALENDAR_IMPORT_BATCH: usize = 64;
@@ -174,13 +174,13 @@ fn upload_record(
 }
 pub(super) fn initialize(
     bundles: &Bundles,
-    archive: CoreArchiveV4,
+    archive: CoreArchiveV5,
     configuration: WholeConfiguration,
 ) -> Result<(sp_io::TestExternalities, Vec<u8>), Error> {
     configuration.validate()?;
     let saved = &archive.checkpoint;
-    if archive.version != 4
-        || saved.engine_version != 4
+    if archive.version != 5
+        || saved.engine_version != 5
         || saved.info.root_account != configuration.root
         || saved.info.provider_instance_id != configuration.generation
     {
@@ -446,14 +446,14 @@ pub(super) fn read_archive(
     _bundles: &Bundles,
     state: &State,
     sealed: bool,
-) -> Result<CoreArchiveV4, Error> {
+) -> Result<CoreArchiveV5, Error> {
     super::archive::read(ext, state, sealed)
 }
 pub(super) async fn export(
     pool: &SqlitePool,
     bundles: &Bundles,
     mode: Mode,
-) -> Result<CoreArchiveV4, Error> {
+) -> Result<CoreArchiveV5, Error> {
     if !matches!(mode, Mode::Directory { whole: true, .. }) {
         return Err(Error::IncompleteCoverage);
     }

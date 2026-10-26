@@ -568,7 +568,13 @@ async fn visible_storage_project(
 fn storage_from_project(
     project: ProjectCore,
     storage_id: EntityId,
-) -> Result<(EntityId, TaskStorageView), Error> {
+) -> Result<
+    (
+        EntityId,
+        generated_contracts::provider_core::TaskStorageCore,
+    ),
+    Error,
+> {
     let id = project.project_id;
     let storage = project
         .proposals
@@ -584,7 +590,13 @@ async fn visible_storage(
     app: &App,
     session: &Session,
     storage_id: EntityId,
-) -> Result<(EntityId, TaskStorageView), Error> {
+) -> Result<
+    (
+        EntityId,
+        generated_contracts::provider_core::TaskStorageCore,
+    ),
+    Error,
+> {
     let (_, project) = visible_storage_project(app, session, storage_id).await?;
     storage_from_project(project, storage_id)
 }
@@ -594,8 +606,15 @@ async fn composed_storage(
     storage_id: EntityId,
 ) -> Result<(EntityId, TaskStorageView), Error> {
     let (generation, project) = visible_storage_project(app, session, storage_id).await?;
-    let project = crate::project_content::children(app, generation, project).await?;
-    storage_from_project(project, storage_id)
+    let project_id = project.project_id;
+    let tasks = crate::task_views::content(app, generation, project).await?;
+    let storage = tasks
+        .storages
+        .into_iter()
+        .find(|record| record.storage.task_storage_id == storage_id)
+        .ok_or(Error::NotFound)?
+        .storage;
+    Ok((project_id, storage))
 }
 
 async fn task_storage(

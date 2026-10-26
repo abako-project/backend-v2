@@ -215,6 +215,14 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
         .await,
         Err(Error::Conflict("idempotency_conflict"))
     ));
+    // Confirm the opening through normal signing/finality, retaining its accepted snapshot.
+    drive(&app, &coordinator, OperationId::from_bytes([61; 16])).await?;
+    drive(&app, &client, OperationId::from_bytes([62; 16])).await?;
+    fake.lock().await.next_entity = Some(case_id);
+    let completed = drive(&app, &client, OperationId::from_bytes([63; 16])).await?;
+    let receipt = completed.receipt.ok_or("opening receipt")?;
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+    case.dispute.opened_at = receipt.finalized_at;
     let stored = &mut project.proposals[0].milestones[0].submissions[0];
     stored.deliverable = Some(EvidenceRecordReferenceV1::Committed(delivery.clone()));
     stored.review = SubmissionReview::Rejected {
@@ -232,6 +240,7 @@ async fn evidence_urls_are_queued_as_hashes_and_public_views_fail_closed() -> Te
     *slot.lock().await = Some(case);
     let mut unrelated = project.clone();
     unrelated.project_id = EntityId::from_bytes([53; 16]);
+    unrelated.proposals.clear();
     unrelated.client = outsider.view.account_id;
     unrelated.coordinator = outsider.view.account_id;
     fake.lock().await.snapshot.projects = vec![

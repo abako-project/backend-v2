@@ -5,7 +5,10 @@ use ink_v5_compatibility::{
     worker::{Authority, WholeConfiguration, Worker},
 };
 use mock_provider::ReferenceState;
-use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV4};
+use provider_execution::{
+    ExecutionInputs, VerifiedCall,
+    migration::{CoreArchiveV4, CoreArchiveV5},
+};
 use serde_json::Value;
 use std::{
     fs,
@@ -46,6 +49,7 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
             .unwrap(),
     )
     .unwrap();
+    let initial = CoreArchiveV5::from_v4(initial).unwrap().0;
     let root = directory.0.join("root.hex");
     fs::write(&root, initial.checkpoint.info.root_account.to_string()).unwrap();
     let source = directory.0.join("native.sqlite");
@@ -79,7 +83,7 @@ fn offline_cli_preserves_native_source_and_rolls_back_current_sandbox_writes() {
     );
     assert_eq!(
         serde_json::to_vec(
-            &serde_json::from_slice::<CoreArchiveV4>(&fs::read(&exported).unwrap()).unwrap()
+            &serde_json::from_slice::<CoreArchiveV5>(&fs::read(&exported).unwrap()).unwrap()
         )
         .unwrap(),
         serde_json::to_vec(&initial).unwrap()
@@ -381,6 +385,112 @@ fn explicit_v3_upgrade_and_downgrade_cli_preserve_owner_files_and_reject_wrong_m
                 fs::metadata(path).unwrap().permissions().mode() & 0o777,
                 0o600
             );
+        }
+    }
+}
+
+#[test]
+fn current_metadata_recovery_reads_v5_with_compact_tasks_and_selected_legacy_writes() {
+    use generated_contracts::provider_core::{CatalogContentV1, CatalogMetadataRecordV1};
+    use sp_core::{Pair, sr25519};
+    let fixture: Value = serde_json::from_str(include_str!(
+        "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
+    ))
+    .unwrap();
+    let original = fixture["archives"].as_array().unwrap().last().unwrap()["archive"]
+        .as_str()
+        .unwrap();
+    let old: CoreArchiveV4 = serde_json::from_str(original).unwrap();
+    let (core, _) =
+        mock_provider::migration::compact_tasks(old.checkpoint.info.root_account, old).unwrap();
+    assert!(
+        core.checkpoint
+            .projects
+            .values()
+            .flat_map(|p| &p.proposals)
+            .flat_map(|p| &p.milestones)
+            .any(|m| !m.task_storage.tasks.is_empty())
+    );
+    let key = sr25519::Pair::from_seed(&[1; 32]);
+    let origin = AccountId32::from_bytes(key.public().0);
+    assert_eq!(origin, core.checkpoint.info.root_account);
+    let call = UnsignedContractCallV1::new(
+        core.checkpoint.info.provider_instance_id,
+        OperationId::from_bytes([249; 16]),
+        origin,
+        core.checkpoint.nonces[&origin],
+        UnixSeconds::new(u64::MAX),
+        ProviderCommand::UpsertCatalogEntry(UpsertCatalogEntryRequest {
+            kind: CatalogKind::Skill,
+            id: 1,
+            name: "Recovered after task cutover\0".into(),
+        }),
+    )
+    .unwrap();
+    let signed = SignedContractCallV1 {
+        signature: Sr25519Signature::from_bytes(key.sign(&call.signable_bytes().unwrap()).0),
+        call,
+    };
+    let (current, receipt) = ReferenceState::from_archive(origin, core)
+        .unwrap()
+        .execute(
+            VerifiedCall::verify(signed).unwrap(),
+            ExecutionInputs {
+                version: 1,
+                now: UnixSeconds::new(1_900_000_000),
+                seed: [249; 32],
+            },
+        )
+        .unwrap();
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+    let current = current.archive().unwrap();
+    let directory = Directory(
+        std::env::temp_dir().join(format!("v5-metadata-recovery-{}", std::process::id())),
+    );
+    fs::create_dir(&directory.0).unwrap();
+    let root = directory.0.join("root.hex");
+    fs::write(&root, origin.to_string()).unwrap();
+    let database = directory.0.join("unused.sqlite");
+    for (version, bytes) in [
+        (4, original.as_bytes().to_vec()),
+        (5, serde_json::to_vec(&current).unwrap()),
+    ] {
+        let source = directory.0.join(format!("v{version}.json"));
+        fs::write(&source, &bytes).unwrap();
+        for kind in ["creation", "proposal", "catalog", "reason"] {
+            let output = directory.0.join(format!("{version}-{kind}.ndjson"));
+            let result = invoke(
+                &database,
+                &root,
+                "rust",
+                &[
+                    &format!("recover-{kind}-metadata"),
+                    source.to_str().unwrap(),
+                    output.to_str().unwrap(),
+                ],
+            );
+            assert!(
+                result.status.success(),
+                "v{version}/{kind}: {}",
+                String::from_utf8_lossy(&result.stderr)
+            );
+            let records = fs::read_to_string(&output).unwrap();
+            let lines: Vec<_> = records.lines().collect();
+            assert!(lines.len() > 1, "selected {kind} records must be recovered");
+            let header: Value = serde_json::from_str(lines[0]).unwrap();
+            assert_eq!(
+                header["generation"],
+                serde_json::to_value(current.checkpoint.info.provider_instance_id).unwrap()
+            );
+            if version == 5 && kind == "catalog" {
+                assert!(lines[1..].iter().any(|line| {
+                    let record: CatalogMetadataRecordV1 = serde_json::from_str(line).unwrap();
+                    matches!(record.content, CatalogContentV1::Entry { kind: CatalogKind::Skill, id: 1, name, .. }
+                        if name == "Recovered after task cutover\0")
+                }));
+            }
+            assert_eq!(fs::read(&source).unwrap(), bytes);
+            assert!(!database.exists());
         }
     }
 }

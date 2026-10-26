@@ -1,5 +1,5 @@
 use super::*;
-use generated_contracts::provider_core::CoreSnapshotV4;
+use generated_contracts::provider_core::CoreSnapshotV5;
 
 async fn submit(
     provider: &Provider,
@@ -180,7 +180,7 @@ async fn assert_response(
     responder: &Keypair,
     project_id: EntityId,
     dispute_id: EntityId,
-    frozen: &CoreSnapshotV4,
+    frozen: &CoreSnapshotV5,
 ) -> TestResult {
     let response = ProviderCommand::RespondDispute {
         project_id,
@@ -223,37 +223,17 @@ async fn assert_frozen(
     let before = provider.snapshot().await?;
     let view = project(provider, project_id).await?;
     let milestone = &view.proposals[0].milestones[1];
-    let task = TaskDefinition {
-        title: "Blocked".into(),
-        description: String::new(),
-        task_type: TaskType::Task,
-        priority: TaskPriority::Low,
-        status: TaskStatus::ToDo,
-        assignees: vec![],
-        estimated_minutes: Minutes::ZERO,
-        logged_minutes: Minutes::ZERO,
-        due_at: None,
-    };
     let commands = vec![
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id,
             task_storage_id: milestone.task_storage.task_storage_id,
-            task: task.clone(),
+            assignees: vec![],
         },
-        ProviderCommand::EditTask {
+        ProviderCommand::SetTaskAssigneesCore {
             project_id,
             task_storage_id: milestone.task_storage.task_storage_id,
             task_id: 1,
-            task,
-        },
-        ProviderCommand::UpdateTaskProgress {
-            project_id,
-            task_storage_id: milestone.task_storage.task_storage_id,
-            task_id: 1,
-            progress: TaskProgressRequest {
-                status: TaskStatus::Done,
-                logged_minutes: Minutes::new(1),
-            },
+            assignees: vec![],
         },
         ProviderCommand::CreateProposal {
             project_id,

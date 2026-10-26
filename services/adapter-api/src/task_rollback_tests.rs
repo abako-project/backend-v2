@@ -1,275 +1,232 @@
-//! Owner-only task handoff checks in actual `PostgreSQL`. No activation API.
 use super::*;
-use std::path::PathBuf;
-fn path() -> Result<PathBuf, Error> {
+// Current compact source and explicit V4 target, backed by real PostgreSQL.
+async fn cohort() -> Result<(Arc<App>, Arc<Mutex<Source>>, Server), Box<dyn std::error::Error>> {
+    let mut fixture = Source::fixture()?;
+    // Extend the retained fixture with real content to exercise frozen-text checks.
+    let mut task = fixture
+        .tasks
+        .storages
+        .iter()
+        .flat_map(|r| &r.storage.tasks)
+        .next()
+        .ok_or("task fixture")?
+        .clone();
+    task.task_id = fixture.tasks.next_task_id;
+    fixture.tasks.next_task_id = task.task_id.checked_add(1).ok_or("task counter")?;
+    let case = fixture.cases.values_mut().next().ok_or("case fixture")?;
+    case.milestone.task_storage.tasks.push(task.clone());
+    let milestone_id = case.milestone.milestone_id;
+    fixture
+        .snapshot
+        .projects
+        .iter_mut()
+        .flat_map(|p| &mut p.proposals)
+        .flat_map(|p| &mut p.milestones)
+        .find(|m| m.milestone_id == milestone_id)
+        .ok_or("milestone fixture")?
+        .task_storage
+        .tasks
+        .push(task.clone());
+    fixture
+        .tasks
+        .storages
+        .iter_mut()
+        .find(|r| r.storage.milestone_id == milestone_id)
+        .ok_or("storage fixture")?
+        .storage
+        .tasks
+        .push(task);
+    let state = Arc::new(Mutex::new(fixture));
+    let server = source(state.clone()).await?;
+    let app = app(&server).await?;
+    crate::task_state::prepare_cutover(&app).await?;
+    state.lock().await.compact = true;
+    crate::task_state::activate(&app).await?;
+    Ok((app, state, server))
+}
+fn output() -> Result<std::path::PathBuf, Error> {
     Ok(std::env::temp_dir().join(format!(
         "task-rollback-{}.json",
-        PrincipalId::from_bytes(crate::state::random()?)
+        OperationId::from_bytes(crate::state::random()?)
     )))
 }
-async fn export(c: &Cohort) -> Result<(PathBuf, TaskStateV1), Box<dyn std::error::Error>> {
-    let file = path()?;
-    crate::task_rollback::export(&c.app, info().provider_instance_id, file.clone()).await?;
-    let state = serde_json::from_slice(&std::fs::read(&file)?)?;
-    Ok((file, state))
-}
-async fn owned(c: &Cohort) -> Result<bool, Error> {
-    crate::task_views::owned(&c.app, info().provider_instance_id).await
-}
-async fn retained(c: &Cohort) -> Result<Vec<String>, Error> {
-    // Full owned history, not just public responses. The ownership flag is the
-    // only intended database change at completion; provenance/counts stay too.
-    let mut values = Vec::new();
+async fn retained(app: &App) -> Result<Vec<String>, Error> {
+    let mut rows = Vec::new();
     for query in [
         "SELECT row_to_json(t)::text FROM operations t ORDER BY operation_id",
-        "SELECT row_to_json(t)::text FROM notifications t ORDER BY notification_id",
         "SELECT row_to_json(t)::text FROM task_items t ORDER BY task_id",
         "SELECT row_to_json(t)::text FROM task_storages t ORDER BY task_storage_id",
+        "SELECT row_to_json(t)::text FROM task_migration_cases t ORDER BY case_id",
         "SELECT row_to_json(t)::text FROM task_freezes t ORDER BY operation_id",
     ] {
-        values.extend(
+        rows.extend(
             sqlx::query_scalar::<_, String>(query)
-                .fetch_all(&c.app.db)
+                .fetch_all(&app.db)
                 .await?,
         );
     }
-    Ok(values)
+    Ok(rows)
 }
 #[tokio::test]
-async fn task_rollback_exports_current_context_and_keeps_history_on_verified_retry() -> TestResult {
-    let c = Cohort::new(true).await?;
-    c.run(&c.owner, c.create()).await?;
-    let mut command = c.create();
-    if let ProviderCommand::CreateTask { task, .. } = &mut command {
-        task.title = "second, then deleted".into();
-    }
-    c.run(&c.owner, command).await?;
-    c.run(
-        &c.owner,
-        ProviderCommand::DeleteTask {
-            project_id: c.project.project_id,
-            task_storage_id: c.storage(),
-            task_id: 10,
-            expected_revision: c.project.proposals[0].revision,
-        },
-    )
-    .await?;
-    // Proposal revision is a live core fact, not the backfill row's old revision.
-    c.fake.lock().await.snapshot.projects[0].proposals[0].revision += 1;
-    let before = retained(&c).await?;
-    let (file, state) = export(&c).await?;
-    assert_eq!(state.next_task_id, 11);
-    assert_eq!(
-        state.storages[0].proposal_revision,
-        c.project.proposals[0].revision + 1
-    );
-    assert_eq!(state.storages[0].storage.tasks[0].task, c.definition);
-    assert!(owned(&c).await?);
+async fn task_rollback_rejects_source_drift_target_counter_and_unbound_work() -> TestResult {
+    let (app, state, server) = cohort().await?;
+    let generation = state.lock().await.tasks.generation;
+    let path = output()?;
+    crate::task_rollback::export(&app, generation, path.clone()).await?;
     assert!(
-        crate::task_rollback::export(&c.app, state.generation, file.clone())
+        crate::task_rollback::export(&app, generation, path.clone())
             .await
             .is_err()
     );
-    // Readback from the restored provider must include current data and allocator.
-    *c.task_source.lock().await = Some(state.clone());
-    c.fake.lock().await.snapshot.projects[0].proposals[0].milestones[0].task_storage =
-        state.storages[0].storage.clone();
-    crate::task_rollback::complete(&c.app, file.clone()).await?;
-    assert!(!owned(&c).await?);
-    crate::task_rollback::complete(&c.app, file.clone()).await?;
-    assert_eq!(retained(&c).await?, before);
-    std::fs::remove_file(file)?;
-    c.internal.finish().await?;
-    Ok(())
-}
-#[tokio::test]
-async fn task_rollback_refuses_source_drift_target_mismatch_and_unbound_work() -> TestResult {
-    let c = Cohort::new(true).await?;
-    c.run(&c.owner, c.create()).await?;
-    let (file, state) = export(&c).await?;
-    // The raw source still has stale/empty tasks and must not establish restore.
+    state.lock().await.compact = false;
+    state.lock().await.tasks.next_task_id += 1;
     assert!(
-        crate::task_rollback::complete(&c.app, file.clone())
+        crate::task_rollback::complete(&app, path.clone())
             .await
             .is_err()
     );
-    assert!(owned(&c).await?);
-    *c.task_source.lock().await = Some(state);
-    c.run(&c.owner, c.create()).await?;
-    assert!(
-        crate::task_rollback::complete(&c.app, file.clone())
-            .await
-            .is_err()
-    );
-    assert!(owned(&c).await?);
-    let pending = operations::enqueue(&c.app, &c.owner, c.create(), None).await?;
-    assert!(
-        crate::task_rollback::export(&c.app, info().provider_instance_id, path()?)
-            .await
-            .is_err()
-    );
-    sqlx::query("UPDATE operations SET status='Rejected',possibly_submitted=TRUE,error_code='uncertain' WHERE operation_id=$1").bind(pending.operation_id.to_string()).execute(&c.app.db).await?;
-    assert!(
-        crate::task_rollback::export(&c.app, info().provider_instance_id, path()?)
-            .await
-            .is_err()
-    );
-    sqlx::query("UPDATE operations SET error_code='provider_rejected' WHERE operation_id=$1")
-        .bind(pending.operation_id.to_string())
-        .execute(&c.app.db)
+    state.lock().await.tasks.next_task_id -= 1;
+    let payload: String =
+        sqlx::query_scalar("SELECT payload FROM task_items ORDER BY task_id LIMIT 1")
+            .fetch_one(&app.db)
+            .await?;
+    let mut task: TaskView = serde_json::from_str(&payload)?;
+    task.task.title = "Changed after export\0".into();
+    sqlx::query("UPDATE task_items SET payload=$1 WHERE task_id=$2")
+        .bind(serde_json::to_string(&task)?)
+        .bind(i64::from(task.task_id))
+        .execute(&app.db)
         .await?;
-    let (released, _) = export(&c).await?;
-    std::fs::remove_file(released)?;
-    let freeze = operations::enqueue(
-        &c.app,
-        &c.client,
-        ProviderCommand::CancelProject {
-            project_id: c.project.project_id,
-            request: ReasonRequest {
-                reason: "Rollback hold".into(),
-            },
-        },
-        None,
-    )
-    .await?;
-    sqlx::query("UPDATE operations SET status='Rejected' WHERE operation_id=$1")
-        .bind(freeze.operation_id.to_string())
-        .execute(&c.app.db)
-        .await?;
-    // Terminal transport state alone cannot release a retained pending hold.
     assert!(
-        crate::task_rollback::export(&c.app, info().provider_instance_id, path()?)
+        crate::task_rollback::complete(&app, path.clone())
             .await
             .is_err()
     );
-
-    std::fs::remove_file(file)?;
-    c.internal.finish().await?;
-    Ok(())
-}
-
-#[tokio::test]
-async fn task_rollback_requires_frozen_task_equality_and_atomic_ownership_commit() -> TestResult {
-    let (c, slot, _, _) = super::views::case_fixture().await?;
-    let accepted = c.tasks().await?;
-    let mut changed = accepted[0].clone();
-    changed.task.title = "Corrupt post-freeze current value".into();
-    sqlx::query("UPDATE task_items SET payload=$1")
-        .bind(serde_json::to_string(&changed)?)
-        .execute(&c.app.db)
+    sqlx::query("UPDATE task_items SET payload=$1 WHERE task_id=$2")
+        .bind(payload)
+        .bind(i64::from(task.task_id))
+        .execute(&app.db)
         .await?;
-    c.fake.lock().await.snapshot.projects[0].proposals[0].milestones[0]
-        .task_storage
-        .tasks = vec![changed.clone()];
-    slot.lock()
-        .await
-        .as_mut()
-        .ok_or("case")?
-        .milestone
-        .task_storage
-        .tasks = vec![changed];
-    let (file, state) = export(&c).await?;
-    *c.task_source.lock().await = Some(state);
+    // A malformed or unbound uncertain row is a barrier before command decoding.
+    sqlx::query("INSERT INTO operations(operation_id,principal_id,wallet_id,account_id,command_json,command_bytes,status,next_attempt_at,expires_at,created_at,possibly_submitted) SELECT $1,principal_id,$2,$3,'{}',$4,'OutcomeUnknown',0,1,0,TRUE FROM principals WHERE is_admin LIMIT 1")
+        .bind(OperationId::from_bytes([231;16]).to_string()).bind(WalletId::from_bytes([231;16]).to_string()).bind(AccountId32::from_bytes([231;32]).to_string()).bind(Vec::<u8>::new()).execute(&app.db).await?;
     assert!(matches!(
-        crate::task_rollback::complete(&c.app, file.clone()).await,
+        crate::task_rollback::complete(&app, path.clone()).await,
+        Err(Error::Conflict("task_rollback_operations_pending"))
+    ));
+    assert!(crate::task_views::owned(&app, generation).await?);
+    std::fs::remove_file(path)?;
+    server.finish().await?;
+    Ok(())
+}
+#[tokio::test]
+async fn task_rollback_refuses_lost_rows_and_false_maintained_counts() -> TestResult {
+    for query in [
+        "DELETE FROM task_items",
+        "UPDATE task_generations SET storage_count=storage_count+1",
+        "DELETE FROM task_storages",
+    ] {
+        let (app, state, server) = cohort().await?;
+        let generation = state.lock().await.tasks.generation;
+        sqlx::query(query).execute(&app.db).await?;
+        let path = output()?;
+        assert!(
+            crate::task_rollback::export(&app, generation, path.clone())
+                .await
+                .is_err()
+        );
+        assert!(!path.exists());
+        assert!(crate::task_views::owned(&app, generation).await?);
+        server.finish().await?;
+    }
+    Ok(())
+}
+#[tokio::test]
+async fn task_rollback_requires_full_frozen_content_and_atomic_ownership_commit() -> TestResult {
+    let (app, state, server) = cohort().await?;
+    let generation = state.lock().await.tasks.generation;
+    let path = output()?;
+    crate::task_rollback::export(&app, generation, path.clone()).await?;
+    let before = retained(&app).await?;
+    state.lock().await.compact = false;
+    let (id, original) = {
+        let mut source = state.lock().await;
+        let (&id, case) = source.cases.iter_mut().next().ok_or("case")?;
+        let original = case.milestone.clone();
+        case.milestone.task_storage.tasks[0].task.title = "Tampered frozen content".into();
+        let changed = case.milestone.clone();
+        let milestone = source
+            .snapshot
+            .projects
+            .iter_mut()
+            .flat_map(|p| &mut p.proposals)
+            .flat_map(|p| &mut p.milestones)
+            .find(|m| m.milestone_id == original.milestone_id)
+            .ok_or("milestone")?;
+        *milestone = changed;
+        (id, original)
+    };
+    assert!(matches!(
+        crate::task_rollback::complete(&app, path.clone()).await,
         Err(Error::Conflict("task_rollback_frozen_mismatch"))
     ));
-    assert!(owned(&c).await?);
-    std::fs::remove_file(file)?;
-    sqlx::query("UPDATE task_items SET payload=$1")
-        .bind(serde_json::to_string(&accepted[0])?)
-        .execute(&c.app.db)
-        .await?;
-    c.fake.lock().await.snapshot.projects[0].proposals[0].milestones[0]
-        .task_storage
-        .tasks = accepted.clone();
-    slot.lock()
-        .await
-        .as_mut()
-        .ok_or("case")?
-        .milestone
-        .task_storage
-        .tasks = accepted;
-    let (file, state) = export(&c).await?;
-    *c.task_source.lock().await = Some(state);
-    let before = retained(&c).await?;
-    sqlx::query("CREATE FUNCTION fail_task_handoff() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'rollback fixture failure'; END $$").execute(&c.app.db).await?;
-    sqlx::query("CREATE TRIGGER fail_task_handoff BEFORE UPDATE ON task_generations FOR EACH ROW EXECUTE FUNCTION fail_task_handoff()").execute(&c.app.db).await?;
+    assert!(crate::task_views::owned(&app, generation).await?);
+    {
+        let mut source = state.lock().await;
+        source.cases.get_mut(&id).ok_or("case")?.milestone = original.clone();
+        let milestone_id = original.milestone_id;
+        *source
+            .snapshot
+            .projects
+            .iter_mut()
+            .flat_map(|p| &mut p.proposals)
+            .flat_map(|p| &mut p.milestones)
+            .find(|m| m.milestone_id == milestone_id)
+            .ok_or("milestone")? = original;
+    }
+    sqlx::raw_sql("CREATE FUNCTION reject_task_handoff() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'injected handoff failure'; END; $$; CREATE TRIGGER reject_task_handoff BEFORE UPDATE ON task_generations FOR EACH ROW WHEN (OLD.api_owned AND NOT NEW.api_owned) EXECUTE FUNCTION reject_task_handoff();").execute(&app.db).await?;
     assert!(
-        crate::task_rollback::complete(&c.app, file.clone())
+        crate::task_rollback::complete(&app, path.clone())
             .await
             .is_err()
     );
-    assert!(owned(&c).await?);
-    assert_eq!(retained(&c).await?, before);
-    sqlx::query("DROP TRIGGER fail_task_handoff ON task_generations")
-        .execute(&c.app.db)
+    assert!(crate::task_views::owned(&app, generation).await?);
+    assert_eq!(retained(&app).await?, before);
+    sqlx::query("DROP TRIGGER reject_task_handoff ON task_generations")
+        .execute(&app.db)
         .await?;
-    crate::task_rollback::complete(&c.app, file.clone()).await?;
-    crate::task_rollback::complete(&c.app, file.clone()).await?;
-    assert!(!owned(&c).await?);
-    assert_eq!(retained(&c).await?, before);
-    std::fs::remove_file(file)?;
-    c.internal.finish().await?;
+    crate::task_rollback::complete(&app, path.clone()).await?;
+    crate::task_rollback::complete(&app, path.clone()).await?;
+    assert_eq!(retained(&app).await?, before);
+    assert!(!crate::task_views::owned(&app, generation).await?);
+    std::fs::remove_file(path)?;
+    server.finish().await?;
     Ok(())
 }
-
 #[tokio::test]
-async fn task_rollback_rejects_lost_rows_and_bad_counts_but_keeps_retained_orphans() -> TestResult {
-    let c = Cohort::new(true).await?;
-    c.run(&c.owner, c.create()).await?;
-    let (file, state) = export(&c).await?;
-    *c.task_source.lock().await = Some(state);
-    sqlx::query("DELETE FROM task_items")
-        .execute(&c.app.db)
+async fn task_rollback_keeps_obsolete_api_context_outside_the_current_restore_projection()
+-> TestResult {
+    let (app, state, server) = cohort().await?;
+    let generation = state.lock().await.tasks.generation;
+    sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$3,$4,'1',$5)")
+        .bind(generation.to_string()).bind(EntityId::from_bytes([211;16]).to_string()).bind(EntityId::from_bytes([212;16]).to_string()).bind(EntityId::from_bytes([213;16]).to_string()).bind(EntityId::from_bytes([214;16]).to_string()).execute(&app.db).await?;
+    sqlx::query("UPDATE task_generations SET storage_count=storage_count+1")
+        .execute(&app.db)
         .await?;
-    assert!(matches!(
-        crate::task_rollback::export(&c.app, info().provider_instance_id, path()?).await,
-        Err(Error::Dependency)
-    ));
-    assert!(matches!(
-        crate::task_rollback::complete(&c.app, file.clone()).await,
-        Err(Error::Dependency)
-    ));
-    assert!(owned(&c).await?);
-    std::fs::remove_file(file)?;
-    // Return to the known empty graph, then model retained obsolete context.
-    // Its real row count matters; stale revision/narrative do not enter export.
-    sqlx::query("UPDATE task_generations SET task_count=0,storage_count=99")
-        .execute(&c.app.db)
-        .await?;
+    let before = retained(&app).await?;
+    let path = output()?;
+    crate::task_rollback::export(&app, generation, path.clone()).await?;
+    let saved: TaskStateV1 = serde_json::from_slice(&std::fs::read(&path)?)?;
     assert!(
-        crate::task_rollback::export(&c.app, info().provider_instance_id, path()?)
-            .await
-            .is_err()
+        !saved
+            .storages
+            .iter()
+            .any(|r| r.storage.task_storage_id == EntityId::from_bytes([211; 16]))
     );
-    sqlx::query("UPDATE task_generations SET storage_count=1")
-        .execute(&c.app.db)
-        .await?;
-    let orphan = EntityId::from_bytes([99; 16]);
-    sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$2,$2,'18446744073709551615',$2)")
-        .bind(info().provider_instance_id.to_string()).bind(orphan.to_string()).execute(&c.app.db).await?;
-    let orphan_task = TaskView {
-        task_id: 9,
-        reporter: c.owner.view.account_id,
-        created_at: UnixSeconds::new(1),
-        updated_at: UnixSeconds::new(1),
-        task: c.definition.clone(),
-    };
-    sqlx::query("INSERT INTO task_items(provider_instance_id,task_id,task_storage_id,ordinal,payload,assignees) VALUES($1,9,$2,0,$3,$4)")
-        .bind(info().provider_instance_id.to_string()).bind(orphan.to_string()).bind(serde_json::to_string(&orphan_task)?).bind(vec![c.worker.view.account_id.to_string()]).execute(&c.app.db).await?;
-    sqlx::query("UPDATE task_generations SET storage_count=2,task_count=1")
-        .execute(&c.app.db)
-        .await?;
-    let before = retained(&c).await?;
-    let (file, state) = export(&c).await?;
-    assert_eq!(state.storages.len(), 1);
-    assert!(state.storages[0].storage.tasks.is_empty());
-    assert_eq!(state.next_task_id, 10);
-    *c.task_source.lock().await = Some(state);
-    crate::task_rollback::complete(&c.app, file.clone()).await?;
-    assert_eq!(retained(&c).await?, before);
-    std::fs::remove_file(file)?;
-    c.internal.finish().await?;
+    state.lock().await.compact = false;
+    crate::task_rollback::complete(&app, path.clone()).await?;
+    assert_eq!(retained(&app).await?, before);
+    std::fs::remove_file(path)?;
+    server.finish().await?;
     Ok(())
 }

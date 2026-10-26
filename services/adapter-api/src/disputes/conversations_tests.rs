@@ -107,6 +107,13 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
     assert!(
         matches!(action,ProviderCommand::OpenDisputeCommitted{ref evidence,..} if evidence.record_id==opening_key)
     );
+    let ProviderCommand::OpenDisputeCommitted { evidence, .. } = action else {
+        return Err("expected committed dispute".into());
+    };
+    fake.lock().await.next_entity = Some(case_id);
+    let completed = drive(&app, &client_session, OperationId::from_bytes([64; 16])).await?;
+    let receipt = completed.receipt.ok_or("opening receipt")?;
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
     project.active_dispute_id = Some(case_id);
     project.proposals[0].milestones[0].frozen = true;
     project.proposals[0].milestones[0].status = Some(MilestoneStatus::Disputed);
@@ -119,9 +126,9 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
             status: DisputeStatus::Open,
             opened_by: project.client,
             counterparty: project.coordinator,
-            opened_at: UnixSeconds::new(102),
-            evidence: None,
-            opening_comment_id: Some(opening_key),
+            opened_at: receipt.finalized_at,
+            evidence: Some(EvidenceRecordReferenceV1::Committed(evidence)),
+            opening_comment_id: None,
             response: None,
             proposal_revision: project.proposals[0].revision,
             context_event_cursor: 0,
@@ -474,7 +481,8 @@ async fn dispute_threads_are_immutable_public_or_private_and_survive_restart() -
         fake.lock().await.snapshot.projects,
         [core_project(&project, info().provider_instance_id)?.0]
     );
-    assert_eq!(fake.lock().await.submissions, 0);
+    // Only the dispute opening reaches core; subsequent discussion stays local.
+    assert_eq!(fake.lock().await.submissions, 1);
     server.finish().await?;
     let restarted =
         Arc::new(App::new(test_config(app.config.database_url.clone(), &internal)?).await?);

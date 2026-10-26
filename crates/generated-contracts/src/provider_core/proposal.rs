@@ -180,7 +180,7 @@ impl ProposalContentReferenceV1 {
         }
     }
 }
-/// Core milestone facts; task ownership remains a subsequent milestone.
+/// Core milestone facts; the adapter owns task narrative and progress.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct MilestoneCore {
@@ -194,8 +194,8 @@ pub struct MilestoneCore {
     pub assignments: Vec<crate::AssignmentView>,
     /// Exact scores retained for settlement.
     pub worker_ratings: Vec<crate::WorkerRating>,
-    /// Existing tasks remain unchanged until R3.
-    pub task_storage: crate::TaskStorageView,
+    /// Actual task identities and execution-time membership.
+    pub task_storage: super::TaskStorageCore,
     /// Core freeze flag.
     pub frozen: bool,
     /// Complete submission history/evidence commitments.
@@ -246,19 +246,25 @@ impl MilestoneTerms {
     }
 }
 impl MilestoneCore {
-    /// Preserve current facts while supplying only the descriptive title.
-    #[must_use]
-    pub fn into_view(self, title: String) -> crate::MilestoneView {
-        crate::MilestoneView {
+    /// Preserve current facts while supplying verified presentation content.
+    pub fn into_view(
+        self,
+        title: String,
+        tasks: crate::TaskStorageView,
+    ) -> Result<crate::MilestoneView, ContractError> {
+        if super::TaskStorageCore::from(&tasks) != self.task_storage {
+            return Err(ContractError::Invalid("task core context"));
+        }
+        Ok(crate::MilestoneView {
             milestone_id: self.milestone_id,
             definition: self.definition.into_definition(title),
             status: self.status,
             assignments: self.assignments,
             worker_ratings: self.worker_ratings,
-            task_storage: self.task_storage,
+            task_storage: tasks,
             frozen: self.frozen,
             submissions: self.submissions,
-        }
+        })
     }
 }
 
@@ -316,9 +322,11 @@ impl ProposalCore {
         self,
         definition: ProposalDefinition,
         change_request: Option<String>,
+        tasks: Vec<crate::TaskStorageView>,
     ) -> Result<crate::ProposalView, ContractError> {
         if self.terms() != ProposalTerms::from(&definition)
             || self.change_request.is_some() != change_request.is_some()
+            || tasks.len() != self.milestones.len()
         {
             return Err(ContractError::Invalid("proposal metadata terms"));
         }
@@ -332,8 +340,9 @@ impl ProposalCore {
                 .milestones
                 .into_iter()
                 .zip(definition.milestones)
-                .map(|(core, text)| core.into_view(text.title))
-                .collect(),
+                .zip(tasks)
+                .map(|((core, text), tasks)| core.into_view(text.title, tasks))
+                .collect::<Result<_, _>>()?,
             change_request,
             delivery: self.delivery,
             compensation_policy: self.compensation_policy,

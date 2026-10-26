@@ -1,6 +1,6 @@
 //! One primary and an optional derivative, committed in the same transaction.
 use super::*;
-use provider_execution::{Admission, ExecutionInputs, VerifiedCall, migration::CoreArchiveV4};
+use provider_execution::{Admission, ExecutionInputs, VerifiedCall, migration::CoreArchiveV5};
 use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
@@ -31,7 +31,7 @@ pub struct WholeDiagnostics {
     pub comparisons: i64,
 }
 struct Retained {
-    archive: CoreArchiveV4,
+    archive: CoreArchiveV5,
     diagnostics: WholeDiagnostics,
 }
 pub(super) fn authority(mode: Mode) -> Result<Authority, Error> {
@@ -60,21 +60,21 @@ pub(super) fn mode(configuration: &WholeConfiguration, authority: Authority) -> 
 }
 pub(super) fn reference(
     mode: Mode,
-    archive: CoreArchiveV4,
+    archive: CoreArchiveV5,
 ) -> Result<mock_provider::ReferenceState, Error> {
     let Mode::Directory { root, .. } = mode else {
         return Err(Error::InvalidState);
     };
     mock_provider::ReferenceState::from_archive(root, archive).map_err(Error::Reference)
 }
-fn bytes(archive: &CoreArchiveV4) -> Result<Vec<u8>, Error> {
+fn bytes(archive: &CoreArchiveV5) -> Result<Vec<u8>, Error> {
     let bytes = serde_json::to_vec(archive).map_err(|_| Error::InvalidState)?;
     if bytes.len() > MAX_SHELL {
         return Err(Error::Limit);
     }
     Ok(bytes)
 }
-fn candidate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result<CoreArchiveV4, Error> {
+fn candidate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result<CoreArchiveV5, Error> {
     migration::read_archive(
         &mut stored.checkpoint.clone().restore()?,
         bundles,
@@ -90,7 +90,7 @@ async fn retained(
     let row = sqlx::query("SELECT archive, comparison, comparisons FROM candidate_reference WHERE singleton = 1 AND authority = ? AND length(archive) <= 67108864 AND comparisons >= 0 AND comparison IN ('disabled','matched','different','incomplete')")
         .bind(selected.key()).fetch_optional(&mut **tx).await?.ok_or(Error::InvalidState)?;
     let bytes: Vec<u8> = row.try_get("archive")?;
-    let archive: CoreArchiveV4 = serde_json::from_slice(&bytes).map_err(|_| Error::InvalidState)?;
+    let archive: CoreArchiveV5 = serde_json::from_slice(&bytes).map_err(|_| Error::InvalidState)?;
     reference(mode, archive.clone())?;
     let comparison: String = row.try_get("comparison")?;
     if (selected == Authority::Rust) != (comparison == "disabled") {
@@ -110,7 +110,7 @@ pub(super) async fn initialize(
     stored: &Stored,
     bundles: &Bundles,
     mode: Mode,
-    fresh: Option<CoreArchiveV4>,
+    fresh: Option<CoreArchiveV5>,
 ) -> Result<(), Error> {
     sqlx::query("CREATE TABLE IF NOT EXISTS candidate_reference (singleton INTEGER PRIMARY KEY CHECK(singleton = 1), authority TEXT NOT NULL CHECK(authority IN ('rust','shadow','sandbox')), archive BLOB NOT NULL CHECK(length(archive) <= 67108864), comparison TEXT NOT NULL CHECK(comparison IN ('disabled','matched','different','incomplete')), comparisons INTEGER NOT NULL CHECK(comparisons >= 0))").execute(&mut **tx).await?;
     if let Some(archive) = fresh {
@@ -143,7 +143,7 @@ pub(super) async fn export(
     pool: &SqlitePool,
     bundles: &Bundles,
     mode: Mode,
-) -> Result<CoreArchiveV4, Error> {
+) -> Result<CoreArchiveV5, Error> {
     let mut tx = pool.begin().await?;
     let native = retained(&mut tx, mode).await?;
     let result = if authority(mode)? == Authority::Sandbox {
@@ -165,7 +165,7 @@ fn applied(evaluation: directory::Evaluation) -> Result<Box<directory::Applied>,
         directory::Evaluation::Replay(_) => Err(Error::InvalidState),
     }
 }
-fn validated_candidate(applied: &directory::Applied, mode: Mode) -> Result<&CoreArchiveV4, Error> {
+fn validated_candidate(applied: &directory::Applied, mode: Mode) -> Result<&CoreArchiveV5, Error> {
     let archive = applied.archive.as_ref().ok_or(Error::IncompleteCoverage)?;
     reference(mode, archive.clone())?;
     Ok(archive)
@@ -323,7 +323,7 @@ mod tests {
             .unwrap()
             .block_on(async {
                 let fixtures: serde_json::Value = serde_json::from_str(include_str!(
-                    "../../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
+                    "../../../../services/mock-provider/src/domain/fixtures/migration-signed-v5.json"
                 ))
                 .unwrap();
                 let source = fixtures["archives"]
@@ -334,7 +334,7 @@ mod tests {
                     .unwrap()["archive"]
                     .as_str()
                     .unwrap();
-                let archive: CoreArchiveV4 = serde_json::from_str(source).unwrap();
+                let archive: CoreArchiveV5 = serde_json::from_str(source).unwrap();
                 let configuration = WholeConfiguration {
                     root: archive.checkpoint.info.root_account,
                     generation: archive.checkpoint.info.provider_instance_id,
@@ -358,7 +358,7 @@ mod tests {
                 .await
                 .unwrap();
                 let trace: serde_json::Value = serde_json::from_str(include_str!(
-                    "../../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+                    "../../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
                 ))
                 .unwrap();
                 let step = &trace["steps"][70];

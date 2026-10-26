@@ -1,5 +1,5 @@
 use generated_contracts::provider_core::{
-    CatalogCore, CatalogEntryCore, CoreSnapshotV4, ProjectCore, SkillRequestCore, SkillRoleCore,
+    CatalogCore, CatalogEntryCore, CoreSnapshotV5, ProjectCore, SkillRequestCore, SkillRoleCore,
     WorkerCore,
 };
 use std::{
@@ -34,12 +34,12 @@ mod validation;
 use provider_execution::Effect;
 
 use generated_contracts::provider_core::ReasonCore as RecordedReason;
-use provider_execution::migration::CoreArchiveV4;
+use provider_execution::migration::CoreArchiveV5;
 
 /// Private aggregate: only authenticated calls can obtain a transition and only
 /// storage can commit it. HTTP snapshots are copies, never mutable handles.
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(from = "checkpoint::CoreCheckpointV4")]
+#[serde(from = "checkpoint::CoreCheckpointV5")]
 pub(crate) struct State {
     #[serde(flatten)]
     shell: execution::Shell,
@@ -198,39 +198,59 @@ impl State {
         }
         Ok(allocation)
     }
-    pub(crate) fn task_state(&self) -> generated_contracts::provider_core::TaskStateV1 {
-        use generated_contracts::provider_core::{TaskStateV1, TaskStorageRecordV1};
-        let mut state = TaskStateV1 {
-            schema_version: 1,
-            generation: self.info().provider_instance_id,
-            next_task_id: self.engine.next_task_id,
-            storages: self
-                .engine
-                .projects
-                .values()
-                .flat_map(|project| {
-                    project.proposals.iter().flat_map(move |proposal| {
-                        proposal
-                            .milestones
-                            .iter()
-                            .map(move |milestone| TaskStorageRecordV1 {
-                                project_id: project.project_id,
-                                proposal_id: proposal.proposal_id,
-                                proposal_revision: proposal.revision,
-                                storage: milestone.task_storage.clone(),
+    pub(crate) fn task_state(&self) -> generated_contracts::provider_core::TaskStateV2 {
+        use generated_contracts::provider_core::{TaskStateV2, TaskStorageRecordV2};
+        let mut state =
+            TaskStateV2 {
+                schema_version: 2,
+                has_task_history: self.shell.receipts.values().any(|record| {
+                    generated_contracts::UnsignedContractCallV1::decode_signable(&record.bytes)
+                            .map_or(true, |call| {
+                                matches!(call.command,
+                    generated_contracts::ProviderCommand::CreateTask { .. }
+                    | generated_contracts::ProviderCommand::EditTask { .. }
+                    | generated_contracts::ProviderCommand::UpdateTaskProgress { .. }
+                    | generated_contracts::ProviderCommand::DeleteTask { .. }
+                    | generated_contracts::ProviderCommand::CreateTaskCore { .. }
+                    | generated_contracts::ProviderCommand::SetTaskAssigneesCore { .. })
                             })
+                }) || self.shell.events.iter().any(|event| {
+                    matches!(
+                        event.kind,
+                        DomainEventKind::TaskCreated
+                            | DomainEventKind::TaskUpdated
+                            | DomainEventKind::TaskDeleted
+                    )
+                }),
+                generation: self.info().provider_instance_id,
+                next_task_id: self.engine.next_task_id,
+                storages: self
+                    .engine
+                    .projects
+                    .values()
+                    .flat_map(|project| {
+                        project.proposals.iter().flat_map(move |proposal| {
+                            proposal
+                                .milestones
+                                .iter()
+                                .map(move |milestone| TaskStorageRecordV2 {
+                                    project_id: project.project_id,
+                                    proposal_id: proposal.proposal_id,
+                                    proposal_revision: proposal.revision,
+                                    storage: milestone.task_storage.clone(),
+                                })
+                        })
                     })
-                })
-                .collect(),
-        };
+                    .collect(),
+            };
         state
             .storages
             .sort_by_key(|record| record.storage.task_storage_id);
         state
     }
-    pub(crate) fn snapshot(&self) -> CoreSnapshotV4 {
-        CoreSnapshotV4 {
-            schema_version: 4,
+    pub(crate) fn snapshot(&self) -> CoreSnapshotV5 {
+        CoreSnapshotV5 {
+            schema_version: 5,
             info: self.info(),
             catalog: CatalogCore {
                 roles: self.engine.roles.values().cloned().collect(),
@@ -286,16 +306,16 @@ impl State {
         state.validate_restored(root_account)
     }
 
-    pub(crate) fn archive(&self) -> Result<CoreArchiveV4> {
+    pub(crate) fn archive(&self) -> Result<CoreArchiveV5> {
         self.engine.validate_task_keys()?;
-        Ok(CoreArchiveV4 {
-            version: 4,
+        Ok(CoreArchiveV5 {
+            version: 5,
             checkpoint: serde_json::from_slice(&self.encode()?).map_err(|_| Error::internal())?,
         })
     }
 
-    pub(crate) fn from_archive(archive: CoreArchiveV4, root_account: AccountId32) -> Result<Self> {
-        require(archive.version == 4, "state_configuration_mismatch")?;
+    pub(crate) fn from_archive(archive: CoreArchiveV5, root_account: AccountId32) -> Result<Self> {
+        require(archive.version == 5, "state_configuration_mismatch")?;
         let state = Self::from(archive.checkpoint).validate_restored(root_account)?;
         state.engine.validate_task_keys()?;
         Ok(state)
@@ -323,6 +343,14 @@ impl State {
             u64::try_from(state.shell.events.len()).map_err(|_| Error::internal())?;
         state.engine.validate()?;
         state.validate_history()?;
+        require(
+            state.shell.receipts.values().all(|record| {
+                record
+                    .allocated_task_id
+                    .is_none_or(|id| id < state.engine.next_task_id)
+            }),
+            "invalid_task_allocation_state",
+        )?;
         state.engine.rebuild_index();
         Ok(self)
     }
@@ -444,5 +472,5 @@ impl RustEngine {
 }
 
 const fn rust_engine_version() -> u32 {
-    4
+    5
 }

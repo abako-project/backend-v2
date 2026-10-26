@@ -13,14 +13,17 @@ promotion and two observed release cycles remain open. Earlier milestone section
 below describe the retained compatibility tests; historical acceptance records
 live in `progress/handoffs/SPEC-0013*.md`.
 
-SPEC-0015 R2b2 uses CoreArchiveV4 / engine version4 and CoreSnapshotV4. The API
-owns worker names, Project root/proposal content, milestone titles, change
-explanations, catalog labels/categories, request narrative and lifecycle reasons.
-Core retains actual numeric terms, permissions, moderated request lifecycle and
-fixed references; current catalog label and skill origin are separate. Existing
-V3 stores require the [paired owner exchange and current-state rollback](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
-Directory and Project are167305 and163514 bytes; code/value/memory limits are
-unchanged. Tasks remain R3 and removal of the paging helper R4/R5.
+SPEC-0015 R3 uses CoreArchiveV5 / engine version5 and CoreSnapshotV5. The API
+owns names, descriptive content, catalog/request narrative, lifecycle reasons,
+and task text/progress. Core retains numeric terms, permissions, task IDs and
+assignees, the actual allocator and fixed content references. Creation/deletion
+and membership changes require core confirmation; local task edits retain an API
+result. Existing V4 stores require the [paired task owner exchange](../../docs/operations/task-cutover.md).
+Earlier V3↔V4 catalog exchange remains an explicit historical converter.
+Directory and Project are167546 and158563 bytes; runtime limits are unchanged.
+Calendar uses ordinary ink! storage. Directory/Project paging removal remains
+R4/R5. Current acceptance and promotion limits are recorded in the
+[ownership handoff](../../progress/handoffs/SPEC-0015.md).
 
 ```sh
 bash scripts/verify.sh ink-sandbox

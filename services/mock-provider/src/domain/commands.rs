@@ -5,7 +5,7 @@ use std::{cmp::Ordering, collections::BTreeSet};
 use generated_contracts::{
     AccountId32, AssignmentView, CalendarView, CatalogKind, DomainEventKind, Minutes, Money,
     PlanningStatus, PlanningView, ProviderCommand, Qualifications, ReputationView, ReservationView,
-    TaskDefinition, UnixSeconds, WorkerMode,
+    UnixSeconds, WorkerMode,
 };
 
 use super::{Effect, RustEngine, compare_scores, empty_score};
@@ -368,7 +368,7 @@ impl RustEngine {
                     .task_storage
                     .tasks
                     .iter()
-                    .flat_map(|task| task.task.assignees.iter())
+                    .flat_map(|task| task.assignees.iter())
                     .copied(),
             );
         }
@@ -484,9 +484,9 @@ impl RustEngine {
         Ok(())
     }
 
-    pub(super) fn task_assignees(&self, task: &TaskDefinition) -> Result<()> {
+    pub(super) fn task_assignees(&self, assignees: &[AccountId32]) -> Result<()> {
         require(
-            task.assignees
+            assignees
                 .iter()
                 .all(|account| self.workers.contains_key(account)),
             "unknown_task_assignee",

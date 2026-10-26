@@ -1,13 +1,13 @@
-//! API task execution in the existing queue. No public admission or activation switch.
+//! Classify API content edits and core task membership work in the existing queue.
 use crate::state::{App, Error, now, parse};
 use generated_contracts::{
-    AccountId32, AdapterTaskEvent, EntityId, ExecutionOutcome, OperationId, ProposalStatus,
-    ProviderCommand, ProviderInstanceId, TaskEventKind, TaskEventSource, TaskOperationResult,
-    TaskView, UnixSeconds, provider_core::ProjectCore,
+    AccountId32, AdapterTaskEvent, EntityId, ExecutionOutcome, OperationId, ProviderCommand,
+    ProviderInstanceId, TaskEventKind, TaskEventSource, TaskOperationResult, TaskView, UnixSeconds,
+    provider_core::ProjectCore,
 };
 use parity_scale_codec::{DecodeAll, Encode};
 use sqlx::{Row, postgres::PgRow};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeSet;
 
 /// The selected core command contains identity/membership only. The original
 /// request remains in the existing operation row for eventual API materialization.
@@ -226,7 +226,7 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
     let workers = snapshot.workers;
     let (project, request, permission) = tokio::task::spawn_blocking(move || {
         let known = workers.iter().map(|w| w.account).collect();
-        let permission = authorize_task(&project, request.actor, &request.command, &known, next);
+        let permission = authorize_task(&project, request.actor, &request.command, &known);
         (project, request, permission)
     })
     .await?;
@@ -277,21 +277,69 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
     {
         return Err(Error::Dependency);
     }
+    let core_command = match &request.command {
+        ProviderCommand::CreateTask { .. } | ProviderCommand::DeleteTask { .. } => {
+            compact_command(&request.command)
+        }
+        ProviderCommand::EditTask { task_id, task, .. } => {
+            let current = project
+                .proposals
+                .iter()
+                .flat_map(|p| &p.milestones)
+                .find(|m| m.task_storage.task_storage_id == request.storage)
+                .and_then(|m| m.task_storage.tasks.iter().find(|t| t.task_id == *task_id));
+            match current {
+                Some(current) if current.assignees != task.assignees => {
+                    compact_command(&request.command)
+                }
+                _ => None,
+            }
+        }
+        _ => None,
+    };
+    if let Some(command) = core_command {
+        // Refuse missing/corrupt preimages before an irreversible core write.
+        // Recovery after success must not introduce new content dependencies.
+        crate::task_views::current_state(&mut tx, request.generation, next, vec![project]).await?;
+        if storage.is_none() {
+            sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$3,$4,$5,$6)")
+                .bind(request.generation.to_string()).bind(request.storage.to_string()).bind(request.project.to_string()).bind(proposal.to_string()).bind(revision.to_string()).bind(milestone.to_string()).execute(&mut *tx).await?;
+            sqlx::query("UPDATE task_generations SET storage_count=storage_count+1 WHERE provider_instance_id=$1")
+                .bind(request.generation.to_string()).execute(&mut *tx).await?;
+        }
+        let (json, bytes) = tokio::task::spawn_blocking(move || {
+            Ok::<_, Error>((serde_json::to_string(&command)?, command.encode()))
+        })
+        .await??;
+        let converted = sqlx::query("UPDATE operations SET task_operation=FALSE,status='AwaitingSignature',command_json=$3,command_bytes=$4,lease_token=NULL,lease_until=NULL,error_code=NULL,attempt_count=0,next_attempt_at=$5 WHERE operation_id=$1 AND lease_token=$2 AND lease_until>$5 AND task_operation AND status='Queued' AND signable_payload IS NULL AND signed_json IS NULL AND receipt_json IS NULL AND task_result_json IS NULL AND NOT possibly_submitted")
+            .bind(request.id.to_string()).bind(&job.lease).bind(json).bind(bytes).bind(now()?).execute(&mut *tx).await?;
+        if converted.rows_affected() != 1 {
+            return Err(Error::Conflict("lease_lost"));
+        }
+        tx.commit().await?;
+        return Ok(());
+    }
     let rows=sqlx::query("SELECT task_id,ordinal,payload,assignees FROM task_items WHERE provider_instance_id=$1 AND task_storage_id=$2 ORDER BY ordinal")
         .bind(request.generation.to_string()).bind(request.storage.to_string()).fetch_all(&mut *tx).await?;
     let (request, changed) = tokio::task::spawn_blocking(move || {
-        let tasks = decode_tasks(rows, next)?;
-        let old_count = tasks.len();
-        let changed = apply(
-            &project,
-            request.storage,
-            request.actor,
-            &request.command,
-            tasks,
-            next,
-            UnixSeconds::new(u64::try_from(time).map_err(|_| Error::Internal)?),
-        )
-        .map(|(tasks, next, kind)| (project, tasks, next, kind, old_count));
+        let changed = match local_task(&project, request.storage, request.actor, &request.command) {
+            Err(code) => Err(code),
+            Ok(task_id) => {
+                let tasks = decode_tasks(rows, next)?;
+                if !tasks.iter().any(|task| task.task_id == task_id) {
+                    // Core identity exists; missing API content is retryable, not deletion.
+                    return Err(Error::Dependency);
+                }
+                let old_count = tasks.len();
+                apply(
+                    &request.command,
+                    tasks,
+                    next,
+                    UnixSeconds::new(u64::try_from(time).map_err(|_| Error::Internal)?),
+                )
+                .map(|(tasks, next, kind)| (project, tasks, next, kind, old_count))
+            }
+        };
         Ok::<_, Error>((request, changed))
     })
     .await??;
@@ -360,32 +408,15 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
             .flat_map(|m| &m.assignments)
             .map(|a| a.worker),
     );
-    let current_storages = project
-        .proposals
-        .iter()
-        .flat_map(|p| &p.milestones)
-        .map(|m| m.task_storage.task_storage_id.to_string())
-        .collect::<Vec<_>>();
-    let assigned = sqlx::query("SELECT t.task_id,t.ordinal,t.payload,t.assignees,t.task_storage_id FROM task_items t JOIN task_storages s USING(provider_instance_id,task_storage_id) WHERE s.provider_instance_id=$1 AND s.project_id=$2 AND s.task_storage_id=ANY($3) ORDER BY t.task_storage_id,t.ordinal")
-        .bind(&generation).bind(request.project.to_string()).bind(current_storages).fetch_all(&mut *tx).await?;
-    let audience = tokio::task::spawn_blocking(move || {
-        let mut grouped = BTreeMap::<EntityId, Vec<PgRow>>::new();
-        for row in assigned {
-            grouped
-                .entry(parse(row.try_get("task_storage_id")?)?)
-                .or_default()
-                .push(row);
-        }
-        let mut audience = BTreeSet::new();
-        for rows in grouped.into_values() {
-            for task in decode_tasks(rows, next)? {
-                audience.extend(task.task.assignees);
-            }
-        }
-        Ok::<_, Error>(audience)
-    })
-    .await??;
-    recipients.extend(audience);
+    recipients.extend(
+        project
+            .proposals
+            .iter()
+            .flat_map(|p| &p.milestones)
+            .flat_map(|m| &m.task_storage.tasks)
+            .flat_map(|t| &t.assignees)
+            .copied(),
+    );
     let event = AdapterTaskEvent {
         source: TaskEventSource::AdapterTask,
         provider_instance_id: request.generation,
@@ -405,6 +436,7 @@ pub(crate) fn decode_tasks(rows: Vec<PgRow>, next: u32) -> Result<Vec<TaskView>,
         .enumerate()
         .map(|(ordinal, row)| {
             let task: TaskView = serde_json::from_str(row.try_get("payload")?)?;
+            task.task.validate().map_err(|_| Error::Dependency)?;
             if task.task_id == 0
                 || task.task_id >= next
                 || i64::from(task.task_id) != row.try_get::<i64, _>("task_id")?
@@ -430,7 +462,6 @@ fn authorize_task(
     actor: AccountId32,
     command: &ProviderCommand,
     workers: &BTreeSet<AccountId32>,
-    next: u32,
 ) -> Result<(), &'static str> {
     if project.cancelled {
         return Err("project_cancelled");
@@ -456,9 +487,6 @@ fn authorize_task(
         ProviderCommand::CreateTask { task, .. } | ProviderCommand::EditTask { task, .. } => {
             coordinator()?;
             known(task)?;
-            if matches!(command, ProviderCommand::CreateTask { .. }) && next == u32::MAX {
-                return Err("task_keys_exhausted");
-            }
         }
         ProviderCommand::DeleteTask { .. } => coordinator()?,
         ProviderCommand::UpdateTaskProgress { .. } => {
@@ -471,28 +499,45 @@ fn authorize_task(
     Ok(())
 }
 
-fn apply(
+fn local_task(
     project: &ProjectCore,
     storage: EntityId,
     actor: AccountId32,
     command: &ProviderCommand,
+) -> Result<u32, &'static str> {
+    let task_id = match command {
+        ProviderCommand::EditTask { task_id, .. }
+        | ProviderCommand::UpdateTaskProgress { task_id, .. } => *task_id,
+        _ => return Err("invalid_project_message"),
+    };
+    let member = project
+        .proposals
+        .iter()
+        .flat_map(|p| &p.milestones)
+        .find(|m| m.task_storage.task_storage_id == storage)
+        .and_then(|m| m.task_storage.tasks.iter().find(|t| t.task_id == task_id))
+        .ok_or("task_not_found")?;
+    match command {
+        ProviderCommand::EditTask { task, .. } if member.assignees != task.assignees => {
+            return Err("task_membership_requires_core");
+        }
+        ProviderCommand::UpdateTaskProgress { .. }
+            if project.coordinator != actor && !member.assignees.contains(&actor) =>
+        {
+            return Err("task_assignee_required");
+        }
+        _ => (),
+    }
+    Ok(task_id)
+}
+
+fn apply(
+    command: &ProviderCommand,
     mut tasks: Vec<TaskView>,
-    mut next: u32,
+    next: u32,
     time: UnixSeconds,
 ) -> Result<(Vec<TaskView>, u32, TaskEventKind), &'static str> {
     let kind = match command {
-        ProviderCommand::CreateTask { task, .. } => {
-            let id = next;
-            next = next.checked_add(1).ok_or("task_keys_exhausted")?;
-            tasks.push(TaskView {
-                task_id: id,
-                reporter: actor,
-                created_at: time,
-                updated_at: time,
-                task: task.clone(),
-            });
-            TaskEventKind::Created
-        }
         ProviderCommand::EditTask { task_id, task, .. } => {
             let current = tasks
                 .iter_mut()
@@ -509,39 +554,10 @@ fn apply(
                 .iter_mut()
                 .find(|t| t.task_id == *task_id)
                 .ok_or("task_not_found")?;
-            if project.coordinator != actor && !current.task.assignees.contains(&actor) {
-                return Err("task_assignee_required");
-            }
             current.task.status = progress.status;
             current.task.logged_minutes = progress.logged_minutes;
             current.updated_at = time;
             TaskEventKind::Updated
-        }
-        ProviderCommand::DeleteTask {
-            task_id,
-            expected_revision,
-            ..
-        } => {
-            let proposal = project
-                .proposals
-                .iter()
-                .find(|p| {
-                    p.milestones
-                        .iter()
-                        .any(|m| m.task_storage.task_storage_id == storage)
-                })
-                .ok_or("task_storage_not_found")?;
-            if proposal.status != ProposalStatus::Draft {
-                return Err("proposal_not_draft");
-            }
-            if proposal.revision != *expected_revision {
-                return Err("revision_conflict");
-            }
-            if !tasks.iter().any(|t| t.task_id == *task_id) {
-                return Err("task_not_found");
-            }
-            tasks.retain(|t| t.task_id != *task_id);
-            TaskEventKind::Deleted
         }
         _ => return Err("invalid_project_message"),
     };

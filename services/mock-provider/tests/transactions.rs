@@ -1,7 +1,7 @@
 //! The same contract suite exercises both storage implementations.
 #![cfg(feature = "mock-seed")]
 
-use generated_contracts::provider_core::{CoreSnapshotV4, ProjectCore};
+use generated_contracts::provider_core::{CoreSnapshotV5, ProjectCore};
 use std::{
     error::Error,
     sync::atomic::{AtomicU64, Ordering},
@@ -57,20 +57,6 @@ fn capacity(minutes: u32) -> CalendarDefinition {
     }
 }
 
-fn draft_task() -> TaskDefinition {
-    TaskDefinition {
-        title: "Milestone deliverable".into(),
-        description: String::new(),
-        task_type: TaskType::Task,
-        priority: TaskPriority::Medium,
-        status: TaskStatus::ToDo,
-        assignees: Vec::new(),
-        estimated_minutes: Minutes::ZERO,
-        logged_minutes: Minutes::ZERO,
-        due_at: None,
-    }
-}
-
 async fn fill_milestone_tasks(
     provider: &Provider,
     coordinator: &Keypair,
@@ -81,10 +67,10 @@ async fn fill_milestone_tasks(
         success(
             provider,
             coordinator,
-            ProviderCommand::CreateTask {
+            ProviderCommand::CreateTaskCore {
                 project_id,
                 task_storage_id: milestone.task_storage.task_storage_id,
-                task: draft_task(),
+                assignees: vec![],
             },
         )
         .await?;
@@ -369,24 +355,13 @@ async fn exercise_task_permissions(
     storage_id: EntityId,
 ) -> TestResult {
     let reserved = provider.snapshot().await?.workers;
-    let task = TaskDefinition {
-        title: "Build".into(),
-        description: String::new(),
-        task_type: TaskType::Feature,
-        priority: TaskPriority::High,
-        status: TaskStatus::ToDo,
-        assignees: vec![account(worker)],
-        estimated_minutes: Minutes::new(60),
-        logged_minutes: Minutes::ZERO,
-        due_at: None,
-    };
     let client_task = send(
         provider,
         client,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id,
             task_storage_id: storage_id,
-            task: task.clone(),
+            assignees: vec![account(worker)],
         },
     )
     .await?;
@@ -397,10 +372,10 @@ async fn exercise_task_permissions(
     success(
         provider,
         coordinator,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id,
             task_storage_id: storage_id,
-            task: task.clone(),
+            assignees: vec![account(worker)],
         },
     )
     .await?;
@@ -410,30 +385,16 @@ async fn exercise_task_permissions(
         .last()
         .ok_or("task missing")?
         .clone();
-    assert_eq!(task_view.reporter, account(coordinator));
-    assert_eq!(task_view.created_at, NOW);
-    success(
-        provider,
-        worker,
-        ProviderCommand::UpdateTaskProgress {
-            project_id,
-            task_storage_id: storage_id,
-            task_id: task_view.task_id,
-            progress: TaskProgressRequest {
-                status: TaskStatus::Done,
-                logged_minutes: Minutes::new(10_000),
-            },
-        },
-    )
-    .await?;
+    assert_eq!(task_view.assignees, vec![account(worker)]);
+    // Content/progress permissions and reporter/time retention are API regressions.
     let unauthorized_edit = send(
         provider,
         worker,
-        ProviderCommand::EditTask {
+        ProviderCommand::SetTaskAssigneesCore {
             project_id,
             task_storage_id: storage_id,
             task_id: task_view.task_id,
-            task: task.clone(),
+            assignees: vec![account(worker)],
         },
     )
     .await?;
@@ -441,16 +402,14 @@ async fn exercise_task_permissions(
         unauthorized_edit.outcome,
         ExecutionOutcome::Failed("coordinator_required".into())
     );
-    let mut changed = task;
-    changed.assignees = vec![account(intruder)];
     success(
         provider,
         coordinator,
-        ProviderCommand::EditTask {
+        ProviderCommand::SetTaskAssigneesCore {
             project_id,
             task_storage_id: storage_id,
             task_id: task_view.task_id,
-            task: changed,
+            assignees: vec![account(intruder)],
         },
     )
     .await?;
@@ -526,7 +485,7 @@ async fn complete_milestone_and_assert_settlement(
 }
 
 fn assert_settlement_snapshot(
-    snapshot: &CoreSnapshotV4,
+    snapshot: &CoreSnapshotV5,
     coordinator: &Keypair,
     worker: &Keypair,
     client: &Keypair,
@@ -1190,7 +1149,7 @@ async fn assert_cancellation_freezes(
     actor: &Keypair,
     project_id: EntityId,
     reason: &ReasonRequest,
-    before: &CoreSnapshotV4,
+    before: &CoreSnapshotV5,
 ) -> TestResult {
     let cancel = ProviderCommand::CancelProject {
         project_id,

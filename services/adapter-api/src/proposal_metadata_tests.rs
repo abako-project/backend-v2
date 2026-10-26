@@ -453,7 +453,12 @@ async fn proposal_exchange_preserves_current_views_and_rejects_incomplete_confli
                 project.project_id,
                 project.coordinator,
                 project.client,
-                core.proposals[0].clone()
+                core.proposals[0].clone(),
+                project.proposals[0]
+                    .milestones
+                    .iter()
+                    .map(|m| m.task_storage.clone())
+                    .collect()
             )
             .await?,
             project.proposals[0]
@@ -469,7 +474,12 @@ async fn proposal_exchange_preserves_current_views_and_rejects_incomplete_confli
             project.project_id,
             project.coordinator,
             project.client,
-            core.proposals[0].clone()
+            core.proposals[0].clone(),
+            project.proposals[0]
+                .milestones
+                .iter()
+                .map(|m| m.task_storage.clone())
+                .collect()
         )
         .await?,
         project.proposals[0]
@@ -488,7 +498,12 @@ async fn proposal_exchange_preserves_current_views_and_rejects_incomplete_confli
             project.project_id,
             project.coordinator,
             project.client,
-            core.proposals[0].clone()
+            core.proposals[0].clone(),
+            project.proposals[0]
+                .milestones
+                .iter()
+                .map(|m| m.task_storage.clone())
+                .collect()
         )
         .await,
         Err(Error::Dependency)

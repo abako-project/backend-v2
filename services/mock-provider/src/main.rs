@@ -31,6 +31,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .map_err(|e| e as Box<dyn Error>)?;
             return Ok(());
         }
+        if let [command, archive, tasks, output] = args.as_slice()
+            && command == "compact-tasks"
+        {
+            owner::compact(archive.into(), tasks.into(), output.into(), root)
+                .await
+                .map_err(|e| e as Box<dyn Error>)?;
+            return Ok(());
+        }
         #[cfg(feature = "storage-sqlite")]
         if let [command, output] = args.as_slice()
             && command == "export"
@@ -47,7 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             import_native(archive.into(), destination.into(), root).await?;
             return Ok(());
         }
-        return Err("usage: mock-provider [import CORE_ARCHIVE NEW_DATABASE_FILE | export NEW_ARCHIVE | restore-tasks CORE_ARCHIVE TASK_STATE NEW_ARCHIVE]".into());
+        return Err("usage: mock-provider [import CORE_ARCHIVE NEW_DATABASE_FILE | export NEW_ARCHIVE | restore-tasks CORE_ARCHIVE TASK_STATE NEW_ARCHIVE | compact-tasks V4_ARCHIVE PREPARED_TASKS NEW_ARCHIVE]".into());
     }
     let service_token = secret("INTERNAL_SERVICE_TOKEN_FILE")?;
     let mode = env::var("MOCK_STORAGE").unwrap_or_else(|_| {
@@ -96,7 +104,7 @@ async fn import_native(
         if bytes.len() > 67_108_864 {
             return Err(std::io::Error::other("archive exceeds limit"));
         }
-        let archive: provider_execution::migration::CoreArchiveV4 = serde_json::from_slice(&bytes)
+        let archive: provider_execution::migration::CoreArchiveV5 = serde_json::from_slice(&bytes)
             .map_err(|_| std::io::Error::other("invalid core archive"))?;
         let mut options = fs::OpenOptions::new();
         options.write(true).create_new(true);

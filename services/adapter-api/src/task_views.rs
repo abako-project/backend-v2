@@ -5,7 +5,7 @@ use generated_contracts::{
     provider_core::{ProjectCore, TaskStateV1, TaskStorageRecordV1},
 };
 use sqlx::{PgConnection, Row, postgres::PgRow};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 pub(crate) async fn owned(app: &App, generation: ProviderInstanceId) -> Result<bool, Error> {
     Ok(sqlx::query_scalar::<_, bool>(
@@ -30,16 +30,6 @@ pub(crate) async fn counter(
         .map(|n| u32::try_from(n).map_err(|_| Error::Dependency))
         .transpose()
 }
-fn contractual_access(project: &ProjectCore, account: AccountId32) -> bool {
-    project.client == account
-        || project.coordinator == account
-        || project
-            .proposals
-            .iter()
-            .flat_map(|p| &p.milestones)
-            .flat_map(|m| &m.assignments)
-            .any(|a| a.worker == account)
-}
 fn ids(projects: &[ProjectCore]) -> Vec<String> {
     projects
         .iter()
@@ -49,49 +39,21 @@ fn ids(projects: &[ProjectCore]) -> Vec<String> {
         .collect()
 }
 
-/// One coherent PG graph, selected before task-based visibility. The projection
-/// array only selects candidates; validated typed tasks establish actual access.
+/// Core membership is authoritative even when a caller submits directly to core.
+/// Content rows never select or grant access to a project.
 async fn selected(
     app: &App,
     generation: ProviderInstanceId,
     projects: Vec<ProjectCore>,
     account: AccountId32,
 ) -> Result<(Vec<ProjectCore>, bool), Error> {
-    let mut tx = app.db.begin().await?;
-    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
-        .execute(&mut *tx)
-        .await?;
-    let Some(next) = counter(&mut tx, generation).await? else {
-        tx.commit().await?;
-        return Ok((
-            projects
-                .into_iter()
-                .filter(|p| crate::operations::visible(p, account))
-                .collect(),
-            false,
-        ));
-    };
-    let candidates:Vec<String>=sqlx::query_scalar("SELECT DISTINCT task_storage_id FROM task_items WHERE provider_instance_id=$1 AND task_storage_id=ANY($2) AND assignees @> ARRAY[$3]::text[]")
-        .bind(generation.to_string()).bind(ids(&projects)).bind(account.to_string()).fetch_all(&mut *tx).await?;
-    let candidates: BTreeSet<_> = candidates.into_iter().collect();
-    let selected = projects
-        .into_iter()
-        .filter(|p| {
-            contractual_access(p, account)
-                || p.proposals
-                    .iter()
-                    .flat_map(|p| &p.milestones)
-                    .any(|m| candidates.contains(&m.task_storage.task_storage_id.to_string()))
-        })
-        .collect();
-    let projects = read(&mut tx, generation, next, selected).await?;
-    tx.commit().await?;
+    let owned = owned(app, generation).await?;
     Ok((
         projects
             .into_iter()
             .filter(|p| crate::operations::visible(p, account))
             .collect(),
-        true,
+        owned,
     ))
 }
 
@@ -104,8 +66,8 @@ pub(crate) async fn visible(
     Ok(selected(app, generation, projects, account).await?.0)
 }
 
-/// Reads only the selected, visible project. Candidate projection rows never
-/// establish access until their typed task payloads have also been validated.
+/// Core membership establishes visibility; API rows supply verified task content
+/// only after that access check.
 pub(crate) async fn project(
     app: &App,
     generation: ProviderInstanceId,
@@ -121,7 +83,7 @@ async fn read(
     generation: ProviderInstanceId,
     next: u32,
     projects: Vec<ProjectCore>,
-) -> Result<Vec<ProjectCore>, Error> {
+) -> Result<TaskStateV1, Error> {
     let storage_ids = ids(&projects);
     let contexts=sqlx::query("SELECT task_storage_id,project_id,proposal_id,milestone_id FROM task_storages WHERE provider_instance_id=$1 AND task_storage_id=ANY($2)")
         .bind(generation.to_string()).bind(&storage_ids).fetch_all(&mut *connection).await?;
@@ -135,10 +97,10 @@ async fn read(
 fn apply(
     generation: ProviderInstanceId,
     next: u32,
-    mut projects: Vec<ProjectCore>,
+    projects: Vec<ProjectCore>,
     contexts: Vec<PgRow>,
     rows: Vec<PgRow>,
-) -> Result<Vec<ProjectCore>, Error> {
+) -> Result<TaskStateV1, Error> {
     let mut stored = BTreeMap::new();
     for row in contexts {
         stored.insert(
@@ -158,10 +120,10 @@ fn apply(
             .push(row);
     }
     let mut validated = Vec::new();
-    for project in &mut projects {
-        for proposal in &mut project.proposals {
-            for milestone in &mut proposal.milestones {
-                let storage = &mut milestone.task_storage;
+    for project in projects {
+        for proposal in project.proposals {
+            for milestone in proposal.milestones {
+                let storage = milestone.task_storage;
                 if storage.milestone_id != milestone.milestone_id {
                     return Err(Error::Dependency);
                 }
@@ -176,16 +138,30 @@ fn apply(
                     None if storage.tasks.is_empty() => {}
                     _ => return Err(Error::Dependency),
                 }
-                storage.tasks = crate::task_execution::decode_tasks(
+                let content = crate::task_execution::decode_tasks(
                     tasks.remove(&storage.task_storage_id).unwrap_or_default(),
                     next,
                 )
                 .map_err(|_| Error::Dependency)?;
+                let mut content: BTreeMap<_, _> = content
+                    .into_iter()
+                    .map(|task| (task.task_id, task))
+                    .collect();
+                let mut composed = Vec::with_capacity(storage.tasks.len());
+                for core in &storage.tasks {
+                    let mut task = content.remove(&core.task_id).ok_or(Error::Dependency)?;
+                    task.task.assignees.clone_from(&core.assignees);
+                    composed.push(task);
+                }
                 validated.push(TaskStorageRecordV1 {
                     project_id: project.project_id,
                     proposal_id: proposal.proposal_id,
                     proposal_revision: proposal.revision,
-                    storage: storage.clone(),
+                    storage: generated_contracts::TaskStorageView {
+                        task_storage_id: storage.task_storage_id,
+                        milestone_id: storage.milestone_id,
+                        tasks: composed,
+                    },
                 });
             }
         }
@@ -193,15 +169,33 @@ fn apply(
     if !stored.is_empty() || !tasks.is_empty() {
         return Err(Error::Dependency);
     }
-    TaskStateV1 {
+    validated.sort_by_key(|record| record.storage.task_storage_id);
+    let state = TaskStateV1 {
         schema_version: 1,
         generation,
         next_task_id: next,
         storages: validated,
-    }
-    .validate()
-    .map_err(|_| Error::Dependency)?;
-    Ok(projects)
+    };
+    state.validate().map_err(|_| Error::Dependency)?;
+    Ok(state)
+}
+
+/// Compose only an already-authorized project's content in one database snapshot.
+pub(crate) async fn content(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: ProjectCore,
+) -> Result<TaskStateV1, Error> {
+    let mut tx = app.db.begin().await?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *tx)
+        .await?;
+    let next = counter(&mut tx, generation)
+        .await?
+        .ok_or(Error::Dependency)?;
+    let tasks = read(&mut tx, generation, next, vec![project]).await?;
+    tx.commit().await?;
+    Ok(tasks)
 }
 
 /// Owner-only current restore projection. Historical/orphan rows remain in the
@@ -212,30 +206,5 @@ pub(crate) async fn current_state(
     next: u32,
     projects: Vec<ProjectCore>,
 ) -> Result<TaskStateV1, Error> {
-    let projects = read(connection, generation, next, projects).await?;
-    tokio::task::spawn_blocking(move || {
-        let mut storages = Vec::new();
-        for project in projects {
-            for proposal in project.proposals {
-                for milestone in proposal.milestones {
-                    storages.push(TaskStorageRecordV1 {
-                        project_id: project.project_id,
-                        proposal_id: proposal.proposal_id,
-                        proposal_revision: proposal.revision,
-                        storage: milestone.task_storage,
-                    });
-                }
-            }
-        }
-        storages.sort_by_key(|r| r.storage.task_storage_id);
-        let state = TaskStateV1 {
-            schema_version: 1,
-            generation,
-            next_task_id: next,
-            storages,
-        };
-        state.validate().map_err(|_| Error::Dependency)?;
-        Ok(state)
-    })
-    .await?
+    read(connection, generation, next, projects).await
 }

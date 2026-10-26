@@ -53,7 +53,7 @@ fn digest(state: &State) -> String {
 }
 #[test]
 fn canonical_signed_project_trace() -> TestResult {
-    let trace: Value = serde_json::from_str(include_str!("fixtures/project-signed.json"))?;
+    let trace: Value = serde_json::from_str(include_str!("fixtures/project-signed-v5.json"))?;
     assert_eq!(trace["schemaVersion"], 1);
     let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
     state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
@@ -175,19 +175,6 @@ fn proposal(keys: &[u32]) -> TestResult<ProposalDefinition> {
                 })
             })
             .collect::<TestResult<Vec<_>>>()?,
-    })
-}
-fn task() -> TestResult<TaskDefinition> {
-    Ok(TaskDefinition {
-        title: "Optional tracking".into(),
-        description: String::new(),
-        task_type: TaskType::Feature,
-        priority: TaskPriority::High,
-        status: TaskStatus::ToDo,
-        assignees: vec![signed_account(3)?],
-        estimated_minutes: Minutes::new(37),
-        logged_minutes: Minutes::ZERO,
-        due_at: None,
     })
 }
 #[test]
@@ -314,33 +301,32 @@ fn export_project_trace() -> TestResult {
     let missing = EntityId::from_bytes([254; 16]);
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_a,
             task_storage_id: missing,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_a,
             task_storage_id: storage,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
-    let mut unknown = task()?;
-    unknown.assignees = vec![signed_account(5)?];
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_a,
             task_storage_id: missing,
-            task: unknown,
+            assignees: vec![signed_account(5)?],
         },
         30,
     )?;
+    // Retired progress commands are rejection probes; API tests cover progress execution.
     let progress = TaskProgressRequest {
         status: TaskStatus::InProgress,
         logged_minutes: Minutes::new(12),
@@ -359,24 +345,21 @@ fn export_project_trace() -> TestResult {
     }
     fixture.step(
         3,
-        ProviderCommand::EditTask {
+        ProviderCommand::SetTaskAssigneesCore {
             project_id: project_a,
             task_storage_id: storage,
             task_id: 1,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
-    let mut edited = task()?;
-    edited.title = "Edited".into();
-    edited.logged_minutes = Minutes::new(37);
     fixture.step(
         2,
-        ProviderCommand::EditTask {
+        ProviderCommand::SetTaskAssigneesCore {
             project_id: project_a,
             task_storage_id: storage,
             task_id: 1,
-            task: edited,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
@@ -414,10 +397,10 @@ fn export_project_trace() -> TestResult {
     }
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_a,
             task_storage_id: storage,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
@@ -432,10 +415,10 @@ fn export_project_trace() -> TestResult {
     )?;
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_a,
             task_storage_id: removed_storage,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
@@ -735,10 +718,10 @@ fn export_project_trace() -> TestResult {
     }
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_b,
             task_storage_id: storage,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
@@ -747,10 +730,10 @@ fn export_project_trace() -> TestResult {
         .task_storage_id;
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_b,
             task_storage_id: sb,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;
@@ -799,10 +782,10 @@ fn export_project_trace() -> TestResult {
     )?;
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: project_a,
             task_storage_id: storage,
-            task: task()?,
+            assignees: vec![signed_account(3)?],
         },
         30,
     )?;

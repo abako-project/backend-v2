@@ -374,7 +374,7 @@ dependencies = [
 [[package]]
 name = "directory-v5"
 version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=a38984fb11a83c4d3cb17338838e77a6f98f344d#a38984fb11a83c4d3cb17338838e77a6f98f344d"
+source = "git+https://github.com/abako-dev/contracts.git?rev=a842fbbaf6a5bc3e27ea95f71ee84d88ea495a67#a842fbbaf6a5bc3e27ea95f71ee84d88ea495a67"
 dependencies = [
  "calendar-v5",
  "chrono",

@@ -68,13 +68,17 @@ pub(crate) async fn present(
         .find(|m| m.key == view.milestone.definition.key)
         .ok_or(Error::Dependency)?
         .title;
-    let view =
-        crate::task_freezes::compose_case(app, generation, proposal.proposal_id, view).await?;
+    let tasks =
+        crate::task_freezes::compose_case(app, generation, proposal.proposal_id, view.clone())
+            .await?;
     Ok((
         generation,
         DisputeView {
             dispute: view.dispute,
-            milestone: view.milestone.into_view(title),
+            milestone: view
+                .milestone
+                .into_view(title, tasks)
+                .map_err(|_| Error::Dependency)?,
         },
     ))
 }

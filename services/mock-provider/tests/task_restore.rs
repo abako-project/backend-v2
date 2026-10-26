@@ -1,7 +1,7 @@
 //! V4 task replacement preserves the complete non-task archive and shell.
 #![cfg(feature = "storage-memory")]
 use generated_contracts::{ProviderInstanceId, provider_core::TaskStateV1};
-use mock_provider::{ReferenceState, migration::restore_tasks};
+use mock_provider::migration::{compact_tasks, restore_tasks};
 use provider_execution::migration::CoreArchiveV4;
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 fn fixture() -> Result<(CoreArchiveV4, TaskStateV1), Box<dyn std::error::Error>> {
@@ -9,9 +9,7 @@ fn fixture() -> Result<(CoreArchiveV4, TaskStateV1), Box<dyn std::error::Error>>
         serde_json::from_str(include_str!("../src/domain/fixtures/migration-signed.json"))?;
     let archive: CoreArchiveV4 =
         serde_json::from_str(trace["archives"][2]["archive"].as_str().ok_or("archive")?)?;
-    let tasks =
-        ReferenceState::from_archive(archive.checkpoint.info.root_account, archive.clone())?
-            .task_state();
+    let tasks = compact_tasks(archive.checkpoint.info.root_account, archive.clone())?.1;
     Ok((archive, tasks))
 }
 #[test]
@@ -29,10 +27,7 @@ fn restores_exact_values_deleted_gaps_and_exhaustion_without_rewriting_history()
     task.task.description = "λ\0".repeat(20_000);
     task.updated_at = generated_contracts::UnixSeconds::new(u64::MAX);
     let restored = restore_tasks(root, &archive, tasks.clone())?;
-    assert_eq!(
-        ReferenceState::from_archive(root, restored.clone())?.task_state(),
-        tasks
-    );
+    assert_eq!(compact_tasks(root, restored.clone())?.1, tasks);
     let mut before = original;
     let mut after = serde_json::to_value(&restored)?;
     for value in [&mut before, &mut after] {

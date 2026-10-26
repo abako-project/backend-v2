@@ -26,7 +26,7 @@ pub(crate) fn visible(project: &ProjectCore, account: AccountId32) -> bool {
                     || m.task_storage
                         .tasks
                         .iter()
-                        .any(|t| t.task.assignees.contains(&account))
+                        .any(|t| t.assignees.contains(&account))
             })
 }
 fn privileged(command: &ProviderCommand) -> bool {
@@ -165,7 +165,7 @@ async fn authorize_project(
                     .find(|m| m.task_storage.task_storage_id == *task_storage_id)
                     .and_then(|m| m.task_storage.tasks.iter().find(|t| t.task_id == *task_id))
                     .is_some_and(|task| {
-                        task.task.assignees.contains(&account)
+                        task.assignees.contains(&account)
                             || (api_tasks && project.coordinator == account)
                     })
         }
@@ -254,6 +254,7 @@ pub(crate) async fn enqueue(
         || crate::reason_metadata::needs_record(&command)
         || crate::catalog_metadata::operation(&command)
         || crate::task_freezes::kind(&command).is_some()
+        || crate::task_freezes::task_project(&command).is_some()
     {
         Some(app.snapshot().await?.info.provider_instance_id)
     } else {
@@ -297,13 +298,32 @@ pub(crate) async fn enqueue(
     } else {
         command
     };
+    let task_project = crate::task_freezes::task_project(&command);
+    let task_operation = task_project.is_some();
+    if task_operation {
+        let generation = generation.ok_or(Error::Dependency)?;
+        let owned: Option<bool> = sqlx::query_scalar(
+            "SELECT api_owned FROM task_generations WHERE provider_instance_id=$1",
+        )
+        .bind(generation.to_string())
+        .fetch_optional(&mut *tx)
+        .await?;
+        if owned != Some(true) {
+            return Err(Error::Conflict("task_state_provider_owned"));
+        }
+    }
+    let initial_status = if task_operation {
+        ProviderOperationStatus::Queued
+    } else {
+        ProviderOperationStatus::AwaitingSignature
+    };
     let command_bytes = command.encode();
     if command_bytes.len() > MAX_SIGNABLE_BYTES - 128 {
         return Err(Error::Invalid);
     }
-    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes, provider_instance_id, catalog_operation) VALUES ($1, $2, $3, $4, $5, $6, 'AwaitingSignature', $7, $8, $9, $10, $11, $12)")
+    sqlx::query("INSERT INTO operations(operation_id, principal_id, wallet_id, account_id, command_json, command_bytes, status, next_attempt_at, expires_at, created_at, request_command_bytes, provider_instance_id, catalog_operation, task_operation, task_project_id) VALUES ($1, $2, $3, $4, $5, $6, $13, $7, $8, $9, $10, $11, $12, $14, $15)")
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
-        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).bind(catalog_operation).execute(&mut *tx).await?;
+        .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).bind(catalog_operation).bind(name(initial_status)).bind(task_operation).bind(task_project.map(|id|id.to_string())).execute(&mut *tx).await?;
     if let Some(generation) = generation {
         crate::task_freezes::capture(app, &mut tx, generation, operation_id, &command).await?;
     }
@@ -312,7 +332,7 @@ pub(crate) async fn enqueue(
     tx.commit().await?;
     Ok(OperationRef {
         operation_id,
-        status: ProviderOperationStatus::AwaitingSignature,
+        status: initial_status,
     })
 }
 fn existing(
@@ -393,6 +413,8 @@ pub(crate) struct Job {
     signed: Option<String>,
     instance: Option<String>,
     receipt: Option<String>,
+    task_intent: bool,
+    task_allocation: Option<generated_contracts::provider_core::TaskAllocationV1>,
     error: Option<String>,
     submitted: bool,
     attempts: i64,
@@ -406,7 +428,7 @@ impl Job {
             return Err(Error::Dependency);
         }
         let command = serde_json::from_str(row.try_get("command_json")?)?;
-        let _ = crate::task_execution::provider_intent(row, &command)?;
+        let task_intent = crate::task_execution::provider_intent(row, &command)?.is_some();
         Ok(Self {
             id: parse(row.try_get("operation_id")?)?,
             wallet: parse(row.try_get("wallet_id")?)?,
@@ -417,6 +439,8 @@ impl Job {
             signed: row.try_get("signed_json")?,
             instance: row.try_get("provider_instance_id")?,
             receipt: row.try_get("receipt_json")?,
+            task_intent,
+            task_allocation: None,
             error: row.try_get("error_code")?,
             submitted: row.try_get("possibly_submitted")?,
             attempts: row.try_get("attempt_count")?,
@@ -510,6 +534,10 @@ async fn save(
     if result.rows_affected() != 1 {
         return Err(Error::Conflict("lease_lost"));
     }
+    if job.task_intent && job.status == ProviderOperationStatus::Finalized {
+        crate::task_materialization::complete(&mut tx, job.id, job.task_allocation.as_ref())
+            .await?;
+    }
     crate::task_freezes::complete(&mut tx, job.id).await?;
     if let Some(completion) = completion {
         crate::catalog_claims::publish(&mut tx, job.id, completion).await?;
@@ -534,6 +562,14 @@ pub(crate) async fn process(app: &App, mut job: Job) -> Result<(), Error> {
     let time = now()?;
     let outcome = async {
         advance(app, &mut job, time).await?;
+        if job.task_intent && job.status == ProviderOperationStatus::Finalized {
+            job.task_allocation = crate::task_materialization::allocation(
+                app,
+                &job.command,
+                job.receipt.as_deref().ok_or(Error::Dependency)?,
+            )
+            .await?;
+        }
         crate::catalog_claims::completion(
             app,
             &job.command,

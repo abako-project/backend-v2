@@ -52,7 +52,11 @@ fn digest(state: &State) -> TestResult<String> {
 }
 #[test]
 fn canonical_signed_financial_trace() -> TestResult {
-    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed-v5.json"))?;
+    // The ownership change cannot alter the frozen financial/worker outcome.
+    let predecessor: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    assert_eq!(trace["final"][1], predecessor["final"][1]);
+    assert_eq!(trace["final"][0][1], predecessor["final"][0][1]);
     let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
     state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
     assert_eq!(json!(projection(&state)?), trace["initial"]);
@@ -559,20 +563,10 @@ fn execution_scenario(fixture: &mut Fixture) -> TestResult {
         .task_storage_id;
     fixture.step(
         2,
-        ProviderCommand::CreateTask {
+        ProviderCommand::CreateTaskCore {
             project_id: happy,
             task_storage_id: storage,
-            task: TaskDefinition {
-                title: "Tracking does not change allocation".into(),
-                description: String::new(),
-                task_type: TaskType::Task,
-                priority: TaskPriority::Medium,
-                status: TaskStatus::ToDo,
-                assignees: vec![signed_account(2)?],
-                estimated_minutes: Minutes::ZERO,
-                logged_minutes: Minutes::new(99999),
-                due_at: None,
-            },
+            assignees: vec![signed_account(2)?],
         },
         51,
     )?;
@@ -986,6 +980,7 @@ fn execution_scenario(fixture: &mut Fixture) -> TestResult {
         81,
     )?;
     fixture.step(4, opening, 151)?;
+    // Progress is API-owned; a direct legacy command cannot change core or money.
     fixture.step(
         2,
         ProviderCommand::UpdateTaskProgress {
@@ -1128,7 +1123,7 @@ fn execution_scenario(fixture: &mut Fixture) -> TestResult {
 
 #[test]
 fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResult {
-    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed-v5.json"))?;
     let root = serde_json::from_value(trace["root"].clone())?;
     let mut state = State::new(root)?;
     state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
@@ -1171,7 +1166,7 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
                 .err()
                 .ok_or("stale counter accepted")?
                 .code(),
-            "invalid_task_state"
+            "invalid_task_allocation_state"
         );
     }
     let mut invalid = restored.archive()?;
@@ -1193,7 +1188,7 @@ fn complete_private_archive_roundtrips_history_and_current_writes() -> TestResul
         "invalid_task_state"
     );
     let mut invalid = restored.archive()?;
-    invalid.version = 5;
+    invalid.version = 6;
     assert_eq!(
         State::from_archive(invalid, root)
             .err()
@@ -1430,7 +1425,7 @@ fn migration_catalog_case(
     frozen: Option<&Value>,
 ) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let first: provider_execution::migration::CoreArchiveV4 =
+    let first: provider_execution::migration::CoreArchiveV5 =
         serde_json::from_str(&archives[0].archive)?;
     let mut catalog = State::from_archive(first.clone(), root)?;
     for offset in 0..14u8 {
@@ -1470,7 +1465,7 @@ fn migration_catalog_case(
 }
 fn migration_project_case(source: &RetainedArchive, frozen: Option<&Value>) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let source: provider_execution::migration::CoreArchiveV4 =
+    let source: provider_execution::migration::CoreArchiveV5 =
         serde_json::from_str(&source.archive)?;
     let mut project = State::from_archive(source, root)?;
     let client = signed_account(5)?;
@@ -1609,7 +1604,7 @@ fn migration_worker_case(
     frozen: Option<&Value>,
 ) -> TestResult<Value> {
     let root = signed_account(1)?;
-    let first: provider_execution::migration::CoreArchiveV4 =
+    let first: provider_execution::migration::CoreArchiveV5 =
         serde_json::from_str(&source.archive)?;
     let mut worker = State::from_archive(first, root)?;
     let owner = signed_account(2)?;
@@ -1681,7 +1676,7 @@ fn migration_planning_cases(
     archives: &[RetainedArchive],
     frozen: Option<&[Value]>,
 ) -> TestResult<Vec<Value>> {
-    let mut source: provider_execution::migration::CoreArchiveV4 =
+    let mut source: provider_execution::migration::CoreArchiveV5 =
         serde_json::from_str(&archives[1].archive)?;
     let project = source
         .checkpoint
@@ -1734,7 +1729,7 @@ fn migration_planning_cases(
 }
 
 fn migration_reference(frozen: Option<&MigrationReference>) -> TestResult<MigrationReference> {
-    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed-v5.json"))?;
     let mut state = State::new(serde_json::from_value(trace["root"].clone())?)?;
     state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
     let mut reference = MigrationReference {
@@ -1796,11 +1791,11 @@ fn export_migration_reference() -> TestResult {
 }
 fn ordinary_qualification_capacity_reference(frozen: Option<&[Value]>) -> TestResult<Vec<Value>> {
     let reference: MigrationReference =
-        serde_json::from_str(include_str!("fixtures/migration-signed.json"))?;
+        serde_json::from_str(include_str!("fixtures/migration-signed-v5.json"))?;
     let source = reference.aggregate_cases.get(2).ok_or("worker case")?;
     let archive = serde_json::from_str(source["archive"].as_str().ok_or("archive")?)?;
     let mut state = State::from_archive(archive, signed_account(1)?)?;
-    let original: provider_execution::migration::CoreArchiveV4 =
+    let original: provider_execution::migration::CoreArchiveV5 =
         serde_json::from_str(&reference.archives.last().ok_or("snapshot")?.archive)?;
     let owner = signed_account(2)?;
     let large = state.engine.workers[&owner].qualifications.clone();
@@ -1834,8 +1829,9 @@ fn export_ordinary_qualification_capacity() -> TestResult {
 }
 #[test]
 fn complete_ordinary_qualification_capacity_reference() -> TestResult {
-    let expected: Vec<Value> =
-        serde_json::from_str(include_str!("fixtures/qualification-capacity-signed.json"))?;
+    let expected: Vec<Value> = serde_json::from_str(include_str!(
+        "fixtures/qualification-capacity-signed-v5.json"
+    ))?;
     let actual = ordinary_qualification_capacity_reference(Some(&expected))?;
     assert_eq!(
         Sha256::digest(serde_json::to_vec(&actual)?),
@@ -1846,7 +1842,7 @@ fn complete_ordinary_qualification_capacity_reference() -> TestResult {
 #[test]
 fn complete_retained_migration_reference() -> TestResult {
     let expected: MigrationReference =
-        serde_json::from_str(include_str!("fixtures/migration-signed.json"))?;
+        serde_json::from_str(include_str!("fixtures/migration-signed-v5.json"))?;
     let actual = migration_reference(Some(&expected))?;
     // Keep failure output small; fixture archives include complete private history.
     assert_eq!(
@@ -1896,11 +1892,11 @@ fn retained_creation_and_proposal_refs_survive_catalog_conversion() -> TestResul
     reason = "Replay the full signed scenario and check each commitment slot, rejection, replay and archive boundary."
 )]
 fn committed_evidence_preserves_receipts_money_replay_and_current_archives() -> TestResult {
-    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed.json"))?;
+    let trace: Value = serde_json::from_str(include_str!("fixtures/financial-signed-v5.json"))?;
     let root = serde_json::from_value(trace["root"].clone())?;
     let mut state = State::new(root)?;
     state.set_fixture_generation(serde_json::from_value(trace["generation"].clone())?);
-    let frozen: Value = serde_json::from_str(include_str!("fixtures/evidence-signed.json"))?;
+    let frozen: Value = serde_json::from_str(include_str!("fixtures/evidence-signed-v5.json"))?;
     let authoring = std::env::var("EVIDENCE_FIXTURE_OUTPUT").ok();
     let mut counts = [0usize; 4];
     let mut replacements = Vec::new();

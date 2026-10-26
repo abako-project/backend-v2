@@ -1,13 +1,15 @@
 use ink_v5_compatibility::worker::comparison::*;
-use provider_execution::migration::CoreArchiveV4;
-fn archive() -> CoreArchiveV4 {
+use provider_execution::migration::CoreArchiveV5;
+fn archive() -> CoreArchiveV5 {
     let fixture: serde_json::Value = serde_json::from_str(include_str!(
         "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
     ))
     .unwrap();
-    serde_json::from_str(fixture["archives"][5]["archive"].as_str().unwrap()).unwrap()
+    let previous =
+        serde_json::from_str(fixture["archives"][5]["archive"].as_str().unwrap()).unwrap();
+    CoreArchiveV5::from_v4(previous).unwrap().0
 }
-fn observed(archive: &CoreArchiveV4) -> Observation<'_> {
+fn observed(archive: &CoreArchiveV5) -> Observation<'_> {
     Observation {
         archive: Some(archive),
         outcome: ObservedOutcome::Rejected {
@@ -76,7 +78,7 @@ fn missing_coverage_and_unreadable_exports_are_incomplete() {
         );
     }
     let mut incompatible = original.clone();
-    incompatible.version = 5;
+    incompatible.version = 6;
     assert_eq!(
         compare(observed(&original), observed(&incompatible)).unwrap(),
         Comparison::Incomplete

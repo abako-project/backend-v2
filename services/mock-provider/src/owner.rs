@@ -1,7 +1,7 @@
 //! Explicit owner file operations. No owner routes are mounted in HTTP.
 use generated_contracts::{AccountId32, provider_core::TaskStateV1};
-use mock_provider::migration::restore_tasks;
-use provider_execution::migration::CoreArchiveV4;
+use mock_provider::migration::restore_task_content;
+use provider_execution::migration::CoreArchiveV5;
 use std::{
     error::Error,
     fs,
@@ -20,7 +20,7 @@ fn read<T: serde::de::DeserializeOwned>(path: PathBuf, maximum: u64) -> Result<T
     }
     serde_json::from_slice(&bytes).map_err(|_| "invalid owner input".into())
 }
-fn write(path: PathBuf, archive: &CoreArchiveV4) -> Result<()> {
+fn write(path: PathBuf, archive: &impl serde::Serialize) -> Result<()> {
     let bytes = serde_json::to_vec(archive).map_err(|_| "cannot encode archive")?;
     if bytes.len() > 67_108_864 {
         return Err("archive exceeds limit".into());
@@ -44,16 +44,34 @@ pub(crate) async fn restore(
     root: AccountId32,
 ) -> Result<()> {
     tokio::task::spawn_blocking(move || {
-        let archive: CoreArchiveV4 = read(archive, 67_108_864)?;
+        let archive: CoreArchiveV5 = read(archive, 67_108_864)?;
         let tasks: TaskStateV1 = read(tasks, 33_554_432)?;
-        write(output, &restore_tasks(root, &archive, tasks)?)
+        write(output, &restore_task_content(root, archive, tasks)?)
+    })
+    .await?
+}
+/// Convert only after the adapter's prepared export agrees with the full source.
+pub(crate) async fn compact(
+    archive: PathBuf,
+    tasks: PathBuf,
+    output: PathBuf,
+    root: AccountId32,
+) -> Result<()> {
+    tokio::task::spawn_blocking(move || {
+        let archive: provider_execution::migration::CoreArchiveV4 = read(archive, 67_108_864)?;
+        let prepared: TaskStateV1 = read(tasks, 33_554_432)?;
+        let (compact, actual) = mock_provider::migration::compact_tasks(root, archive)?;
+        if actual != prepared {
+            return Err("prepared task state does not match predecessor archive".into());
+        }
+        write(output, &compact)
     })
     .await?
 }
 #[cfg(feature = "storage-sqlite")]
 pub(crate) async fn export(url: String, output: PathBuf, root: AccountId32) -> Result<()> {
     use mock_provider::ReferenceState;
-    use provider_execution::migration::CoreCheckpointV4;
+    use provider_execution::migration::CoreCheckpointV5;
     use sqlx::{
         Row,
         sqlite::{SqliteConnectOptions, SqlitePoolOptions},
@@ -73,10 +91,10 @@ pub(crate) async fn export(url: String, output: PathBuf, root: AccountId32) -> R
     pool.close().await;
     let bytes: Vec<u8> = result?.try_get("state")?;
     tokio::task::spawn_blocking(move || {
-        let checkpoint: CoreCheckpointV4 =
+        let checkpoint: CoreCheckpointV5 =
             serde_json::from_slice(&bytes).map_err(|_| "invalid stored archive")?;
-        let archive = CoreArchiveV4 {
-            version: 4,
+        let archive = CoreArchiveV5 {
+            version: 5,
             checkpoint,
         };
         let exact = serde_json::to_vec(&archive)?;

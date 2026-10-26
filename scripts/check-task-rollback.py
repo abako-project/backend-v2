@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Rehearse API-current tasks → frozen native provider using disposable stores.
 
-No production activation exists. Only this disposable fixture marks ownership and
-converts definitely unsigned public task admissions to API jobs. The real worker,
-provider, wallet, API, notifications and owner tools perform all subsequent work.
+Task identity and membership use real core transactions. Text/progress use API
+results. The real worker, provider, wallet, API, notifications and paused owner
+tools perform the handoff; no operation rows or ownership flags are fabricated.
 Supply frozen, hash-verified predecessor binaries; never rebuild them in place.
 """
 import argparse
@@ -46,49 +46,33 @@ def history(database):
     # bytes and task payloads. Only the final ownership flag may change.
     return tuple(sql(database, f"SELECT row_to_json(t)::text FROM {table} t ORDER BY {order}")
                  for table, order in (("operations", "creation_sequence"), ("notifications", "notification_id"),
+                                      ("task_migration_cases", "case_id"),
                                       ("task_items", "task_id"), ("task_storages", "task_storage_id"),
                                       ("task_freezes", "operation_id")))
 
 
-def task_command(database, actor, method, path, body, generation, project, expected="Success"):
-    # Existing public admission still targets the provider. Hold an earlier real
-    # finalized same-wallet operation under a future fixture lease so no signer
-    # can race this one definitely unsigned admission. Restore it byte-for-byte.
-    account = literal(actor.session["accountId"])
-    rows = sql(database, "SELECT row_to_json(o)::text FROM operations o WHERE account_id=" + account +
-               " AND status='Finalized' AND NOT task_operation AND lease_token IS NULL ORDER BY creation_sequence LIMIT 1")
-    require(bool(rows), "fixture requires an earlier real finalized provider operation")
-    previous = json.loads(rows)
-    identity = literal(previous["operation_id"])
-    lease = literal("0x" + secrets.token_hex(16))
-    sql(database, f"UPDATE operations SET status='OutcomeUnknown',lease_token={lease},lease_until=EXTRACT(EPOCH FROM now())::bigint+3600 WHERE operation_id={identity}")
-    key = "0x" + secrets.token_hex(16)
-    try:
-        actor.request(method, path, body, 202, {"Idempotency-Key": key})
-        changed = sql(database, "UPDATE operations SET task_operation=TRUE,task_project_id=" + literal(project) +
-                      ",provider_instance_id=" + literal(generation) + ",status='Queued' WHERE operation_id=" + literal(key) +
-                      " AND status='AwaitingSignature' AND signable_payload IS NULL AND signed_json IS NULL AND receipt_json IS NULL AND NOT possibly_submitted AND lease_token IS NULL RETURNING operation_id")
-        require(changed == key, "fixture admission was not definitely unsigned")
-    finally:
-        sql(database, f"UPDATE operations SET status={literal(previous['status'])},lease_token={literal(previous['lease_token'])},lease_until={literal(previous['lease_until'])} WHERE operation_id={identity}")
-    deadline = time.monotonic() + 45
-    while time.monotonic() < deadline:
-        operation = actor.request("GET", "/api/operations/" + key)
-        if operation["status"] == "Finalized":
-            require(operation["receipt"] is None and operation["taskResult"]["outcome"]["type"] == expected,
-                    "task operation fabricated a receipt or had unexpected outcome")
-            return key, operation
-        require(operation["status"] not in ("Rejected", "Expired"), "task operation failed admission")
-        time.sleep(0.1)
-    raise AssertionError("API task worker did not finalize")
+def task_command(actor, method, path, body, expected="Success", membership=False):
+    operation = actor.command(method, path, body, expected_outcome=expected)
+    core = (method in ("POST", "DELETE") or membership) and expected == "Success"
+    require((operation.get("receipt") is not None) == core,
+            "task returned the wrong authority's result")
+    return operation["operationId"], operation
 
 
-def run(binaries, predecessor):
+def run(binaries, predecessor, sdk=None, authority="sandbox"):
     manifest = load(predecessor / "manifest.json")
+    records = manifest.get("binaries", manifest.get("files"))
+    require(isinstance(records, dict), "missing frozen binary manifest")
     for name in ("adapter-api", "wallet", "mock-provider"):
         digest = hashlib.sha256((predecessor / name).read_bytes()).hexdigest()
-        require(digest == manifest["files"][name]["sha256"], "frozen predecessor hash changed")
+        require(digest == records[name]["sha256"], "frozen predecessor hash changed")
         print(name + " predecessor SHA-256: " + digest, flush=True)
+    current_provider = sdk or binaries / "mock-provider"
+    previous_provider = predecessor / ("whole-provider" if sdk else "mock-provider")
+    if sdk:
+        digest = hashlib.sha256(previous_provider.read_bytes()).hexdigest()
+        require(digest == manifest["sdkBinary"]["sha256"], "frozen SDK predecessor hash changed")
+        print("whole-provider predecessor SHA-256: " + digest, flush=True)
     with ExitStack() as resources:
         directory = Path(resources.enter_context(tempfile.TemporaryDirectory(prefix="task-rollback-")))
         database = POC.temporary_postgres(resources, directory)
@@ -103,10 +87,11 @@ def run(binaries, predecessor):
                       "CUSTODY_ROOT_SEED_FILE": str(secrets_dir / "root-seed.hex")}
         provider_env = {**common, "MOCK_STORAGE": "sqlite", "MOCK_DATABASE_URL": f"sqlite://{directory}/source.sqlite?mode=rwc",
                         "MOCK_ROOT_ACCOUNT_FILE": str(secrets_dir / "root-account.hex")}
+        provider_env.update(WHOLE_DATABASE_PATH=str(directory / "source-whole.sqlite"), PROVIDER_AUTHORITY=authority)
         logs = []
         source = resources.enter_context(ExitStack())
         wallet = POC.launch(source, binaries / "wallet", POC.available_port(), wallet_env, logs)
-        provider = POC.launch(source, binaries / "mock-provider", POC.available_port(), provider_env, logs)
+        provider = POC.launch(source, current_provider, POC.available_port(), provider_env, logs)
         adapter_env = {**common, "ADAPTER_DATABASE_URL": database, "CUSTODY_URL": wallet.base,
                        "MOCK_PROVIDER_URL": provider.base, "ALLOWED_ORIGINS": ",".join(POC.ORIGINS),
                        "COOKIE_SECURE": "false", "ENABLE_MOCK_FUNDING": "true", "BOOTSTRAP_ADMIN_USERNAME": "admin",
@@ -128,14 +113,10 @@ def run(binaries, predecessor):
         draft = client.request("GET", draft_path)
         draft_storage = draft_path + "/task-storages/" + draft["proposals"][0]["milestones"][0]["taskStorage"]["taskStorageId"]
         generation = sql(database, "SELECT provider_instance_id FROM operations WHERE provider_instance_id IS NOT NULL LIMIT 1")
-        cli(binaries / "adapter-api", ["backfill-task-state"], adapter_env)
-        sql(database, "UPDATE task_generations SET api_owned=TRUE")  # disposable fixture only
-        before_path = directory / "before-task-edits.json"
-        cli(binaries / "mock-provider", ["export", before_path], provider_env)
         outcomes = []
 
-        def mutate(actor, method, path, body=None, project=draft_id, expected="Success"):
-            record = task_command(database, actor, method, path, body, generation, project, expected)
+        def mutate(actor, method, path, body=None, project=draft_id, expected="Success", membership=False):
+            record = task_command(actor, method, path, body, expected, membership)
             outcomes.append((actor, *record))
             return record
 
@@ -144,11 +125,14 @@ def run(binaries, predecessor):
         mutate(coordinator, "DELETE", draft_storage + "/tasks/2", {"expectedRevision": revision})
         task = {**task, "assignees": [worker_account], "description": "λ\0" * 20_000}
         mutate(coordinator, "POST", draft_storage + "/tasks", task)
+        mutate(coordinator, "PUT", storage_path + "/tasks/1", {**task, "title": "Confirmed member"}, project_id, membership=True)
+        before_path = directory / "before-local-edits.json"
+        cli(current_provider, ["export", before_path], provider_env)
         mutate(coordinator, "PUT", draft_storage + "/tasks/3", {**task, "title": "Edited API task"})
         mutate(worker, "PATCH", draft_storage + "/tasks/3/progress", {"status": "InProgress", "loggedMinutes": 17})
         mutate(coordinator, "PUT", storage_path + "/tasks/1", {**task, "title": "Frozen API task"}, project_id)
         after_path = directory / "after-task-edits.json"
-        cli(binaries / "mock-provider", ["export", after_path], provider_env)
+        cli(current_provider, ["export", after_path], provider_env)
         require(load(before_path) == load(after_path), "API tasks changed provider funds/reputation/nonces/receipts/events")
         milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
         submission = coordinator.command("POST", milestone_path + "/request-completion", {"deliverable": {"url": "https://example.test/delivery"}})
@@ -173,7 +157,7 @@ def run(binaries, predecessor):
         # Export needs only a paused provider read service, not a running API worker.
         with ExitStack() as paused:
             export_logs = []
-            provider = POC.launch(paused, binaries / "mock-provider", POC.available_port(), provider_env, export_logs)
+            provider = POC.launch(paused, current_provider, POC.available_port(), provider_env, export_logs)
             adapter_env["MOCK_PROVIDER_URL"] = provider.base
             tasks_path = directory / "current-tasks.json"
             cli(binaries / "adapter-api", ["export-current-tasks", generation, tasks_path], adapter_env)
@@ -182,18 +166,20 @@ def run(binaries, predecessor):
         require(tasks["nextTaskId"] == 4, "deleted task gap/counter was lost")
         require(sorted(t["taskId"] for r in tasks["storages"] for t in r["storage"]["tasks"]) == [1, 3], "wrong live tasks")
         core_path, restored_path = directory / "current-core.json", directory / "restored-core.json"
-        cli(binaries / "mock-provider", ["export", core_path], provider_env)
+        cli(current_provider, ["export", core_path], provider_env)
         cli(binaries / "mock-provider", ["restore-tasks", core_path, tasks_path, restored_path], provider_env)
         retained = history(database)
         target_env = {**provider_env, "MOCK_DATABASE_URL": f"sqlite://{directory}/restored.sqlite?mode=rwc"}
-        cli(predecessor / "mock-provider", ["import", restored_path, directory / "restored.sqlite"], target_env)
+        target_env["WHOLE_DATABASE_PATH"] = str(directory / "restored-whole.sqlite")
+        arguments = ["import", restored_path] if sdk else ["import", restored_path, directory / "restored.sqlite"]
+        cli(previous_provider, arguments, target_env)
         readback = directory / "target-readback.json"
-        cli(binaries / "mock-provider", ["export", readback], target_env)
+        cli(previous_provider, ["export", readback], target_env)
         require(load(readback) == load(restored_path), "fresh target changed non-task state or history")
         for phase in ("first", "reopened"):
             with ExitStack() as target:
                 target_logs = []
-                provider = POC.launch(target, predecessor / "mock-provider", POC.available_port(), target_env, target_logs)
+                provider = POC.launch(target, previous_provider, POC.available_port(), target_env, target_logs)
                 wallet = POC.launch(target, predecessor / "wallet", POC.available_port(), wallet_env, target_logs)
                 target_adapter_env = {**adapter_env, "MOCK_PROVIDER_URL": provider.base, "CUSTODY_URL": wallet.base}
                 cli(binaries / "adapter-api", ["complete-task-rollback", tasks_path], target_adapter_env)
@@ -211,7 +197,7 @@ def run(binaries, predecessor):
                         "existing signed operation replay changed")
                 if phase == "reopened":
                     new = coordinator.command("POST", draft_storage + "/tasks", task)
-                    require(new["receipt"] is not None and "taskResult" not in new, "provider task did not use truthful signing receipt")
+                    require(new["receipt"] is not None and new.get("taskResult") is None, "provider task did not use truthful signing receipt")
                     current = coordinator.request("GET", "/api/task-storages/" + draft_storage.rsplit("/", 1)[1])
                     require([t["taskId"] for t in current["tasks"]] == [3, 4], "provider reused a deleted task ID")
                     coordinator.command("PUT", draft_storage + "/tasks/4", {**task, "title": "Provider edit after rollback"})
@@ -220,7 +206,7 @@ def run(binaries, predecessor):
                     require([t["taskId"] for t in coordinator.request("GET", "/api/task-storages/" + draft_storage.rsplit("/", 1)[1])["tasks"]] == [4], "further provider CRUD failed")
                 POC.scan_secret_logs(target_logs)
         final_path = directory / "final-target.json"
-        cli(binaries / "mock-provider", ["export", final_path], target_env)
+        cli(previous_provider, ["export", final_path], target_env)
         final, original = load(final_path)["checkpoint"], load(restored_path)["checkpoint"]
         require(final["next_task_id"] == 5, "further work lost retained allocator")
         require(all(final["receipts"].get(key) == value for key, value in original["receipts"].items()), "accepted call bytes/receipts changed")
@@ -233,12 +219,14 @@ def run(binaries, predecessor):
                     for milestone in proposal["milestones"]:
                         milestone["taskStorage"]["tasks"] = []
         require(final == original, "further task work changed funds, reputation or other non-task business facts")
-        print("PASS: native paired current-task rollback, preserved history/frozen views, restart, replay and further signed CRUD", flush=True)
+        print(f"PASS: {authority if sdk else 'native'} paired current-task rollback, preserved history/frozen views, restart, replay and further signed CRUD", flush=True)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binaries", required=True, type=Path)
     parser.add_argument("--predecessor", required=True, type=Path)
+    parser.add_argument("--sdk", type=Path, help="current whole-provider binary; otherwise use native provider")
+    parser.add_argument("--authority", choices=("rust", "shadow", "sandbox"), default="sandbox")
     args = parser.parse_args()
-    run(args.binaries.resolve(), args.predecessor.resolve())
+    run(args.binaries.resolve(), args.predecessor.resolve(), args.sdk.resolve() if args.sdk else None, args.authority)

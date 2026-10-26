@@ -48,6 +48,8 @@ mod reason_documents;
 mod task_execution;
 #[path = "task_history_tests.rs"]
 mod task_history;
+#[path = "task_migration_tests.rs"]
+mod task_migration;
 #[path = "task_state_tests.rs"]
 mod task_state;
 
@@ -81,8 +83,12 @@ impl Server {
         Ok(())
     }
 }
+#[allow(
+    clippy::struct_excessive_bools,
+    reason = "Independent injected transport faults, not a production state machine."
+)]
 struct Fake {
-    snapshot: generated_contracts::provider_core::CoreSnapshotV4,
+    snapshot: generated_contracts::provider_core::CoreSnapshotV5,
     jobs: BTreeMap<OperationId, SigningJobView>,
     receipts: BTreeMap<OperationId, OperationReceipt>,
     nonces: BTreeMap<AccountId32, u64>,
@@ -96,6 +102,9 @@ struct Fake {
     snapshot_failures: usize,
     next_outcome: Option<ExecutionOutcome>,
     next_entity: Option<EntityId>,
+    task_allocations: BTreeMap<OperationId, generated_contracts::provider_core::TaskAllocationV1>,
+    allocation_unavailable: bool,
+    next_task_id: u32,
 }
 pub(crate) fn info() -> ProviderInfo {
     ProviderInfo {
@@ -106,8 +115,8 @@ pub(crate) fn info() -> ProviderInfo {
 }
 fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
     Ok(Arc::new(Mutex::new(Fake {
-        snapshot: generated_contracts::provider_core::CoreSnapshotV4 {
-            schema_version: 4,
+        snapshot: generated_contracts::provider_core::CoreSnapshotV5 {
+            schema_version: 5,
             info: info(),
             catalog: generated_contracts::provider_core::CatalogCore {
                 roles: vec![],
@@ -133,6 +142,9 @@ fn fake() -> Result<Arc<Mutex<Fake>>, ContractError> {
         snapshot_failures: 0,
         next_outcome: None,
         next_entity: None,
+        task_allocations: BTreeMap::new(),
+        allocation_unavailable: false,
+        next_task_id: 9,
     })))
 }
 fn internal(fake: Arc<Mutex<Fake>>) -> Router {
@@ -213,6 +225,11 @@ fn internal(fake: Arc<Mutex<Fake>>) -> Router {
                 },
             ),
         )
+        .route("/internal/task-allocations/{operation}", get(|State(fake): State<Arc<Mutex<Fake>>>, Path(id): Path<String>| async move {
+            let fake = fake.lock().await;
+            if fake.allocation_unavailable { return Err(Error::Dependency); }
+            Ok::<_, Error>(Json(fake.task_allocations.get(&parse(&id)?).cloned().ok_or(Error::NotFound)?))
+        }))
         .route("/internal/contracts/call", post(submit))
         .route(
             "/internal/receipts/{operation}",
@@ -296,6 +313,7 @@ async fn submit(
         last_event_cursor: None,
         finalized_at: UnixSeconds::new(u64::try_from(now()?).map_err(|_| Error::Internal)?),
     };
+    let receipt = task_execution::core_recovery::apply_fixture(&mut fake, &call, receipt)?;
     fake.receipts.insert(call.operation_id, receipt.clone());
     if fake.lose_reply {
         fake.lose_reply = false;
@@ -1506,7 +1524,49 @@ pub(crate) fn core_project(
     );
     Ok((serde_json::from_value(value)?, record))
 }
+// Test setup for a current API-owned project. Predecessor preparation tests use
+// stage_project_without_tasks so their migration/ownership checks remain real.
 async fn stage_project(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: ProjectView,
+) -> Result<generated_contracts::provider_core::ProjectCore, Box<dyn std::error::Error>> {
+    let core = stage_project_without_tasks(app, generation, project.clone()).await?;
+    stage_task_content(app, generation, project).await?;
+    Ok(core)
+}
+async fn stage_task_content(
+    app: &App,
+    generation: ProviderInstanceId,
+    project: ProjectView,
+) -> TestResult {
+    let mut tx = app.db.begin().await?;
+    sqlx::query("INSERT INTO task_generations(provider_instance_id,next_task_id,source_hash,storage_count,task_count,api_owned) VALUES($1,1,$2,0,0,TRUE) ON CONFLICT DO NOTHING")
+        .bind(generation.to_string()).bind([0_u8;32].as_slice()).execute(&mut *tx).await?;
+    for proposal in project.proposals {
+        for milestone in proposal.milestones {
+            let storage = milestone.task_storage;
+            sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(provider_instance_id,task_storage_id) DO UPDATE SET proposal_revision=EXCLUDED.proposal_revision")
+                .bind(generation.to_string()).bind(storage.task_storage_id.to_string()).bind(project.project_id.to_string()).bind(proposal.proposal_id.to_string()).bind(proposal.revision.to_string()).bind(milestone.milestone_id.to_string()).execute(&mut *tx).await?;
+            sqlx::query(
+                "DELETE FROM task_items WHERE provider_instance_id=$1 AND task_storage_id=$2",
+            )
+            .bind(generation.to_string())
+            .bind(storage.task_storage_id.to_string())
+            .execute(&mut *tx)
+            .await?;
+            for (ordinal, task) in storage.tasks.iter().enumerate() {
+                sqlx::query("INSERT INTO task_items(provider_instance_id,task_id,task_storage_id,ordinal,payload,assignees) VALUES($1,$2,$3,$4,$5,$6)")
+                    .bind(generation.to_string()).bind(i64::from(task.task_id)).bind(storage.task_storage_id.to_string()).bind(i64::try_from(ordinal)?).bind(serde_json::to_string(task)?).bind(task.task.assignees.iter().map(ToString::to_string).collect::<Vec<_>>()).execute(&mut *tx).await?;
+            }
+        }
+    }
+    sqlx::query("UPDATE task_generations SET storage_count=(SELECT count(*) FROM task_storages WHERE provider_instance_id=$1),task_count=(SELECT count(*) FROM task_items WHERE provider_instance_id=$1),next_task_id=GREATEST(next_task_id,COALESCE((SELECT max(task_id)+1 FROM task_items WHERE provider_instance_id=$1),1)) WHERE provider_instance_id=$1")
+        .bind(generation.to_string()).execute(&mut *tx).await?;
+    tx.commit().await?;
+    Ok(())
+}
+async fn stage_project_without_tasks(
     app: &App,
     generation: ProviderInstanceId,
     project: ProjectView,
@@ -1639,6 +1699,11 @@ fn core_proposals(
                 .ok_or("definition fixture")?
                 .remove("title");
         }
+        for milestone in value["milestones"].as_array_mut().ok_or("milestones")? {
+            let storage: TaskStorageView =
+                serde_json::from_value(milestone["taskStorage"].clone())?;
+            milestone["taskStorage"] = serde_json::to_value(TaskStorageCore::from(&storage))?;
+        }
         proposals.push(serde_json::from_value(value)?);
     }
     Ok((proposals, records))
@@ -1651,6 +1716,11 @@ fn core_case(
         .as_object_mut()
         .ok_or(Error::Internal)?
         .remove("title");
+    let storage: TaskStorageView =
+        serde_json::from_value(value["milestone"]["taskStorage"].clone())?;
+    value["milestone"]["taskStorage"] = serde_json::to_value(
+        generated_contracts::provider_core::TaskStorageCore::from(&storage),
+    )?;
     Ok(serde_json::from_value(value)?)
 }
 

@@ -24,7 +24,7 @@ use std::{
 const NOW: UnixSeconds = UnixSeconds::new(100);
 fn trace() -> Value {
     serde_json::from_str(include_str!(
-        "../../../services/mock-provider/src/domain/fixtures/financial-signed.json"
+        "../../../services/mock-provider/src/domain/fixtures/financial-signed-v5.json"
     ))
     .unwrap()
 }

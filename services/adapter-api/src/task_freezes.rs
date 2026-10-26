@@ -2,12 +2,10 @@
 use crate::state::{App, Error, parse};
 use generated_contracts::{
     EntityId, ExecutionOutcome, OperationId, OperationReceipt, ProviderCommand, ProviderInstanceId,
-    TaskStorageView,
-    provider_core::{TaskStateV1, TaskStorageRecordV1},
+    TaskStorageView, provider_core::TaskStateV1,
 };
 use parity_scale_codec::Encode;
 use sqlx::{PgConnection, Row, postgres::PgRow};
-use std::collections::BTreeMap;
 
 pub(crate) fn kind(command: &ProviderCommand) -> Option<&'static str> {
     match command {
@@ -18,11 +16,11 @@ pub(crate) fn kind(command: &ProviderCommand) -> Option<&'static str> {
         | ProviderCommand::OpenDisputeWithComment(_)
         | ProviderCommand::OpenDisputeCommitted { .. } => Some("Dispute"),
         // Planning disputes do not currently freeze task execution. Preserve that
-        // behavior pending the separate owner decision recorded in the handoff.
+        // behavior under the owner-approved task policy.
         _ => None,
     }
 }
-fn task_project(command: &ProviderCommand) -> Option<EntityId> {
+pub(crate) fn task_project(command: &ProviderCommand) -> Option<EntityId> {
     match command {
         ProviderCommand::CreateTask { project_id, .. }
         | ProviderCommand::EditTask { project_id, .. }
@@ -147,75 +145,14 @@ pub(crate) async fn capture(
         .into_iter()
         .find(|p| p.project_id == project)
         .ok_or(Error::NotFound)?;
-    let ids = core
-        .proposals
-        .iter()
-        .flat_map(|p| &p.milestones)
-        .map(|m| m.task_storage.task_storage_id.to_string())
-        .collect::<Vec<_>>();
-    let storages=sqlx::query("SELECT task_storage_id,project_id,proposal_id,milestone_id FROM task_storages WHERE provider_instance_id=$1 AND task_storage_id=ANY($2)")
-        .bind(generation.to_string()).bind(&ids).fetch_all(&mut *connection).await?;
-    let rows=sqlx::query("SELECT task_id,task_storage_id,ordinal,payload,assignees FROM task_items WHERE provider_instance_id=$1 AND task_storage_id=ANY($2) ORDER BY task_storage_id,ordinal")
-        .bind(generation.to_string()).bind(&ids).fetch_all(&mut *connection).await?;
-    let json = tokio::task::spawn_blocking(move || {
-        let mut contexts = BTreeMap::new();
-        for row in storages {
-            contexts.insert(
-                parse::<EntityId>(row.try_get("task_storage_id")?)?,
-                (
-                    parse::<EntityId>(row.try_get("project_id")?)?,
-                    parse::<EntityId>(row.try_get("proposal_id")?)?,
-                    parse::<EntityId>(row.try_get("milestone_id")?)?,
-                ),
-            );
-        }
-        let mut grouped = BTreeMap::<EntityId, Vec<PgRow>>::new();
-        for row in rows {
-            grouped
-                .entry(parse(row.try_get("task_storage_id")?)?)
-                .or_default()
-                .push(row);
-        }
-        let mut captured = Vec::new();
-        for proposal in core.proposals {
-            for milestone in proposal.milestones {
-                let id = milestone.task_storage.task_storage_id;
-                match contexts.remove(&id) {
-                    Some(context)
-                        if context == (project, proposal.proposal_id, milestone.milestone_id) => {}
-                    None if milestone.task_storage.tasks.is_empty() => {}
-                    _ => return Err(Error::Dependency),
-                }
-                let tasks = crate::task_execution::decode_tasks(
-                    grouped.remove(&id).unwrap_or_default(),
-                    next,
-                )?;
-                captured.push(TaskStorageRecordV1 {
-                    project_id: project,
-                    proposal_id: proposal.proposal_id,
-                    proposal_revision: proposal.revision,
-                    storage: TaskStorageView {
-                        task_storage_id: id,
-                        milestone_id: milestone.milestone_id,
-                        tasks,
-                    },
-                });
-            }
-        }
-        if !contexts.is_empty() || !grouped.is_empty() {
-            return Err(Error::Dependency);
-        }
-        captured.sort_by_key(|r| r.storage.task_storage_id);
-        let state = TaskStateV1 {
-            schema_version: 1,
-            generation,
-            next_task_id: next,
-            storages: captured,
-        };
-        state.validate().map_err(|_| Error::Dependency)?;
-        Ok::<_, Error>(serde_json::to_string(&state.storages)?)
-    })
-    .await??;
+    let pending: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM operations WHERE provider_instance_id=$1 AND task_project_id=$2 AND NOT task_operation AND (status NOT IN ('Finalized','Rejected','Expired') OR (status='Finalized' AND receipt_json IS NULL) OR (possibly_submitted AND (status='Expired' OR (status='Rejected' AND error_code IS DISTINCT FROM 'provider_rejected')))))")
+        .bind(generation.to_string()).bind(project.to_string()).fetch_one(&mut *connection).await?;
+    if pending {
+        return Err(Error::Conflict("task_core_pending"));
+    }
+    let tasks = crate::task_views::current_state(connection, generation, next, vec![core]).await?;
+    let json =
+        tokio::task::spawn_blocking(move || serde_json::to_string(&tasks.storages)).await??;
     sqlx::query("INSERT INTO task_freezes(operation_id,provider_instance_id,project_id,kind,snapshot_json) VALUES($1,$2,$3,$4,$5)")
         .bind(operation.to_string()).bind(generation.to_string()).bind(project.to_string()).bind(kind).bind(json).execute(connection).await?;
     Ok(())
@@ -287,33 +224,40 @@ pub(crate) async fn compose_case(
     generation: ProviderInstanceId,
     proposal: EntityId,
     view: generated_contracts::provider_core::CoreDisputeView,
-) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
+) -> Result<TaskStorageView, Error> {
     let mut tx = app.db.begin().await?;
     sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         .execute(&mut *tx)
         .await?;
     let Some(next) = crate::task_views::counter(&mut tx, generation).await? else {
-        tx.commit().await?;
-        return Ok(view);
+        return Err(Error::Dependency);
     };
     let view = accepted_case(&mut tx, generation, proposal, next, view).await?;
     tx.commit().await?;
     Ok(view)
 }
 
-async fn accepted_case(
+pub(crate) async fn accepted_case(
     connection: &mut PgConnection,
     generation: ProviderInstanceId,
     proposal: EntityId,
     next: u32,
     view: generated_contracts::provider_core::CoreDisputeView,
-) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
+) -> Result<TaskStorageView, Error> {
     // Core currently permits one permanent milestone dispute per project. Two
     // confirmed opening records are ambiguous and cannot establish frozen text.
     let rows=sqlx::query("SELECT f.operation_id,f.snapshot_json,o.command_json,o.command_bytes,o.provider_instance_id,o.account_id,o.signable_payload,o.signed_json,o.receipt_json FROM task_freezes f JOIN operations o USING(operation_id) WHERE f.provider_instance_id=$1 AND f.project_id=$2 AND f.kind='Dispute' AND f.state='Confirmed' AND o.status='Finalized' AND NOT o.task_operation ORDER BY o.creation_sequence LIMIT 2")
-        .bind(generation.to_string()).bind(view.dispute.project_id.to_string()).fetch_all(connection).await?;
+        .bind(generation.to_string()).bind(view.dispute.project_id.to_string()).fetch_all(&mut *connection).await?;
+    let migrated =
+        crate::task_migration::lookup(connection, generation, proposal, next, view.clone()).await?;
+    if let Some(tasks) = migrated {
+        if !rows.is_empty() {
+            return Err(Error::Conflict("task_migration_case_conflict"));
+        }
+        return Ok(tasks);
+    }
     let view = tokio::task::spawn_blocking(move || {
-        frozen(generation, proposal, next, view, rows).map_err(|_| Error::Dependency)
+        frozen(generation, proposal, next, &view, rows).map_err(|_| Error::Dependency)
     })
     .await??;
     Ok(view)
@@ -322,9 +266,9 @@ fn frozen(
     generation: ProviderInstanceId,
     proposal: EntityId,
     next: u32,
-    mut view: generated_contracts::provider_core::CoreDisputeView,
+    view: &generated_contracts::provider_core::CoreDisputeView,
     mut rows: Vec<PgRow>,
-) -> Result<generated_contracts::provider_core::CoreDisputeView, Error> {
+) -> Result<TaskStorageView, Error> {
     use generated_contracts::{
         EvidenceRecordReferenceV1, SignedContractCallV1, UnsignedContractCallV1,
     };
@@ -419,11 +363,12 @@ fn frozen(
     if record.proposal_revision != case.proposal_revision
         || record.storage.task_storage_id != view.milestone.task_storage.task_storage_id
         || view.milestone.task_storage.milestone_id != milestone
+        || generated_contracts::provider_core::TaskStorageCore::from(&record.storage)
+            != view.milestone.task_storage
     {
         return Err(Error::Dependency);
     }
-    view.milestone.task_storage.tasks = record.storage.tasks;
-    Ok(view)
+    Ok(record.storage)
 }
 
 /// Ownership handoff must preserve the frozen public task vector as well as
@@ -433,12 +378,23 @@ pub(crate) async fn verify_restored_case(
     generation: ProviderInstanceId,
     next: u32,
     proposal: EntityId,
-    view: generated_contracts::provider_core::CoreDisputeView,
+    view: generated_contracts::provider_core::CoreDisputeViewV4,
 ) -> Result<(), Error> {
-    let expected = view.milestone.task_storage.clone();
-    let accepted = accepted_case(connection, generation, proposal, next, view).await?;
-    if accepted.milestone.task_storage != expected {
-        return Err(Error::Conflict("task_rollback_frozen_mismatch"));
-    }
-    Ok(())
+    let (expected, compact) = tokio::task::spawn_blocking(move || {
+        let expected = view.milestone.task_storage.clone();
+        let compact = generated_contracts::provider_core::CoreDisputeView {
+            dispute: view.dispute,
+            milestone: view.milestone.into(),
+        };
+        (expected, compact)
+    })
+    .await?;
+    let accepted = accepted_case(connection, generation, proposal, next, compact).await?;
+    tokio::task::spawn_blocking(move || {
+        if accepted != expected {
+            return Err(Error::Conflict("task_rollback_frozen_mismatch"));
+        }
+        Ok(())
+    })
+    .await?
 }
