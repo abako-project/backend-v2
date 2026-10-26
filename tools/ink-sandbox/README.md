@@ -20,8 +20,8 @@ assignees, the actual allocator and fixed content references. Creation/deletion
 and membership changes require core confirmation; local task edits retain an API
 result. Existing V4 stores require the [paired task owner exchange](../../docs/operations/task-cutover.md).
 Earlier V3↔V4 catalog exchange remains an explicit historical converter.
-Directory and Project are167546 and158563 bytes; runtime limits are unchanged.
-Calendar uses ordinary ink! storage. Directory/Project paging removal remains
+Directory and Project are148621 and158345 bytes; runtime limits are unchanged.
+Calendar and Directory use ordinary ink! storage. Project paging removal remains
 R4/R5. Current acceptance and promotion limits are recorded in the
 [ownership handoff](../../progress/handoffs/SPEC-0015.md).
 
@@ -301,7 +301,7 @@ A nested exhausted ink call may surface as an outer contract trap; either known
 metered failure commits only its failed receipt/nonce, with no business effects.
 
 SPEC-0014 removes the URL validator from current execution. The three operational
-contracts are Directory (189,487 bytes), Calendar and Project (163,416 bytes).
+contracts are Directory (148,621 bytes), Calendar and Project (158,345 bytes).
 The adapter validates URLs and retains complete evidence; Project stores fixed
 hashes, plus record IDs for new commitments. Contracts never fetch references.
 Seven pinned artifacts remain: these three plus four earlier test fixtures.
@@ -343,21 +343,20 @@ hash is invented. Directory seals its import capability permanently and activate
 its children only after the complete archive matches. SQLite then commits the
 runtime and retained shell together.
 
-Catalog entries, worker/project registry records and Project images still use
-ordered 8 KiB migration pages. Calendar imports use bounded typed records as
-described below. Directory stages records in a separate temporary
-namespace, applies each complete decoded record atomically, then clears its pages.
-An unfinished record blocks sealing. Derived worker skill indexes rebuild in fixed
-batches of at most 32 entries; sealing also requires every index complete. The
-native-authored capacity trace retains 512 skills added by later valid calls,
-large catalogs, calendars and proposal descriptions. R2b1 worker/Project root and proposal text
-now stays offchain; the immediate-predecessor corpus preserves the old stress
-inputs for explicit conversion tests. Paging removes
-the single-call import ceiling; finite WASM gas/memory and archive/checkpoint
-admission still apply and fail without committing a destination.
+Directory imports natural typed records in batches of at most 64 records and
+8 KiB encoded input. Fixed headers declare child counts; separately keyed entries
+preserve qualifications, catalog references and project identities. Sealing
+checks completeness and uniqueness before activating children. Worker skill
+indexes are populated with each imported membership. Only Project images still
+use ordered 8 KiB pages pending the next R4 slice. Calendar uses bounded typed
+records as described below. Import uses the existing fixed `WHOLE_GAS` budget;
+`WholeConfiguration.gas_limit` continues to control subsequent signed execution.
+Finite gas/memory and archive/checkpoint admission still apply, and a failure
+commits no destination.
 
-`worker::archive` decodes pinned ink! Calendar cells and the remaining Directory/Project
-storage-v5 cells using pallet-contracts' read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
+`worker::archive` decodes pinned ordinary Calendar/Directory cells and the
+remaining Project `storage-v5` cells through pallet-contracts' read-only storage
+API. It does not execute business rules. Cells remain <=16 KiB;
 legacy signed creation profiles are lowered before WASM; bounded core records
 retain their commitments without relaxing Kreivo's 16 memory pages or 192 KiB code limit. Complete reads
 have a cumulative 64 MiB cell budget and a 64 MiB archive limit. The existing
@@ -393,7 +392,8 @@ The operational `calendar-v5` uses standard ink! `Lazy` and `Mapping`, with fixe
 manual keys pinned by the fixture manifest. Its header is at most 138 bytes;
 a reservation is at most 47 bytes. Overrides, ordered indexes and per-week
 reserved totals have their own fixed-size cells. Calendar no longer depends on
-`storage-v5`. Directory and Project still do; this slice does not complete R4/R5.
+`storage-v5`. Project still does; the current Directory slice also removes that
+dependency. R4/R5 are not complete.
 No runtime, code, value, memory, input or gas limit is raised.
 
 Replacing 1,000 retained overrides uses more metered resources than the former
@@ -415,9 +415,11 @@ archive procedure, never substitute new WASM into an old checkpoint.
 
 The growth regression accumulates 1,000 reservations through ordinary calls and
 reopens them after a rejected edit; it also checks atomic failure of an oversized
-single call. The opt-in frozen-executable test proves current Calendar writes,
+single call. The opt-in frozen-executable test targets current Directory and Calendar writes,
 complete export/import/reopen, exact signed replay and further signed work in
-Rust, Shadow and Sandbox. Set the frozen binary path and its recorded SHA-256:
+Rust, Shadow and Sandbox against the immediately preceding R3 executable. Both
+sides use CoreArchiveV5; task content remains in the adapter. Set the frozen
+binary path and its recorded SHA-256:
 
 ```sh
 INK_STORAGE_PREDECESSOR=/ssd/frozen/whole-provider \
@@ -430,6 +432,29 @@ It uses disposable SQLite files, local HTTP and Python's standard library. Keep
 `TMPDIR` and `CARGO_TARGET_DIR` on disk. It is a provider storage rollback proof;
 it does not establish the later API task cutover, browser readiness or production
 migration approval. The separate SDK dependency-policy gate still applies.
+
+## Directory ordinary storage (SPEC-0015 R4 candidate)
+
+Directory and its embedded Bank use standard ink! `Mapping` and `StorageVec`.
+The packed header is at most 189 bytes. Worker headers are 155 bytes, historical
+request headers 107 bytes and reason records at most 123 bytes. Qualifications,
+request roles, proposal references, project layouts and growing ID indexes use
+individually addressed cells; no collection-sized blob or replacement storage
+library is involved. The public logical archive stays CoreArchiveV5.
+
+Typed-import regression checks include incomplete/duplicate/out-of-range records,
+late failure after a Bank write, child sealing rollback and exact checkpoint
+preservation. A retained request with 2,199 role IDs exceeds the component helper's
+16 MiB proof budget while sealing (123,470,991,092 ref-time units and 16,752,717
+proof bytes consumed before rejection). Import now uses the already existing
+whole-provider budget of 128 MiB; no runtime limits change. This records a real
+cost of individually stored cells, not identical resource usage to packed storage.
+
+The growth regression imports over 5,000 catalog IDs, then removes/reinserts an
+interior ID through signed Shadow execution and reopens the complete archive.
+Current candidate verification and review results are recorded in the
+[SPEC-0015 handoff](../../progress/handoffs/SPEC-0015.md). A test's presence alone
+does not establish a passing gate or authorize cohort activation.
 
 ## Explicit whole-provider candidate (M8)
 

@@ -1,5 +1,6 @@
 //! Read-only codec for pinned contract storage, including ordinary Calendar cells.
-//! Directory/Project retain their transitional paged layout. It copies facts;
+//! Directory and Calendar use ordinary ink cells; Project still uses its preceding
+//! layout. This owner codec copies facts;
 //! commands, permissions, prices and score updates still execute only in WASM.
 use super::{directory::State, *};
 use generated_contracts::provider_core::{
@@ -9,7 +10,7 @@ use generated_contracts::provider_core::{
 use generated_contracts::*;
 use parity_scale_codec::DecodeAll;
 use provider_execution::migration::{BrampArchive, CoreArchiveV5, CoreCheckpointV5};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 const PAGE: usize = 8192;
 type Reason = (
     EntityId,
@@ -23,12 +24,15 @@ type Reason = (
 struct Bank {
     enabled: bool,
     _mock_funding: bool,
+    #[codec(skip)]
     accounts: Vec<AccountId32>,
     minted: Money,
+    #[codec(skip)]
     deposits: Vec<EntityId>,
+    #[codec(skip)]
     withdrawals: Vec<EntityId>,
 }
-// PagedMapping handles encode zero bytes. Field order follows DirectoryData and
+// Standard ink Mapping/StorageVec handles encode zero bytes. Field order follows DirectoryData and
 // Bank at manifest.sourceCommit; bundle identity rejects older persisted layouts.
 #[derive(Decode)]
 struct Directory {
@@ -36,17 +40,24 @@ struct Directory {
     _calendar_code: H256,
     _reservation_controller: AccountId32,
     _reference_controller: AccountId32,
+    #[codec(skip)]
     roles: Vec<u32>,
+    #[codec(skip)]
     skills: Vec<u32>,
+    #[codec(skip)]
     workers: Vec<AccountId32>,
+    #[codec(skip)]
     requests: Vec<EntityId>,
+    #[codec(skip)]
     _proposals: Vec<EntityId>,
     score_policy: ScorePolicy,
     compensation_policy: CompensationPolicy,
     _project_code: Option<H256>,
+    #[codec(skip)]
     projects: Vec<EntityId>,
     next_task_id: u32,
     bank: Bank,
+    #[codec(skip)]
     disputes: Vec<EntityId>,
     phase: u8,
     reasons: u64,
@@ -54,13 +65,32 @@ struct Directory {
 #[derive(Decode)]
 struct WorkerRecord {
     content: generated_contracts::provider_core::MetadataReferenceV1,
-    qualifications: Qualifications,
+    qualifications: QualificationCounts,
     mode: WorkerMode,
     coordinator_eligible: bool,
     calendar: Account,
     calendar_id: EntityId,
     worker_score: ReputationView,
     coordinator_score: ReputationView,
+}
+#[derive(Decode)]
+struct QualificationCounts {
+    roles: u32,
+    skills: u32,
+}
+#[derive(Decode)]
+struct ProjectProposalRecord {
+    id: EntityId,
+    milestones: u32,
+}
+#[derive(Decode)]
+struct RequestRecord {
+    request_id: EntityId,
+    requester: AccountId32,
+    content: generated_contracts::provider_core::CatalogReferenceV1,
+    roles: u32,
+    status: SkillRequestStatus,
+    skill_id: Option<u32>,
 }
 // Standard ink Lazy/Mapping cells in the pinned Calendar contract. Each decoded
 // value is fixed-size; no root reconstruction or byte-page codec is involved.
@@ -88,12 +118,18 @@ impl<'a> Storage<'a> {
             remaining: MAX_SHELL,
         }
     }
-    fn cell<T: Decode>(&mut self, address: &Account, key: impl Encode) -> Result<T, Error> {
-        let bytes = self
+    fn optional_cell<T: Decode>(
+        &mut self,
+        address: &Account,
+        key: impl Encode,
+    ) -> Result<Option<T>, Error> {
+        let Some(bytes) = self
             .ext
             .execute_with(|| Contracts::get_storage(address.clone(), key.encode()))
             .map_err(|_| Error::InvalidState)?
-            .ok_or(Error::InvalidState)?;
+        else {
+            return Ok(None);
+        };
         if bytes.len() > 16 * 1024 {
             return Err(Error::InvalidState);
         }
@@ -101,7 +137,41 @@ impl<'a> Storage<'a> {
             .remaining
             .checked_sub(bytes.len())
             .ok_or(Error::Limit)?;
-        T::decode_all(&mut &bytes[..]).map_err(|_| Error::InvalidState)
+        T::decode_all(&mut &bytes[..])
+            .map(Some)
+            .map_err(|_| Error::InvalidState)
+    }
+    fn cell<T: Decode>(&mut self, address: &Account, key: impl Encode) -> Result<T, Error> {
+        self.optional_cell(address, key)?.ok_or(Error::InvalidState)
+    }
+    fn index<T: Decode + Ord>(&mut self, address: &Account, key: u32) -> Result<Vec<T>, Error> {
+        let count: u32 = self.optional_cell(address, key)?.unwrap_or(0);
+        if count as usize > self.remaining {
+            return Err(Error::Limit);
+        }
+        let mut values = Vec::new();
+        for i in 0..count {
+            let value = self.cell(address, (key, i))?;
+            if values.last().is_some_and(|previous| previous >= &value) {
+                return Err(Error::InvalidState);
+            }
+            values.push(value);
+        }
+        Ok(values)
+    }
+    fn list<T: Decode>(
+        &mut self,
+        address: &Account,
+        namespace: u32,
+        owner: impl Encode + Copy,
+        count: u32,
+    ) -> Result<Vec<T>, Error> {
+        if count as usize > self.remaining {
+            return Err(Error::Limit);
+        }
+        (0..count)
+            .map(|i| self.cell(address, (namespace, (owner, i))))
+            .collect()
     }
     fn pages<T: Decode>(
         &mut self,
@@ -122,20 +192,23 @@ impl<'a> Storage<'a> {
         }
         T::decode_all(&mut &bytes[..]).map_err(|_| Error::InvalidState)
     }
-    fn root<T: Decode>(&mut self, state: &directory::State, importing: bool) -> Result<T, Error> {
-        let (length, import): (u32, Option<(AccountId32, EntityId, u32)>) =
-            self.cell(&state.directory, 0u32)?;
-        let expected = importing.then_some((
-            state.shell.info.root_account,
-            EntityId::from_bytes([0; 16]),
-            0,
-        ));
-        if import != expected {
+    fn root(&mut self, state: &directory::State, importing: bool) -> Result<Directory, Error> {
+        let address = &state.directory;
+        let mut header: Directory = self.cell(address, 0u32)?;
+        if importing != (header.phase == 1) || header.phase > 2 {
             return Err(Error::InvalidState);
         }
-        self.pages(length, |reader, index| {
-            reader.cell(&state.directory, (u32::MAX, index))
-        })
+        header.roles = self.index(address, 50)?;
+        header.skills = self.index(address, 51)?;
+        header.workers = self.index(address, 52)?;
+        header.requests = self.index(address, 53)?;
+        header._proposals = self.index(address, 54)?;
+        header.projects = self.index(address, 55)?;
+        header.disputes = self.index(address, 56)?;
+        header.bank.accounts = self.index(address, 150)?;
+        header.bank.deposits = self.index(address, 151)?;
+        header.bank.withdrawals = self.index(address, 152)?;
+        Ok(header)
     }
     fn child<T: Decode>(&mut self, address: &Account) -> Result<T, Error> {
         let (length, import): (u32, Option<(AccountId32, EntityId, u32)>) =
@@ -153,10 +226,7 @@ impl<'a> Storage<'a> {
         namespace: u32,
         key: impl Encode + Copy,
     ) -> Result<T, Error> {
-        let length = self.cell(address, (namespace, key, 0u32))?;
-        self.pages(length, |reader, index| {
-            reader.cell(address, (namespace, key, index + 1))
-        })
+        self.cell(address, (namespace, key))
     }
     fn calendar(
         &mut self,
@@ -236,7 +306,20 @@ impl<'a> Storage<'a> {
             workers.push(WorkerCore {
                 account: *account,
                 content: worker.content,
-                qualifications: worker.qualifications,
+                qualifications: Qualifications {
+                    role_ids: self.list(
+                        &state.directory,
+                        21,
+                        *account,
+                        worker.qualifications.roles,
+                    )?,
+                    skill_ids: self.list(
+                        &state.directory,
+                        22,
+                        *account,
+                        worker.qualifications.skills,
+                    )?,
+                },
                 mode: worker.mode,
                 coordinator_eligible: worker.coordinator_eligible,
                 calendar,
@@ -289,7 +372,10 @@ pub(super) fn read(
             *id,
             SkillMetadataCore {
                 origin: reader.value(&state.directory, 18, *id)?,
-                role_ids: reader.value(&state.directory, 3, *id)?,
+                role_ids: {
+                    let count = reader.value(&state.directory, 3, *id)?;
+                    reader.list(&state.directory, 20, *id, count)?
+                },
             },
         );
     }
@@ -300,7 +386,15 @@ pub(super) fn read(
         .collect();
     let mut requests = BTreeMap::new();
     for id in &directory.requests {
-        let request: SkillRequestCore = reader.value(&state.directory, 6, *id)?;
+        let record: RequestRecord = reader.value(&state.directory, 6, *id)?;
+        let request = SkillRequestCore {
+            request_id: record.request_id,
+            requester: record.requester,
+            content: record.content,
+            role_ids: reader.list(&state.directory, 23, *id, record.roles)?,
+            status: record.status,
+            skill_id: record.skill_id,
+        };
         if request.request_id != *id {
             return Err(Error::InvalidState);
         }
@@ -309,6 +403,7 @@ pub(super) fn read(
     let mut projects = BTreeMap::new();
     let mut disputes = BTreeMap::new();
     let mut local_reasons = BTreeMap::new();
+    let mut proposal_ids = BTreeSet::new();
     for id in &directory.projects {
         let address: Account = reader.value(&state.directory, 8, *id)?;
         let (parent, project, reasons, cases, live): (
@@ -326,6 +421,71 @@ pub(super) fn read(
         {
             return Err(Error::InvalidState);
         }
+        // Directory's lookup/guard facts must describe the actual Project tree.
+        // Comparing only the Project projection would miss an incomplete secondary index.
+        let registered: EntityId = reader.cell(&state.directory, (9u32, &address))?;
+        let count: u32 = reader
+            .optional_cell(&state.directory, (10u32, *id))?
+            .unwrap_or(0);
+        if registered != *id || count as usize != project.proposals.len() {
+            return Err(Error::InvalidState);
+        }
+        for (index, proposal) in project.proposals.iter().enumerate() {
+            let index = u32::try_from(index).map_err(|_| Error::Limit)?;
+            let record: ProjectProposalRecord = reader.value(&state.directory, 26, (*id, index))?;
+            if record.id != proposal.proposal_id
+                || record.milestones as usize != proposal.milestones.len()
+                || !proposal_ids.insert(proposal.proposal_id)
+            {
+                return Err(Error::InvalidState);
+            }
+            let mut roles = BTreeSet::new();
+            let mut skills = BTreeSet::new();
+            for (i, milestone) in proposal.milestones.iter().enumerate() {
+                let actual: (EntityId, EntityId) = reader.value(
+                    &state.directory,
+                    27,
+                    (*id, index, u32::try_from(i).map_err(|_| Error::Limit)?),
+                )?;
+                if actual
+                    != (
+                        milestone.milestone_id,
+                        milestone.task_storage.task_storage_id,
+                    )
+                {
+                    return Err(Error::InvalidState);
+                }
+                for requirement in &milestone.definition.requirements {
+                    roles.insert(requirement.role_id);
+                    skills.extend(requirement.skill_ids.iter().copied());
+                }
+            }
+            let counts: QualificationCounts =
+                reader.value(&state.directory, 7, proposal.proposal_id)?;
+            let actual_roles: Vec<u32> =
+                reader.list(&state.directory, 24, proposal.proposal_id, counts.roles)?;
+            let actual_skills: Vec<u32> =
+                reader.list(&state.directory, 25, proposal.proposal_id, counts.skills)?;
+            if actual_roles != roles.into_iter().collect::<Vec<_>>()
+                || actual_skills != skills.into_iter().collect::<Vec<_>>()
+            {
+                return Err(Error::InvalidState);
+            }
+        }
+        let count = reader
+            .optional_cell(&state.directory, (11u32, *id))?
+            .unwrap_or(0);
+        let actual_submissions: Vec<EntityId> = reader.list(&state.directory, 28, *id, count)?;
+        let expected_submissions: Vec<_> = project
+            .proposals
+            .iter()
+            .flat_map(|p| &p.milestones)
+            .flat_map(|m| &m.submissions)
+            .map(|s| s.submission_id)
+            .collect();
+        if actual_submissions != expected_submissions {
+            return Err(Error::InvalidState);
+        }
         for case in cases {
             let case = case.into_domain(&state.legacy_references)?;
             let owner: EntityId = reader.value(&state.directory, 12, case.dispute_id)?;
@@ -339,7 +499,9 @@ pub(super) fn read(
         projects.insert(*id, project);
         local_reasons.insert(*id, reasons);
     }
-    if disputes.keys().copied().collect::<Vec<_>>() != directory.disputes {
+    if proposal_ids.into_iter().collect::<Vec<_>>() != directory._proposals
+        || disputes.keys().copied().collect::<Vec<_>>() != directory.disputes
+    {
         return Err(Error::InvalidState);
     }
     let mut balances = BTreeMap::new();
@@ -364,9 +526,7 @@ pub(super) fn read(
     }
     let mut reasons = Vec::new();
     for index in 0..directory.reasons {
-        let bytes: Vec<u8> = reader.value(&state.directory, 19, index)?;
-        let reason: Reason =
-            Reason::decode_all(&mut &bytes[..]).map_err(|_| Error::InvalidState)?;
+        let reason: Reason = reader.value(&state.directory, 19, index)?;
         reasons.push(reason);
     }
     for (id, local) in local_reasons {
