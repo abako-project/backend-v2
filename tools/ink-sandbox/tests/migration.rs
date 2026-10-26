@@ -317,11 +317,10 @@ fn assert_assets(stored: &(i64, Vec<u8>, Vec<u8>), archive: &CoreArchiveV5) {
             visible += u128::from(amount.units());
         }
         for (id, project) in &archive.checkpoint.projects {
-            let bytes = Contracts::get_storage(directory.clone(), (8u32, *id, 1u32).encode())
+            let bytes = Contracts::get_storage(directory.clone(), (8u32, *id).encode())
                 .unwrap()
                 .unwrap();
-            let page = Vec::<u8>::decode_all(&mut &bytes[..]).unwrap();
-            let address = Account::decode_all(&mut &page[..]).unwrap();
+            let address = Account::decode_all(&mut &bytes[..]).unwrap();
             let escrow = u128::from(project.planning.escrow.units())
                 + u128::from(project.execution_escrow.units());
             let actual = <Assets as Inspect<Account>>::balance(1, &address);
@@ -364,21 +363,19 @@ fn sealed_import_messages_reject_root_and_other_accounts_without_effects() {
         let state: serde_json::Value = serde_json::from_slice(&before.2).unwrap();
         let directory: Account = serde_json::from_value(state["directory"].clone()).unwrap();
         for origin in [configuration.root, AccountId32::from_bytes([8; 32])] {
-            for (name, args, expected) in [
+            let expected = if origin == configuration.root {
+                "invalid_archive"
+            } else {
+                "system_origin_required"
+            };
+            for (name, args) in [
+                ("begin_import", Vec::new()),
+                ("seal_import", Vec::new()),
                 (
-                    "begin_import",
-                    Vec::new(),
-                    if origin == configuration.root {
-                        "invalid_archive"
-                    } else {
-                        "system_origin_required"
-                    },
-                ),
-                ("seal_import", Vec::new(), "record_in_progress"),
-                (
-                    "import_record_page",
-                    (0u32, vec![5u8, 1], true).encode(),
-                    "import_closed",
+                    "import_records",
+                    // One well-formed MigrationRecordV2::Issuance(0); the
+                    // authorization/closed phase must reject it before writing.
+                    vec![(14u8, 0u64)].encode(),
                 ),
             ] {
                 let mut input = sp_core::hashing::blake2_256(name.as_bytes())[..4].to_vec();
