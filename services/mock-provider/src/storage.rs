@@ -293,6 +293,16 @@ impl Provider {
     pub async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
         Ok(self.read().await?.receipt(operation))
     }
+    /// Exact task allocation from one owned state, without scanning live tasks.
+    pub async fn task_allocation(
+        &self,
+        operation: OperationId,
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+        let state = self.read().await?;
+        tokio::task::spawn_blocking(move || state.task_allocation(operation))
+            .await
+            .map_err(|_| Error::internal())?
+    }
     /// Durable events. Limit is a transport page bound, never a matching bound.
     pub async fn events(&self, after: u64, limit: usize) -> Result<ProviderEvents> {
         if limit == 0 || limit > 1000 {

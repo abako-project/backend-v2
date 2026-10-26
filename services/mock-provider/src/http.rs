@@ -47,6 +47,10 @@ pub fn router_with_provider<P: ProviderApi>(provider: P, service_token: &str) ->
         .route("/internal/accounts/{account}/nonce", get(nonce::<P>))
         .route("/internal/contracts/call", post(call::<P>))
         .route("/internal/receipts/{operation_id}", get(receipt::<P>))
+        .route(
+            "/internal/task-allocations/{operation_id}",
+            get(task_allocation::<P>),
+        )
         .route("/internal/events", get(events::<P>))
         .route("/internal/snapshot", get(snapshot::<P>))
         .route("/internal/task-state", get(task_state::<P>))
@@ -220,6 +224,21 @@ async fn nonce<P: ProviderApi>(
 ) -> Result<impl IntoResponse> {
     let Path(account) = path.map_err(|_| Error::bad("invalid_account_id"))?;
     Ok(Json(state.provider.nonce(account).await?))
+}
+async fn task_allocation<P: ProviderApi>(
+    State(state): State<App<P>>,
+    path: std::result::Result<Path<OperationId>, PathRejection>,
+) -> Result<impl IntoResponse> {
+    let Path(operation) = path.map_err(|_| Error::bad("invalid_operation_id"))?;
+    state
+        .provider
+        .task_allocation(operation)
+        .await?
+        .map(Json)
+        .ok_or(Error {
+            code: "task_allocation_not_found",
+            status: StatusCode::NOT_FOUND,
+        })
 }
 async fn receipt<P: ProviderApi>(
     State(state): State<App<P>>,

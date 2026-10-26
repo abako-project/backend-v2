@@ -27,6 +27,26 @@ async fn task_state_http_requires_service_identity_and_leaves_shell_unchanged()
         client.get(&url).send().await?.status(),
         reqwest::StatusCode::UNAUTHORIZED
     );
+    let allocation_url = url.replace(
+        "/internal/task-state",
+        &format!(
+            "/internal/task-allocations/{}",
+            generated_contracts::OperationId::from_bytes([7; 16]),
+        ),
+    );
+    assert_eq!(
+        client.get(&allocation_url).send().await?.status(),
+        reqwest::StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(
+        client
+            .get(&allocation_url)
+            .bearer_auth(token)
+            .send()
+            .await?
+            .status(),
+        reqwest::StatusCode::NOT_FOUND
+    );
     let response = client.get(&url).bearer_auth(token).send().await?;
     assert_eq!(response.status(), reqwest::StatusCode::OK);
     let state = response.json::<TaskStateV1>().await?;

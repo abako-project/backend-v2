@@ -645,6 +645,19 @@ async fn task_core_intent_schema_preserves_original_request_across_classificatio
         .fetch_one(&reopened.db)
         .await?;
         assert_eq!(retained, original.encode());
+        let row = sqlx::query("SELECT * FROM operations WHERE operation_id=$1")
+            .bind(id.to_string())
+            .fetch_one(&reopened.db)
+            .await?;
+        assert_eq!(
+            crate::task_execution::provider_intent(&row, &core)?,
+            Some(original.clone())
+        );
+        let mut wrong = core.clone();
+        if let ProviderCommand::CreateTaskCore { assignees, .. } = &mut wrong {
+            assignees.push(alice.view.account_id);
+        }
+        assert!(crate::task_execution::provider_intent(&row, &wrong).is_err());
         assert_eq!(
             operations::enqueue(&reopened, &alice, original.clone(), Some(id))
                 .await?

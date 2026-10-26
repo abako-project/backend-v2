@@ -26,6 +26,11 @@ pub trait ProviderApi: Clone + Send + Sync + 'static {
         &self,
         operation: OperationId,
     ) -> impl Future<Output = Result<Option<OperationReceipt>>> + Send;
+    /// Private core task key bound to its original command and successful receipt.
+    fn task_allocation(
+        &self,
+        operation: OperationId,
+    ) -> impl Future<Output = Result<Option<generated_contracts::provider_core::TaskAllocationV1>>> + Send;
     /// Bounded page of durable provider events.
     fn events(
         &self,
@@ -79,6 +84,12 @@ impl ProviderApi for Provider {
     }
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
         Self::receipt(self, operation).await
+    }
+    async fn task_allocation(
+        &self,
+        operation: OperationId,
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+        Self::task_allocation(self, operation).await
     }
     async fn events(&self, after: u64, limit: usize) -> Result<ProviderEvents> {
         Self::events(self, after, limit).await

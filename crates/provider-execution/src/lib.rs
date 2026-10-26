@@ -201,6 +201,48 @@ impl Shell {
     pub fn nonce(&self, origin: AccountId32) -> u64 {
         self.nonces.get(&origin).copied().unwrap_or(0)
     }
+    /// Recover the exact private task key from this operation's retained result.
+    /// Neither live tasks nor the current allocator can identify a past allocation.
+    pub fn task_allocation(
+        &self,
+        operation: OperationId,
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+        let Some(record) = self.receipts.get(&operation) else {
+            return Ok(None);
+        };
+        let Some(task_id) = record.allocated_task_id else {
+            return Ok(None);
+        };
+        let call = UnsignedContractCallV1::decode_signable(&record.bytes)
+            .map_err(|_| Error::unavailable())?;
+        let ProviderCommand::CreateTaskCore {
+            project_id,
+            task_storage_id,
+            ..
+        } = call.command
+        else {
+            return Err(Error::unavailable());
+        };
+        if task_id == 0
+            || task_id == u32::MAX
+            || record.receipt.outcome != ExecutionOutcome::Success
+            || record.receipt.operation_id != operation
+            || call.operation_id != operation
+            || record.receipt.provider_instance_id != self.info.provider_instance_id
+            || call.provider_instance_id != self.info.provider_instance_id
+            || record.receipt.origin != call.origin
+            || record.receipt.nonce != call.nonce
+            || record.receipt.created_entity_id != Some(task_storage_id)
+        {
+            return Err(Error::unavailable());
+        }
+        Ok(Some(generated_contracts::provider_core::TaskAllocationV1 {
+            receipt: record.receipt.clone(),
+            project_id,
+            task_storage_id,
+            task_id,
+        }))
+    }
     fn check(&self, verified: &VerifiedCall, now: UnixSeconds) -> Result<Option<OperationReceipt>> {
         let call = &verified.call;
         require(
@@ -553,6 +595,71 @@ mod tests {
             .ok_or_else(Error::unavailable)?
             .allocated_task_id = None;
         shell.validate(root)?;
+        Ok(())
+    }
+    #[test]
+    fn task_allocation_read_binds_the_original_command_and_receipt() -> Result<()> {
+        let root = AccountId32::from_bytes([1; 32]);
+        let storage = EntityId::from_bytes([3; 16]);
+        let project = EntityId::from_bytes([2; 16]);
+        let mut shell = Shell::new(root)?;
+        let mut verified = call(&shell, 1)?;
+        verified.call.command = ProviderCommand::CreateTaskCore {
+            project_id: project,
+            task_storage_id: storage,
+            assignees: Vec::new(),
+        };
+        verified.bytes = verified.call.signable_bytes()?;
+        // Retained successor-history fixture. No task business execution is asserted.
+        let pending = PreparedExecution {
+            verified,
+            inputs: ExecutionInputs {
+                version: 1,
+                now: UnixSeconds::new(100),
+                seed: [7; 32],
+            },
+            cursor: 0,
+            next_nonce: 1,
+        };
+        let receipt = shell.complete(
+            pending,
+            Ok(Effect::new(
+                DomainEventKind::TaskCreated,
+                Some(storage),
+                root,
+            )),
+        )?;
+        assert!(shell.task_allocation(receipt.operation_id)?.is_none());
+        shell
+            .receipts
+            .get_mut(&receipt.operation_id)
+            .ok_or_else(Error::unavailable)?
+            .allocated_task_id = Some(7);
+        let result = shell
+            .task_allocation(receipt.operation_id)?
+            .ok_or_else(Error::unavailable)?;
+        assert_eq!(result.task_id, 7);
+        assert_eq!(result.project_id, project);
+        assert_eq!(result.task_storage_id, storage);
+        assert_eq!(result.receipt, receipt);
+        assert!(
+            shell
+                .task_allocation(OperationId::from_bytes([2; 16]))?
+                .is_none()
+        );
+        shell
+            .receipts
+            .get_mut(&receipt.operation_id)
+            .ok_or_else(Error::unavailable)?
+            .receipt
+            .created_entity_id = Some(project);
+        assert!(
+            shell
+                .task_allocation(receipt.operation_id)
+                .err()
+                .ok_or_else(Error::unavailable)?
+                .is_infrastructure()
+        );
         Ok(())
     }
 }

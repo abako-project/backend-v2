@@ -5,9 +5,73 @@ use generated_contracts::{
     ProviderCommand, ProviderInstanceId, TaskEventKind, TaskEventSource, TaskOperationResult,
     TaskView, UnixSeconds, provider_core::ProjectCore,
 };
-use parity_scale_codec::Encode;
+use parity_scale_codec::{DecodeAll, Encode};
 use sqlx::{Row, postgres::PgRow};
 use std::collections::{BTreeMap, BTreeSet};
+
+/// The selected core command contains identity/membership only. The original
+/// request remains in the existing operation row for eventual API materialization.
+pub(crate) fn compact_command(request: &ProviderCommand) -> Option<ProviderCommand> {
+    Some(match request {
+        ProviderCommand::CreateTask {
+            project_id,
+            task_storage_id,
+            task,
+        } => ProviderCommand::CreateTaskCore {
+            project_id: *project_id,
+            task_storage_id: *task_storage_id,
+            assignees: task.assignees.clone(),
+        },
+        ProviderCommand::EditTask {
+            project_id,
+            task_storage_id,
+            task_id,
+            task,
+        } => ProviderCommand::SetTaskAssigneesCore {
+            project_id: *project_id,
+            task_storage_id: *task_storage_id,
+            task_id: *task_id,
+            assignees: task.assignees.clone(),
+        },
+        ProviderCommand::DeleteTask { .. } => request.clone(),
+        _ => return None,
+    })
+}
+
+/// Signing must never reinterpret an original request or a different project's
+/// classified row. This is also used by the final materialization transaction.
+pub(crate) fn provider_intent(
+    row: &PgRow,
+    command: &ProviderCommand,
+) -> Result<Option<ProviderCommand>, Error> {
+    let project: Option<&str> = row.try_get("task_project_id")?;
+    let Some(project) = project else {
+        return if matches!(
+            command,
+            ProviderCommand::CreateTaskCore { .. } | ProviderCommand::SetTaskAssigneesCore { .. }
+        ) {
+            Err(Error::Dependency)
+        } else {
+            Ok(None)
+        };
+    };
+    let bytes: Vec<u8> = row
+        .try_get::<Option<Vec<u8>>, _>("request_command_bytes")?
+        .ok_or(Error::Dependency)?;
+    if bytes.len() > generated_contracts::MAX_SIGNABLE_BYTES - 128 {
+        return Err(Error::Dependency);
+    }
+    let original = ProviderCommand::decode_all(&mut &bytes[..]).map_err(|_| Error::Dependency)?;
+    original.validate().map_err(|_| Error::Dependency)?;
+    if original.project_id() != Some(parse(project)?)
+        || original.encode() != bytes
+        || compact_command(&original).as_ref() != Some(command)
+        || command.encode() != row.try_get::<Vec<u8>, _>("command_bytes")?
+    {
+        return Err(Error::Dependency);
+    }
+    Ok(Some(original))
+}
 
 pub(crate) struct Job {
     id: OperationId,

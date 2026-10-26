@@ -405,11 +405,13 @@ impl Job {
         if row.try_get::<bool, _>("task_operation")? {
             return Err(Error::Dependency);
         }
+        let command = serde_json::from_str(row.try_get("command_json")?)?;
+        let _ = crate::task_execution::provider_intent(row, &command)?;
         Ok(Self {
             id: parse(row.try_get("operation_id")?)?,
             wallet: parse(row.try_get("wallet_id")?)?,
             account: parse(row.try_get("account_id")?)?,
-            command: serde_json::from_str(row.try_get("command_json")?)?,
+            command,
             status: status(row.try_get("status")?)?,
             payload: row.try_get("signable_payload")?,
             signed: row.try_get("signed_json")?,
@@ -462,7 +464,8 @@ pub(crate) async fn claim_work(app: &App) -> Result<Option<Work>, Error> {
             lease,
         ))))
     } else {
-        Ok(Some(Work::Provider(Box::new(Job::from_row(&row, lease)?))))
+        let job = tokio::task::spawn_blocking(move || Job::from_row(&row, lease)).await??;
+        Ok(Some(Work::Provider(Box::new(job))))
     }
 }
 

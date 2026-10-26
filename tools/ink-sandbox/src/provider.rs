@@ -38,6 +38,13 @@ impl ProviderApi for Client {
     async fn receipt(&self, operation: OperationId) -> Result<Option<OperationReceipt>> {
         self.read(move |state| Ok(state.receipt(operation))).await
     }
+    async fn task_allocation(
+        &self,
+        operation: OperationId,
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+        self.read(move |state| state.task_allocation(operation))
+            .await
+    }
     async fn events(&self, after: u64, limit: usize) -> Result<ProviderEvents> {
         self.read(move |state| state.events(after, limit)).await
     }

@@ -61,3 +61,18 @@ impl TaskStateV1 {
         Ok(())
     }
 }
+
+/// Private execution fact used to materialize a confirmed compact task creation.
+/// The public receipt continues to identify the task storage, not the task key.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TaskAllocationV1 {
+    /// The original successful provider receipt, unchanged.
+    pub receipt: crate::OperationReceipt,
+    /// Owning project from the retained signed command.
+    pub project_id: EntityId,
+    /// Owning storage from that same command and receipt.
+    pub task_storage_id: EntityId,
+    /// Key returned by the core execution that produced the receipt.
+    pub task_id: u32,
+}

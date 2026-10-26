@@ -57,6 +57,13 @@ impl ReferenceState {
     pub fn receipt(&self, operation: OperationId) -> Option<OperationReceipt> {
         self.0.receipt(operation)
     }
+    /// Private allocation from the selected authority's retained execution record.
+    pub fn task_allocation(
+        &self,
+        operation: OperationId,
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+        self.0.task_allocation(operation)
+    }
     /// Bounded page of durable provider events.
     pub fn events(&self, after: u64, limit: usize) -> Result<ProviderEvents> {
         if limit == 0 || limit > 1000 {

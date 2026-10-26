@@ -185,6 +185,19 @@ impl State {
             .get(&operation)
             .map(|record| record.receipt.clone())
     }
+    pub(crate) fn task_allocation(
+        &self,
+        operation: OperationId,
+    ) -> Result<Option<generated_contracts::provider_core::TaskAllocationV1>> {
+        let allocation = self.shell.task_allocation(operation)?;
+        if allocation
+            .as_ref()
+            .is_some_and(|value| value.task_id >= self.engine.next_task_id)
+        {
+            return Err(Error::unavailable());
+        }
+        Ok(allocation)
+    }
     pub(crate) fn task_state(&self) -> generated_contracts::provider_core::TaskStateV1 {
         use generated_contracts::provider_core::{TaskStateV1, TaskStorageRecordV1};
         let mut state = TaskStateV1 {
