@@ -484,3 +484,144 @@ fn competing_reservations_observe_committed_capacity() {
         restarted.shutdown().await.unwrap();
     });
 }
+
+#[test]
+fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
+    run(async {
+        let db = Database::new();
+        let worker = db.start().await;
+        let client = worker.client();
+        let address = deploy(
+            &client,
+            &CalendarDefinition {
+                default_weekly_minutes: Minutes::new(1),
+                overrides: Vec::new(),
+            },
+        )
+        .await;
+        let week = Week::new(2026, 1).unwrap();
+        let record = ReservationView {
+            project_id: generated_contracts::EntityId::from_bytes([10; 16]),
+            milestone_id: Some(generated_contracts::EntityId::from_bytes([11; 16])),
+            requirement_key: Some(7),
+            week,
+            minutes: Minutes::ZERO,
+        };
+        let before_limit = client.diagnostics().unwrap().result().await.unwrap();
+        let oversized = client
+            .execute(
+                1,
+                call(
+                    &address,
+                    2,
+                    "reserve",
+                    (
+                        WeekWindow::new(week, Week::new(2046, 1).unwrap()).unwrap(),
+                        Minutes::new(1000),
+                        &record,
+                    ),
+                ),
+                shell(),
+            )
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(
+            oversized.status,
+            Status::Dispatch(pallet_contracts::Error::<Runtime>::OutOfGas.into()),
+            "{oversized:?}"
+        );
+        assert_eq!(
+            client.diagnostics().unwrap().result().await.unwrap().root,
+            before_limit.root
+        );
+        let mut revision = 2;
+        for year in 2026..2046 {
+            let window =
+                WeekWindow::new(Week::new(year, 1).unwrap(), Week::new(year, 50).unwrap()).unwrap();
+            let outcome = client
+                .execute(
+                    revision,
+                    call(&address, 2, "reserve", (window, Minutes::new(50), &record)),
+                    shell(),
+                )
+                .unwrap()
+                .result()
+                .await
+                .unwrap();
+            assert_eq!(outcome.status, Status::Success, "{outcome:?}");
+            revision += 1;
+        }
+        let expected = view(&client, &address).await;
+        assert_eq!(expected.reservations.len(), 1000);
+        assert!(expected.encode().len() > 16 * 1024);
+        let before = client.diagnostics().unwrap().result().await.unwrap();
+        let failed = client
+            .execute(
+                revision,
+                call(
+                    &address,
+                    3,
+                    "set_calendar",
+                    CalendarDefinition {
+                        default_weekly_minutes: Minutes::ZERO,
+                        overrides: Vec::new(),
+                    },
+                ),
+                shell(),
+            )
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(failed.status, Status::Reverted);
+        assert_eq!(decode::<()>(&failed), Err("calendar_overcommitted".into()));
+        assert_eq!(
+            client.diagnostics().unwrap().result().await.unwrap().root,
+            before.root
+        );
+        worker.shutdown().await.unwrap();
+        let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", db.0.display()))
+            .await
+            .unwrap();
+        let bytes: Vec<u8> = sqlx::query_scalar("SELECT runtime FROM candidate_state")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        pool.close().await;
+        let mut ext = ink_v5_compatibility::checkpoint::Checkpoint::decode(&bytes)
+            .unwrap()
+            .restore()
+            .unwrap();
+        ext.execute_with(|| {
+            let header = ink_v5_compatibility::Contracts::get_storage(
+                address.clone(),
+                0x4341_4c01u32.encode(),
+            )
+            .unwrap()
+            .unwrap();
+            assert!(header.len() <= 138);
+            for index in [0u32, 999] {
+                let value = ink_v5_compatibility::Contracts::get_storage(
+                    address.clone(),
+                    (0x4341_4c04u32, index).encode(),
+                )
+                .unwrap()
+                .unwrap();
+                assert_eq!(value.len(), 47);
+            }
+            assert!(
+                ink_v5_compatibility::Contracts::get_storage(
+                    address.clone(),
+                    (u32::MAX, 0u32).encode()
+                )
+                .unwrap()
+                .is_none()
+            );
+        });
+        let reopened = db.start().await;
+        assert_eq!(view(&reopened.client(), &address).await, expected);
+        reopened.shutdown().await.unwrap();
+    });
+}

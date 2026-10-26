@@ -340,8 +340,9 @@ hash is invented. Directory seals its import capability permanently and activate
 its children only after the complete archive matches. SQLite then commits the
 runtime and retained shell together.
 
-Catalog entries, worker/project registry records and complete child images use
-ordered 8 KiB migration pages. Directory stages records in a separate temporary
+Catalog entries, worker/project registry records and Project images still use
+ordered 8 KiB migration pages. Calendar imports use bounded typed records as
+described below. Directory stages records in a separate temporary
 namespace, applies each complete decoded record atomically, then clears its pages.
 An unfinished record blocks sealing. Derived worker skill indexes rebuild in fixed
 batches of at most 32 entries; sealing also requires every index complete. The
@@ -352,8 +353,8 @@ inputs for explicit conversion tests. Paging removes
 the single-call import ceiling; finite WASM gas/memory and archive/checkpoint
 admission still apply and fail without committing a destination.
 
-`worker::archive` decodes the pinned storage-v5 cells using pallet-contracts'
-read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
+`worker::archive` decodes pinned ink! Calendar cells and the remaining Directory/Project
+storage-v5 cells using pallet-contracts' read-only storage API. It does not execute business rules. Cells remain <=16 KiB;
 legacy signed creation profiles are lowered before WASM; bounded core records
 retain their commitments without relaxing Kreivo's 16 memory pages or 192 KiB code limit. Complete reads
 have a cumulative 64 MiB cell budget and a 64 MiB archive limit. The existing
@@ -382,6 +383,50 @@ pre-cutover checkpoint is never a rollback source. Whole-provider HTTP compositi
 and the gateway smoke flow are covered in M8 below. Formal performance acceptance,
 promotion and two observed stable release cycles remain open. These fixtures do
 not authorize promotion or a release.
+
+## Calendar ordinary storage (SPEC-0015 R4 slice)
+
+The operational `calendar-v5` uses standard ink! `Lazy` and `Mapping`, with fixed
+manual keys pinned by the fixture manifest. Its header is at most 138 bytes;
+a reservation is at most 47 bytes. Overrides, ordered indexes and per-week
+reserved totals have their own fixed-size cells. Calendar no longer depends on
+`storage-v5`. Directory and Project still do; this slice does not complete R4/R5.
+No runtime, code, value, memory, input or gas limit is raised.
+
+Replacing 1,000 retained overrides uses more metered resources than the former
+packed representation: this retained call fails under the component fixture's
+`GAS` budget and succeeds with the whole-provider's existing `WHOLE_GAS`. The
+suite preserves both cases, including complete state/history equality after the
+smaller-budget failure and reopen. This is a resource-cost regression, not a
+claim of identical gas usage; the separate ref-time/proof-size cause is not yet
+isolated. Contract dependencies stay pinned to committed Git revisions so
+independent builds reproduce their WASM and ABI.
+
+Whole-provider migration imports the definition and up to 64 typed overrides or
+reservations per call, preserves order and reservations, checks declared counts,
+and seals only after complete archive comparison. A bad later record reverts the
+entire batch and Directory staging. Normal reads and writes use the same ordinary
+cells; the public aggregate Calendar view is unchanged. Existing runtime databases
+remain tied to their original artifact identity: use the paused fresh-destination
+archive procedure, never substitute new WASM into an old checkpoint.
+
+The growth regression accumulates 1,000 reservations through ordinary calls and
+reopens them after a rejected edit; it also checks atomic failure of an oversized
+single call. The opt-in frozen-executable test proves current Calendar writes,
+complete export/import/reopen, exact signed replay and further signed work in
+Rust, Shadow and Sandbox. Set the frozen binary path and its recorded SHA-256:
+
+```sh
+INK_STORAGE_PREDECESSOR=/ssd/frozen/whole-provider \
+INK_STORAGE_PREDECESSOR_SHA256=<recorded-sha256> \
+cargo test --manifest-path tools/ink-sandbox/Cargo.toml --locked \
+  --test storage_cohort -- --ignored --nocapture
+```
+
+It uses disposable SQLite files, local HTTP and Python's standard library. Keep
+`TMPDIR` and `CARGO_TARGET_DIR` on disk. It is a provider storage rollback proof;
+it does not establish the later API task cutover, browser readiness or production
+migration approval. The separate SDK dependency-policy gate still applies.
 
 ## Explicit whole-provider candidate (M8)
 

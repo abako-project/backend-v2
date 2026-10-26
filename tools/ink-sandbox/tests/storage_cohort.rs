@@ -1,0 +1,232 @@
+//! Explicit current-state handoff to a frozen preceding executable, not a rebuild
+//! of the same source under a different authority flag.
+use generated_contracts::*;
+use ink_v5_compatibility::{
+    WHOLE_GAS,
+    worker::{Authority, WholeConfiguration, Worker},
+};
+use mock_provider::ReferenceState;
+use provider_execution::{ExecutionInputs, VerifiedCall, migration::CoreArchiveV4};
+use serde_json::Value;
+use sp_core::{Pair, hashing::sha2_256, sr25519};
+use std::{fs, path::Path, process::Command};
+
+fn cli(binary: &Path, database: &Path, root: &Path, authority: &str, command: &str, file: &Path) {
+    let output = Command::new(binary)
+        .arg(command)
+        .arg(file)
+        .env("WHOLE_DATABASE_PATH", database)
+        .env("MOCK_ROOT_ACCOUNT_FILE", root)
+        .env("PROVIDER_AUTHORITY", authority)
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+fn read(path: &Path) -> Value {
+    serde_json::from_slice(&fs::read(path).unwrap()).unwrap()
+}
+
+#[test]
+#[ignore = "requires INK_STORAGE_PREDECESSOR and its recorded INK_STORAGE_PREDECESSOR_SHA256"]
+fn current_calendar_writes_restore_into_frozen_predecessor_in_all_authorities() {
+    let predecessor =
+        std::env::var_os("INK_STORAGE_PREDECESSOR").expect("frozen predecessor required");
+    let predecessor = Path::new(&predecessor);
+    let hash: String = sha2_256(&fs::read(predecessor).unwrap())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    assert_eq!(
+        hash,
+        std::env::var("INK_STORAGE_PREDECESSOR_SHA256").unwrap()
+    );
+    let fixtures: Value = serde_json::from_str(include_str!(
+        "../../../services/mock-provider/src/domain/fixtures/migration-signed.json"
+    ))
+    .unwrap();
+    let initial: CoreArchiveV4 = serde_json::from_str(
+        fixtures["archives"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|a| a["beforeStep"] == 70)
+            .unwrap()["archive"]
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap();
+    let (origin, retained) = initial
+        .checkpoint
+        .workers
+        .iter()
+        .find(|(_, w)| !w.calendar.reservations.is_empty())
+        .unwrap();
+    let key = (1..=10)
+        .map(|seed| sr25519::Pair::from_seed(&[seed; 32]))
+        .find(|key| key.public().0 == *origin.as_bytes())
+        .unwrap();
+    let mut definition = retained.calendar.definition.clone();
+    definition.default_weekly_minutes = Minutes::new(10_000);
+    definition.overrides = (2028..2068)
+        .flat_map(|year| {
+            (1..=50).map(move |week| WeekOverride {
+                week: Week::new(year, week).unwrap(),
+                capacity: Minutes::new(10_000),
+            })
+        })
+        .collect();
+    let command = ProviderCommand::SetCalendar(definition);
+    let configuration = WholeConfiguration {
+        root: initial.checkpoint.info.root_account,
+        generation: initial.checkpoint.info.provider_instance_id,
+        mock_funding: true,
+        gas_limit: WHOLE_GAS,
+    };
+    let base = std::env::temp_dir().join(format!("calendar-cohort-{}", std::process::id()));
+    fs::create_dir(&base).unwrap();
+    let root = base.join("root.hex");
+    fs::write(&root, configuration.root.to_string()).unwrap();
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+    for (name, authority) in [
+        ("rust", Authority::Rust),
+        ("shadow", Authority::Shadow),
+        ("sandbox", Authority::Sandbox),
+    ] {
+        let directory = base.join(name);
+        fs::create_dir(&directory).unwrap();
+        let database = directory.join("current.sqlite");
+        let call = UnsignedContractCallV1::new(
+            configuration.generation,
+            OperationId::from_bytes([245; 16]),
+            *origin,
+            *initial.checkpoint.nonces.get(origin).unwrap_or(&0),
+            UnixSeconds::new(1_900_000_000),
+            command.clone(),
+        )
+        .unwrap();
+        let signature = Sr25519Signature::from_bytes(key.sign(&call.signable_bytes().unwrap()).0);
+        let signed = SignedContractCallV1 { call, signature };
+        let inputs = ExecutionInputs {
+            version: 1,
+            now: UnixSeconds::new(1_800_000_000),
+            seed: [240; 32],
+        };
+        let reference = ReferenceState::from_archive(configuration.root, initial.clone()).unwrap();
+        let (reference, expected) = reference
+            .execute(
+                VerifiedCall::verify(signed.clone()).unwrap(),
+                inputs.clone(),
+            )
+            .unwrap();
+        assert_eq!(expected.outcome, ExecutionOutcome::Success);
+        runtime.block_on(async {
+            let worker = Worker::import_whole(
+                database.clone(),
+                initial.clone(),
+                configuration.clone(),
+                authority,
+            )
+            .await
+            .unwrap();
+            let receipt = worker
+                .client()
+                .execute_directory_with_inputs(signed.clone(), inputs)
+                .unwrap()
+                .result()
+                .await
+                .unwrap();
+            assert_eq!(receipt, expected);
+            worker.shutdown().await.unwrap();
+        });
+        // Both CLI exports reopen the actual runtime, including Sandbox authority.
+        let current = directory.join("current.json");
+        cli(
+            Path::new(env!("CARGO_BIN_EXE_whole-provider")),
+            &database,
+            &root,
+            name,
+            "export",
+            &current,
+        );
+        assert_eq!(
+            read(&current),
+            serde_json::to_value(reference.archive().unwrap()).unwrap()
+        );
+        let restored = directory.join("preceding.sqlite");
+        cli(predecessor, &restored, &root, name, "import", &current);
+        for phase in ["first", "reopened"] {
+            let exported = directory.join(format!("preceding-{phase}.json"));
+            cli(predecessor, &restored, &root, name, "export", &exported);
+            assert_eq!(
+                read(&exported),
+                read(&current),
+                "{name}/{phase}: complete state/history changed"
+            );
+        }
+        let mut next = signed.call.clone();
+        next.operation_id = OperationId::from_bytes([246; 16]);
+        next.nonce = next.nonce.checked_add(1).unwrap();
+        let ProviderCommand::SetCalendar(definition) = &mut next.command else {
+            unreachable!()
+        };
+        definition.default_weekly_minutes = Minutes::new(10_001);
+        let fresh = SignedContractCallV1 {
+            signature: Sr25519Signature::from_bytes(key.sign(&next.signable_bytes().unwrap()).0),
+            call: next,
+        };
+        fs::write(
+            directory.join("calls.json"),
+            serde_json::to_vec(&[&signed, &fresh]).unwrap(),
+        )
+        .unwrap();
+        let exercised = Command::new("python3")
+            .arg(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/storage_cohort_http.py"
+            ))
+            .arg(predecessor)
+            .arg(&restored)
+            .arg(&root)
+            .arg(name)
+            .arg(&directory)
+            .output()
+            .unwrap();
+        assert!(
+            exercised.status.success(),
+            "{name}: {}",
+            String::from_utf8_lossy(&exercised.stderr)
+        );
+        let receipts: Vec<OperationReceipt> =
+            serde_json::from_slice(&fs::read(directory.join("receipts.json")).unwrap()).unwrap();
+        assert_eq!(receipts[0], expected, "retained signed replay");
+        assert_eq!(receipts[1].outcome, ExecutionOutcome::Success);
+        assert_eq!(receipts[1], receipts[2]);
+        let after_path = directory.join("after-work.json");
+        cli(predecessor, &restored, &root, name, "export", &after_path);
+        let after: CoreArchiveV4 = serde_json::from_value(read(&after_path)).unwrap();
+        let captured = after.checkpoint.receipts[&fresh.call.operation_id]
+            .inputs
+            .clone()
+            .unwrap();
+        let (reference, fresh_expected) = reference
+            .execute(VerifiedCall::verify(fresh).unwrap(), captured)
+            .unwrap();
+        assert_eq!(receipts[1], fresh_expected);
+        assert_eq!(
+            read(&after_path),
+            serde_json::to_value(reference.archive().unwrap()).unwrap(),
+            "{name}: replay/further work changed unrelated state or history"
+        );
+        println!(
+            "{name}: current writes, frozen import/reopen/replay and further signed work verified"
+        );
+    }
+    fs::remove_dir_all(base).unwrap();
+}

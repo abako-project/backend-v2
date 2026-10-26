@@ -506,10 +506,61 @@ async fn retained_case_with_gas(
 fn retained_aggregates_above_the_single_call_limit_keep_working() {
     run(async {
         for case in reference().aggregate_cases {
-            retained_case(case, None).await;
+            // This is a whole-provider workload. Ordinary per-record Calendar
+            // storage needs more metered resources than the former packed blob; keep
+            // the published WHOLE_GAS unchanged rather than using fixture GAS.
+            retained_case_with_gas(case, None, ink_v5_compatibility::WHOLE_GAS).await;
         }
     })
 }
+#[test]
+fn calendar_replacement_at_component_budget_preserves_state_and_reopens() {
+    run(async {
+        let case = reference().aggregate_cases.remove(2);
+        let archive: CoreArchiveV4 =
+            serde_json::from_str(case["archive"].as_str().unwrap()).unwrap();
+        let configuration = config(&archive);
+        assert_eq!(configuration.gas_limit, GAS);
+        let db = Database::new();
+        let worker = Worker::import_archive(db.0.clone(), archive.clone(), configuration.clone())
+            .await
+            .unwrap();
+        let before = db.stored().await;
+        let result = worker
+            .client()
+            .execute_directory_with_inputs(
+                serde_json::from_value(case["signed"].clone()).unwrap(),
+                serde_json::from_value(case["inputs"].clone()).unwrap(),
+            )
+            .unwrap()
+            .result()
+            .await;
+        // A nested ink call can surface resource exhaustion as a caller trap.
+        // The unchanged whole-provider budget executes this exact retained call
+        // in the aggregate test; no failed attempt may consume history here.
+        assert!(
+            matches!(result, Err(Error::InvalidState | Error::ExecutionLimit(_))),
+            "{result:?}"
+        );
+        assert_eq!(db.stored().await, before);
+        worker.shutdown().await.unwrap();
+        let reopened = Worker::reopen(db.0.clone(), configuration).await.unwrap();
+        let retained = reopened
+            .client()
+            .export_archive()
+            .unwrap()
+            .result()
+            .await
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(retained).unwrap(),
+            serde_json::to_value(archive).unwrap()
+        );
+        assert_eq!(db.stored().await, before);
+        reopened.shutdown().await.unwrap();
+    });
+}
+
 #[test]
 fn retained_positive_planning_escrow_pays_and_freezes_with_complete_backing() {
     run(async {

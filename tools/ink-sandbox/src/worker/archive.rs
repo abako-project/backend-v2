@@ -1,4 +1,5 @@
-//! Read-only codec for the pinned storage-v5 layout. It copies retained facts;
+//! Read-only codec for pinned contract storage, including ordinary Calendar cells.
+//! Directory/Project retain their transitional paged layout. It copies facts;
 //! commands, permissions, prices and score updates still execute only in WASM.
 use super::{directory::State, *};
 use generated_contracts::provider_core::{
@@ -60,6 +61,21 @@ struct WorkerRecord {
     calendar_id: EntityId,
     worker_score: ReputationView,
     coordinator_score: ReputationView,
+}
+// Standard ink Lazy/Mapping cells in the pinned Calendar contract. Each decoded
+// value is fixed-size; no root reconstruction or byte-page codec is involved.
+#[derive(Decode)]
+struct CalendarHeader {
+    calendar_id: EntityId,
+    owner: AccountId32,
+    directory: Account,
+    controller: Account,
+    default_minutes: u32,
+    overrides: u32,
+    reservations: u32,
+    reserved_weeks: u32,
+    expected: Option<(u32, u32)>,
+    phase: u8,
 }
 struct Storage<'a> {
     ext: &'a mut sp_io::TestExternalities,
@@ -142,6 +158,62 @@ impl<'a> Storage<'a> {
             reader.cell(address, (namespace, key, index + 1))
         })
     }
+    fn calendar(
+        &mut self,
+        address: &Account,
+    ) -> Result<(CalendarView, Account, Account, bool), Error> {
+        let header: CalendarHeader = self.cell(address, 0x4341_4c01u32)?;
+        if header.expected.is_some()
+            || !matches!(header.phase, 2 | 3)
+            || header.reserved_weeks > header.reservations
+        {
+            return Err(Error::InvalidState);
+        }
+        let records = u64::from(header.overrides) + u64::from(header.reservations);
+        if records > u64::try_from(self.remaining).map_err(|_| Error::Limit)? {
+            return Err(Error::Limit);
+        }
+        let mut overrides = Vec::new();
+        for index in 0..header.overrides {
+            let week: Week = self.cell(address, (0x4341_4c03u32, index))?;
+            let capacity = self.cell(address, (0x4341_4c02u32, week))?;
+            overrides.push(WeekOverride { week, capacity });
+        }
+        let mut reservations = Vec::new();
+        let mut totals = BTreeMap::<Week, u32>::new();
+        for index in 0..header.reservations {
+            let item: ReservationView = self.cell(address, (0x4341_4c04u32, index))?;
+            let total = totals.entry(item.week).or_default();
+            *total = total
+                .checked_add(item.minutes.get())
+                .ok_or(Error::InvalidState)?;
+            reservations.push(item);
+        }
+        if totals.len() != usize::try_from(header.reserved_weeks).map_err(|_| Error::Limit)? {
+            return Err(Error::InvalidState);
+        }
+        for index in 0..header.reserved_weeks {
+            let week: Week = self.cell(address, (0x4341_4c06u32, index))?;
+            let total: u32 = self.cell(address, (0x4341_4c05u32, week))?;
+            if totals.remove(&week) != Some(total) {
+                return Err(Error::InvalidState);
+            }
+        }
+        Ok((
+            CalendarView {
+                calendar_id: header.calendar_id,
+                owner: header.owner,
+                definition: CalendarDefinition {
+                    default_weekly_minutes: Minutes::new(header.default_minutes),
+                    overrides,
+                },
+                reservations,
+            },
+            header.directory,
+            header.controller,
+            header.phase == 3,
+        ))
+    }
     fn workers(
         &mut self,
         state: &State,
@@ -152,7 +224,7 @@ impl<'a> Storage<'a> {
         for account in &directory.workers {
             let worker: WorkerRecord = self.value(&state.directory, 4, *account)?;
             let (calendar, parent, controller, live): (CalendarView, Account, Account, bool) =
-                self.child(&worker.calendar)?;
+                self.calendar(&worker.calendar)?;
             if calendar.owner != *account
                 || calendar.calendar_id != worker.calendar_id
                 || parent != state.directory

@@ -7,6 +7,8 @@ use generated_contracts::*;
 use provider_execution::migration::CoreArchiveV4;
 use std::collections::BTreeSet;
 
+const CALENDAR_IMPORT_BATCH: usize = 64;
+
 /// Fixed deployment settings; mutable catalogs and archive contents are not identity.
 #[derive(Clone)]
 pub struct WholeConfiguration {
@@ -86,6 +88,9 @@ enum Record {
     Reason(Vec<u8>),
     Catalog(CatalogKind, CatalogEntryCore, Vec<u32>, CatalogReferenceV1),
     WorkerIndex(AccountId32),
+    CalendarDefinition(AccountId32, u32, u32, u32),
+    CalendarOverrides(AccountId32, Vec<WeekOverride>),
+    CalendarReservations(AccountId32, Vec<ReservationView>),
 }
 type Reason = (
     EntityId,
@@ -350,13 +355,45 @@ pub(super) fn initialize(
         upload_record(&mut ext, bundles, &state, &record)?;
     }
     for worker in saved.workers.values() {
-        let image = (&worker.calendar, &state.directory, &state.directory, false).encode();
-        upload(
+        upload_record(
             &mut ext,
             bundles,
             &state,
+            &Record::CalendarDefinition(
+                worker.account,
+                worker.calendar.definition.default_weekly_minutes.get(),
+                u32::try_from(worker.calendar.definition.overrides.len())
+                    .map_err(|_| Error::Limit)?,
+                u32::try_from(worker.calendar.reservations.len()).map_err(|_| Error::Limit)?,
+            ),
+        )?;
+        for items in worker
+            .calendar
+            .definition
+            .overrides
+            .chunks(CALENDAR_IMPORT_BATCH)
+        {
+            upload_record(
+                &mut ext,
+                bundles,
+                &state,
+                &Record::CalendarOverrides(worker.account, items.to_vec()),
+            )?;
+        }
+        for items in worker.calendar.reservations.chunks(CALENDAR_IMPORT_BATCH) {
+            upload_record(
+                &mut ext,
+                bundles,
+                &state,
+                &Record::CalendarReservations(worker.account, items.to_vec()),
+            )?;
+        }
+        write(
+            &mut ext,
+            bundles,
+            &state,
+            "finish_child_import",
             ImportTarget::Calendar(worker.account),
-            &image,
         )?;
     }
     for project in saved.projects.values() {
@@ -634,41 +671,74 @@ mod tests {
             },
             reservations: Vec::new(),
         };
-        let image = (&calendar, &state.directory, &state.directory, false).encode();
-        assert!(image.len() > 8192);
-        write(
+        upload_record(
             &mut ext,
             &bundles,
             &state,
-            "import_child_page",
-            (target, 0u32, &image[..8192]),
+            &Record::CalendarDefinition(
+                owner,
+                calendar.definition.default_weekly_minutes.get(),
+                u32::try_from(calendar.definition.overrides.len()).unwrap(),
+                0,
+            ),
         )
         .unwrap();
         ext = preserved(ext, |ext| {
+            assert!(write(ext, &bundles, &state, "finish_child_import", target).is_err());
+        });
+        // The first record writes successfully, but the duplicate second record
+        // must revert the entire child call and the enclosing Directory staging.
+        ext = preserved(ext, |ext| {
+            let item = calendar.definition.overrides[0].clone();
             assert!(
-                write(
+                upload_record(
                     ext,
                     &bundles,
                     &state,
-                    "import_child_page",
-                    (target, 0u32, &image[..8192])
+                    &Record::CalendarOverrides(owner, vec![item.clone(), item])
                 )
                 .is_err()
-            )
+            );
         });
-        ext = preserved(ext, |ext| {
-            assert!(write(ext, &bundles, &state, "finish_child_import", target).is_err())
-        });
-        for (index, page) in image.chunks(8192).enumerate().skip(1) {
-            write(
+        for records in [
+            Vec::new(),
+            vec![calendar.definition.overrides[0].clone(); 65],
+        ] {
+            ext = preserved(ext, |ext| {
+                assert!(
+                    upload_record(
+                        ext,
+                        &bundles,
+                        &state,
+                        &Record::CalendarOverrides(owner, records)
+                    )
+                    .is_err()
+                );
+            });
+        }
+        for items in calendar.definition.overrides.chunks(CALENDAR_IMPORT_BATCH) {
+            upload_record(
                 &mut ext,
                 &bundles,
                 &state,
-                "import_child_page",
-                (target, u32::try_from(index).unwrap(), page),
+                &Record::CalendarOverrides(owner, items.to_vec()),
             )
             .unwrap();
         }
+        ext = preserved(ext, |ext| {
+            assert!(
+                upload_record(
+                    ext,
+                    &bundles,
+                    &state,
+                    &Record::CalendarOverrides(
+                        owner,
+                        vec![calendar.definition.overrides[0].clone()]
+                    )
+                )
+                .is_err()
+            );
+        });
         write(&mut ext, &bundles, &state, "finish_child_import", target).unwrap();
         for _ in 0..2 {
             ext = preserved(ext, |ext| {
@@ -687,7 +757,7 @@ mod tests {
                     &bundles,
                     &state,
                     "import_child_page",
-                    (target, 0u32, &image[..8192])
+                    (target, 0u32, vec![0u8])
                 )
                 .is_err()
             )

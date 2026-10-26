@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "610b5d2acefb0ced4eab2c3725cd40b526f0b3cf",
+  "sourceCommit": "f522e16cd0a12299148e5636edf3735326860ec7",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
@@ -30,21 +30,21 @@
       "lockSha256": "1193ede85e8cdf2564b030f3e648e6f8fbd2561e226968f39db9a3ae98ad9c42"
     },
     "calendar-v5": {
-      "artifactSha256": "6870754b5e65f9e0368918d79a9aea29bdeb58fbd37888ec14c4c9b3c3101033",
-      "wasmBlake2b256": "0x2b27681f3c843c9f1caa5d1d8d0b0c98ef5f0704619cdb890cc75191818c5135",
-      "lockSha256": "18d65be4d9daff11eda26174212bf028e2476b61dcc4411d73c666069f38cb49",
+      "artifactSha256": "d3e63aefc3cee183edad54986f835aeb7471127e1d0da95bc10951ce92af1b97",
+      "wasmBlake2b256": "0x44ce9463c5ca6059b23f1428d740548d8c700801c3dcd2b2adad1ca6a37424cf",
+      "lockSha256": "cf2238ae1ef1616889a6cadcbfd436e8d052421d47335cc4941502d16d0939b0",
       "staticBufferBytes": 294912
     },
     "directory-v5": {
-      "artifactSha256": "d908c46799c095031d848a93523a3e2894044bfed0c63f76d43fc07e0b16e105",
-      "wasmBlake2b256": "0x3be03fa1ea92d9fc269a2c1ed097bc1374e4ee95e7dea0056d39155378045912",
-      "lockSha256": "c0e529d3336ddfca715f4703e903bae083de267f0b2ca092095d06bbcb616a5c",
+      "artifactSha256": "a8c2b9e9a7dff44c3b93c790046d694c0c4ae6614a21ad348dda1d7d358c0850",
+      "wasmBlake2b256": "0xa823385e996d58c88520962444f7d6b7fdeefb46f7cbad4cb378f5042efc8f92",
+      "lockSha256": "fdeaea2b4b94fe1e53c25bc2e322fb00251d15dcfc296fd08a5b5c4c110302ea",
       "staticBufferBytes": 294912
     },
     "projects-v5": {
-      "artifactSha256": "bb1050fc13db7b913507fdee105b122f76d4b9a8b5a056efd756139f481a7043",
-      "wasmBlake2b256": "0x9495912feef4514238083ec9cd2797d65176a10beb8e3e23d87c19b3782ddbd5",
-      "lockSha256": "587d133e0ba3e8743f36efb3947cfee03a5f627e001de94e803e8f5e3cde325d",
+      "artifactSha256": "1c9a2e1208bf61a19579b896fb9e2ff4293c402b40a29329676b2020d0ca3530",
+      "wasmBlake2b256": "0xbfdceb864292a40d4b1d98bab357e6e84c65137909b42131d71398e922df003c",
+      "lockSha256": "54b91098f9b1f837c21812146bcefd37ab43d0214532894dc415e5895cb25b5e",
       "staticBufferBytes": 294912
     }
   }
