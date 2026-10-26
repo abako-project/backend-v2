@@ -1,7 +1,7 @@
 # R5 cleanup and recovery inventory
 
-Implementation candidate under approved SPEC-0015; verification and exact reviewer
-acceptance are recorded in [the handoff](../../progress/handoffs/SPEC-0015.md).
+Functional R5 accepted by Astra xhigh under approved SPEC-0015; verification and
+exact reviewed revisions are recorded in [the handoff](../../progress/handoffs/SPEC-0015.md).
 No deployment, live backfill, authority promotion or release is implied.
 
 ## Removed code and surviving checks

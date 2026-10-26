@@ -17,7 +17,7 @@ signatures and uses Rust business logic by default. The explicit
 Directory, Calendar and Project WASM locally, with Shadow comparison and
 current-state migration/rollback. Neither provider submits transactions to
 Kreivo or uses real funds. Existing data needs the paired
-[current ownership transition](specs/0015-adapter-core-boundary/r2b-proposals.md). See the
+[current ownership transition](docs/operations/task-cutover.md). See the
 [current status and limitations](docs/project/project-context.md).
 
 ## Architecture

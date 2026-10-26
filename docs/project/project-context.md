@@ -1,9 +1,10 @@
 # Current implementation and limitations
 
-Application baseline: `608c70b`; current candidate includes SPEC-0015 metadata
-ownership and task migration preparation through native task rollback, 2026-10-26. This page describes implementation;
-[specifications](../../SPECS.md) define approved behavior. Dated handoffs record
-verification of their own revisions, not a fresh verification of every later commit.
+The candidate includes reviewed SPEC-0015 metadata/task ownership and ordinary
+ink storage across all three contracts. Astra xhigh accepted the functional R3–R5
+implementation, including transitional cleanup. This page describes implementation; [specifications](../../SPECS.md)
+define approved behavior. [Dated handoffs](../../progress/handoffs/SPEC-0015.md)
+record exact tested revisions and limitations.
 
 ## Working implementation
 
@@ -53,40 +54,38 @@ import/rollback. Its SDK dependency policy currently fails on unwaived RUSTSEC-2
 provider; changing an endpoint URL cannot supply compatible execution and
 reconciliation. ink! v6 remains outside scope.
 
-SPEC-0015 R2a/R2b1/R2b2 moves descriptive creation/proposal content, catalog labels,
-categories, request narrative and lifecycle reasons into the adapter. Core V4
-retains fixed refs, actual numeric terms, moderated request markers and separate
-current-label/skill-origin refs; public DTOs stay unchanged. Existing V3 stores
-require the explicit [paired V3↔V4 exchange and rollback](../../specs/0015-adapter-core-boundary/r2b-catalog-reasons.md).
-The API uses the existing operation queue for normalized skill-name admission;
-core still assigns actual IDs and enforces permissions and role references.
-The [R3a reader contract](../../specs/0015-adapter-core-boundary/r3-task-compatibility.md)
-adds dormant Queued/taskResult/AdapterTask forms and updates built-in consumers;
-current task writes and emitted provider payloads are unchanged. Independent
-frontend compatibility must precede task-shaped emission. R3b1 adds durable API
-task result/notification readers in the existing tables,
-with source/context checks and a provider signing guard. Current task writes
-remain provider-owned. Unexpected pending API work stays unresolved and blocks
-later same-wallet provider work until reconciled; this is not the active task
-scheduler. R3b2 copies actual tasks and the retained allocator into three adapter
-tables
-through one authenticated selected-provider export. Ordering, empty storages,
-deleted-ID gaps and original data are verified before commit; public task reads
-still use the provider. Preparation can become stale and does not activate task
-ownership. R3b3a prepares a transactional task executor in the existing bounded
-worker, guarded by a per-generation ownership fact that defaults to provider.
-Current public writes remain provider-owned and no activation procedure is
-exposed. R3b3b adds immutable accepted task snapshots, per-operation edit holds and
-uncertainty recovery for milestone disputes/cancellations, with held tasks
-suspended as FIFO blockers across wallets. Planning-dispute behavior is preserved
-pending its owner decision. R3b3c prepares API-owned task membership and public/frozen view composition
-without activating a generation. Raw core authorization and contractual audiences
-remain separate; missing frozen history fails closed pending migration. Active
-admission, historical-case reconciliation, audience timing and actual paired
-task-data rollback remain R3b; paging removal remains R4/R5. Formal
-performance acceptance,
-promotion and two observed stable releases remain open. No image publication,
-deployment or onchain upgrade is authorized by this candidate.
+SPEC-0015 makes the adapter authoritative for descriptive content, catalog names
+and uniqueness, task text/progress and accepted dispute snapshots. Core V5 keeps
+fixed references, numeric terms, permissions, task IDs/assignees and the actual
+global allocator. Creation/deletion and membership changes use real signed core
+operations; local content edits return truthful API task results without invented
+provider receipts. Project notification audiences reflect membership at core
+execution. Uncertain operations retain their intents and block conflicting work;
+pending dispute snapshots hold later task edits while the outcome is uncertain.
+Confirmed disputes retain the core lifecycle edit guard.
+
+R3 includes guarded activation and paused V4↔V5 paired owner migration/rollback,
+preserving original content, frozen cases, IDs and history. Missing content fails
+closed. Current views have no predecessor text fallback. See the
+[owner procedure](../operations/task-cutover.md); existing data cannot silently
+switch ownership, and frontend compatibility must precede live activation.
+
+R4 replaces custom paging with ordinary ink storage in Calendar, Directory and
+Project. Fixed records and individually addressed growing lists stay below the
+unchanged cell limit. Fresh typed imports are bounded, verified and permanently
+sealed. Complete current archives and signed replay are tested against the frozen
+preceding executable. Whole-history scans still have finite gas/memory costs.
+
+R5 removes the unused storage helper, three obsolete proof contracts and the
+Calendar-only signed bridge. The bundle retains three application contracts and
+one private failure probe. Unique regression checks move to current contracts;
+Git provenance, frozen binaries, native financial reference and required offline
+recovery codecs remain. The [cleanup inventory](../../specs/0015-adapter-core-boundary/r5-cleanup.md)
+maps removals and surviving checks. No database records are deleted.
+
+Controlled-host performance acceptance, dependency-policy remediation, independent
+frontend deployment, authority promotion and observed releases remain open.
+No image publication, deployment or onchain upgrade is authorized by this work.
 
 ## Remaining limits
 
@@ -122,15 +121,7 @@ revisions. The [sandbox consolidation](../../progress/handoffs/SPEC-0013-CONSOLI
 records the embedded candidate; the [ownership handoff](../../progress/handoffs/SPEC-0015.md)
 records current ownership source, exact checks, Astra review and later milestones.
 
-### Latest simplification decisions (2026-10-26)
-
-The owner requires Project notification audiences to reflect membership at core
-execution. Core will therefore retain task IDs, allocation and assignees; creation,
-deletion and assignment changes require core confirmation. Task narrative and
-progress stay in the adapter. This approved amendment replaces the provisional
-all-local CRUD/allocator design; its isolated tests do not establish the revised
-cutover. Provider event ingestion remains unchanged while the revised workflow
-is implemented.
+### Independent frontend readiness
 
 The independent `abako-web/dev` frontend compatibility patch is prepared in
 [draft PR #55](https://github.com/abako-project/abako-web/pull/55), revision
