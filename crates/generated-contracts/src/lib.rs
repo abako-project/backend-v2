@@ -555,6 +555,20 @@ pub enum ProviderCommand {
         project_id: EntityId,
         content: provider_core::MetadataCommitmentV1,
     },
+    // Decode/replay bridge for task identity and chain-confirmed membership.
+    #[codec(index = 58)]
+    CreateTaskCore {
+        project_id: EntityId,
+        task_storage_id: EntityId,
+        assignees: Vec<AccountId32>,
+    },
+    #[codec(index = 59)]
+    SetTaskAssigneesCore {
+        project_id: EntityId,
+        task_storage_id: EntityId,
+        task_id: u32,
+        assignees: Vec<AccountId32>,
+    },
 }
 
 fn nonempty(value: &str, field: &'static str) -> Result<(), ContractError> {
@@ -730,6 +744,8 @@ impl ProviderCommand {
                 nonempty(&request.reason, "reason")
             }
             Self::CreateTask { task, .. } | Self::EditTask { task, .. } => task.validate(),
+            Self::CreateTaskCore { assignees, .. }
+            | Self::SetTaskAssigneesCore { assignees, .. } => unique(assignees, "task assignees"),
             Self::SubmitMilestoneCommitted {
                 worker_ratings: Some(worker_ratings),
                 ..
@@ -784,6 +800,8 @@ impl ProviderCommand {
             | Self::RejectMilestoneCompletion { project_id, .. }
             | Self::RespondDispute { project_id, .. }
             | Self::CreateTask { project_id, .. }
+            | Self::CreateTaskCore { project_id, .. }
+            | Self::SetTaskAssigneesCore { project_id, .. }
             | Self::EditTask { project_id, .. }
             | Self::UpdateTaskProgress { project_id, .. }
             | Self::RequestMilestoneCompletionWithoutDeliverable { project_id, .. }

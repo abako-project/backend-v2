@@ -90,6 +90,9 @@ pub struct RecordedCall {
     pub inputs: Option<ExecutionInputs>,
     /// Finality is independent of success or domain rejection.
     pub receipt: OperationReceipt,
+    /// Exact core allocation for compact task creation; never the public storage ID.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub allocated_task_id: Option<u32>,
 }
 /// Internal storage model shared by the two engines, never a browser DTO.
 #[derive(Clone, Serialize, Deserialize)]
@@ -208,6 +211,14 @@ impl Shell {
             require(record.bytes == verified.bytes, "idempotency_conflict")?;
             return Ok(Some(record.receipt.clone()));
         }
+        // This predecessor can preserve/replay compact task history but cannot
+        // execute its successor's commands. Replay above remains authoritative.
+        if matches!(
+            call.command,
+            ProviderCommand::CreateTaskCore { .. } | ProviderCommand::SetTaskAssigneesCore { .. }
+        ) {
+            return Err(Error::unavailable());
+        }
         require(call.expires_at > now, "expired_call")?;
         require(call.nonce == self.nonce(call.origin), "nonce_conflict")?;
         Ok(None)
@@ -313,6 +324,7 @@ impl Shell {
                 bytes,
                 inputs: Some(inputs),
                 receipt: receipt.clone(),
+                allocated_task_id: None,
             },
         );
         Ok(receipt)
@@ -338,6 +350,18 @@ impl Shell {
                 )?;
             }
             let call = UnsignedContractCallV1::decode_signable(&recorded.bytes)?;
+            let created_task = matches!(call.command, ProviderCommand::CreateTaskCore { .. })
+                && recorded.receipt.outcome == ExecutionOutcome::Success;
+            require(
+                if created_task {
+                    recorded
+                        .allocated_task_id
+                        .is_some_and(|id| id != 0 && id != u32::MAX)
+                } else {
+                    recorded.allocated_task_id.is_none()
+                },
+                "invalid_task_allocation_state",
+            )?;
             require(
                 call.operation_id == *id
                     && recorded.receipt.operation_id == *id
@@ -434,6 +458,101 @@ mod tests {
             shell.validate(root).err().map(|e| e.code()),
             Some("invalid_receipt_state")
         );
+        Ok(())
+    }
+    #[test]
+    fn task_history_bridge_preserves_allocation_and_replay_without_enabling_execution()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let root = AccountId32::from_bytes([1; 32]);
+        let mut shell = Shell::new(root)?;
+        let mut verified = call(&shell, 1)?;
+        verified.call.command = ProviderCommand::CreateTaskCore {
+            project_id: EntityId::from_bytes([2; 16]),
+            task_storage_id: EntityId::from_bytes([3; 16]),
+            assignees: Vec::new(),
+        };
+        verified.bytes = verified.call.signable_bytes()?;
+        let before = (shell.receipts.len(), shell.events.len(), shell.nonce(root));
+        let unsupported = shell
+            .prepare(verified.clone(), UnixSeconds::new(100))
+            .err()
+            .ok_or_else(Error::unavailable)?;
+        assert_eq!(unsupported.code(), "provider_unavailable");
+        assert!(unsupported.is_infrastructure());
+        assert_eq!(
+            (shell.receipts.len(), shell.events.len(), shell.nonce(root)),
+            before
+        );
+        // Reader fixture for successor history, not evidence of task execution.
+        let pending = PreparedExecution {
+            verified: verified.clone(),
+            inputs: ExecutionInputs {
+                version: 1,
+                now: UnixSeconds::new(100),
+                seed: [7; 32],
+            },
+            cursor: 0,
+            next_nonce: 1,
+        };
+        let receipt = shell.complete(
+            pending,
+            Ok(Effect::new(
+                DomainEventKind::TaskCreated,
+                Some(EntityId::from_bytes([3; 16])),
+                root,
+            )),
+        )?;
+        let recorded = shell
+            .receipts
+            .get_mut(&receipt.operation_id)
+            .ok_or_else(Error::unavailable)?;
+        assert!(recorded.allocated_task_id.is_none());
+        recorded.allocated_task_id = Some(7);
+        shell.validate(root)?;
+        let reopened = shell.clone();
+        assert!(matches!(
+            reopened.prepare(verified.clone(), UnixSeconds::new(999))?,
+            Admission::Replay(same) if same == receipt
+        ));
+        let mut conflicting = verified.clone();
+        if let ProviderCommand::CreateTaskCore { assignees, .. } = &mut conflicting.call.command {
+            assignees.push(root);
+        }
+        conflicting.bytes = conflicting.call.signable_bytes()?;
+        assert_eq!(
+            reopened
+                .prepare(conflicting, UnixSeconds::new(999))
+                .err()
+                .map(|e| e.code()),
+            Some("idempotency_conflict")
+        );
+        for invalid in [None, Some(0), Some(u32::MAX)] {
+            shell
+                .receipts
+                .get_mut(&receipt.operation_id)
+                .ok_or_else(Error::unavailable)?
+                .allocated_task_id = invalid;
+            assert_eq!(
+                shell.validate(root).err().map(|e| e.code()),
+                Some("invalid_task_allocation_state")
+            );
+        }
+        let recorded = shell
+            .receipts
+            .get_mut(&receipt.operation_id)
+            .ok_or_else(Error::unavailable)?;
+        recorded.allocated_task_id = Some(7);
+        recorded.receipt.outcome = ExecutionOutcome::Failed("task_storage_not_found".into());
+        assert_eq!(
+            shell.validate(root).err().map(|e| e.code()),
+            Some("invalid_task_allocation_state")
+        );
+        shell
+            .receipts
+            .get_mut(&receipt.operation_id)
+            .ok_or_else(Error::unavailable)?
+            .allocated_task_id = None;
+        shell.validate(root)?;
         Ok(())
     }
 }

@@ -445,4 +445,36 @@ mod tests {
         assert_eq!(restored.engine.workers[&root].worker_score, score);
         Ok(())
     }
+    #[test]
+    fn task_allocation_history_roundtrip_preserves_old_absence_and_new_private_id()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let before = State::new(root()?)?;
+        let verified = call(&before, root()?, worker_command())?;
+        let (after, receipt) = before.execute_with_inputs(
+            verified,
+            ExecutionInputs {
+                version: 1,
+                now: UnixSeconds::new(100),
+                seed: [1; 32],
+            },
+        )?;
+        let record = after
+            .shell
+            .receipts
+            .get(&receipt.operation_id)
+            .ok_or("missing receipt")?;
+        let old = serde_json::to_value(record)?;
+        assert!(old.get("allocated_task_id").is_none());
+        let roundtrip: provider_execution::RecordedCall = serde_json::from_value(old.clone())?;
+        assert_eq!(serde_json::to_value(&roundtrip)?, old);
+        // Storage compatibility only; the successor's actual allocation is tested
+        // with its engine. The legacy command cannot claim this field in validation.
+        let mut future = roundtrip;
+        future.allocated_task_id = Some(7);
+        let encoded = serde_json::to_value(&future)?;
+        let recovered: provider_execution::RecordedCall = serde_json::from_value(encoded.clone())?;
+        assert_eq!(recovered.allocated_task_id, Some(7));
+        assert_eq!(serde_json::to_value(&recovered)?, encoded);
+        Ok(())
+    }
 }

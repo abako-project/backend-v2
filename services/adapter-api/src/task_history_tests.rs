@@ -601,3 +601,65 @@ async fn task_history_migration_preserves_actual_pre_bridge_rows() -> TestResult
     internal.finish().await?;
     Ok(())
 }
+
+#[tokio::test]
+async fn task_core_intent_schema_preserves_original_request_across_classification_and_restart()
+-> TestResult {
+    let internal = Server::start(internal(fake()?)).await?;
+    let app = app(&internal).await?;
+    let (alice, _) = register(&app, "task_core_intent").await?;
+    let id = OperationId::from_bytes([67; 16]);
+    let (original, _, _) = retained_operation(&app, &alice, id, "Queued").await?;
+    let ProviderCommand::CreateTask {
+        project_id,
+        task_storage_id,
+        task,
+    } = &original
+    else {
+        return Err("unexpected fixture".into());
+    };
+    sqlx::query("UPDATE operations SET task_project_id=$2 WHERE operation_id=$1")
+        .bind(id.to_string())
+        .bind(project_id.to_string())
+        .execute(&app.db)
+        .await?;
+    // Upgrade a real previous constraint before exercising the additive schema.
+    sqlx::raw_sql("ALTER TABLE operations DROP CONSTRAINT operations_task_project_source; ALTER TABLE operations ADD CONSTRAINT operations_task_project_source CHECK(task_project_id IS NULL OR task_operation)")
+        .execute(&app.db).await?;
+    let upgraded = App::new(test_config(app.config.database_url.clone(), &internal)?).await?;
+    let core = ProviderCommand::CreateTaskCore {
+        project_id: *project_id,
+        task_storage_id: *task_storage_id,
+        assignees: task.assignees.clone(),
+    };
+    // Schema fixture only: production classification is introduced by the writer.
+    sqlx::query("UPDATE operations SET task_operation=FALSE,status='AwaitingSignature',command_json=$2,command_bytes=$3 WHERE operation_id=$1 AND task_operation AND status='Queued'")
+        .bind(id.to_string()).bind(serde_json::to_string(&core)?).bind(core.encode())
+        .execute(&upgraded.db).await?;
+    for _ in 0..2 {
+        let reopened = App::new(test_config(app.config.database_url.clone(), &internal)?).await?;
+        let retained: Vec<u8> = sqlx::query_scalar(
+            "SELECT request_command_bytes FROM operations WHERE operation_id=$1",
+        )
+        .bind(id.to_string())
+        .fetch_one(&reopened.db)
+        .await?;
+        assert_eq!(retained, original.encode());
+        assert_eq!(
+            operations::enqueue(&reopened, &alice, original.clone(), Some(id))
+                .await?
+                .status,
+            ProviderOperationStatus::AwaitingSignature
+        );
+        for update in [
+            "UPDATE operations SET request_command_bytes=NULL WHERE task_project_id IS NOT NULL",
+            "UPDATE operations SET provider_instance_id=NULL WHERE task_project_id IS NOT NULL",
+            "UPDATE operations SET catalog_operation=TRUE WHERE task_project_id IS NOT NULL",
+            "UPDATE operations SET task_result_json='{}' WHERE task_project_id IS NOT NULL",
+        ] {
+            assert!(sqlx::query(update).execute(&reopened.db).await.is_err());
+        }
+    }
+    internal.finish().await?;
+    Ok(())
+}

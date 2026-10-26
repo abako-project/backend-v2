@@ -201,79 +201,32 @@ impl App {
         sqlx::query("SELECT pg_advisory_xact_lock(621006)")
             .execute(&mut *migration)
             .await?;
-        sqlx::raw_sql(include_str!("../migrations/0001_adapter.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0002_profiles.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0003_passkeys.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0004_profile_images.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0005_worker_contact_email.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0006_project_briefs.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0007_proposal_reviews.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!(
-            "../migrations/0008_submission_presentations.sql"
-        ))
-        .execute(&mut *migration)
-        .await?;
-        sqlx::raw_sql(include_str!(
-            "../migrations/0009_proposal_review_delivery.sql"
-        ))
-        .execute(&mut *migration)
-        .await?;
-        sqlx::raw_sql(include_str!("../migrations/0010_submission_comments.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0011_dispute_conversations.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!(
-            "../migrations/0012_private_profile_details.sql"
-        ))
-        .execute(&mut *migration)
-        .await?;
-        sqlx::raw_sql(include_str!("../migrations/0013_evidence_commitments.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!(
-            "../migrations/0014_provider_content_copies.sql"
-        ))
-        .execute(&mut *migration)
-        .await?;
-        sqlx::raw_sql(include_str!("../migrations/0015_creation_metadata.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0016_proposal_documents.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!(
-            "../migrations/0017_catalog_reason_documents.sql"
-        ))
-        .execute(&mut *migration)
-        .await?;
-        sqlx::raw_sql(include_str!("../migrations/0018_task_history.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0019_task_state.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0020_task_execution.sql"))
-            .execute(&mut *migration)
-            .await?;
-        sqlx::raw_sql(include_str!("../migrations/0021_task_freezes.sql"))
-            .execute(&mut *migration)
-            .await?;
+        for script in [
+            include_str!("../migrations/0001_adapter.sql"),
+            include_str!("../migrations/0002_profiles.sql"),
+            include_str!("../migrations/0003_passkeys.sql"),
+            include_str!("../migrations/0004_profile_images.sql"),
+            include_str!("../migrations/0005_worker_contact_email.sql"),
+            include_str!("../migrations/0006_project_briefs.sql"),
+            include_str!("../migrations/0007_proposal_reviews.sql"),
+            include_str!("../migrations/0008_submission_presentations.sql"),
+            include_str!("../migrations/0009_proposal_review_delivery.sql"),
+            include_str!("../migrations/0010_submission_comments.sql"),
+            include_str!("../migrations/0011_dispute_conversations.sql"),
+            include_str!("../migrations/0012_private_profile_details.sql"),
+            include_str!("../migrations/0013_evidence_commitments.sql"),
+            include_str!("../migrations/0014_provider_content_copies.sql"),
+            include_str!("../migrations/0015_creation_metadata.sql"),
+            include_str!("../migrations/0016_proposal_documents.sql"),
+            include_str!("../migrations/0017_catalog_reason_documents.sql"),
+            include_str!("../migrations/0018_task_history.sql"),
+            include_str!("../migrations/0019_task_state.sql"),
+            include_str!("../migrations/0020_task_execution.sql"),
+            include_str!("../migrations/0021_task_freezes.sql"),
+            include_str!("../migrations/0022_task_core_intent.sql"),
+        ] {
+            sqlx::raw_sql(script).execute(&mut *migration).await?;
+        }
         crate::task_freezes::backfill_context(&mut migration).await?;
         migration.commit().await?;
         let client = reqwest::Client::builder()

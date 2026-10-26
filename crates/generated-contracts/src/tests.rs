@@ -524,3 +524,49 @@ fn catalog_reason_bridge_preserves_indexes_validation_and_operation_binding()
     }
     Ok(())
 }
+
+#[test]
+fn task_identity_commands_preserve_signed_indexes_and_membership_validation()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut call = sample_call()?;
+    let project_id = EntityId::from_bytes([1; 16]);
+    let task_storage_id = EntityId::from_bytes([2; 16]);
+    for (index, command) in [
+        ProviderCommand::CreateTaskCore {
+            project_id,
+            task_storage_id,
+            assignees: vec![call.origin],
+        },
+        ProviderCommand::SetTaskAssigneesCore {
+            project_id,
+            task_storage_id,
+            task_id: 7,
+            assignees: vec![],
+        },
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert_eq!(usize::from(command.encode()[0]), 58 + index);
+        assert_eq!(command.project_id(), Some(project_id));
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+    }
+    call.command = ProviderCommand::CreateTaskCore {
+        project_id,
+        task_storage_id,
+        assignees: vec![call.origin, call.origin],
+    };
+    assert!(call.signable_bytes().is_err());
+    call.command = ProviderCommand::SetTaskAssigneesCore {
+        project_id,
+        task_storage_id,
+        task_id: 7,
+        assignees: vec![call.origin, call.origin],
+    };
+    assert!(call.signable_bytes().is_err());
+    Ok(())
+}

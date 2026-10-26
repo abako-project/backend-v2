@@ -5,6 +5,13 @@ selected frontend compatibility first on 2026-10-24. Task execution,
 permissions, signing, provider state, notification ingestion and emitted payloads
 remain unchanged. It does not enable adapter-owned task writes.
 
+The approved [2026-10-26 amendment](spec.md#execution-time-notification-audience-amendment-2026-10-26)
+supersedes the all-API allocator/CRUD proposal in the historical steps below.
+Core retains task IDs, allocation, creation/deletion and assignees; only narrative
+and progress edits remain API-owned. The earlier executor is still dormant and
+must be revised before activation. Planning disputes retain their existing task
+editing behavior; there is no pending requirement to extend that hold.
+
 ## Why separate this step
 
 Today the frontend considers a finalized operation without a provider receipt
@@ -401,3 +408,27 @@ next ID. The disposable PostgreSQL/custody stores are retained through handoff;
 this is not a PostgreSQL backup/restore, a live cutover or an all-authority proof.
 Existing frontend adoption, active admission, historical-case reconciliation,
 policy choices, three-authority task rollback and R4/R5 remain open gates.
+
+## R3 task identity predecessor compatibility
+
+The paired predecessor must decode the appended `CreateTaskCore` (SCALE 58) and
+`SetTaskAssigneesCore` (59) commands in retained signed history. They carry project,
+storage and membership; the latter also carries the existing task ID. Structural
+validation preserves unique assignees. The core writer will keep allocation and
+business authorization in the selected engine.
+
+`RecordedCall.allocated_task_id` is a private optional field for successful compact
+task creation. It preserves the actual allocated ID independently of the existing
+public receipt's storage ID. Absence preserves old JSON serialization. A successful
+compact creation requires a nonzero, nonexhausted ID; other outcomes/commands may
+not claim one. Exact replay precedes capability checks. This reader rejects fresh
+compact task calls as infrastructure unavailable without consuming a nonce,
+recording a failed receipt or changing business state. It does not enable them.
+
+The existing operation row retains the immutable original request bytes. The
+compatible schema permits its project context to survive a later transition from
+API-queued work to provider work and retains the result-source constraints. No
+intent table, second queue or writer is added. Repeated startup and retries retain
+large NUL-bearing original task content. This is a reader/schema checkpoint, not
+proof of the future classifier, active task writes or task rollback. Freeze the
+paired executable only after all successor schema requirements are established.
