@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "6db7b56ddf055671fb8fe013ddb559d0ef26acd5",
+  "sourceCommit": "4eca9c564842616ce3808d7f9df9b3a3b2e3c854",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
@@ -21,8 +21,8 @@
       "staticBufferBytes": 294912
     },
     "directory": {
-      "artifactSha256": "7506515c4a7d5c5db37b45af80b07e46133aa6a5383bc1bb1fb7ba3627e91954",
-      "wasmBlake2b256": "0x4ac724cf9343440ebc9ce58c9d7c4dfdb0a094e674b7161eb466e6d46da20eb5",
+      "artifactSha256": "3e94b9df87685ea45afb7ddedc18a51726a4abab9803c08f07ad0bbe526c6a73",
+      "wasmBlake2b256": "0x424c9f918425e4e6907ef61c1e88e508ec346bae65e9d66cee11e34a969304c9",
       "lockSha256": "4b9b21b42e8738ba5f1adf119928e78001d433d3e90d9b694d9af935df5a509a",
       "staticBufferBytes": 294912
     },
