@@ -1,8 +1,7 @@
 # REST adapter
 
-The adapter owns credentials, sessions, descriptive profiles, durable transport
-operations, immutable worker directory names and Project root text, and
-notification read state in PostgreSQL. Enforceable business facts remain
+The adapter owns identity, sessions, descriptive content, catalog names, task
+text/progress, durable operations and notifications in PostgreSQL. Enforceable business facts remain
 in the signed provider. Frontends use the same
 REST routes and authenticated SSE; no frontend assets or arbitrary signing API are
 served here. See `crates/generated-contracts/API.md` and `contracts/openapi.json`.
@@ -54,8 +53,8 @@ for local HTTP. The funding flag exposes fixture-only `/api/admin/fund`; a
 normal mock deployment uses simulated Bramp deposit requests. `/health` and `/ready`
 are internal deployment probes, not public gateway routes.
 
-Fresh PostgreSQL migrations run before admission; existing SQLite development
-data is not imported or deleted. `/ready` checks PostgreSQL and internal
+A fresh PostgreSQL schema is initialized before admission; compatible state reopens,
+and unmarked existing schemas are rejected without modifying their data. `/ready` checks PostgreSQL and internal
 dependencies. Argon2 work runs on blocking workers with
 bounded admission. Sessions use opaque hashed tokens, HttpOnly SameSite=Lax cookies,
 and session-bound CSRF tokens. Password changes preserve the custodial account and

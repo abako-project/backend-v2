@@ -44,14 +44,15 @@ for transaction, content, notification and recovery boundaries.
 
 | Path | What to read |
 |---|---|
-| `services/adapter-api/` | Public API, identity, content and operation reconciliation |
-| `services/wallet/` | Custodial keys and durable signing jobs |
-| `services/mock-provider/` | Native business engine and storage; also the reference for contract parity |
-| `crates/provider-execution/` | Shared signature, nonce, replay and receipt shell |
-| `crates/generated-contracts/`, `crates/domain-primitives/` | Wire contracts and validated value types |
-| `tools/ink-sandbox/` | Isolated contract runtime, pinned WASM and parity tests |
-| `apps/leptos-web/` | Independent example frontend |
-| `crates/bloque-rs/` | Standalone unofficial Bloque client; not an active backend integration |
+| [adapter-api](services/adapter-api/README.md) | Public API, identity, content and operation reconciliation |
+| [wallet](services/wallet/README.md) | Custodial keys and durable signing jobs |
+| [mock-provider](services/mock-provider/README.md) | Standalone native development provider and private provider HTTP interface |
+| [provider-execution](crates/provider-execution/README.md) | Shared signature, nonce, replay and receipt shell |
+| [generated-contracts](crates/generated-contracts/README.md) | API types, signed commands and wire validation |
+| [domain-primitives](crates/domain-primitives/README.md) | Validated IDs, exact money, minutes and weeks |
+| [ink-sandbox](tools/ink-sandbox/README.md) | Embedded WASM provider, pinned contracts and runtime tests |
+| [leptos-web](apps/leptos-web/README.md) | Independent example frontend |
+| [bloque](crates/bloque-rs/README.md) | Standalone unofficial Bloque client; not an active backend integration |
 | `infra/` | Compose, images, gateway and preview deployment tooling |
 
 The [contract-provider guide](tools/ink-sandbox/README.md) explains how to build,
@@ -84,7 +85,7 @@ bash scripts/verify.sh app
 
 This runs Rust checks/tests, frontend WASM verification and real-service API E2E
 against disposable PostgreSQL. The [verification guide](ci/README.md) also covers
-contract parity, dependency policy, containers and browser limits. Use on-disk
+contract execution, dependency policy, containers and browser limits. Use on-disk
 `TMPDIR` and Cargo output directories when `/tmp` is RAM-backed.
 
 [Approved requirements](specs/README.md) define business behavior.

@@ -21,7 +21,7 @@ records the REST/frontend boundary.
 
 The normal mock executes native Rust rules. The isolated
 [contract provider](../tools/ink-sandbox/README.md) runs Directory, Calendar and
-Project WASM in one runtime, with explicit Rust, Shadow and Sandbox modes.
+Project WASM in one runtime with a single WASM execution path.
 Both use `provider-execution` for generation, signatures, nonces, idempotency,
 receipts and event cursors. Wallet owns keys; provider never signs.
 
