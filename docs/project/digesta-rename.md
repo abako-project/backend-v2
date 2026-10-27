@@ -39,7 +39,7 @@ environment:
    `digesta_session`; previous cookies are not consumed. Cookie security
    attributes, CSRF enforcement and authorization rules are unchanged.
 
-KVN remains the simulated token unit. No money or pricing rule changes.
+Development uses simulated payment units. No money or pricing rule changes.
 
 ## Stable identifiers
 

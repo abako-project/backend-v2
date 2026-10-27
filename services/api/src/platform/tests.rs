@@ -39,9 +39,14 @@ fn explicit_profile_is_bounded_validated_and_never_silently_replaced() -> TestRe
     alternative["id"] = json!("architecture");
     alternative["name"] = json!("Architecture DAO");
     alternative["projectTypes"] = json!(["Building Design"]);
+    alternative["currency"] = json!({"symbol":"PAY", "name":"DAO payment asset", "decimals":12});
     std::fs::write(&path, serde_json::to_vec(&alternative)?)?;
     let profile = load(Some(&path))?;
     assert_eq!(profile.id, "architecture");
+    assert_eq!(
+        serde_json::to_value(&profile.currency)?,
+        alternative["currency"]
+    );
     assert!(allows_project_type(&profile, "Building Design"));
     assert!(!allows_project_type(&profile, "Full Stack"));
     assert!(allows_project_type(&profile, "SmartContract"));

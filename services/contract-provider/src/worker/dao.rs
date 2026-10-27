@@ -131,7 +131,7 @@ pub(super) fn initialize(
                 1,
             )
             .map_err(|_| Error::InvalidState)?;
-            // Inventory is local setup, never visible issued/free KVN. It covers
+            // Inventory is local setup, never visible issued/free payment units. It covers
             // u64::MAX visible units and separate bounded technical minima.
             crate::Assets::mint(
                 crate::RuntimeOrigin::signed(account(settings.root)),

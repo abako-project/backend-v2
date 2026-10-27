@@ -8,7 +8,7 @@ use std::{
 use native_provider::Provider;
 use protocol::{
     AccountId32, CreateDepositRequest, CreateWithdrawalRequest, DepositStatus, EntityId,
-    ExecutionOutcome, KvnAmount, Money, OperationId, ProviderCommand, SignedContractCallV1,
+    ExecutionOutcome, Money, OperationId, PositiveAmount, ProviderCommand, SignedContractCallV1,
     Sr25519Signature, UnixSeconds, UnsignedContractCallV1, WithdrawalStatus,
 };
 use subxt_signer::sr25519::Keypair;
@@ -86,7 +86,7 @@ async fn deposit_flow(
     owner: &Keypair,
     stranger: &Keypair,
 ) -> TestResult {
-    let amount = KvnAmount::new(Money::new(25))?;
+    let amount = PositiveAmount::new(Money::new(25))?;
     let deposit_id = created_id(
         &execute(
             provider,
@@ -159,7 +159,7 @@ async fn withdrawal_flow(
             provider,
             owner,
             ProviderCommand::CreateWithdrawal(CreateWithdrawalRequest {
-                amount: KvnAmount::new(Money::new(26))?,
+                amount: PositiveAmount::new(Money::new(26))?,
             }),
         )
         .await?
@@ -171,7 +171,7 @@ async fn withdrawal_flow(
             provider,
             owner,
             ProviderCommand::CreateWithdrawal(CreateWithdrawalRequest {
-                amount: KvnAmount::new(Money::new(20))?,
+                amount: PositiveAmount::new(Money::new(20))?,
             }),
         )
         .await?,

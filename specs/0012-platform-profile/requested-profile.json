@@ -5,8 +5,8 @@
   "description": "Marketplace built around accountability for Web3 and software engineering teams.",
   "sector": "software",
   "currency": {
-    "symbol": "KVN",
-    "name": "Kreivo Native",
+    "symbol": "UNIT",
+    "name": "Development payment asset",
     "decimals": 12
   },
   "projectTypes": [

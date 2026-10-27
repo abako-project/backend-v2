@@ -20,7 +20,7 @@ Approval: The product owner requested the project rename to Digesta, including p
 
 The session cookie becomes `digesta_session`; existing browsers must log in again. Its security attributes, CSRF checks and authorization rules remain the same. The browser configuration becomes `window.DIGESTA_API_BASE`, and the container configuration mount becomes `/etc/digesta/config.js`.
 
-New local environments use `DIGESTA_LOCAL_DIR`, the `digesta-local` Compose project and Digesta PostgreSQL defaults. Existing environments must retain their actual database connection and Compose project when keeping stored data. Cryptographic domains, associated data and the KVN token unit remain unchanged.
+New local environments use `DIGESTA_LOCAL_DIR`, the `digesta-local` Compose project and Digesta PostgreSQL defaults. Existing environments must retain their actual database connection and Compose project when keeping stored data. Cryptographic domains, associated data and the payment unit remain unchanged.
 
 ## Verification
 

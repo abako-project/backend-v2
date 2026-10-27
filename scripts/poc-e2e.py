@@ -679,7 +679,7 @@ def exercise_bramp(base, admin, owner, outsider):
     withdrawal_path = "/api/bramp/withdrawals/" + withdrawal_id
     require(owner.request("GET", withdrawal_path)["status"] == "Pending"
             and int(owner.request("GET", "/api/balance")["available"]) == initial + 5,
-            "pending withdrawal did not hold free KVN")
+            "pending withdrawal did not hold free payment units")
     outsider.request("GET", withdrawal_path, expected=404)
     outsider.request("POST", withdrawal_path + "/cancel", expected=404)
     owner.command("POST", withdrawal_path + "/cancel")

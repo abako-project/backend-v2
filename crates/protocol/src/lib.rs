@@ -1,7 +1,7 @@
 //! Shared REST DTOs and versioned mock signing contracts, not database entities.
 //!
 //! JSON fields use camelCase; enums use their declared `PascalCase` names. All
-//! amounts are integer KVN units encoded as decimal strings. Opaque IDs and
+//! amounts are integer payment-asset units encoded as decimal strings. Opaque IDs and
 //! signatures are 0x-prefixed hex. See `API.md` for HTTP route mappings.
 //!
 //! Every boundary accepting a command must call [`ProviderCommand::validate`].
@@ -981,7 +981,7 @@ dto!(/// Negotiation and settlement of planning, separate from execution.
     PlanningView { revision: u64, status: PlanningStatus, quote: Option<PlanningQuote>, escrow: Money, frozen: bool });
 dto!(/// Project read model; completion follows acceptance of the final funded milestone.
     ProjectView { project_id: EntityId, #[serde(default)] created_at: Option<UnixSeconds>, client: AccountId32, coordinator: AccountId32, title: String, description: String, planning: PlanningView, proposals: Vec<ProposalView>, execution_escrow: Money, cancelled: bool, completed: bool, #[serde(default)] evaluations: Vec<ProjectEvaluation>, active_dispute_id: Option<EntityId> });
-dto!(/// Available balance for the initial KVN asset, excluding locked escrow.
+dto!(/// Available balance for the development payment asset, excluding locked escrow.
     BalanceView { account: AccountId32, asset_id: u32, available: Money });
 dto!(/// Internal read-only snapshot. Adapter filters confidential project/task data.
     ProviderSnapshot { info: ProviderInfo, catalog: CatalogView, workers: Vec<WorkerView>, projects: Vec<ProjectView>, balances: Vec<BalanceView> });

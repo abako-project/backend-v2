@@ -49,7 +49,7 @@ and design. Credential identifiers do not grant authentication.
 ## RAMP-001: Simulated deposit
 
 The account owner creates a deposit request for a strictly positive integer
-amount of asset 1 (KVN). The owner, destination custodial account and amount
+amount of the development payment asset (fixture ID 1). The owner, destination custodial account and amount
 are fixed at creation. No spendable balance changes yet. A separate system
 origin confirms it once, crediting exactly that amount to the existing mock
 ledger. Confirmation cannot accept replacement owner, destination or amount.
@@ -63,7 +63,7 @@ the signed operation/receipt/SSE pipeline and return HTTP 202.
 
 ## RAMP-002: Simulated withdrawal
 
-The owner may request withdrawal of a strictly positive KVN amount only from
+The owner may request withdrawal of a strictly positive amount only from
 their free balance. The same atomic mock transaction places the amount in a
 withdrawal hold; project escrow and other holds are unavailable. The request
 remains Pending because no bank settlement exists. The owner or system

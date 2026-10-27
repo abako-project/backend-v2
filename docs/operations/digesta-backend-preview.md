@@ -14,7 +14,7 @@ The frontend remains at `web.dev.abako.xyz`; frontend delivery is managed separa
 
 ## Test accounts
 
-These are shared development fixtures, with at least 1000 mock KVN each at
+These are shared development fixtures, with at least 1000 mock payment units each at
 seeding time. Transactions can change their balances. All assets are simulated.
 
 | Usernames | Password pattern | Example |

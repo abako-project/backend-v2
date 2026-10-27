@@ -81,7 +81,7 @@ fn rejects_invalid_dates_enums_unknown_fields_and_revisions()
         ("principalId", json!("spoofed")),
         (
             "indicativeBudget",
-            json!({"currency":"KVN","range":"Below10000"}),
+            json!({"currency":"UNIT","range":"Below10000"}),
         ),
         (
             "indicativeBudget",

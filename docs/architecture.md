@@ -95,6 +95,17 @@ uses clean data; no historical import or rollback converter is shipped. Existing
 incompatible stores fail startup rather than being silently reset. See
 [disaster recovery](operations/disaster-recovery.md).
 
+## Assets
+
+The platform profile's `currency` describes payment display metadata, configured
+through `PLATFORM_CONFIG_PATH`. Its bundled `UNIT` value is a development placeholder.
+The current providers still use one local payment asset (fixture ID 1); changing
+the profile does not select another asset. DAO-configured payment and governance
+assets are separate future concerns, and neither is assumed to be the native token.
+
+Bloque stays available as one future on/off-ramp provider. It is not yet wired into
+the account top-up API.
+
 ## Signing direction
 
 Custodial signing remains a temporary development service. Keeping it separate
@@ -104,6 +115,3 @@ with the API relaying signed operations rather than holding user keys. This requ
 a separate authentication change covering account binding, permitted calls, expiry,
 revocation and recovery against the deployed Kreivo runtime. Current browser login
 passkeys authenticate API sessions; they do not replace custodial transaction signing.
-
-Bloque stays available as one future on/off-ramp provider. It is not yet wired into
-the account top-up API.

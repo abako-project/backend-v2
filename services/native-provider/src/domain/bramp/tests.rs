@@ -19,7 +19,7 @@ fn a_deposit_is_immutable_and_can_only_credit_once() -> Result<()> {
     let owner = account(2);
     let stranger = account(3);
     let mut state = RustEngine::new(root, protocol::ProviderInstanceId::from_bytes([0; 16]))?;
-    let amount = protocol::KvnAmount::new(Money::new(25))?;
+    let amount = protocol::PositiveAmount::new(Money::new(25))?;
     let effect = state.bramp_command(
         owner,
         &ProviderCommand::CreateDeposit(CreateDepositRequest { amount }),
@@ -76,7 +76,7 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
     let deposit = state.bramp_command(
         owner,
         &ProviderCommand::CreateDeposit(CreateDepositRequest {
-            amount: protocol::KvnAmount::new(Money::new(25))?,
+            amount: protocol::PositiveAmount::new(Money::new(25))?,
         }),
         NOW,
     )?;
@@ -90,7 +90,7 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
     let too_much = state.bramp_command(
         owner,
         &ProviderCommand::CreateWithdrawal(CreateWithdrawalRequest {
-            amount: protocol::KvnAmount::new(Money::new(26))?,
+            amount: protocol::PositiveAmount::new(Money::new(26))?,
         }),
         NOW,
     );
@@ -99,7 +99,7 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
     let effect = state.bramp_command(
         owner,
         &ProviderCommand::CreateWithdrawal(CreateWithdrawalRequest {
-            amount: protocol::KvnAmount::new(Money::new(20))?,
+            amount: protocol::PositiveAmount::new(Money::new(20))?,
         }),
         NOW,
     )?;
@@ -143,9 +143,9 @@ fn withdrawal_holds_only_free_balance_and_cancels_once() -> Result<()> {
 }
 
 #[test]
-fn zero_kvn_cannot_enter_a_request_from_json_or_scale() {
-    assert!(protocol::KvnAmount::new(Money::ZERO).is_err());
+fn zero_amount_cannot_enter_a_request_from_json_or_scale() {
+    assert!(protocol::PositiveAmount::new(Money::ZERO).is_err());
     assert!(serde_json::from_str::<CreateDepositRequest>(r#"{"amount":"0"}"#).is_err());
     let bytes = Money::ZERO.encode();
-    assert!(protocol::KvnAmount::decode(&mut &bytes[..]).is_err());
+    assert!(protocol::PositiveAmount::decode(&mut &bytes[..]).is_err());
 }

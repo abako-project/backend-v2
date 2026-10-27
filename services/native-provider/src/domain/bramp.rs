@@ -1,10 +1,10 @@
-//! Mock-only KVN ramp requests. The provider's outer transaction commits these
+//! Mock payment ramp requests. The provider's outer transaction commits these
 //! records with balances, receipts, nonces and events as one unit.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use protocol::{
-    AccountId32, DepositStatus, DepositView, DomainEventKind, EntityId, KvnAmount, Money,
+    AccountId32, DepositStatus, DepositView, DomainEventKind, EntityId, Money, PositiveAmount,
     ProviderCommand, UnixSeconds, WithdrawalStatus, WithdrawalView,
 };
 use serde::{Deserialize, Serialize};
@@ -45,7 +45,7 @@ impl RustEngine {
     fn create_deposit(
         &mut self,
         origin: AccountId32,
-        amount: KvnAmount,
+        amount: PositiveAmount,
         now: UnixSeconds,
     ) -> Result<Effect> {
         let deposit_id = self.bramp.new_id(self.context.random_id())?;
@@ -108,7 +108,7 @@ impl RustEngine {
     fn create_withdrawal(
         &mut self,
         origin: AccountId32,
-        amount: KvnAmount,
+        amount: PositiveAmount,
         now: UnixSeconds,
     ) -> Result<Effect> {
         let withdrawal_id = self.bramp.new_id(self.context.random_id())?;

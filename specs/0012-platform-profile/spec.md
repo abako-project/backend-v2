@@ -21,6 +21,9 @@ dynamic administration, translations or new assets. It does not reinterpret
 existing money, mutate provider state or change worker matching.
 
 Branding: the owner confirmed Digesta as the default product name on 2026-10-27.
+The same day, the owner removed sample-token naming. `currency` describes the
+payment asset only; it does not select a provider asset or describe governance.
+DAO payment/governance asset selection remains a separate design.
 
 ## Requirements
 
@@ -29,7 +32,8 @@ Branding: the owner confirmed Digesta as the default product name on 2026-10-27.
   Nested property names follow the user's camelCase example. All listed
   terminology fields, including the external-profile hints, are present.
 - PLATFORM-002: Ship the supplied software/Digesta profile as the default.
-  Use currency decimals 0. Other fields retain the supplied values.
+  Use currency decimals 0 and neutral development payment metadata (`UNIT`,
+  `Development payment asset`); other fields retain the supplied values.
 - PLATFORM-003: An optional `PLATFORM_CONFIG_PATH` selects an operator-owned
   JSON file. Load and validate it once at startup. Invalid or unreadable
   explicit configuration prevents startup; never silently use another DAO.

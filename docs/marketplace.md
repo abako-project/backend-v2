@@ -202,7 +202,7 @@ may `POST /api/catalog/skill-requests` with
 to `/api/admin/catalog/skill-requests/{requestId}/decision`. Approval adds the
 skill to the global catalog; the worker must separately update qualifications.
 A funded user may `POST /api/bramp/withdrawals` with `{"amount":"100"}`;
-the pending request holds only free KVN and may be cancelled at
+the pending request holds only free payment units and may be cancelled at
 `POST /api/bramp/withdrawals/{withdrawalId}/cancel`. No bank transfer occurs.
 Passkey registration starts at `POST /api/auth/passkeys/register/options`
 with the current password and completes at `/register/verify` with the
@@ -310,7 +310,7 @@ New projects start in Accepted planning with no quote and zero planning escrow.
 The coordinator prepares and submits a proposal directly. Planning delivery acceptance
 moves no money. Execution approval reserves the full execution budget. Each milestone
 settlement pays its stored coordinator share plus workers' shares. The percentage is
-included in that budget: 100 KVN means 10 KVN for coordination and 90 KVN for workers.
+included in that budget: 100 payment units allocates 10 to coordination and 90 to workers.
 Workers split the remainder by planned approved requirement minutes. Largest fractional
 shares receive integer leftovers without losing units. Coordination minutes still control
 capacity and reputation, not the monetary share. A positive budget needs worker hours.

@@ -1,7 +1,7 @@
 # Shared HTTP contract
 
 All bodies use JSON with camelCase fields. Enum values use PascalCase. IDs and
-signatures are 0x-prefixed hex; KVN amounts are decimal strings in integer token
+signatures are 0x-prefixed hex; payment amounts are decimal strings in integer token
 units. Timestamps are Unix seconds and weeks are `{isoYear, week}`. Unknown request
 fields are rejected. Provider commands are internal only, never a public generic
 signing endpoint. Consumers must validate commands before signing and again after
@@ -88,8 +88,8 @@ adapter, but clients needing retry safety should always supply one.
 | POST /api/admin/catalog/skill-requests/{requestId}/decision | `"Approve"` or `"Reject"` | DecideSkillRequest through system wallet |
 | POST /api/bramp/deposits | `{"amount":"10000"}` | CreateDeposit; pending mock request, no balance change |
 | GET /api/bramp/deposits/{depositId} | — | Own DepositView |
-| POST /api/admin/bramp/deposits/{depositId}/confirm | — | ConfirmDeposit; system credits fixed KVN amount once |
-| POST /api/bramp/withdrawals | `{"amount":"100"}` | CreateWithdrawal; hold free KVN, no bank settlement |
+| POST /api/admin/bramp/deposits/{depositId}/confirm | — | ConfirmDeposit; system credits fixed payment amount once |
+| POST /api/bramp/withdrawals | `{"amount":"100"}` | CreateWithdrawal; hold free payment units, no bank settlement |
 | GET /api/bramp/withdrawals/{withdrawalId} | — | Own WithdrawalView |
 | POST /api/bramp/withdrawals/{withdrawalId}/cancel | — | CancelWithdrawal; owner/system returns hold once |
 | GET /api/workers | — | WorkerSummaryView[] |

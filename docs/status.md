@@ -30,8 +30,9 @@ and the [requirements](../specs/README.md).
 
 ## Not delivered
 
-- Real-chain submission, real assets, bank integration, DAO governance, tenant
-  isolation, currency conversion or generic external payments. Bramp currently
+- Real-chain submission, DAO-configured payment/governance assets, real assets,
+  bank integration, DAO governance, tenant isolation, currency conversion or
+  generic external payments. Bramp currently
   models deposits and withdrawal holds with operator confirmation.
 - Formal dispute rulings, resolution payments, refunds or unfreezing. Private
   conversation access remains contractual; public arguments remain client/coordinator-only.

@@ -210,7 +210,7 @@ async fn bank_reads_enforce_owner_or_system_and_credits_once() {
     let database = Database::new();
     let worker = database.open().await;
     let client = worker.client();
-    let amount = KvnAmount::new(Money::new(37)).unwrap();
+    let amount = PositiveAmount::new(Money::new(37)).unwrap();
     let create = sign(
         &client,
         2,

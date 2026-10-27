@@ -1,4 +1,4 @@
-//! Typed wire data for the mock-only KVN ramp.
+//! Typed wire data for the mock payment ramp.
 
 use crate::{AccountId32, EntityId, Money, UnixSeconds};
 use parity_scale_codec::{Decode, Encode, Input};
@@ -6,16 +6,16 @@ use serde::{Deserialize, Serialize};
 
 use crate::ContractError;
 
-/// A strictly positive amount of asset 1 (KVN), in integer token units.
+/// A strictly positive integer amount; the operation determines the asset.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Encode, Serialize, Deserialize)]
 #[serde(try_from = "Money", into = "Money")]
-pub struct KvnAmount(Money);
+pub struct PositiveAmount(Money);
 
-impl KvnAmount {
+impl PositiveAmount {
     /// Reject zero before a request can be signed or persisted.
     pub fn new(amount: Money) -> Result<Self, ContractError> {
         if amount == Money::ZERO {
-            return Err(ContractError::Invalid("positive KVN amount"));
+            return Err(ContractError::Invalid("positive amount"));
         }
         Ok(Self(amount))
     }
@@ -27,7 +27,7 @@ impl KvnAmount {
     }
 }
 
-impl TryFrom<Money> for KvnAmount {
+impl TryFrom<Money> for PositiveAmount {
     type Error = ContractError;
 
     fn try_from(amount: Money) -> Result<Self, Self::Error> {
@@ -35,15 +35,15 @@ impl TryFrom<Money> for KvnAmount {
     }
 }
 
-impl From<KvnAmount> for Money {
-    fn from(amount: KvnAmount) -> Self {
+impl From<PositiveAmount> for Money {
+    fn from(amount: PositiveAmount) -> Self {
         amount.money()
     }
 }
 
-impl Decode for KvnAmount {
+impl Decode for PositiveAmount {
     fn decode<I: Input>(input: &mut I) -> Result<Self, parity_scale_codec::Error> {
-        Self::new(Money::decode(input)?).map_err(|_| "KVN amount must be positive".into())
+        Self::new(Money::decode(input)?).map_err(|_| "amount must be positive".into())
     }
 }
 
@@ -52,15 +52,15 @@ impl Decode for KvnAmount {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CreateDepositRequest {
     /// Fixed amount credited after operator confirmation.
-    pub amount: KvnAmount,
+    pub amount: PositiveAmount,
 }
 
-/// Requesting a simulated withdrawal moves free KVN into a hold.
+/// Requesting a simulated withdrawal moves free payment units into a hold.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CreateWithdrawalRequest {
     /// Fixed amount held while the request remains pending.
-    pub amount: KvnAmount,
+    pub amount: PositiveAmount,
 }
 
 /// A deposit may be credited once; it cannot be cancelled in this proof of concept.
@@ -75,7 +75,7 @@ pub enum DepositStatus {
 /// A withdrawal cannot settle to a bank in this proof of concept.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Encode, Decode)]
 pub enum WithdrawalStatus {
-    /// KVN is held outside the owner's free balance.
+    /// Payment units are held outside the owner's free balance.
     Pending,
     /// The hold was returned to the owner's free balance.
     Cancelled,
@@ -91,8 +91,8 @@ pub struct DepositView {
     pub owner: AccountId32,
     /// Custodial account to credit; fixed to the owner's account.
     pub destination: AccountId32,
-    /// KVN amount agreed at creation.
-    pub amount: KvnAmount,
+    /// Payment amount agreed at creation.
+    pub amount: PositiveAmount,
     /// Current request state.
     pub status: DepositStatus,
     /// Provider Unix timestamp of creation.
@@ -109,8 +109,8 @@ pub struct WithdrawalView {
     pub withdrawal_id: EntityId,
     /// Account whose free balance was debited.
     pub owner: AccountId32,
-    /// KVN amount held at creation.
-    pub amount: KvnAmount,
+    /// Payment amount held at creation.
+    pub amount: PositiveAmount,
     /// Current request state.
     pub status: WithdrawalStatus,
     /// Provider Unix timestamp of creation.

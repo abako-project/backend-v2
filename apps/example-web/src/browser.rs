@@ -453,7 +453,7 @@ pub(super) fn App() -> impl IntoView {
     }
     view! {
         <a href="#main" class="skip">"Saltar al contenido"</a>
-        <header><strong>"Digesta"</strong><span class="badge">"Prueba de concepto · KVN simulado"</span></header>
+        <header><strong>"Digesta"</strong><span class="badge">"Prueba de concepto · activo de pago simulado"</span></header>
         <main id="main">
             <h1>"Tu espacio de trabajo"</h1>
             <p class="muted">"Planifica por semanas, acuerda precios y sigue cada hito. Las operaciones se firman en el backend."</p>
@@ -461,7 +461,7 @@ pub(super) fn App() -> impl IntoView {
             {move || context.error.get().map(|message| view! { <div role="alert" class="notice error">{message}<button class="secondary" on:click=move |_| context.error.set(None)>"Cerrar aviso"</button></div> })}
             {move || context.session.get().map_or_else(|| view! { <Authentication/> }.into_any(), |session| view! {
                 <section><div class="split"><div><h2>{session.display_name.clone()}</h2><p>"Cuenta: "<code>{session.account_id.to_string()}</code></p>
-                <p>"Disponible: "{move || context.balance.get().map_or_else(|| "—".into(), |balance| format!("{} KVN", balance.available.units()))}</p></div>
+                <p>"Disponible: "{move || context.balance.get().map_or_else(|| "—".into(), |balance| format!("{} unidades", balance.available.units()))}</p></div>
                 <div class="actions"><Action label="Actualizar datos" on_click=Callback::new(move |()| { context.refresh(); Ok(()) })/>
                 <Action label="Cerrar sesión" on_click=Callback::new(move |()| context.ordinary::<Value>("/auth/logout".into(), None, true))/></div></div>
                 <nav aria-label="Secciones"><a href="#projects">"Proyectos"</a><a href="#workers">"Perfil y disponibilidad"</a><a href="#notifications">"Notificaciones"</a><a href="#operations">"Operaciones"</a></nav>

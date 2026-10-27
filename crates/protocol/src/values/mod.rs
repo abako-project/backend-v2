@@ -165,7 +165,7 @@ hex_type!(
     "A fixed-width sr25519 signature; no secret material."
 );
 
-/// Non-negative integer KVN token units; JSON is always a decimal string.
+/// Non-negative integer payment-asset units; JSON is always a decimal string.
 #[derive(
     Debug,
     Default,

@@ -61,15 +61,15 @@ fn Project(project: ProjectView, account: AccountId32) -> impl IntoView {
         <p>{project.description}</p><p class="muted">"Proyecto: "<code>{id.to_string()}</code></p>
         <p class="muted">"Coordinador: "<code>{project.coordinator.to_string()}</code></p>
         <div class="compact"><h3>"1. Acuerdo de planificación"</h3><p>"Estado: "{format!("{planning_status:?}")} " · Revisión "{revision}</p>
-        {quote.clone().map(|quote| view! { <p>{format!("Precio: {} KVN · {} minutos · {} a {}", quote.fee.units(), quote.minutes.get(), week_input(quote.window.start()), week_input(quote.window.end()))}</p> })}
-        <p>{format!("Fondos bloqueados de planificación: {} KVN{}", planning.escrow.units(), if planning.frozen { " · congelados" } else { "" })}</p>
+        {quote.clone().map(|quote| view! { <p>{format!("Precio: {} unidades · {} minutos · {} a {}", quote.fee.units(), quote.minutes.get(), week_input(quote.window.start()), week_input(quote.window.end()))}</p> })}
+        <p>{format!("Fondos bloqueados de planificación: {} unidades{}", planning.escrow.units(), if planning.frozen { " · congelados" } else { "" })}</p>
         {(client && active && planning_status == PlanningStatus::Delivered).then(|| view! { <p class="muted">"Revisa el plan abajo. Aceptar la entrega no mueve fondos ni contrata la ejecución."</p><Action label="Aceptar entrega del plan" on_click=Callback::new(move |()| context.command("POST", format!("/projects/{id}/planning/accept-delivery"), &RevisionRequest { expected_revision: revision }))/> })}
         {((client || coordinator) && active).then(|| view! {
             <details><summary>"Abrir disputa de planificación"</summary><p class="muted">"Congela los fondos no liquidados. No hay pago ni reembolso automático."</p>
             <Form fields=vec![Field::text("reason", "Motivo de la disputa", "")] submit="Disputar planificación" on_submit=Callback::new(move |values: Values| context.command("POST", format!("/projects/{id}/planning/dispute"), &ReasonRequest { reason: values.text("reason") })) /></details>
         })}
         </div>
-        <h3>"2. Propuestas y ejecución"</h3><p>{format!("Fondos bloqueados de ejecución: {} KVN", project.execution_escrow.units())}</p>
+        <h3>"2. Propuestas y ejecución"</h3><p>{format!("Fondos bloqueados de ejecución: {} unidades", project.execution_escrow.units())}</p>
         {(coordinator && active && matches!(planning_status, PlanningStatus::Accepted | PlanningStatus::Delivered | PlanningStatus::Completed)).then(|| view! { <details><summary>"Preparar una nueva propuesta"</summary><ProposalEditor project_id=id initial=None/></details> })}
         {project.proposals.into_iter().map(|proposal| view! { <Proposal project_id=id proposal=proposal coordinator=coordinator client=client active=active planning_complete=planning_complete account=account/> }).collect_view()}
         {((client || coordinator) && active).then(|| view! {
@@ -104,7 +104,7 @@ fn Proposal(
     };
     let total = definition.total().map_or_else(
         |_| "Importe no válido".into(),
-        |money| format!("{} KVN", money.units()),
+        |money| format!("{} unidades", money.units()),
     );
     let draft = proposal.status == ProposalStatus::Draft;
     let pending = proposal.status == ProposalStatus::PendingApproval;
@@ -161,18 +161,18 @@ fn ProposalEditor(project_id: EntityId, initial: Option<ProposalView>) -> impl I
             let key = milestone.key;
             view! {
                 <div class="card"><h4>{format!("Hito {key}: {}", milestone.title)}</h4>
-                <p>{format!("{} a {} · Coordinación: {} minutos / {} KVN", week_input(milestone.window.start()), week_input(milestone.window.end()), milestone.coordinator_minutes.get(), milestone.coordinator_fee.units())}</p>
-                <details><summary>"Editar datos del hito"</summary><Form fields=vec![Field::text("title", "Nombre", milestone.title.clone()), Field::week("start", "Semana inicial", week_input(milestone.window.start())), Field::week("end", "Semana final", week_input(milestone.window.end())), Field::number("minutes", "Minutos de coordinación", milestone.coordinator_minutes.get()), Field::number("fee", "Tarifa del coordinador (KVN)", milestone.coordinator_fee.units())] submit="Aplicar cambios al hito" on_submit=Callback::new(move |values: Values| {
+                <p>{format!("{} a {} · Coordinación: {} minutos / {} unidades", week_input(milestone.window.start()), week_input(milestone.window.end()), milestone.coordinator_minutes.get(), milestone.coordinator_fee.units())}</p>
+                <details><summary>"Editar datos del hito"</summary><Form fields=vec![Field::text("title", "Nombre", milestone.title.clone()), Field::week("start", "Semana inicial", week_input(milestone.window.start())), Field::week("end", "Semana final", week_input(milestone.window.end())), Field::number("minutes", "Minutos de coordinación", milestone.coordinator_minutes.get()), Field::number("fee", "Tarifa del coordinador (unidades)", milestone.coordinator_fee.units())] submit="Aplicar cambios al hito" on_submit=Callback::new(move |values: Values| {
                     let window = window(&values)?; let minutes = Minutes::new(values.parse("minutes")?); let fee = Money::new(values.parse("fee")?);
                     draft.update(|definition| { if let Some(item) = definition.milestones.iter_mut().find(|item| item.key == key) { item.title = values.text("title"); item.window = window; item.coordinator_minutes = minutes; item.coordinator_fee = fee; } }); Ok(())
                 })/></details>
                 <ul class="list">{milestone.requirements.into_iter().map(|requirement| {
                     let requirement_key = requirement.key;
-                    view! { <li>{format!("Puesto {} · rol {} · skills {:?} · {} minutos · {} KVN", requirement.key, requirement.role_id, requirement.skill_ids, requirement.minutes.get(), requirement.budget.units())}
+                    view! { <li>{format!("Puesto {} · rol {} · skills {:?} · {} minutos · {} unidades", requirement.key, requirement.role_id, requirement.skill_ids, requirement.minutes.get(), requirement.budget.units())}
                         <Action label="Quitar puesto del borrador" on_click=Callback::new(move |()| { draft.update(|definition| { if let Some(item) = definition.milestones.iter_mut().find(|item| item.key == key) { item.requirements.retain(|item| item.key != requirement_key); } }); Ok(()) })/>
                     </li> }
                 }).collect_view()}</ul>
-                <Form fields=vec![Field::number("role", "ID del rol (metadato)", 3), Field::text("skills", "IDs de TODAS las habilidades requeridas", ""), Field::number("minutes", "Minutos comprometidos del puesto", 60), Field::number("budget", "Pago del puesto (KVN)", 0)] submit="Añadir puesto al hito"
+                <Form fields=vec![Field::number("role", "ID del rol (metadato)", 3), Field::text("skills", "IDs de TODAS las habilidades requeridas", ""), Field::number("minutes", "Minutos comprometidos del puesto", 60), Field::number("budget", "Pago del puesto (unidades)", 0)] submit="Añadir puesto al hito"
                 on_submit=Callback::new(move |values: Values| {
                     let current = draft.get_untracked();
                     let milestone = current.milestones.iter().find(|milestone| milestone.key == key).ok_or("Hito no encontrado")?;
@@ -184,13 +184,13 @@ fn ProposalEditor(project_id: EntityId, initial: Option<ProposalView>) -> impl I
                 </div>
             }
         }).collect_view()}
-        <details><summary>"Añadir hito"</summary><Form fields=vec![Field::text("title", "Nombre del hito", ""), Field::week("start", "Semana inicial", ""), Field::week("end", "Semana final (incluida)", ""), Field::number("minutes", "Minutos de coordinación", 60), Field::number("fee", "Tarifa de coordinación del hito (KVN)", 0)] submit="Añadir hito al borrador"
+        <details><summary>"Añadir hito"</summary><Form fields=vec![Field::text("title", "Nombre del hito", ""), Field::week("start", "Semana inicial", ""), Field::week("end", "Semana final (incluida)", ""), Field::number("minutes", "Minutos de coordinación", 60), Field::number("fee", "Tarifa de coordinación del hito (unidades)", 0)] submit="Añadir hito al borrador"
         on_submit=Callback::new(move |values: Values| {
             let key = draft.with_untracked(|definition| definition.milestones.iter().map(|item| item.key).max().unwrap_or(0)).checked_add(1).ok_or("Demasiados hitos")?;
             let milestone = MilestoneDefinition { key, title: values.text("title"), window: window(&values)?, coordinator_fee: Money::new(values.parse("fee")?), coordinator_minutes: Minutes::new(values.parse("minutes")?), requirements: Vec::new() };
             draft.update(|definition| definition.milestones.push(milestone)); Ok(())
         })/></details>
-        <p>"Total del borrador: "{move || draft.get().total().map_or_else(|_| "Revisa los importes".into(), |money| format!("{} KVN", money.units()))}</p>
+        <p>"Total del borrador: "{move || draft.get().total().map_or_else(|_| "Revisa los importes".into(), |money| format!("{} unidades", money.units()))}</p>
         <Action label="Guardar propuesta" on_click=Callback::new(move |()| {
             let definition = draft.get_untracked(); definition.validate().map_err(|error| error.to_string())?;
             let (method, path) = id.map_or_else(|| ("POST", format!("/projects/{project_id}/proposals")), |id| ("PUT", format!("/projects/{project_id}/proposals/{id}")));
@@ -223,7 +223,7 @@ fn Milestone(
         .map(|submission| submission.submission_id);
     view! {
         <details><summary>{format!("Hito {} · {} · {}", milestone.definition.key, milestone.definition.title, status.map_or_else(|| "Sin ejecutar".into(), |status| format!("{status:?}")))}</summary>
-        <p>{format!("{} a {} · Coordinador: {} minutos, {} KVN", week_input(milestone.definition.window.start()), week_input(milestone.definition.window.end()), milestone.definition.coordinator_minutes.get(), milestone.definition.coordinator_fee.units())}</p>
+        <p>{format!("{} a {} · Coordinador: {} minutos, {} unidades", week_input(milestone.definition.window.start()), week_input(milestone.definition.window.end()), milestone.definition.coordinator_minutes.get(), milestone.definition.coordinator_fee.units())}</p>
         {milestone.frozen.then(|| view! { <p class="notice">"Fondos congelados. No hay resolución automática de disputas."</p> })}
         {((client || coordinator) && active && status == Some(MilestoneStatus::ChangesRequested)).then(|| view! {
             <details><summary>"Abrir disputa por el rechazo vigente"</summary>
@@ -233,7 +233,7 @@ fn Milestone(
                 context.command("POST", "/disputes".into(), &OpenDisputeRequest { project_id, milestone_id: id, rejected_submission_id, evidence: evidence(&values)? })
             }) /></details>
         })}
-        <div class="scroll"><table><thead><tr><th>"Puesto"</th><th>"Habilidades"</th><th>"Minutos"</th><th>"KVN"</th><th>"Asignado"</th></tr></thead><tbody>{milestone.definition.requirements.into_iter().map(|requirement| {
+        <div class="scroll"><table><thead><tr><th>"Puesto"</th><th>"Habilidades"</th><th>"Minutos"</th><th>"Unidades"</th><th>"Asignado"</th></tr></thead><tbody>{milestone.definition.requirements.into_iter().map(|requirement| {
             let assigned = milestone.assignments.iter().find(|item| item.requirement_key == requirement.key).map_or_else(|| "Sin asignar".into(), |item| item.worker.to_string());
             view! { <tr><td>{requirement.key}</td><td>{format!("{:?}", requirement.skill_ids)}</td><td>{requirement.minutes.get()}</td><td>{requirement.budget.units().to_string()}</td><td><code>{assigned}</code></td></tr> }
         }).collect_view()}</tbody></table></div>
