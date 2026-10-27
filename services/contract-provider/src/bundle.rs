@@ -5,7 +5,7 @@ use sp_core::hashing::{blake2_256, sha2_256};
 use std::collections::BTreeMap;
 
 const MANIFEST: &[u8] = include_bytes!("../fixtures/manifest.json");
-const ARTIFACTS: [(&str, &[u8], &[u8]); 3] = [
+const ARTIFACTS: [(&str, &[u8], &[u8]); 2] = [
     (
         "project",
         include_bytes!("../fixtures/project.contract"),
@@ -15,11 +15,6 @@ const ARTIFACTS: [(&str, &[u8], &[u8]); 3] = [
         "dao",
         include_bytes!("../fixtures/dao.contract"),
         include_bytes!("../fixtures/build-locks/dao.lock"),
-    ),
-    (
-        "sandbox-probe",
-        include_bytes!("../fixtures/sandbox-probe.contract"),
-        include_bytes!("../fixtures/build-locks/sandbox-probe.lock"),
     ),
 ];
 
@@ -38,9 +33,14 @@ impl Identity {
             include_bytes!("../Cargo.lock").as_slice(),
         ]
         .concat();
+        #[cfg(not(test))]
+        let bundles = sha2_256(MANIFEST);
+        // Probe checkpoints belong to the unit-test runtime, never the application.
+        #[cfg(test)]
+        let bundles = sha2_256(&[MANIFEST, tests::PROBE_MANIFEST].concat());
         Self {
             runtime: sha2_256(&runtime),
-            bundles: sha2_256(MANIFEST),
+            bundles,
         }
     }
 }
@@ -60,6 +60,8 @@ impl Bundles {
         for (name, artifact, lock) in ARTIFACTS {
             code.insert(name, verify(artifact, lock, &manifest["contracts"][name])?);
         }
+        #[cfg(test)]
+        tests::insert_probe(&mut code)?;
         Ok(Self {
             identity: Identity::pinned(),
             code,
@@ -116,14 +118,33 @@ fn verify(artifact: &[u8], lock: &[u8], entry: &serde_json::Value) -> Result<Vec
 #[cfg(test)]
 mod tests {
     use super::*;
+    pub(super) const PROBE_MANIFEST: &[u8] = include_bytes!("../tests/fixtures/manifest.json");
+    pub(super) fn insert_probe(
+        code: &mut BTreeMap<&'static str, Vec<u8>>,
+    ) -> Result<(), ProofError> {
+        let manifest: serde_json::Value =
+            serde_json::from_slice(PROBE_MANIFEST).map_err(|_| ProofError::Bundle)?;
+        code.insert(
+            "sandbox-probe",
+            verify(
+                include_bytes!("../tests/fixtures/sandbox-probe.contract"),
+                include_bytes!("../tests/fixtures/build-locks/sandbox-probe.lock"),
+                &manifest["contracts"]["sandbox-probe"],
+            )?,
+        );
+        Ok(())
+    }
+
     #[test]
     fn rejects_artifact_or_build_lock_changes() {
-        let manifest: serde_json::Value = serde_json::from_slice(MANIFEST).unwrap();
+        let manifest: serde_json::Value = serde_json::from_slice(super::MANIFEST).unwrap();
         let (name, original, lock) = ARTIFACTS[0];
         let mut changed = original.to_vec();
         changed[10] ^= 1;
         assert!(verify(&changed, lock, &manifest["contracts"][name]).is_err());
         assert!(verify(original, b"wrong lock", &manifest["contracts"][name]).is_err());
         assert_eq!(Bundles::pinned().unwrap().identity(), Identity::pinned());
+        assert_ne!(Identity::pinned().bundles, sha2_256(super::MANIFEST));
+        assert!(Bundles::pinned().unwrap().code("sandbox-probe").is_ok());
     }
 }

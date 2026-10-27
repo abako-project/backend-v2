@@ -42,8 +42,14 @@ matching API, wallet and provider environment.
 | [src/provider.rs](src/provider.rs) | Existing private HTTP provider interface |
 | [fixtures/manifest.json](fixtures/manifest.json) | Source, WASM, ABI and build-lock pins |
 
-The bundle contains two application contracts and one private `sandbox-probe`
-for traps, reverts, gas and persistence tests. Business rules live in the
+The normal bundle contains only Dao and Project. The private `sandbox-probe`
+lives under `tests/fixtures/`, with a separate manifest, and is loaded into the
+worker only under `cfg(test)`. Its worker regressions live in
+[src/worker/persistence_tests.rs](src/worker/persistence_tests.rs). Probe changes do
+not change the application bundle identity. Test checkpoints have a distinct
+identity and cannot reopen as application state. Removing the probe from the
+application manifest changes its bundle identity once; older checkpoints are
+rejected and never silently reset. Business rules live in the
 [canonical contracts](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime).
 The worker adds transport execution and persistence, not another business engine.
 Shared execution/HTTP code comes from `provider`; production builds do not depend
@@ -78,6 +84,7 @@ Reproduce the pinned artifacts from a committed contracts checkout. Use a disk-b
 
 ```sh
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline
+python3 services/contract-provider/rebuild.py /path/to/contracts --offline --test-fixtures
 ```
 
 After building the application binaries, run the real adapter/wallet/PostgreSQL

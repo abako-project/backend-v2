@@ -9,11 +9,6 @@
   },
   "runtime": "pallet-contracts-43.0.0-frame-43.0.0",
   "contracts": {
-    "sandbox-probe": {
-      "artifactSha256": "66e676cb4985632908cf8e893ab9702e5ac662684f8d40b8e3396bc74315289e",
-      "wasmBlake2b256": "0xd3d86a5e5bf951204fd2c038efdca90c86540994cb60702fe8d3c3405473a418",
-      "lockSha256": "1193ede85e8cdf2564b030f3e648e6f8fbd2561e226968f39db9a3ae98ad9c42"
-    },
     "project": {
       "artifactSha256": "ec6c6321a1e6714a1c1d7259971d565167488e693a6012bc88d35925d1577de3",
       "wasmBlake2b256": "0x5a706eda020ed5a94f14b392c86bc61a3c15cb00c32b18b892759e98dc5d02d2",

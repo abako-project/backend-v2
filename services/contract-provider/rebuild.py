@@ -22,8 +22,10 @@ def main():
     parser.add_argument("source", type=Path, help="local checkout of the canonical contracts repository")
     parser.add_argument("--offline", action="store_true")
     parser.add_argument("--contract", action="append", help="rebuild only a named fixture; repeat to select several")
+    parser.add_argument("--test-fixtures", action="store_true", help="rebuild test-only contracts instead of the application bundle")
     args = parser.parse_args()
-    manifest = json.loads((HERE / "fixtures/manifest.json").read_text())
+    fixtures = HERE / ("tests/fixtures" if args.test_fixtures else "fixtures")
+    manifest = json.loads((fixtures / "manifest.json").read_text())
     version = subprocess.check_output(["cargo", "contract", "--version"], text=True)
     if not version.startswith("cargo-contract-contract 5.0.3-"):
         raise SystemExit("This bundle requires cargo-contract 5.0.3")
@@ -39,10 +41,13 @@ def main():
         for name, entry in manifest["contracts"].items():
             if args.contract and name not in args.contract:
                 continue
-            lock = HERE / "fixtures/build-locks" / f"{name}.lock"
+            lock = fixtures / "build-locks" / f"{name}.lock"
             if digest(lock) != entry["lockSha256"]:
                 raise SystemExit(f"{name}: build lock mismatch")
-            contract = directory / "source" / name
+            contract = directory / "source"
+            if args.test_fixtures:
+                contract /= "tests/fixtures"
+            contract /= name
             shutil.copyfile(lock, contract / "Cargo.lock")
             command = ["cargo", "+1.88.0", "contract", "build", "--release", "--manifest-path", str(contract / "Cargo.toml")]
             if args.offline:
@@ -56,7 +61,7 @@ def main():
                 raise SystemExit(f"{name}: build changed the pinned lockfile")
             artifact_name = name.replace("-", "_")
             built = json.loads((contract / "target/ink" / f"{artifact_name}.contract").read_text())
-            pinned = json.loads((HERE / "fixtures" / f"{name}.contract").read_text())
+            pinned = json.loads((fixtures / f"{name}.contract").read_text())
             if built["source"]["hash"] != entry["wasmBlake2b256"]:
                 raise SystemExit(f"{name}: WASM differs from the pinned bundle")
             for key in ["spec", "types", "storage", "version"]:

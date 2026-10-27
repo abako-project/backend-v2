@@ -758,6 +758,9 @@ async fn inspect(pool: &SqlitePool, identity: Identity, mode: Mode) -> Result<Di
 }
 
 #[cfg(test)]
+mod persistence_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     #[test]

@@ -189,6 +189,13 @@ mod tests {
             Checkpoint::decode_for(&bytes, identity),
             Err(ProofError::Identity)
         ));
+        // A probe-enabled unit-test checkpoint cannot open in a normal build.
+        let mut application_identity = Identity::pinned();
+        application_identity.bundles = sha2_256(include_bytes!("../fixtures/manifest.json"));
+        assert!(matches!(
+            Checkpoint::decode_for(&bytes, application_identity),
+            Err(ProofError::Identity)
+        ));
         let mut bad = checkpoint.clone();
         bad.version = 1;
         assert!(matches!(

@@ -28,11 +28,11 @@ fn unhex(value: &str) -> Vec<u8> {
 }
 fn artifact(name: &str) -> Vec<u8> {
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("fixtures")
+        .join("tests/fixtures")
         .join(format!("{name}.contract"));
     let bytes = fs::read(path).unwrap();
     let manifest: serde_json::Value =
-        serde_json::from_str(include_str!("../fixtures/manifest.json")).unwrap();
+        serde_json::from_str(include_str!("fixtures/manifest.json")).unwrap();
     let expected = manifest["contracts"][name]["artifactSha256"]
         .as_str()
         .unwrap();
@@ -43,7 +43,7 @@ fn artifact(name: &str) -> Vec<u8> {
     );
     let lock = fs::read(
         Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("fixtures/build-locks")
+            .join("tests/fixtures/build-locks")
             .join(format!("{name}.lock")),
     )
     .unwrap();
@@ -198,4 +198,17 @@ fn wasm_traps_nested_rejections_and_endless_execution_roll_back_child_storage() 
         assert!(exhausted.gas_consumed.all_lte(limit));
         assert_eq!(query::<u32>(&owner, &parent, "value", ()), 0);
     });
+}
+
+// Integration tests link the normal library, without cfg(test).
+#[test]
+fn normal_bundle_contains_only_application_contracts() {
+    let bundles = contract_provider::bundle::Bundles::pinned().unwrap();
+    assert!(bundles.code("dao").is_ok());
+    assert!(bundles.code("project").is_ok());
+    assert!(bundles.code("sandbox-probe").is_err());
+    let bytes = include_bytes!("../fixtures/manifest.json");
+    let manifest: serde_json::Value = serde_json::from_slice(bytes).unwrap();
+    assert_eq!(manifest["contracts"].as_object().unwrap().len(), 2);
+    assert_eq!(bundles.identity().bundles, sha2_256(bytes));
 }

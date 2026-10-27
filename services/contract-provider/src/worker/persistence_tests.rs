@@ -1,4 +1,4 @@
-use contract_provider::{
+use crate::{
     Account, GAS, Runtime,
     worker::{Action, Client, Error, Invocation, MAX_INPUT, ShellChanges, Status, Worker},
 };
