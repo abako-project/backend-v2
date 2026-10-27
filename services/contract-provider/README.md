@@ -64,6 +64,10 @@ receipt. The queue holds at most eight requests; shutdown observes active work.
 Shell-only reads do not decode the WASM checkpoint. Snapshot reads assemble
 current contract cells directly.
 
+Dao groups ordinary ink storage into config, catalog, members, projects,
+calendars and bank. The facts reader follows the pinned scalar encoding and
+explicit mapping keys; a changed layout requires matching artifacts and reader.
+
 The adapter owns descriptive content, URL validation, task text/progress and
 notifications. Contracts retain permissions, numeric terms, exact money, task IDs
 and assignees. Evidence uses fixed commitments. Growing records use ordinary ink

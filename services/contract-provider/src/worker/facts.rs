@@ -66,8 +66,8 @@ struct Bank {
     #[codec(skip)]
     withdrawals: Vec<EntityId>,
 }
-// Standard ink Mapping/StorageVec handles encode zero bytes. Field order follows DaoData and
-// Bank at manifest.sourceCommit; bundle identity rejects older persisted layouts.
+// Standard ink Mapping/StorageVec handles encode zero bytes. Encoded scalars follow
+// Config, Projects and Bank at manifest.sourceCommit; bundle identity rejects older layouts.
 #[derive(Decode)]
 struct Dao {
     root: AccountId32,
@@ -89,10 +89,10 @@ struct Dao {
     #[codec(skip)]
     projects: Vec<EntityId>,
     next_task_id: u32,
-    bank: Bank,
     #[codec(skip)]
     disputes: Vec<EntityId>,
     reasons: u64,
+    bank: Bank,
 }
 #[derive(Decode)]
 struct WorkerRecord {
