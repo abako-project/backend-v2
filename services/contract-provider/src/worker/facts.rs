@@ -1,6 +1,6 @@
 //! Read-only codec for pinned ordinary ink storage. This owner codec copies facts;
 //! commands, permissions, prices and score updates still execute only in WASM.
-use super::{directory::State, *};
+use super::{dao::State, *};
 use parity_scale_codec::DecodeAll;
 use protocol::provider_core::{
     CatalogEntryCore, ReasonCore, ReasonReferenceV1, SkillMetadataCore, SkillRequestCore,
@@ -28,7 +28,7 @@ pub(super) fn next_task_id(
     ext: &mut sp_io::TestExternalities,
     state: &State,
 ) -> Result<u32, Error> {
-    let header: Directory = Storage::new(ext).cell(&state.directory, 0u32)?;
+    let header: Dao = Storage::new(ext).cell(&state.dao, 0u32)?;
     Ok(header.next_task_id)
 }
 pub(super) fn deposit(
@@ -36,14 +36,14 @@ pub(super) fn deposit(
     state: &State,
     id: EntityId,
 ) -> Result<Option<DepositView>, Error> {
-    Storage::new(ext).optional_cell(&state.directory, (102u32, id))
+    Storage::new(ext).optional_cell(&state.dao, (102u32, id))
 }
 pub(super) fn withdrawal(
     ext: &mut sp_io::TestExternalities,
     state: &State,
     id: EntityId,
 ) -> Result<Option<WithdrawalView>, Error> {
-    Storage::new(ext).optional_cell(&state.directory, (103u32, id))
+    Storage::new(ext).optional_cell(&state.dao, (103u32, id))
 }
 
 pub(super) type Reason = (
@@ -66,10 +66,10 @@ struct Bank {
     #[codec(skip)]
     withdrawals: Vec<EntityId>,
 }
-// Standard ink Mapping/StorageVec handles encode zero bytes. Field order follows DirectoryData and
+// Standard ink Mapping/StorageVec handles encode zero bytes. Field order follows DaoData and
 // Bank at manifest.sourceCommit; bundle identity rejects older persisted layouts.
 #[derive(Decode)]
-struct Directory {
+struct Dao {
     root: AccountId32,
     _calendar_code: H256,
     _reservation_controller: AccountId32,
@@ -131,7 +131,7 @@ struct RequestRecord {
 struct CalendarHeader {
     calendar_id: EntityId,
     owner: AccountId32,
-    directory: Account,
+    dao: Account,
     controller: Account,
     default_minutes: u32,
     overrides: u32,
@@ -208,9 +208,9 @@ impl<'a> Storage<'a> {
             .map(|i| self.cell(address, (namespace, (owner, i))))
             .collect()
     }
-    fn root(&mut self, state: &directory::State) -> Result<Directory, Error> {
-        let address = &state.directory;
-        let mut header: Directory = self.cell(address, 0u32)?;
+    fn root(&mut self, state: &dao::State) -> Result<Dao, Error> {
+        let address = &state.dao;
+        let mut header: Dao = self.cell(address, 0u32)?;
         header.roles = self.index(address, 50)?;
         header.skills = self.index(address, 51)?;
         header.workers = self.index(address, 52)?;
@@ -276,20 +276,20 @@ impl<'a> Storage<'a> {
                 },
                 reservations,
             },
-            header.directory,
+            header.dao,
             header.controller,
         ))
     }
-    fn workers(&mut self, state: &State, directory: &Directory) -> Result<Vec<WorkerCore>, Error> {
+    fn workers(&mut self, state: &State, dao: &Dao) -> Result<Vec<WorkerCore>, Error> {
         let mut workers = Vec::new();
-        for account in &directory.workers {
-            let worker: WorkerRecord = self.value(&state.directory, 4, *account)?;
+        for account in &dao.workers {
+            let worker: WorkerRecord = self.value(&state.dao, 4, *account)?;
             let (calendar, parent, controller): (CalendarView, Account, Account) =
                 self.calendar(&worker.calendar)?;
             if calendar.owner != *account
                 || calendar.calendar_id != worker.calendar_id
-                || parent != state.directory
-                || controller != state.directory
+                || parent != state.dao
+                || controller != state.dao
             {
                 return Err(Error::InvalidState);
             }
@@ -297,18 +297,8 @@ impl<'a> Storage<'a> {
                 account: *account,
                 content: worker.content,
                 qualifications: Qualifications {
-                    role_ids: self.list(
-                        &state.directory,
-                        21,
-                        *account,
-                        worker.qualifications.roles,
-                    )?,
-                    skill_ids: self.list(
-                        &state.directory,
-                        22,
-                        *account,
-                        worker.qualifications.skills,
-                    )?,
+                    role_ids: self.list(&state.dao, 21, *account, worker.qualifications.roles)?,
+                    skill_ids: self.list(&state.dao, 22, *account, worker.qualifications.skills)?,
                 },
                 mode: worker.mode,
                 coordinator_eligible: worker.coordinator_eligible,
@@ -322,25 +312,25 @@ impl<'a> Storage<'a> {
 }
 pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<Facts, Error> {
     let mut reader = Storage::new(ext);
-    let directory: Directory = reader.root(state)?;
-    if directory.root != state.shell.info.root_account
-        || !directory.bank.enabled
-        || directory.reasons > MAX_SHELL as u64
+    let dao: Dao = reader.root(state)?;
+    if dao.root != state.shell.info.root_account
+        || !dao.bank.enabled
+        || dao.reasons > MAX_SHELL as u64
     {
         return Err(Error::InvalidState);
     }
     let mut roles = BTreeMap::new();
     let mut skills = BTreeMap::new();
     let mut metadata = BTreeMap::new();
-    for id in &directory.roles {
-        let entry: CatalogEntryCore = reader.value(&state.directory, 1, *id)?;
+    for id in &dao.roles {
+        let entry: CatalogEntryCore = reader.value(&state.dao, 1, *id)?;
         if entry.id != *id {
             return Err(Error::InvalidState);
         }
         roles.insert(*id, entry);
     }
-    for id in &directory.skills {
-        let entry: CatalogEntryCore = reader.value(&state.directory, 2, *id)?;
+    for id in &dao.skills {
+        let entry: CatalogEntryCore = reader.value(&state.dao, 2, *id)?;
         if entry.id != *id {
             return Err(Error::InvalidState);
         }
@@ -348,27 +338,27 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
         metadata.insert(
             *id,
             SkillMetadataCore {
-                origin: reader.value(&state.directory, 18, *id)?,
+                origin: reader.value(&state.dao, 18, *id)?,
                 role_ids: {
-                    let count = reader.value(&state.directory, 3, *id)?;
-                    reader.list(&state.directory, 20, *id, count)?
+                    let count = reader.value(&state.dao, 3, *id)?;
+                    reader.list(&state.dao, 20, *id, count)?
                 },
             },
         );
     }
     let workers = reader
-        .workers(state, &directory)?
+        .workers(state, &dao)?
         .into_iter()
         .map(|w| (w.account, w))
         .collect();
     let mut requests = BTreeMap::new();
-    for id in &directory.requests {
-        let record: RequestRecord = reader.value(&state.directory, 6, *id)?;
+    for id in &dao.requests {
+        let record: RequestRecord = reader.value(&state.dao, 6, *id)?;
         let request = SkillRequestCore {
             request_id: record.request_id,
             requester: record.requester,
             content: record.content,
-            role_ids: reader.list(&state.directory, 23, *id, record.roles)?,
+            role_ids: reader.list(&state.dao, 23, *id, record.roles)?,
             status: record.status,
             skill_id: record.skill_id,
         };
@@ -381,32 +371,27 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
     let mut disputes = BTreeMap::new();
     let mut local_reasons = BTreeMap::new();
     let mut proposal_ids = BTreeSet::new();
-    for id in &directory.projects {
-        let address: Account = reader.value(&state.directory, 8, *id)?;
+    for id in &dao.projects {
+        let address: Account = reader.value(&state.dao, 8, *id)?;
         let super::project_storage::StoredProject {
-            directory: parent,
+            dao: parent,
             project,
             reasons,
             cases,
         } = super::project_storage::read(&mut reader, &address)?;
-        if parent != state.directory
-            || project.project_id != *id
-            || reasons.iter().any(|r| r.0 != *id)
-        {
+        if parent != state.dao || project.project_id != *id || reasons.iter().any(|r| r.0 != *id) {
             return Err(Error::InvalidState);
         }
-        // Directory's lookup/guard facts must describe the actual Project tree.
+        // Dao's lookup/guard facts must describe the actual Project tree.
         // Comparing only the Project projection would miss an incomplete secondary index.
-        let registered: EntityId = reader.cell(&state.directory, (9u32, &address))?;
-        let count: u32 = reader
-            .optional_cell(&state.directory, (10u32, *id))?
-            .unwrap_or(0);
+        let registered: EntityId = reader.cell(&state.dao, (9u32, &address))?;
+        let count: u32 = reader.optional_cell(&state.dao, (10u32, *id))?.unwrap_or(0);
         if registered != *id || count as usize != project.proposals.len() {
             return Err(Error::InvalidState);
         }
         for (index, proposal) in project.proposals.iter().enumerate() {
             let index = u32::try_from(index).map_err(|_| Error::Limit)?;
-            let record: ProjectProposalRecord = reader.value(&state.directory, 26, (*id, index))?;
+            let record: ProjectProposalRecord = reader.value(&state.dao, 26, (*id, index))?;
             if record.id != proposal.proposal_id
                 || record.milestones as usize != proposal.milestones.len()
                 || !proposal_ids.insert(proposal.proposal_id)
@@ -417,7 +402,7 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
             let mut skills = BTreeSet::new();
             for (i, milestone) in proposal.milestones.iter().enumerate() {
                 let actual: (EntityId, EntityId) = reader.value(
-                    &state.directory,
+                    &state.dao,
                     27,
                     (*id, index, u32::try_from(i).map_err(|_| Error::Limit)?),
                 )?;
@@ -434,22 +419,19 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
                     skills.extend(requirement.skill_ids.iter().copied());
                 }
             }
-            let counts: QualificationCounts =
-                reader.value(&state.directory, 7, proposal.proposal_id)?;
+            let counts: QualificationCounts = reader.value(&state.dao, 7, proposal.proposal_id)?;
             let actual_roles: Vec<u32> =
-                reader.list(&state.directory, 24, proposal.proposal_id, counts.roles)?;
+                reader.list(&state.dao, 24, proposal.proposal_id, counts.roles)?;
             let actual_skills: Vec<u32> =
-                reader.list(&state.directory, 25, proposal.proposal_id, counts.skills)?;
+                reader.list(&state.dao, 25, proposal.proposal_id, counts.skills)?;
             if actual_roles != roles.into_iter().collect::<Vec<_>>()
                 || actual_skills != skills.into_iter().collect::<Vec<_>>()
             {
                 return Err(Error::InvalidState);
             }
         }
-        let count = reader
-            .optional_cell(&state.directory, (11u32, *id))?
-            .unwrap_or(0);
-        let actual_submissions: Vec<EntityId> = reader.list(&state.directory, 28, *id, count)?;
+        let count = reader.optional_cell(&state.dao, (11u32, *id))?.unwrap_or(0);
+        let actual_submissions: Vec<EntityId> = reader.list(&state.dao, 28, *id, count)?;
         let expected_submissions: Vec<_> = project
             .proposals
             .iter()
@@ -461,7 +443,7 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
             return Err(Error::InvalidState);
         }
         for case in cases {
-            let owner: EntityId = reader.value(&state.directory, 12, case.dispute_id)?;
+            let owner: EntityId = reader.value(&state.dao, 12, case.dispute_id)?;
             if case.project_id != *id
                 || owner != *id
                 || disputes.insert(case.dispute_id, case).is_some()
@@ -472,30 +454,30 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
         projects.insert(*id, project);
         local_reasons.insert(*id, reasons);
     }
-    if proposal_ids.into_iter().collect::<Vec<_>>() != directory._proposals
-        || disputes.keys().copied().collect::<Vec<_>>() != directory.disputes
+    if proposal_ids.into_iter().collect::<Vec<_>>() != dao._proposals
+        || disputes.keys().copied().collect::<Vec<_>>() != dao.disputes
     {
         return Err(Error::InvalidState);
     }
     let mut balances = BTreeMap::new();
-    for account in directory.bank.accounts {
-        balances.insert(account, reader.value(&state.directory, 100, account)?);
+    for account in dao.bank.accounts {
+        balances.insert(account, reader.value(&state.dao, 100, account)?);
     }
-    for id in directory.bank.deposits {
-        let deposit: DepositView = reader.value(&state.directory, 102, id)?;
+    for id in dao.bank.deposits {
+        let deposit: DepositView = reader.value(&state.dao, 102, id)?;
         if deposit.deposit_id != id {
             return Err(Error::InvalidState);
         }
     }
-    for id in directory.bank.withdrawals {
-        let withdrawal: WithdrawalView = reader.value(&state.directory, 103, id)?;
+    for id in dao.bank.withdrawals {
+        let withdrawal: WithdrawalView = reader.value(&state.dao, 103, id)?;
         if withdrawal.withdrawal_id != id {
             return Err(Error::InvalidState);
         }
     }
     let mut reasons = Vec::new();
-    for index in 0..directory.reasons {
-        let reason: Reason = reader.value(&state.directory, 19, index)?;
+    for index in 0..dao.reasons {
+        let reason: Reason = reader.value(&state.dao, 19, index)?;
         reasons.push(reason);
     }
     for (id, local) in local_reasons {
@@ -514,13 +496,13 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
         skills,
         skill_metadata: metadata,
         skill_requests: requests,
-        score_policy: directory.score_policy,
-        compensation_policy: directory.compensation_policy,
+        score_policy: dao.score_policy,
+        compensation_policy: dao.compensation_policy,
         workers,
         projects,
         balances,
         disputes,
-        next_task_id: directory.next_task_id,
+        next_task_id: dao.next_task_id,
         reasons: reasons
             .into_iter()
             .map(|r| ReasonCore {

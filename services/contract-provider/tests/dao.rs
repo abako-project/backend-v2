@@ -1,4 +1,4 @@
-//! Independent replay of native Directory traces against production ink WASM.
+//! Independent replay of native Dao traces against production ink WASM.
 //! Accounts/IDs are explicit fixtures; signed command routing remains pending.
 use contract_provider::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
@@ -44,10 +44,10 @@ fn input(name: &str, args: impl Encode) -> Vec<u8> {
     bytes.extend(args.encode());
     bytes
 }
-fn call(origin: &Account, directory: &Account, data: Vec<u8>) -> ExecReturnValue {
+fn call(origin: &Account, dao: &Account, data: Vec<u8>) -> ExecReturnValue {
     Contracts::bare_call(
         origin.clone(),
-        directory.clone(),
+        dao.clone(),
         0,
         GAS,
         None,
@@ -59,8 +59,8 @@ fn call(origin: &Account, directory: &Account, data: Vec<u8>) -> ExecReturnValue
     .result
     .unwrap()
 }
-fn read<T: Decode>(directory: &Account, caller: u8, name: &str, args: impl Encode) -> T {
-    let value = call(&account(caller), directory, input(name, args));
+fn read<T: Decode>(dao: &Account, caller: u8, name: &str, args: impl Encode) -> T {
+    let value = call(&account(caller), dao, input(name, args));
     assert!(!value.did_revert());
     Result::<T, u8>::decode_all(&mut &value.data[..])
         .unwrap()
@@ -80,7 +80,7 @@ fn fixture() -> Value {
 fn setup(seed: &Catalog, valid_code: bool) -> (sp_io::TestExternalities, Account) {
     let bundles = Bundles::pinned().unwrap();
     let mut ext = new_externalities((1..=4).map(account).collect()).unwrap();
-    let directory = ext.execute_with(|| {
+    let dao = ext.execute_with(|| {
         let uploaded = Contracts::bare_upload_code(
             account(1),
             bundles.code("calendar").unwrap().to_vec(),
@@ -98,9 +98,9 @@ fn setup(seed: &Catalog, valid_code: bool) -> (sp_io::TestExternalities, Account
             0,
             GAS,
             None,
-            Code::Upload(bundles.code("directory").unwrap().to_vec()),
+            Code::Upload(bundles.code("dao").unwrap().to_vec()),
             input("new", (hash, account(4), account(4), seed)),
-            b"directory".to_vec(),
+            b"dao".to_vec(),
             DebugInfo::Skip,
             CollectEvents::Skip,
         )
@@ -109,16 +109,16 @@ fn setup(seed: &Catalog, valid_code: bool) -> (sp_io::TestExternalities, Account
         assert!(!created.result.did_revert(), "{:?}", created.result);
         created.account_id
     });
-    (ext, directory)
+    (ext, dao)
 }
-fn projection(directory: &Account) -> Projection {
-    let (roles, skills, associations): Catalog = read(directory, 1, "catalog", ());
+fn projection(dao: &Account) -> Projection {
+    let (roles, skills, associations): Catalog = read(dao, 1, "catalog", ());
     (
         roles,
         skills,
         associations,
-        read(directory, 1, "workers", ()),
-        read(directory, 1, "skill_requests", ()),
+        read(dao, 1, "workers", ()),
+        read(dao, 1, "skill_requests", ()),
     )
 }
 fn digest(state: &Projection) -> String {
@@ -147,35 +147,33 @@ fn command_input(command: ProviderCommand, id: EntityId, origin: AccountId32) ->
         command
     };
     match command {
-        ProviderCommand::RegisterWorkerCore(request) => {
-            input("register_worker_core", (request, id))
-        }
+        ProviderCommand::RegisterWorkerCore(request) => input("register_worker", (request, id)),
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
         ProviderCommand::PromoteCoordinator(request) => input("promote_coordinator", request),
         ProviderCommand::UpsertCatalogEntryCore { kind, id, content } => {
-            input("upsert_catalog_entry_core", (kind, id, content))
+            input("upsert_catalog_entry", (kind, id, content))
         }
         ProviderCommand::DeleteCatalogEntry(request) => input("delete_catalog_entry", request),
         ProviderCommand::CreateSkillRequestCore { role_ids, content } => {
-            input("create_skill_request_core", (role_ids, content, id))
+            input("create_skill_request", (role_ids, content, id))
         }
         ProviderCommand::DecideSkillRequest(request) => input("decide_skill_request", request),
-        _ => panic!("incomplete Directory coverage"),
+        _ => panic!("incomplete Dao coverage"),
     }
 }
 
 #[test]
-fn canonical_directory_trace_cross_calls_and_restart() {
+fn canonical_dao_trace_cross_calls_and_restart() {
     let fixture = fixture();
     assert_eq!(fixture["schemaVersion"], 1);
     let initial: Projection = serde_json::from_value(fixture["initial"].clone()).unwrap();
-    let (mut ext, directory) = setup(
+    let (mut ext, dao) = setup(
         &(initial.0.clone(), initial.1.clone(), initial.2.clone()),
         true,
     );
-    ext.execute_with(|| assert_eq!(projection(&directory), initial));
+    ext.execute_with(|| assert_eq!(projection(&dao), initial));
     for (index, step) in fixture["steps"].as_array().unwrap().iter().enumerate() {
         ext.execute_with(|| {
             let origin: AccountId32 = serde_json::from_value(step["origin"].clone()).unwrap();
@@ -184,7 +182,7 @@ fn canonical_directory_trace_cross_calls_and_restart() {
             let id: EntityId = serde_json::from_value(step["capturedId"].clone()).unwrap();
             let value = call(
                 &Account::new(origin.into_bytes()),
-                &directory,
+                &dao,
                 command_input(command, id, origin),
             );
             let observed = match outcome::<Effect>(&value) {
@@ -199,7 +197,7 @@ fn canonical_directory_trace_cross_calls_and_restart() {
             };
             assert_eq!(observed, step["outcome"], "step {index}: {step}");
             assert_eq!(
-                digest(&projection(&directory)),
+                digest(&projection(&dao)),
                 step["stateDigest"],
                 "step {index}: {step}"
             );
@@ -209,7 +207,7 @@ fn canonical_directory_trace_cross_calls_and_restart() {
             ext = Checkpoint::decode(&checkpoint).unwrap().restore().unwrap();
         }
     }
-    ext.execute_with(|| assert_eq!(json!(projection(&directory)), fixture["final"]));
+    ext.execute_with(|| assert_eq!(json!(projection(&dao)), fixture["final"]));
 }
 
 #[test]
@@ -217,9 +215,9 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
     let seed = (initial.0, initial.1, initial.2);
     {
-        let (mut ext, directory) = setup(&seed, false);
+        let (mut ext, dao) = setup(&seed, false);
         ext.execute_with(|| {
-            let before = digest(&projection(&directory));
+            let before = digest(&projection(&dao));
             let request = protocol::provider_core::RegisterWorkerCoreRequest {
                 content: protocol::provider_core::MetadataCommitmentV1 {
                     operation_id: OperationId::from_bytes([0; 16]),
@@ -236,11 +234,8 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
             };
             let value = call(
                 &account(2),
-                &directory,
-                input(
-                    "register_worker_core",
-                    (request, EntityId::from_bytes([8; 16])),
-                ),
+                &dao,
+                input("register_worker", (request, EntityId::from_bytes([8; 16]))),
             );
             assert!(value.did_revert());
             assert_eq!(
@@ -248,10 +243,10 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
                 "calendar_instantiation_failed"
             );
             assert_eq!(
-                read::<Option<Account>>(&directory, 1, "calendar_address", account(2)),
+                read::<Option<Account>>(&dao, 1, "calendar_address", account(2)),
                 None
             );
-            assert_eq!(digest(&projection(&directory)), before);
+            assert_eq!(digest(&projection(&dao)), before);
         });
     }
 }
@@ -272,13 +267,13 @@ fn registration() -> protocol::provider_core::RegisterWorkerCoreRequest {
         },
     }
 }
-fn write(directory: &Account, caller: u8, name: &str, args: impl Encode) -> Effect {
-    let value = call(&account(caller), directory, input(name, args));
+fn write(dao: &Account, caller: u8, name: &str, args: impl Encode) -> Effect {
+    let value = call(&account(caller), dao, input(name, args));
     assert!(!value.did_revert(), "{name}: {value:?}");
     outcome(&value).unwrap()
 }
-fn reject<T: Decode>(directory: &Account, caller: u8, name: &str, args: impl Encode, code: &str) {
-    let value = call(&account(caller), directory, input(name, args));
+fn reject<T: Decode>(dao: &Account, caller: u8, name: &str, args: impl Encode, code: &str) {
+    let value = call(&account(caller), dao, input(name, args));
     assert!(value.did_revert());
     assert!(matches!(outcome::<T>(&value),Err(error) if error == code));
 }
@@ -286,43 +281,33 @@ fn reject<T: Decode>(directory: &Account, caller: u8, name: &str, args: impl Enc
 #[test]
 fn request_visibility_reference_guards_and_nested_calendar_permissions() {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    let (mut ext, directory) = setup(&(initial.0, initial.1, initial.2), true);
+    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2), true);
     ext.execute_with(|| {
-        write(
-            &directory,
-            2,
-            "register_worker_core",
-            (registration(), [1_u8; 16]),
-        );
-        let before = digest(&projection(&directory));
+        write(&dao, 2, "register_worker", (registration(), [1_u8; 16]));
+        let before = digest(&projection(&dao));
         reject::<Effect>(
-            &directory,
+            &dao,
             3,
-            "register_worker_core",
+            "register_worker",
             (registration(), [1_u8; 16]),
             "invalid_worker_state",
         );
-        assert_eq!(digest(&projection(&directory)), before);
+        assert_eq!(digest(&projection(&dao)), before);
+        write(&dao, 3, "register_worker", (registration(), [2_u8; 16]));
         write(
-            &directory,
-            3,
-            "register_worker_core",
-            (registration(), [2_u8; 16]),
-        );
-        write(
-            &directory,
+            &dao,
             2,
-            "create_skill_request_core",
+            "create_skill_request",
             (vec![3_u32], commitment(5), [5_u8; 16]),
         );
         write(
-            &directory,
+            &dao,
             3,
-            "create_skill_request_core",
+            "create_skill_request",
             (vec![2_u32], commitment(6), [6_u8; 16]),
         );
         for (caller, expected) in [(1, 2), (2, 1), (3, 1), (4, 0)] {
-            let requests: Vec<SkillRequestCore> = read(&directory, caller, "skill_requests", ());
+            let requests: Vec<SkillRequestCore> = read(&dao, caller, "skill_requests", ());
             assert_eq!(requests.len(), expected);
             assert!(
                 requests
@@ -331,15 +316,15 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
             );
         }
         write(
-            &directory,
+            &dao,
             1,
-            "upsert_catalog_entry_core",
+            "upsert_catalog_entry",
             (CatalogKind::Role, 90_u32, commitment(90)),
         );
         write(
-            &directory,
+            &dao,
             1,
-            "upsert_catalog_entry_core",
+            "upsert_catalog_entry",
             (CatalogKind::Skill, 80_u32, commitment(80)),
         );
         let refs = Some(Qualifications {
@@ -348,7 +333,7 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         });
         for caller in [1, 2, 3] {
             reject::<()>(
-                &directory,
+                &dao,
                 caller,
                 "set_proposal_references",
                 ([9_u8; 16], &refs),
@@ -357,13 +342,13 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         }
         let value = call(
             &account(4),
-            &directory,
+            &dao,
             input("set_proposal_references", ([9_u8; 16], &refs)),
         );
         assert_eq!(outcome::<()>(&value), Ok(()));
         for kind in [CatalogKind::Role, CatalogKind::Skill] {
             reject::<Effect>(
-                &directory,
+                &dao,
                 1,
                 "delete_catalog_entry",
                 (
@@ -379,7 +364,7 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         }
         let value = call(
             &account(4),
-            &directory,
+            &dao,
             input(
                 "set_proposal_references",
                 ([9_u8; 16], Option::<Qualifications>::None),
@@ -387,26 +372,21 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         );
         assert_eq!(outcome::<()>(&value), Ok(()));
         write(
-            &directory,
+            &dao,
             1,
             "delete_catalog_entry",
             (CatalogKind::Skill, 80_u32),
         );
-        write(
-            &directory,
-            1,
-            "delete_catalog_entry",
-            (CatalogKind::Role, 90_u32),
-        );
+        write(&dao, 1, "delete_catalog_entry", (CatalogKind::Role, 90_u32));
 
-        let calendar: Option<Account> = read(&directory, 2, "calendar_address", account(2));
+        let calendar: Option<Account> = read(&dao, 2, "calendar_address", account(2));
         let calendar = calendar.unwrap();
         let bundles = Bundles::pinned().unwrap();
         assert_eq!(
             Contracts::code_hash(&calendar),
             Some(H256::from(blake2_256(bundles.code("calendar").unwrap())))
         );
-        // Directory is an actual contract caller here, not the root fixture account.
+        // Dao is an actual contract caller here, not the root fixture account.
         reject::<()>(
             &calendar,
             1,
@@ -435,7 +415,7 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         );
         let value = call(
             &account(4),
-            &directory,
+            &dao,
             input(
                 "reserve_calendar",
                 (
@@ -448,12 +428,12 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         );
         assert_eq!(outcome::<()>(&value), Ok(()));
         let reserved: CalendarView = read(&calendar, 2, "view", ());
-        write(&directory, 1, "promote_coordinator", account(2));
-        write(&directory, 2, "set_worker_mode", WorkerMode::Coordinator);
+        write(&dao, 1, "promote_coordinator", account(2));
+        write(&dao, 2, "set_worker_mode", WorkerMode::Coordinator);
         assert_eq!(read::<CalendarView>(&calendar, 2, "view", ()), reserved);
-        let before = digest(&projection(&directory));
+        let before = digest(&projection(&dao));
         reject::<Effect>(
-            &directory,
+            &dao,
             2,
             "set_calendar",
             CalendarDefinition {
@@ -462,9 +442,9 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
             },
             "calendar_overcommitted",
         );
-        assert_eq!(digest(&projection(&directory)), before);
+        assert_eq!(digest(&projection(&dao)), before);
         write(
-            &directory,
+            &dao,
             2,
             "set_calendar",
             CalendarDefinition {
@@ -482,28 +462,28 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
 #[test]
 fn parent_storage_failure_discards_tentative_child_instance() {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    let (mut ext, directory) = setup(&(initial.0, initial.1, initial.2), true);
+    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2), true);
     ext.execute_with(|| {
         let request = registration();
         // Measure the successful parent/child transaction, discard it, then
         // exhaust gas at its final boundary rather than relying on packed storage.
         let id=[8_u8;16];
         let code_hash=H256::from(blake2_256(Bundles::pinned().unwrap().code("calendar").unwrap()));
-        let child=Contracts::contract_address(&directory,&code_hash,&input("new",(account(2),directory.clone(),id,&request.calendar)),&id);
-        let data=input("register_worker_core",(request,id));
-        let before=digest(&projection(&directory));
+        let child=Contracts::contract_address(&dao,&code_hash,&input("new",(account(2),dao.clone(),id,&request.calendar)),&id);
+        let data=input("register_worker",(request,id));
+        let before=digest(&projection(&dao));
         sp_io::storage::start_transaction();
-        let completed=Contracts::bare_call(account(2),directory.clone(),0,GAS,None,data.clone(),DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced);
+        let completed=Contracts::bare_call(account(2),dao.clone(),0,GAS,None,data.clone(),DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced);
         assert!(!completed.result.unwrap().did_revert());
         assert!(Contracts::code_hash(&child).is_some());
         sp_io::storage::rollback_transaction();
         assert_eq!(Contracts::code_hash(&child),None);
         let gas=frame_support::weights::Weight::from_parts(completed.gas_consumed.ref_time().checked_sub(1).unwrap(),GAS.proof_size());
-        let result=Contracts::bare_call(account(2),directory.clone(),0,gas,None,data,DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced).result;
+        let result=Contracts::bare_call(account(2),dao.clone(),0,gas,None,data,DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced).result;
         assert!(matches!(result,Err(error) if error==pallet_contracts::Error::<contract_provider::Runtime>::OutOfGas.into()));
         assert_eq!(Contracts::code_hash(&child),None);
-        assert_eq!(read::<Option<Account>>(&directory,1,"calendar_address",account(2)),None);
-        assert_eq!(digest(&projection(&directory)),before);
+        assert_eq!(read::<Option<Account>>(&dao,1,"calendar_address",account(2)),None);
+        assert_eq!(digest(&projection(&dao)),before);
     });
 }
 

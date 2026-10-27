@@ -141,9 +141,7 @@ fn command_input(
             (dispute_id, Reference::Committed(evidence.clone())),
         ),
 
-        ProviderCommand::CreateProjectCore(content) => {
-            input("create_project_core", (content, seed))
-        }
+        ProviderCommand::CreateProjectCore(content) => input("create_project", (content, seed)),
         ProviderCommand::SetCompensationPolicy(policy) => input("set_compensation_policy", policy),
         ProviderCommand::CreateProposalCore {
             proposal, content, ..
@@ -214,20 +212,20 @@ fn command_input(
 pub(super) fn execute(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,
-    state: &mut super::directory::State,
+    state: &mut super::dao::State,
     pending: &PreparedExecution,
     gas: Weight,
     time: u64,
     event_cursor: u64,
 ) -> Result<Outcome, Error> {
-    let directory = &state.directory;
+    let dao = &state.dao;
     let call = pending.call();
     let command = &call.command;
     let data = command_input(command, pending.inputs().seed, event_cursor)?;
     let mut invocation = Invocation {
         caller: Account::new(call.origin.into_bytes()),
         action: Action::Call {
-            address: directory.clone(),
+            address: dao.clone(),
         },
         input: data,
         gas,
@@ -246,7 +244,7 @@ pub(super) fn execute(
             Invocation {
                 caller: invocation.caller.clone(),
                 action: Action::Call {
-                    address: directory.clone(),
+                    address: dao.clone(),
                 },
                 input: input("resolve_project", id),
                 gas,
@@ -266,7 +264,7 @@ pub(super) fn execute(
             .ok_or(Error::InvalidState)?;
         invocation.action = Action::Call { address };
     }
-    // The user calls Project directly. Directory/factory never becomes the
+    // The user calls Project directly. Dao/factory never becomes the
     // payer for asset deposits. Lookup and execution share one gas cap.
     let mut result = run(ext, bundles, invocation)?;
     result.gas_consumed = result.gas_consumed.saturating_add(resolution_gas);

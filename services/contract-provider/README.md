@@ -1,6 +1,6 @@
 # Embedded contract provider
 
-This package runs Directory, Calendar and Project as ink! 5.1.1 WASM in one
+This package runs Dao, Calendar and Project as ink! 5.1.1 WASM in one
 FRAME/pallet-contracts runtime. Local development needs no parachain nodes or
 block production. Frontends continue using the adapter’s REST/JSON and SSE API.
 
@@ -37,7 +37,7 @@ matching API, wallet and provider environment.
 | [src/lib.rs](src/lib.rs), [assets.rs](src/assets.rs) | Runtime resource limits and asset extension |
 | [src/worker.rs](src/worker.rs), [checkpoint.rs](src/checkpoint.rs) | Bounded queue, atomic persistence and shutdown |
 | [configuration.rs](src/worker/configuration.rs) | Fresh constructor-based startup |
-| [directory.rs](src/worker/directory.rs), [projects.rs](src/worker/projects.rs) | Signed command routing into WASM |
+| [dao.rs](src/worker/dao.rs), [projects.rs](src/worker/projects.rs) | Signed command routing into WASM |
 | [reads.rs](src/worker/reads.rs), [facts.rs](src/worker/facts.rs), [project_storage.rs](src/worker/project_storage.rs) | Current ink storage reads and private API views |
 | [src/provider.rs](src/provider.rs) | Existing private HTTP provider interface |
 | [fixtures/manifest.json](fixtures/manifest.json) | Source, WASM, ABI and build-lock pins |

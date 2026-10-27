@@ -69,10 +69,10 @@ fn input(name: &str, args: impl Encode) -> Vec<u8> {
     bytes.extend(args.encode());
     bytes
 }
-fn call(origin: &Account, directory: &Account, input: Vec<u8>) -> ExecReturnValue {
+fn call(origin: &Account, dao: &Account, input: Vec<u8>) -> ExecReturnValue {
     Contracts::bare_call(
         origin.clone(),
-        directory.clone(),
+        dao.clone(),
         0,
         GAS,
         None,
@@ -84,8 +84,8 @@ fn call(origin: &Account, directory: &Account, input: Vec<u8>) -> ExecReturnValu
     .result
     .unwrap()
 }
-fn read<T: Decode>(directory: &Account, name: &str) -> T {
-    let value = call(&account(1), directory, input(name, ()));
+fn read<T: Decode>(dao: &Account, name: &str) -> T {
+    let value = call(&account(1), dao, input(name, ()));
     assert!(!value.did_revert());
     Result::<T, u8>::decode_all(&mut &value.data[..])
         .unwrap()
@@ -111,7 +111,7 @@ fn seed() -> Catalog {
 fn setup() -> (sp_io::TestExternalities, Account) {
     let bundles = Bundles::pinned().unwrap();
     let mut ext = new_externalities((1..=100).map(account).collect()).unwrap();
-    let directory = ext.execute_with(|| {
+    let dao = ext.execute_with(|| {
         let calendar = Contracts::bare_upload_code(
             account(1),
             bundles.code("calendar").unwrap().to_vec(),
@@ -125,7 +125,7 @@ fn setup() -> (sp_io::TestExternalities, Account) {
             0,
             GAS,
             None,
-            Code::Upload(bundles.code("directory").unwrap().to_vec()),
+            Code::Upload(bundles.code("dao").unwrap().to_vec()),
             input("new", (calendar, account(99), account(99), seed())),
             b"matching-v5".to_vec(),
             DebugInfo::Skip,
@@ -136,23 +136,20 @@ fn setup() -> (sp_io::TestExternalities, Account) {
         assert!(!created.result.did_revert());
         created.account_id
     });
-    (ext, directory)
+    (ext, dao)
 }
-fn projection(directory: &Account) -> Projection {
-    let (roles, skills, metadata): Catalog = read(directory, "catalog");
+fn projection(dao: &Account) -> Projection {
+    let (roles, skills, metadata): Catalog = read(dao, "catalog");
     (
         roles,
         skills,
         metadata,
-        read(directory, "workers"),
-        read(directory, "skill_requests"),
+        read(dao, "workers"),
+        read(dao, "skill_requests"),
     )
 }
-fn digest(directory: &Account) -> String {
-    format!(
-        "{:x}",
-        H256::from(sha2_256(&projection(directory).encode()))
-    )
+fn digest(dao: &Account) -> String {
+    format!("{:x}", H256::from(sha2_256(&projection(dao).encode())))
 }
 fn id(seed: u8) -> EntityId {
     let mut bytes = [0; 16];
@@ -176,7 +173,7 @@ fn command_input(command: ProviderCommand, seed: u8, origin: AccountId32) -> Vec
     };
     match command {
         ProviderCommand::RegisterWorkerCore(request) => {
-            input("register_worker_core", (request, id(seed)))
+            input("register_worker", (request, id(seed)))
         }
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
@@ -209,7 +206,7 @@ fn observed<T: Serialize>(result: Result<T, String>) -> Value {
         Err(error) => json!({"error":error}),
     }
 }
-fn apply(directory: &Account, action: Action) -> Value {
+fn apply(dao: &Account, action: Action) -> Value {
     match action {
         Action::Command {
             origin,
@@ -217,7 +214,7 @@ fn apply(directory: &Account, action: Action) -> Value {
             seed,
         } => observed(decoded::<Effect>(call(
             &Account::new(origin.into_bytes()),
-            directory,
+            dao,
             command_input(command, seed, origin),
         ))),
         Action::Contributions {
@@ -226,13 +223,13 @@ fn apply(directory: &Account, action: Action) -> Value {
             votes,
         } => observed(decoded::<()>(call(
             &account(99),
-            directory,
+            dao,
             input("apply_reputation", (project_id, author, votes)),
         ))),
         Action::Coordinator { client, week, seed } => {
             observed(decoded::<(AccountId32, EntityId)>(call(
                 &account(99),
-                directory,
+                dao,
                 input("select_coordinator", (client, week, [seed; 32])),
             )))
         }
@@ -244,7 +241,7 @@ fn apply(directory: &Account, action: Action) -> Value {
             seed,
         } => observed(decoded::<Vec<Vec<(u32, AccountId32)>>>(call(
             &account(99),
-            directory,
+            dao,
             input(
                 "assign_team",
                 (
@@ -262,20 +259,20 @@ fn apply(directory: &Account, action: Action) -> Value {
 fn canonical_reputation_matching_trace_preserves_every_result_and_reservation() {
     let fixture = fixture();
     assert_eq!(fixture["schemaVersion"], 1);
-    let (mut ext, directory) = setup();
+    let (mut ext, dao) = setup();
     for (index, step) in fixture["steps"].as_array().unwrap().iter().enumerate() {
         ext.execute_with(|| {
             assert_eq!(
                 apply(
-                    &directory,
+                    &dao,
                     serde_json::from_value(step["action"].clone()).unwrap()
                 ),
                 step["outcome"],
                 "step {index}"
             );
-            assert_eq!(digest(&directory), step["stateDigest"], "step {index}");
+            assert_eq!(digest(&dao), step["stateDigest"], "step {index}");
             assert_eq!(
-                json!(read::<ScorePolicy>(&directory, "score_policy")),
+                json!(read::<ScorePolicy>(&dao, "score_policy")),
                 step["policy"],
                 "step {index}"
             );
@@ -285,9 +282,9 @@ fn canonical_reputation_matching_trace_preserves_every_result_and_reservation() 
             ext = Checkpoint::decode(&bytes).unwrap().restore().unwrap();
         }
     }
-    ext.execute_with(|| assert_eq!(json!(projection(&directory)), fixture["final"]));
+    ext.execute_with(|| assert_eq!(json!(projection(&dao)), fixture["final"]));
 }
-fn registration(directory: &Account, origin: u8) {
+fn registration(dao: &Account, origin: u8) {
     let request = ProviderCommand::RegisterWorker(RegisterWorkerRequest {
         display_name: "Candidate".into(),
         qualifications: Qualifications {
@@ -302,7 +299,7 @@ fn registration(directory: &Account, origin: u8) {
     assert!(
         decoded::<Effect>(call(
             &account(origin),
-            directory,
+            dao,
             command_input(request, origin, AccountId32::from_bytes([origin; 32]))
         ))
         .is_ok()
@@ -310,23 +307,23 @@ fn registration(directory: &Account, origin: u8) {
 }
 #[test]
 fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes() {
-    let (mut ext, directory) = setup();
+    let (mut ext, dao) = setup();
     ext.execute_with(|| {
-        registration(&directory, 2);
-        registration(&directory, 3);
-        let before = digest(&directory);
+        registration(&dao, 2);
+        registration(&dao, 3);
+        let before = digest(&dao);
         let votes = vec![(account(2), 0u8, 5u8, 37u32)];
         let vote_input = input("apply_reputation", ([90u8; 16], account(1), &votes));
         for caller in [1, 2, 3] {
             assert_eq!(
-                decoded::<()>(call(&account(caller), &directory, vote_input.clone())).unwrap_err(),
+                decoded::<()>(call(&account(caller), &dao, vote_input.clone())).unwrap_err(),
                 "reservation_controller_required"
             );
             let week = Week::new(2026, 1).unwrap();
             assert_eq!(
                 decoded::<(AccountId32, EntityId)>(call(
                     &account(caller),
-                    &directory,
+                    &dao,
                     input("select_coordinator", (account(1), week, [0u8; 32]))
                 ))
                 .unwrap_err(),
@@ -335,7 +332,7 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
             assert_eq!(
                 decoded::<Vec<Vec<(u32, AccountId32)>>>(call(
                     &account(caller),
-                    &directory,
+                    &dao,
                     input(
                         "assign_team",
                         (
@@ -351,32 +348,27 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
                 "reservation_controller_required"
             );
         }
-        assert_eq!(digest(&directory), before);
-        assert!(decoded::<()>(call(&account(99), &directory, vote_input.clone())).is_ok());
-        let once = digest(&directory);
+        assert_eq!(digest(&dao), before);
+        assert!(decoded::<()>(call(&account(99), &dao, vote_input.clone())).is_ok());
+        let once = digest(&dao);
         let policy = ScorePolicy::new(Percentage::new(50).unwrap(), Percentage::new(50).unwrap())
             .unwrap()
             .with_coordinator_vote_weights(100, 0)
             .unwrap();
         assert!(
-            decoded::<Effect>(call(
-                &account(1),
-                &directory,
-                input("set_score_policy", policy)
-            ))
-            .is_ok()
+            decoded::<Effect>(call(&account(1), &dao, input("set_score_policy", policy))).is_ok()
         );
-        assert!(decoded::<()>(call(&account(99), &directory, vote_input)).is_ok());
-        assert_eq!(digest(&directory), once);
+        assert!(decoded::<()>(call(&account(99), &dao, vote_input)).is_ok());
+        assert_eq!(digest(&dao), once);
         let conflict = input(
             "apply_reputation",
             ([90u8; 16], account(1), vec![(account(2), 0u8, 1u8, 37u32)]),
         );
         assert_eq!(
-            decoded::<()>(call(&account(99), &directory, conflict)).unwrap_err(),
+            decoded::<()>(call(&account(99), &dao, conflict)).unwrap_err(),
             "evaluation_conflict"
         );
-        assert_eq!(digest(&directory), once);
+        assert_eq!(digest(&dao), once);
         for invalid in [
             vec![(account(2), 0u8, 5u8, 99u32), (account(3), 0, 0, 37)],
             vec![(account(2), 0u8, 5u8, 99u32), (account(101), 0, 5, 37)],
@@ -384,22 +376,22 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
             assert!(
                 decoded::<()>(call(
                     &account(99),
-                    &directory,
+                    &dao,
                     input("apply_reputation", ([91u8; 16], account(1), invalid))
                 ))
                 .is_err()
             );
-            assert_eq!(digest(&directory), once);
+            assert_eq!(digest(&dao), once);
         }
         // Invalid policy bytes fail ink decoding, before any domain mutation.
         let malformed = call(
             &account(1),
-            &directory,
+            &dao,
             input("set_score_policy", [50u8, 50, 0, 0]),
         );
         assert!(malformed.did_revert());
         assert_eq!(malformed.data, [1, 1]);
-        assert_eq!(read::<ScorePolicy>(&directory, "score_policy"), policy);
+        assert_eq!(read::<ScorePolicy>(&dao, "score_policy"), policy);
     });
 }
 
@@ -487,7 +479,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                 1,
                 1,
                 VmAction::Instantiate {
-                    bundle: "directory".into(),
+                    bundle: "dao".into(),
                     salt: b"matching-worker".to_vec(),
                 },
                 input("new", (code, account(99), account(99), seed())),
@@ -495,7 +487,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
             .await
             .unwrap();
             assert_eq!(created.status, Status::Success);
-            let directory = created.address.unwrap();
+            let dao = created.address.unwrap();
             let request = protocol::provider_core::RegisterWorkerCoreRequest {
                 content: protocol::provider_core::MetadataCommitmentV1 {
                     operation_id: OperationId::from_bytes([0; 16]),
@@ -513,9 +505,9 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                     revision,
                     origin,
                     VmAction::Call {
-                        address: directory.clone(),
+                        address: dao.clone(),
                     },
-                    input("register_worker_core", (&request, id(origin))),
+                    input("register_worker", (&request, id(origin))),
                 )
                 .await
                 .unwrap();
@@ -536,13 +528,13 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
             );
             // Both async tasks enqueue work on separate dedicated OS workers.
             let c1 = client.clone();
-            let d1 = directory.clone();
+            let d1 = dao.clone();
             let data1 = data.clone();
             let first = tokio::spawn(async move {
                 execute(&c1, 4, 99, VmAction::Call { address: d1 }, data1).await
             });
             let c2 = other.clone();
-            let d2 = directory.clone();
+            let d2 = dao.clone();
             let data2 = data.clone();
             let second_call = tokio::spawn(async move {
                 execute(&c2, 4, 99, VmAction::Call { address: d2 }, data2).await
@@ -568,7 +560,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                 5,
                 99,
                 VmAction::Call {
-                    address: directory.clone(),
+                    address: dao.clone(),
                 },
                 data,
             )
@@ -595,7 +587,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                 .client()
                 .query(Invocation {
                     caller: account(1),
-                    action: VmAction::Call { address: directory },
+                    action: VmAction::Call { address: dao },
                     input: input("worker", account(3)),
                     gas: GAS,
                     timestamp_ms: 1_700_000_000_000,

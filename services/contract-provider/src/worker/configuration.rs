@@ -63,6 +63,6 @@ impl Configuration {
                 }
             }
         }
-        directory::initialize(bundles, self, catalog, generation)
+        dao::initialize(bundles, self, catalog, generation)
     }
 }

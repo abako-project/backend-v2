@@ -1,5 +1,5 @@
 //! M3 Calendar slice: independent replay of the Rust engine's committed cases
-//! against real ink! v5 WASM. This does not claim Directory/Project parity.
+//! against real ink! v5 WASM. This does not claim Dao/Project parity.
 use contract_provider::{
     Account, GAS, Runtime,
     worker::{Action, Client, Invocation, Outcome, ShellChanges, Status, Worker},
@@ -261,7 +261,7 @@ fn caller_permissions_and_dry_runs_preserve_calendar() {
             minutes: Minutes::ZERO,
         };
         let mut revision = 1;
-        // Neither the calendar owner nor Directory may invent project reservations.
+        // Neither the calendar owner nor Dao may invent project reservations.
         for caller in [1, 3, 4] {
             let before = client.diagnostics().unwrap().result().await.unwrap();
             let outcome = client
@@ -325,7 +325,7 @@ fn caller_permissions_and_dry_runs_preserve_calendar() {
         assert_eq!(view(&client, &address).await, initial);
         let after = client.diagnostics().unwrap().result().await.unwrap();
         assert_eq!((after.root, after.revision), (before.root, before.revision));
-        // Directory's immutable delegation is exercised separately from owner writes.
+        // Dao's immutable delegation is exercised separately from owner writes.
         let outcome = client
             .execute(
                 revision,

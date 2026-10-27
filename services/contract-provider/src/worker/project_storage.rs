@@ -79,13 +79,13 @@ fn items<T>(length: u32, read: impl FnMut(u32) -> Result<T>) -> Result<Vec<T>> {
     (0..length).map(read).collect()
 }
 pub(super) struct StoredProject {
-    pub(super) directory: Account,
+    pub(super) dao: Account,
     pub(super) project: ProjectCore,
     pub(super) reasons: Vec<Reason>,
     pub(super) cases: Vec<Dispute>,
 }
 pub(super) fn read(reader: &mut Storage<'_>, address: &Account) -> Result<StoredProject> {
-    let (directory, id): (Account, EntityId) = reader.cell(address, 0u32)?;
+    let (dao, id): (Account, EntityId) = reader.cell(address, 0u32)?;
 
     let record: ProjectRecord = reader.cell(address, 1u32)?;
     if record.project_id != id {
@@ -113,7 +113,7 @@ pub(super) fn read(reader: &mut Storage<'_>, address: &Account) -> Result<Stored
         })?,
     };
     Ok(StoredProject {
-        directory,
+        dao,
         project,
         reasons: items(record.reasons, |i| reader.value(address, 22, i))?,
         cases: items(record.disputes, |i| reader.value(address, 23, i))?,

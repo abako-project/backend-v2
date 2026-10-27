@@ -8,7 +8,7 @@ use rand::{Rng, SeedableRng, rngs::StdRng};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-pub type DirectoryCatalog = (
+pub type DaoCatalog = (
     Vec<CatalogEntryCore>,
     Vec<CatalogEntryCore>,
     Vec<SkillRoleCore>,
@@ -19,7 +19,7 @@ pub(super) struct State {
     pub(super) version: u32,
     pub(super) configuration: H256,
     pub(super) shell: Shell,
-    pub(super) directory: Account,
+    pub(super) dao: Account,
 }
 #[derive(Decode)]
 struct ContractEffect {
@@ -65,7 +65,7 @@ fn decode_shell(bytes: &[u8], mode: Mode) -> Result<State, Error> {
 pub(super) fn initialize(
     bundles: &Bundles,
     settings: Configuration,
-    catalog: DirectoryCatalog,
+    catalog: DaoCatalog,
     generation: protocol::ProviderInstanceId,
 ) -> Result<(sp_io::TestExternalities, Vec<u8>), Error> {
     settings.validate()?;
@@ -86,7 +86,7 @@ pub(super) fn initialize(
     let invocation = Invocation {
         caller: account(settings.root),
         action: Action::Instantiate {
-            bundle: "directory".into(),
+            bundle: "dao".into(),
             salt: b"contracts".to_vec(),
         },
         input: input(
@@ -163,7 +163,7 @@ pub(super) fn initialize(
             Invocation {
                 caller: account(settings.root),
                 action: Action::Call { address },
-                input: input("configure_money", mock_funding),
+                input: input("configure_accounting", mock_funding),
                 gas: GAS,
                 timestamp_ms: 1_700_000_000_000,
             },
@@ -178,17 +178,17 @@ pub(super) fn initialize(
         version: 1,
         configuration,
         shell,
-        directory: created.address.ok_or(Error::InvalidState)?,
+        dao: created.address.ok_or(Error::InvalidState)?,
     };
     Ok((ext, encode(&state)?))
 }
 pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result<(), Error> {
     let state = decode(stored, mode)?;
     let mut ext = stored.checkpoint.clone().restore()?;
-    let code = ext.execute_with(|| Contracts::code_hash(&state.directory));
+    let code = ext.execute_with(|| Contracts::code_hash(&state.dao));
     if code
         != Some(H256::from(sp_core::hashing::blake2_256(
-            bundles.code("directory")?,
+            bundles.code("dao")?,
         )))
     {
         return Err(Error::InvalidState);
@@ -196,9 +196,9 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     let enabled: bool = read(
         &mut ext,
         bundles,
-        &state.directory,
+        &state.dao,
         state.shell.info.root_account,
-        "money_enabled",
+        "accounting_enabled",
         (),
     )?;
     if !enabled {
@@ -206,7 +206,7 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     }
     if let Mode::Contracts { root, .. } = mode {
         let addresses: Vec<(EntityId, Account)> =
-            read(&mut ext, bundles, &state.directory, root, "projects", ())?;
+            read(&mut ext, bundles, &state.dao, root, "projects", ())?;
         let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("project")?));
         for (_, address) in addresses {
             if ext.execute_with(|| Contracts::code_hash(&address)) != Some(expected) {
@@ -218,7 +218,7 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     Ok(())
 }
 fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<Vec<u8>, Error> {
-    // Directory commands allocate at most one ID, before any random selection. This is
+    // Dao commands allocate at most one ID, before any random selection. This is
     // the same first 16 bytes of the version-1 locked native StdRng stream.
     let id = || {
         let mut bytes = [0; 16];
@@ -240,20 +240,18 @@ fn command_input(command: &ProviderCommand, inputs: &ExecutionInputs) -> Result<
             input("cancel_withdrawal", withdrawal_id)
         }
 
-        ProviderCommand::RegisterWorkerCore(request) => {
-            input("register_worker_core", (request, id()))
-        }
+        ProviderCommand::RegisterWorkerCore(request) => input("register_worker", (request, id())),
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
         ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
         ProviderCommand::SetScorePolicy(policy) => input("set_score_policy", policy),
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
         ProviderCommand::PromoteCoordinator(request) => input("promote_coordinator", request),
         ProviderCommand::UpsertCatalogEntryCore { kind, id, content } => {
-            input("upsert_catalog_entry_core", (kind, id, content))
+            input("upsert_catalog_entry", (kind, id, content))
         }
         ProviderCommand::DeleteCatalogEntry(request) => input("delete_catalog_entry", request),
         ProviderCommand::CreateSkillRequestCore { role_ids, content } => {
-            input("create_skill_request_core", (role_ids, content, id()))
+            input("create_skill_request", (role_ids, content, id()))
         }
         ProviderCommand::DecideSkillRequest(request) => input("decide_skill_request", request),
         _ => return Err(Error::IncompleteCoverage),
@@ -455,7 +453,7 @@ pub(super) fn evaluate(
             let invocation = Invocation {
                 caller: account(pending.call().origin),
                 action: Action::Call {
-                    address: state.directory.clone(),
+                    address: state.dao.clone(),
                 },
                 input: data,
                 gas,
@@ -546,7 +544,7 @@ pub(super) async fn read_shell(pool: &SqlitePool, mode: Mode) -> Result<Shell, E
 pub(super) fn read<T: Decode>(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,
-    directory: &Account,
+    dao: &Account,
     origin: AccountId32,
     name: &str,
     args: impl Encode,
@@ -557,7 +555,7 @@ pub(super) fn read<T: Decode>(
         Invocation {
             caller: account(origin),
             action: Action::Call {
-                address: directory.clone(),
+                address: dao.clone(),
             },
             input: input(name, args),
             gas: GAS,

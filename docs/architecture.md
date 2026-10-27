@@ -20,7 +20,7 @@ records the REST/frontend boundary.
 ## Execution
 
 The normal mock executes native Rust rules. The isolated
-[contract provider](../services/contract-provider/README.md) runs Directory, Calendar and
+[contract provider](../services/contract-provider/README.md) runs Dao, Calendar and
 Project WASM in one runtime with a single WASM execution path.
 Both use `provider` for the private HTTP interface, generation, signatures, nonces,
 idempotency, receipts and event cursors. Browser-safe values and wire messages live

@@ -56,7 +56,7 @@ for transaction, content, notification and recovery boundaries.
 
 The [contract-provider guide](services/contract-provider/README.md) explains how to build,
 run and verify WASM execution. Its [canonical source](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime)
-contains Directory, Calendar and Project. The SDK remains isolated from normal
+contains Dao, Calendar and Project. The SDK remains isolated from normal
 application builds while its promotion gates are open.
 
 ## Integrate a frontend

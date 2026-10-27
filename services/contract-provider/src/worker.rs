@@ -31,7 +31,7 @@ use std::{
 };
 use tokio::sync::oneshot;
 mod configuration;
-mod directory;
+mod dao;
 mod facts;
 mod reads;
 pub use configuration::Configuration;
@@ -401,7 +401,7 @@ impl Worker {
                                             runtime.block_on(async {
                                                 match mode {
                                                     Mode::Contracts { .. } => {
-                                                        directory::execute(
+                                                        dao::execute(
                                                             &pool, &bundles, mode, call, now,
                                                         )
                                                         .await
@@ -413,9 +413,7 @@ impl Worker {
                                     }
                                 }
                                 Job::Shell(read) => {
-                                    read(&mut || {
-                                        runtime.block_on(directory::read_shell(&pool, mode))
-                                    });
+                                    read(&mut || runtime.block_on(dao::read_shell(&pool, mode)));
                                 }
                                 Job::Execute {
                                     expected,
@@ -604,7 +602,7 @@ async fn open(
     }
     let stored = load(&mut tx, bundles.identity(), mode).await?;
     if matches!(mode, Mode::Contracts { .. }) {
-        directory::validate(&stored, bundles, mode)?;
+        dao::validate(&stored, bundles, mode)?;
     }
     tx.commit().await?;
     Ok(pool)

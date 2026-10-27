@@ -5,11 +5,11 @@ use provider::{Error as ApiError, Result as ApiResult};
 
 pub(crate) struct Reader {
     stored: Stored,
-    state: directory::State,
+    state: dao::State,
 }
 impl Reader {
     pub(super) fn new(stored: Stored, mode: Mode) -> Result<Self, Error> {
-        let state = directory::decode(&stored, mode)?;
+        let state = dao::decode(&stored, mode)?;
         Ok(Self { stored, state })
     }
     fn facts(&self) -> ApiResult<facts::Facts> {

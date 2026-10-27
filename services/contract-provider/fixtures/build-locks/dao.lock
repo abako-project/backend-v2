@@ -272,6 +272,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dao"
+version = "0.1.0"
+dependencies = [
+ "calendar",
+ "chrono",
+ "ink",
+ "parity-scale-codec",
+ "rand 0.10.2",
+ "scale-info",
+]
+
+[[package]]
 name = "darling"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -369,18 +381,6 @@ dependencies = [
  "block-buffer",
  "crypto-common",
  "subtle",
-]
-
-[[package]]
-name = "directory"
-version = "0.1.0"
-dependencies = [
- "calendar",
- "chrono",
- "ink",
- "parity-scale-codec",
- "rand 0.10.2",
- "scale-info",
 ]
 
 [[package]]

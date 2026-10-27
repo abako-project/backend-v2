@@ -12,9 +12,9 @@ const ARTIFACTS: [(&str, &[u8], &[u8]); 4] = [
         include_bytes!("../fixtures/build-locks/project.lock"),
     ),
     (
-        "directory",
-        include_bytes!("../fixtures/directory.contract"),
-        include_bytes!("../fixtures/build-locks/directory.lock"),
+        "dao",
+        include_bytes!("../fixtures/dao.contract"),
+        include_bytes!("../fixtures/build-locks/dao.lock"),
     ),
     (
         "calendar",
