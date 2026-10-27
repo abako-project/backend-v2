@@ -28,7 +28,7 @@ Keep existing state and secrets when updating an environment; see
 ```mermaid
 flowchart LR
     Browser[Frontend] --> Gateway[Nginx]
-    Gateway --> Adapter[adapter-api: REST and SSE]
+    Gateway --> Adapter[api: REST and SSE]
     Adapter --> Wallet[wallet: signing]
     Adapter --> Provider[provider: core rules]
     Adapter --> PG[(PostgreSQL)]
@@ -44,27 +44,26 @@ for transaction, content, notification and recovery boundaries.
 
 | Path | What to read |
 |---|---|
-| [adapter-api](services/adapter-api/README.md) | Public API, identity, content and operation reconciliation |
+| [api](services/api/README.md) | Public API, identity, content and operation reconciliation |
 | [wallet](services/wallet/README.md) | Custodial keys and durable signing jobs |
-| [mock-provider](services/mock-provider/README.md) | Standalone native development provider and private provider HTTP interface |
-| [provider-execution](crates/provider-execution/README.md) | Shared signature, nonce, replay and receipt shell |
-| [generated-contracts](crates/generated-contracts/README.md) | API types, signed commands and wire validation |
-| [domain-primitives](crates/domain-primitives/README.md) | Validated IDs, exact money, minutes and weeks |
-| [ink-sandbox](tools/ink-sandbox/README.md) | Embedded WASM provider, pinned contracts and runtime tests |
-| [leptos-web](apps/leptos-web/README.md) | Independent example frontend |
+| [native-provider](services/native-provider/README.md) | Standalone native development provider |
+| [provider](crates/provider/README.md) | Shared signature/replay handling and provider HTTP interface |
+| [protocol](crates/protocol/README.md) | API types, signed commands and validated values |
+| [contract-provider](services/contract-provider/README.md) | Embedded WASM provider, pinned contracts and runtime tests |
+| [example-web](apps/example-web/README.md) | Independent example frontend |
 | [bloque](crates/bloque-rs/README.md) | Standalone unofficial Bloque client; not an active backend integration |
 | `infra/` | Compose, images, gateway and preview deployment tooling |
 
-The [contract-provider guide](tools/ink-sandbox/README.md) explains how to build,
+The [contract-provider guide](services/contract-provider/README.md) explains how to build,
 run and verify WASM execution. Its [canonical source](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime)
 contains Directory, Calendar and Project. The SDK remains isolated from normal
 application builds while its promotion gates are open.
 
 ## Integrate a frontend
 
-- [HTTP contract and examples](crates/generated-contracts/API.md)
+- [HTTP contract and examples](crates/protocol/API.md)
 - [OpenAPI](contracts/openapi.json), also served at `/api/openapi.json`
-- [DAO profile configuration](services/adapter-api/README.md#public-platform-profile)
+- [DAO profile configuration](services/api/README.md#public-platform-profile)
 - [External frontend setup](infra/README.md#another-frontend)
 
 Sessions use an HttpOnly cookie. Authenticated mutations require `X-CSRF-Token`;

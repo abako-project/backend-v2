@@ -72,7 +72,7 @@ For a separately hosted development frontend, add its **exact** origin to `ALLOW
 
 ```sh
 export ALLOWED_ORIGINS=http://localhost:8088,http://127.0.0.1:8088,http://localhost:5173
-docker compose -f infra/compose.yaml up -d --no-deps adapter-api
+docker compose -f infra/compose.yaml up -d --no-deps api
 ```
 
 Use credentialed browser requests and the session-bound CSRF token. Do not use wildcard credentialed CORS. Prefer the same hostname for local frontend/API URLs; unrelated sites require a separate TLS/cookie policy. HTTP and `COOKIE_SECURE=false` are local-only choices. Nginx does not add permissive CORS headers or alter cookies.
@@ -81,7 +81,7 @@ Use credentialed browser requests and the session-bound CSRF token. Do not use w
 
 ```sh
 # Backend-only builds do not install browser tooling or compile browser WASM.
-docker compose -f infra/compose.yaml build adapter-api wallet mock-provider
+docker compose -f infra/compose.yaml build api wallet native-provider
 docker compose -f infra/compose.yaml build frontend
 docker compose -f infra/compose.yaml exec gateway nginx -t
 docker compose -f infra/compose.yaml ps

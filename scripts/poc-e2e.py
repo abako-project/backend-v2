@@ -740,7 +740,7 @@ def exercise_auxiliary(base, admin_password, _proxy):
     """Typed REST checks beyond the original project and dispute paths."""
     visitor = Client(base)
     profile = visitor.request("GET", "/api/platform")
-    expected = json.loads((ROOT / "services/adapter-api/src/platform/default.json").read_text())
+    expected = json.loads((ROOT / "services/api/src/platform/default.json").read_text())
     require(profile == expected, "public platform profile differs from its startup default")
     require(profile["currency"]["decimals"] == 0, "platform changed mock amount units")
     visitor.request("GET", "/api/platform", expected=403,
@@ -794,7 +794,7 @@ def run(storage, binaries, scenario=exercise, provider_binary=None):
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
         }, logs)
         provider_port = available_port()
-        launch(stack, provider_binary or binaries / "mock-provider", provider_port, {
+        launch(stack, provider_binary or binaries / "native-provider", provider_port, {
             **common, "MOCK_DATABASE_URL": f"sqlite://{directory}/mock.sqlite?mode=rwc",
             "CONTRACT_DATABASE_PATH": str(directory / "contracts.sqlite"),
             "ENABLE_MOCK_FUNDING": "true",
@@ -806,7 +806,7 @@ def run(storage, binaries, scenario=exercise, provider_binary=None):
         stack.callback(proxy.server_close)
         stack.callback(proxy.shutdown)
         adapter_port = available_port()
-        adapter = launch(stack, binaries / "adapter-api", adapter_port, {
+        adapter = launch(stack, binaries / "api", adapter_port, {
             **common, "ADAPTER_DATABASE_URL": adapter_database_url,
             "CUSTODY_URL": f"http://127.0.0.1:{wallet_port}",
             "MOCK_PROVIDER_URL": f"http://127.0.0.1:{proxy.server_port}",

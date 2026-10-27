@@ -1,0 +1,228 @@
+use protocol::{
+    AccountId32, CalendarDefinition, CatalogKind, CreateSkillRequest, DecideSkillRequest,
+    ExecutionOutcome, Minutes, OperationId, ProviderCommand, Qualifications, RegisterWorkerRequest,
+    SkillRequestDecision, SkillRequestStatus, UnixSeconds, UnsignedContractCallV1,
+    UpsertCatalogEntryRequest,
+};
+
+use super::super::{State, VerifiedCall};
+use crate::Result;
+
+const NOW: UnixSeconds = UnixSeconds::new(100);
+
+fn worker(state: &mut State, account: AccountId32) -> Result<()> {
+    state.engine.apply(
+        account,
+        &ProviderCommand::RegisterWorker(RegisterWorkerRequest {
+            display_name: "Worker".into(),
+            qualifications: Qualifications {
+                role_ids: vec![1],
+                skill_ids: Vec::new(),
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: Vec::new(),
+            },
+        }),
+        NOW,
+    )?;
+    Ok(())
+}
+
+#[test]
+fn request_remains_private_and_does_not_self_qualify() -> Result<()> {
+    let root = AccountId32::from_bytes([1; 32]);
+    let owner = AccountId32::from_bytes([2; 32]);
+    let stranger = AccountId32::from_bytes([3; 32]);
+    let mut state = State::new(root)?;
+    worker(&mut state, owner)?;
+    let initial_skills = state.engine.skills.len();
+    let effect = state.engine.apply(
+        owner,
+        &ProviderCommand::CreateSkillRequest(CreateSkillRequest {
+            name: "  New  Skill  ".into(),
+            role_ids: vec![1],
+        }),
+        NOW,
+    )?;
+    let id = effect.entity_id.ok_or_else(crate::Error::unavailable)?;
+    assert!(effect.recipients.contains(&owner));
+    assert!(effect.recipients.contains(&root));
+    assert_eq!(state.engine.skills.len(), initial_skills);
+    assert!(
+        state
+            .engine
+            .worker_mut(owner)?
+            .qualifications
+            .skill_ids
+            .is_empty()
+    );
+    assert!(state.skill_requests(stranger).is_empty());
+    assert_eq!(state.skill_requests(owner).len(), 1);
+    assert_eq!(state.skill_requests(root).len(), 1);
+    assert!(
+        state
+            .engine
+            .apply(
+                stranger,
+                &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
+                    request_id: id,
+                    decision: SkillRequestDecision::Approve,
+                }),
+                NOW,
+            )
+            .is_err()
+    );
+
+    state.engine.apply(
+        root,
+        &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
+            request_id: id,
+            decision: SkillRequestDecision::Approve,
+        }),
+        NOW,
+    )?;
+    let request = &state.skill_requests(owner)[0];
+    assert_eq!(request.status, SkillRequestStatus::Approved);
+    let skill_id = request.skill_id.ok_or_else(crate::Error::unavailable)?;
+    assert_eq!(state.engine.skills.len(), initial_skills + 1);
+    assert_eq!(state.engine.skill_metadata[&skill_id].role_ids, vec![1]);
+    assert!(
+        state
+            .snapshot()
+            .catalog
+            .skill_roles
+            .iter()
+            .any(|association| association.skill_id == skill_id && association.role_ids == [1])
+    );
+    assert!(
+        state
+            .engine
+            .worker_mut(owner)?
+            .qualifications
+            .skill_ids
+            .is_empty()
+    );
+    // Name uniqueness is an adapter admission rule; core retains numeric facts.
+    assert!(
+        state
+            .engine
+            .apply(
+                root,
+                &ProviderCommand::UpsertCatalogEntry(UpsertCatalogEntryRequest {
+                    kind: CatalogKind::Skill,
+                    id: skill_id + 1,
+                    name: " new skill ".into(),
+                }),
+                NOW,
+            )
+            .is_ok()
+    );
+    state.engine.validate()?;
+    Ok(())
+}
+
+#[test]
+fn rejected_request_does_not_change_catalog() -> Result<()> {
+    let root = AccountId32::from_bytes([1; 32]);
+    let owner = AccountId32::from_bytes([2; 32]);
+    let mut state = State::new(root)?;
+    worker(&mut state, owner)?;
+    let initial_skills = state.engine.skills.len();
+    let effect = state.engine.apply(
+        owner,
+        &ProviderCommand::CreateSkillRequest(CreateSkillRequest {
+            name: "Unneeded Skill".into(),
+            role_ids: vec![1],
+        }),
+        NOW,
+    )?;
+    let id = effect.entity_id.ok_or_else(crate::Error::unavailable)?;
+    state.engine.apply(
+        root,
+        &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
+            request_id: id,
+            decision: SkillRequestDecision::Reject,
+        }),
+        NOW,
+    )?;
+    assert_eq!(state.engine.skills.len(), initial_skills);
+    assert_eq!(
+        state.skill_requests(owner)[0].status,
+        SkillRequestStatus::Rejected
+    );
+    assert!(
+        state
+            .engine
+            .apply(
+                root,
+                &ProviderCommand::DecideSkillRequest(DecideSkillRequest {
+                    request_id: id,
+                    decision: SkillRequestDecision::Approve,
+                }),
+                NOW,
+            )
+            .is_err()
+    );
+    state.engine.validate()?;
+    Ok(())
+}
+
+#[test]
+fn transition_records_a_durable_request_event() -> Result<()> {
+    let root = AccountId32::from_bytes([1; 32]);
+    let key = subxt_signer::sr25519::Keypair::from_secret_key([2; 32])
+        .map_err(|_| crate::Error::unavailable())?;
+    let owner = AccountId32::from_bytes(key.public_key().0);
+    let mut state = State::new(root)?;
+    let creation = UnsignedContractCallV1::new(
+        state.info().provider_instance_id,
+        OperationId::from_bytes([8; 16]),
+        owner,
+        0,
+        UnixSeconds::new(200),
+        ProviderCommand::RegisterWorker(RegisterWorkerRequest {
+            display_name: "Worker".into(),
+            qualifications: Qualifications {
+                role_ids: vec![1],
+                skill_ids: vec![],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        }),
+    )?;
+    let signature = protocol::Sr25519Signature::from_bytes(key.sign(&creation.signable_bytes()?).0);
+    (state, _) = state.execute(
+        VerifiedCall::verify(protocol::SignedContractCallV1 {
+            call: creation,
+            signature,
+        })?,
+        NOW,
+    )?;
+    let call = UnsignedContractCallV1::new(
+        state.info().provider_instance_id,
+        OperationId::from_bytes([9; 16]),
+        owner,
+        1,
+        UnixSeconds::new(200),
+        ProviderCommand::CreateSkillRequest(CreateSkillRequest {
+            name: "Durable Skill".into(),
+            role_ids: vec![1],
+        }),
+    )?;
+    let signature = protocol::Sr25519Signature::from_bytes(key.sign(&call.signable_bytes()?).0);
+    let verified = VerifiedCall::verify(protocol::SignedContractCallV1 { call, signature })?;
+    let (state, receipt) = state.execute(verified, NOW)?;
+    assert_eq!(receipt.outcome, ExecutionOutcome::Success);
+    assert_eq!(state.events(0, 10).events.len(), 2);
+    assert_eq!(state.events(0, 10).events[1].recipients.len(), 2);
+    #[cfg(feature = "storage-sqlite")]
+    {
+        let restored = State::restore(&state.encode()?, root)?;
+        assert_eq!(restored.skill_requests(owner).len(), 1);
+        assert_eq!(restored.events(0, 10).events.len(), 2);
+    }
+    Ok(())
+}

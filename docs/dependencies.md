@@ -1,8 +1,8 @@
 # Dependencies
 
 The root [manifest](../Cargo.toml) and [lockfile](../Cargo.lock) define the
-application graph. The embedded runtime has its own [manifest](../tools/ink-sandbox/Cargo.toml),
-lockfile and [policy](../tools/ink-sandbox/policy/README.md), so its SDK does not
+application graph. The embedded runtime has its own [manifest](../services/contract-provider/Cargo.toml),
+lockfile and [policy](../services/contract-provider/policy/README.md), so its SDK does not
 enter normal application builds. Use locked builds and minimal features.
 
 | Component | Selected tools and reason |

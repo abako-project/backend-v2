@@ -33,7 +33,7 @@ is respected when selecting the E2E binaries.
 To run only backend E2E after building:
 
 ```sh
-cargo build -p adapter-api -p wallet -p mock-provider --all-features --locked
+cargo build -p api -p wallet -p native-provider --all-features --locked
 python3 scripts/poc-e2e.py
 ```
 
@@ -46,13 +46,13 @@ The SDK is a separate workspace. Its functional gate and dependency-policy gate
 are explicit:
 
 ```sh
-bash scripts/verify.sh ink-sandbox
-bash scripts/verify.sh ink-sandbox-dependencies
+bash scripts/verify.sh contract-provider
+bash scripts/verify.sh contract-provider-dependencies
 ```
 
 The first checks formatting, all targets/features, strict Clippy, tests, doctests
 and build. The second enforces the existing exact-lock/expiring policy; its known
-security finding remains unwaived. See the [runtime guide](../tools/ink-sandbox/README.md)
+security finding remains unwaived. See the [runtime guide](../services/contract-provider/README.md)
 for artifact reproduction and real-service tests. Performance acceptance needs
 a controlled idle host; functional tests do not establish latency acceptance. Keep build output and temporary databases on disk if
 `/tmp` is RAM-backed. Record current results in the PR.
@@ -114,15 +114,15 @@ by these workflows.
 SDK integration has a separate owner-approved, exact-lock dependency check:
 
 ```sh
-bash scripts/verify.sh ink-sandbox-dependencies
+bash scripts/verify.sh contract-provider-dependencies
 ```
 
 The SDK policy expires on 2026-12-01 and accepts only its recorded package/version
 licenses and advisory IDs. A changed SDK lock requires a new review. The root
 application policy and its existing findings remain unchanged.
 
-The SDK workflow runs for changes anywhere in `services/mock-provider/`, because
-its manifest, HTTP boundary and error types are used by the embedded provider. It installs the already reviewed cargo-deny 0.20.2 with its locked
+The contract-provider workflow covers `crates/protocol/`, `crates/provider/` and
+`services/native-provider/`; native helpers are used only by its golden-trace tests. It installs the already reviewed cargo-deny 0.20.2 with its locked
 tool dependencies and runs the policy wrapper before compatibility tests. This
 checks the exact SDK lock, review expiry, current advisories, licenses and sources;
 it does not grant exceptions to the root application policy. The tool's published

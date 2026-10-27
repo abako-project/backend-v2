@@ -88,7 +88,7 @@ def rollback(folder, partial=False):
             raise ValueError('live configuration changed; refusing to overwrite later edits')
     for name, target in FILES.items():
         replace_file(target, (folder / name).read_text())
-    command(*COMPOSE, 'up', '--detach', '--no-deps', '--wait', '--wait-timeout', '120', 'adapter-api')
+    command(*COMPOSE, 'up', '--detach', '--no-deps', '--wait', '--wait-timeout', '120', 'api')
     command('nginx', '-t')
     command('systemctl', 'reload', 'nginx')
     print('Hostname configuration restored from:', folder)
@@ -154,7 +154,7 @@ def move(apply):
         for name, path in FILES.items():
             replace_file(path, after[name])
         command('nginx', '-t')
-        command(*COMPOSE, 'up', '--detach', '--no-deps', '--wait', '--wait-timeout', '120', 'adapter-api')
+        command(*COMPOSE, 'up', '--detach', '--no-deps', '--wait', '--wait-timeout', '120', 'api')
         command('systemctl', 'reload', 'nginx')
         verify_cors()
         command('python3', str(ROOT / 'verify-api.py'), '--base-url', 'https://dev.abako.xyz',

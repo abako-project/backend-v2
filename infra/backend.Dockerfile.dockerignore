@@ -8,10 +8,10 @@
 !services/
 !services/**
 !apps/
-!apps/leptos-web/
-!apps/leptos-web/Cargo.toml
-!apps/leptos-web/src/
-!apps/leptos-web/src/**
+!apps/example-web/
+!apps/example-web/Cargo.toml
+!apps/example-web/src/
+!apps/example-web/src/**
 **/target
 **/node_modules
 **/dist

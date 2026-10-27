@@ -7,7 +7,7 @@ use axum::{
     response::{IntoResponse, Response},
     routing::{get, post},
 };
-use generated_contracts::{
+use protocol::{
     ApiError, CreateSigningJobRequest, OperationId, ProvisionWalletRequest, SigningJobView,
     WalletView,
 };
@@ -46,7 +46,7 @@ pub(crate) fn router(state: AppState) -> Router {
         .route("/health", get(|| async { StatusCode::NO_CONTENT }))
         .route("/ready", get(ready))
         .layer(DefaultBodyLimit::max(
-            generated_contracts::MAX_SIGNABLE_BYTES * 4 + 4096,
+            protocol::MAX_SIGNABLE_BYTES * 4 + 4096,
         ))
         .layer(middleware::from_fn_with_state(state.clone(), bound_request))
         .with_state(state)

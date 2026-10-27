@@ -9,7 +9,7 @@ Before marking a feature complete, run its acceptance checks and applicable [ver
 Pushing a tag that matches `v*.*.*` runs `.github/workflows/release.yml`:
 
 1. **verify** calls the shared Verify workflow, requiring the tagged commit to belong to `master`. It runs `bash scripts/verify.sh app`, including disposable PostgreSQL tests, both mock E2E modes and the frontend WASM check, with Rust 1.96.1, the compiler used by `infra/backend.Dockerfile`. The same application checks run on PRs and pushes to `master`.
-2. **publish** builds the `adapter-api`, `wallet` and `mock-provider` targets of `infra/backend.Dockerfile` and pushes them to GHCR. It runs only if verify passes.
+2. **publish** builds the `api`, `wallet` and `native-provider` targets of `infra/backend.Dockerfile` and pushes them to GHCR. It runs only if verify passes.
 
 The registry namespace is the lowercase GitHub repository owner, derived at
 runtime. In the image references below, replace `<repository-owner>` with that
@@ -23,9 +23,9 @@ git push origin v0.2.0
 
 | Image | Source target |
 |---|---|
-| `ghcr.io/<repository-owner>/digesta-adapter-api` | `adapter-api` |
+| `ghcr.io/<repository-owner>/digesta-api` | `api` |
 | `ghcr.io/<repository-owner>/digesta-wallet` | `wallet` |
-| `ghcr.io/<repository-owner>/digesta-mock-provider` | `mock-provider` |
+| `ghcr.io/<repository-owner>/digesta-native-provider` | `native-provider` |
 
 Each release gets these tags. `v1.4.2` is shown as an example:
 

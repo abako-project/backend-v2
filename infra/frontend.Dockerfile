@@ -8,14 +8,14 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 # Cargo workspace resolution requires manifests and targets, not backend builds.
 COPY services ./services
-COPY apps/leptos-web ./apps/leptos-web
-WORKDIR /workspace/apps/leptos-web
+COPY apps/example-web ./apps/example-web
+WORKDIR /workspace/apps/example-web
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/workspace/target \
-    cargo build --package leptos-web --bin leptos-web --target wasm32-unknown-unknown --release --locked \
-    && wasm-bindgen --target web --out-dir /dist --out-name leptos_web \
-        /workspace/target/wasm32-unknown-unknown/release/leptos-web.wasm \
+    cargo build --package example-web --bin example-web --target wasm32-unknown-unknown --release --locked \
+    && wasm-bindgen --target web --out-dir /dist --out-name example_web \
+        /workspace/target/wasm32-unknown-unknown/release/example-web.wasm \
     && install -m 0644 index.direct.html /dist/index.html \
     && install -m 0644 style.css /dist/style.css
 

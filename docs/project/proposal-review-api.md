@@ -1,6 +1,6 @@
 # Proposal presentation and scoped review API
 
-See the [approved requirements](../../specs/0007-proposal-review-presentation/spec.md). These additions persist descriptive information in adapter-api/PostgreSQL; provider commands, assignments and payments are unchanged.
+See the [approved requirements](../../specs/0007-proposal-review-presentation/spec.md). These additions persist descriptive information in api/PostgreSQL; provider commands, assignments and payments are unchanged.
 
 ## Contract
 

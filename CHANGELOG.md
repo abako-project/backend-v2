@@ -7,8 +7,8 @@
   repository owner's namespace. See `docs/project/digesta-rename.md` before
   reusing an existing local environment.
 - Added `.github/workflows/release.yml`: `v*.*.*` tags on `master` run fmt,
-  clippy, Cargo tests and doc tests, then publish `digesta-adapter-api`,
-  `digesta-wallet` and `digesta-mock-provider` to GHCR with semver tags and
+  clippy, Cargo tests and doc tests, then publish `digesta-api`,
+  `digesta-wallet` and `digesta-native-provider` to GHCR with semver tags and
   the Podman auto-update label.
 
 ## 2026.09.25

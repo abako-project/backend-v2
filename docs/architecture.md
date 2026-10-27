@@ -12,7 +12,7 @@ inside one provider runtime, not independently deployed backend services.
 | Frontend | Presentation and local UI state | No authoritative business store |
 
 Services use each other's authenticated HTTP interfaces, never another service's
-database rows. Public DTOs live in `crates/generated-contracts`; storage models
+database rows. Public DTOs live in `crates/protocol`; storage models
 remain private. There are no cross-service database foreign keys. The accepted
 [architecture decision](architecture/adr/0001-rest-and-independent-frontends.md)
 records the REST/frontend boundary.
@@ -20,10 +20,11 @@ records the REST/frontend boundary.
 ## Execution
 
 The normal mock executes native Rust rules. The isolated
-[contract provider](../tools/ink-sandbox/README.md) runs Directory, Calendar and
+[contract provider](../services/contract-provider/README.md) runs Directory, Calendar and
 Project WASM in one runtime with a single WASM execution path.
-Both use `provider-execution` for generation, signatures, nonces, idempotency,
-receipts and event cursors. Wallet owns keys; provider never signs.
+Both use `provider` for the private HTTP interface, generation, signatures, nonces,
+idempotency, receipts and event cursors. Browser-safe values and wire messages live
+in `protocol`; server-side execution stays separate. Wallet owns keys; provider never signs.
 
 For a core mutation, the adapter records the original request and immutable
 content, obtains its signature, submits the exact call and reconciles its receipt.
@@ -93,3 +94,16 @@ uncertain operations before backup or replacement. The development installation
 uses clean data; no historical import or rollback converter is shipped. Existing
 incompatible stores fail startup rather than being silently reset. See
 [disaster recovery](operations/disaster-recovery.md).
+
+## Signing direction
+
+Custodial signing remains a temporary development service. Keeping it separate
+currently prevents the API process from owning seed decryption keys. The intended
+replacement is user-held passkeys authorizing scoped, short-lived session keys,
+with the API relaying signed operations rather than holding user keys. This requires
+a separate authentication change covering account binding, permitted calls, expiry,
+revocation and recovery against the deployed Kreivo runtime. Current browser login
+passkeys authenticate API sessions; they do not replace custodial transaction signing.
+
+Bloque stays available as one future on/off-ramp provider. It is not yet wired into
+the account top-up API.

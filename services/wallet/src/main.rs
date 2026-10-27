@@ -4,7 +4,7 @@ mod crypto;
 mod store;
 mod web;
 
-use generated_contracts::{WalletId, WalletLifecycle};
+use protocol::{WalletId, WalletLifecycle};
 use std::{
     env, error::Error, future::IntoFuture, net::SocketAddr, path::Path, sync::Arc, time::Duration,
 };

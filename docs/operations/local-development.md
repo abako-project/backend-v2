@@ -4,8 +4,8 @@ Use the [Compose startup guide](../../infra/README.md#start) from the repository
 root. It covers prerequisites, generated secrets, administrator login, data
 persistence and the independent frontend. No agent setup is required.
 
-The stack includes Nginx, a frontend, adapter-api, PostgreSQL, wallet and
-mock-provider. The gateway listens on localhost:8088. The adapter stores its data
+The stack includes Nginx, a frontend, api, PostgreSQL, wallet and
+native-provider. The gateway listens on localhost:8088. The adapter stores its data
 in PostgreSQL; custody and the default mock use separate SQLite stores. Migrations
 run at startup, and the mock initializes missing catalog entries. Keep the same
 secret/data set when restarting. See [data ownership](../architecture.md).

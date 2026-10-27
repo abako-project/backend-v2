@@ -7,7 +7,7 @@ for the compatibility proof; it does not authorize publication or deployment.
 On 2026-10-22 the owner explicitly approved the reviewed four maintenance-advisory
 and thirteen exact-version license exceptions for SDK provider-integration work
 and requested continued implementation. The approved scope and review expiry
-are in `tools/ink-sandbox/policy/`. This does not approve additional exceptions,
+are in `services/contract-provider/policy/`. This does not approve additional exceptions,
 authority promotion, publication or deployment.
 
 The owner-approved fresh-install amendment in SPEC-0015 supersedes the historical

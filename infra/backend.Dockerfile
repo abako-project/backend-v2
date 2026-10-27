@@ -8,15 +8,15 @@ COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
 COPY services ./services
 # Cargo resolves every workspace member; this does not build frontend assets.
-COPY apps/leptos-web/Cargo.toml ./apps/leptos-web/Cargo.toml
-COPY apps/leptos-web/src ./apps/leptos-web/src
+COPY apps/example-web/Cargo.toml ./apps/example-web/Cargo.toml
+COPY apps/example-web/src ./apps/example-web/src
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/workspace/target \
-    cargo build --locked --release -p adapter-api -p wallet -p mock-provider \
-    && install -D target/release/adapter-api /out/adapter-api \
+    cargo build --locked --release -p api -p wallet -p native-provider \
+    && install -D target/release/api /out/api \
     && install -D target/release/wallet /out/wallet \
-    && install -D target/release/mock-provider /out/mock-provider
+    && install -D target/release/native-provider /out/native-provider
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libgcc-s1 libssl3 \
@@ -24,15 +24,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 WORKDIR /app
 USER 65532:65532
 
-FROM runtime AS adapter-api
-COPY --from=build /out/adapter-api /usr/local/bin/adapter-api
+FROM runtime AS api
+COPY --from=build /out/api /usr/local/bin/api
 COPY contracts/openapi.json /app/contracts/openapi.json
-ENTRYPOINT ["/usr/local/bin/adapter-api"]
+ENTRYPOINT ["/usr/local/bin/api"]
 
 FROM runtime AS wallet
 COPY --from=build /out/wallet /usr/local/bin/wallet
 ENTRYPOINT ["/usr/local/bin/wallet"]
 
-FROM runtime AS mock-provider
-COPY --from=build /out/mock-provider /usr/local/bin/mock-provider
-ENTRYPOINT ["/usr/local/bin/mock-provider"]
+FROM runtime AS native-provider
+COPY --from=build /out/native-provider /usr/local/bin/native-provider
+ENTRYPOINT ["/usr/local/bin/native-provider"]

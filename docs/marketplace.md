@@ -250,7 +250,7 @@ No API exists to resolve or unlock the case. See [SPEC-0005](../specs/0005-dispu
 ## Run the executable flow
 
 ```sh
-cargo build -p adapter-api -p wallet -p mock-provider --all-features --locked
+cargo build -p api -p wallet -p native-provider --all-features --locked
 python3 scripts/poc-e2e.py
 ```
 

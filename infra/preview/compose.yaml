@@ -57,7 +57,7 @@ services:
       start_period: 15s
       retries: 12
 
-  mock-provider:
+  native-provider:
     <<: *backend
     image: ghcr.io/abako-project/digesta-mock-provider@sha256:68b0c1a7199ef159031508b90f33bae5af27c4c3afe15d61210e16bdaeeb5bc6
     environment:
@@ -80,7 +80,7 @@ services:
       start_period: 15s
       retries: 12
 
-  adapter-api:
+  api:
     <<: *backend
     image: ghcr.io/abako-project/digesta-adapter-api@sha256:c121368e5d11061be93e466ec2483046b4270cf61b8b456640f3c664ae4e7dd2
     env_file: ${DIGESTA_STATE_DIR:?Set DIGESTA_STATE_DIR}/secrets/adapter.env
@@ -88,7 +88,7 @@ services:
       BIND_ADDR: 0.0.0.0:8080
       OPENAPI_PATH: /app/contracts/openapi.json
       CUSTODY_URL: http://wallet:8081
-      MOCK_PROVIDER_URL: http://mock-provider:8082
+      MOCK_PROVIDER_URL: http://native-provider:8082
       INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
       BOOTSTRAP_ADMIN_USERNAME: admin
       BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/bootstrap-admin-password
@@ -104,7 +104,7 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       wallet: {condition: service_healthy}
-      mock-provider: {condition: service_healthy}
+      native-provider: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8080/ready]
       interval: 5s
