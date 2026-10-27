@@ -73,16 +73,6 @@ pub(super) fn initialize(
         return Err(Error::InvalidState);
     };
     let mut ext = new_externalities(vec![account(settings.root)])?;
-    let calendar = ext.execute_with(|| {
-        Contracts::bare_upload_code(
-            account(settings.root),
-            bundles.code("calendar")?.to_vec(),
-            None,
-            Determinism::Enforced,
-        )
-        .map(|code| code.code_hash)
-        .map_err(|_| Error::InvalidState)
-    })?;
     let invocation = Invocation {
         caller: account(settings.root),
         action: Action::Instantiate {
@@ -91,12 +81,7 @@ pub(super) fn initialize(
         },
         input: input(
             "new",
-            (
-                calendar,
-                account(settings.root),
-                account(settings.root),
-                catalog,
-            ),
+            (account(settings.root), account(settings.root), catalog),
         ),
         gas: GAS,
         timestamp_ms: 1_700_000_000_000,
@@ -392,7 +377,7 @@ fn domain_error(code: &str) -> Result<&'static str, Error> {
         "incomplete_money_coverage" => Err(Error::IncompleteCoverage),
         "invalid_worker_state" => Err(Error::Invariant("invalid_worker_state")),
         "invalid_catalog_state" => Err(Error::Invariant("invalid_catalog_state")),
-        "calendar_instantiation_failed" => Err(Error::Invariant("calendar_instantiation_failed")),
+        "invalid_calendar_state" => Err(Error::Invariant("invalid_calendar_state")),
         _ => Err(Error::InvalidState),
     }
 }
@@ -592,14 +577,14 @@ mod tests {
             "invalid_withdrawal_state",
             "invalid_worker_state",
             "invalid_catalog_state",
-            "calendar_instantiation_failed",
+            "invalid_calendar_state",
         ] {
             let data = Result::<Result<(), String>, u8>::Ok(Err(code.into())).encode();
             assert!(
                 matches!(transition(&outcome(Status::Reverted, data)), Err(Error::Invariant(observed)) if observed == code)
             );
         }
-        // Preserve the retired Calendar bridge's distinction between language,
+        // Distinguish language,
         // metering and trap failures at the current signed ABI boundary.
         for (status, data, expected) in [
             (Status::LanguageError, vec![1, 1], "sandbox_language_error"),

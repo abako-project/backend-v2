@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "90d24d21a61331656b2a0ea03c870ada23247ca3",
+  "sourceCommit": "0318a986859de61e24e9ab8fc0e3653c0297efc3",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
@@ -14,22 +14,16 @@
       "wasmBlake2b256": "0xd3d86a5e5bf951204fd2c038efdca90c86540994cb60702fe8d3c3405473a418",
       "lockSha256": "1193ede85e8cdf2564b030f3e648e6f8fbd2561e226968f39db9a3ae98ad9c42"
     },
-    "calendar": {
-      "artifactSha256": "087c5186477084d6aa333a3ad0891d1fd717fc18fa7f6e3832611c14ba687c36",
-      "wasmBlake2b256": "0xae3d878226befc0388b3f8ebb17be5025eaffa2b5dea6e7624ba6d1a87e1f3c3",
-      "lockSha256": "81d7a4ad0b00071c78c22dda8afac7a26630001450543f8b4fe991b993a99b37",
-      "staticBufferBytes": 294912
-    },
     "project": {
-      "artifactSha256": "6602e7b5b3c158d224d5f996430184383a85db5f124d75d05d9da0aecc49f482",
-      "wasmBlake2b256": "0x060080b3e7ab2d28eb75724f83ca1a9f209bec4a2c951c580610979304bee1bb",
-      "lockSha256": "26d9c0d2efc6b6448c34c83a3e07c1ab908ee686d1b3accf3f2258216e754839",
+      "artifactSha256": "ec6c6321a1e6714a1c1d7259971d565167488e693a6012bc88d35925d1577de3",
+      "wasmBlake2b256": "0x5a706eda020ed5a94f14b392c86bc61a3c15cb00c32b18b892759e98dc5d02d2",
+      "lockSha256": "2e8afad45355987b2c17639673d686cd42521f3a1ed5aa9910ec4ae6989e8387",
       "staticBufferBytes": 294912
     },
     "dao": {
-      "artifactSha256": "2475e170fad3152546e8438475739e922f9e501e4bc93ed76343858dee02c8d8",
-      "wasmBlake2b256": "0xc5b7d6ef267df1cc8f4ebf84a1c788dfb74e5ff90f6e6da69ab4e71abc57dc7f",
-      "lockSha256": "04298694fd3a4ced86c6b179aec345fa7078e920d21b794a35520a394ea3ee0d",
+      "artifactSha256": "5d3779d47e3e5bbd30ff3cf089e8d5f806a11dbdfb48ae674e9399c74a9a17b5",
+      "wasmBlake2b256": "0xedbb6954e4e186513451661850f8a61893d497ac354aabdf4d02437497be31e9",
+      "lockSha256": "52cc75072cfe7451d15b07d04010a36bb47d55468c621a65be04b5e62be4f8b3",
       "staticBufferBytes": 294912
     }
   }

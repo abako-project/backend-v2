@@ -34,6 +34,21 @@ failure-atomicity tests. Replace historical golden archives with small fresh
 scenarios. Record source changes, measured reduction and review in the existing PRs.
 No dependency-policy waiver, image publication or deployment is authorized.
 
+## Calendar consolidation amendment (2026-10-27)
+
+The owner approved folding Calendar into Dao as an internal module. The two
+business contracts are Dao and Project; the private VM probe remains test-only.
+Use ordinary account-keyed ink mappings for capacity, overrides, reservation
+history and totals. Remove separate Calendar deployment, code pins and addresses.
+Preserve public calendar IDs/views, owner-only capacity edits, authorized Project
+reservations, matching order and atomic all-or-nothing team approval. Calendars
+remain scoped to one DAO; cross-DAO shared capacity is not introduced.
+
+This supersedes the three-contract topology below, not its business rules.
+Continue using fresh development state and reject incompatible checkpoints.
+Measure the combined code size and reservation execution work under unchanged
+runtime limits; retain restart, competing reservations and failure regressions.
+
 ## Decision
 
 The adapter owns application content and workflow that does not determine

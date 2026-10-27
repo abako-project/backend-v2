@@ -122,17 +122,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1fd0f2584146f6f2ef48085050886acf353beff7305ebd1ae69500e27c67f64b"
 
 [[package]]
-name = "calendar"
-version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=4cc83cd7bb12d32c6e3adca74d78d90e09476a83#4cc83cd7bb12d32c6e3adca74d78d90e09476a83"
-dependencies = [
- "chrono",
- "ink",
- "parity-scale-codec",
- "scale-info",
-]
-
-[[package]]
 name = "cc"
 version = "1.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -274,9 +263,8 @@ dependencies = [
 [[package]]
 name = "dao"
 version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=09e1ea8fb2d2063de9952e03d72fc7b627b59011#09e1ea8fb2d2063de9952e03d72fc7b627b59011"
+source = "git+https://github.com/abako-dev/contracts.git?rev=87ac5da186e20e95d02e80fd34a6c8178c00b7aa#87ac5da186e20e95d02e80fd34a6c8178c00b7aa"
 dependencies = [
- "calendar",
  "chrono",
  "ink",
  "parity-scale-codec",
@@ -982,7 +970,6 @@ dependencies = [
 name = "project"
 version = "0.1.0"
 dependencies = [
- "calendar",
  "chrono",
  "dao",
  "ink",

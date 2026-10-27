@@ -5,7 +5,7 @@ use sp_core::hashing::{blake2_256, sha2_256};
 use std::collections::BTreeMap;
 
 const MANIFEST: &[u8] = include_bytes!("../fixtures/manifest.json");
-const ARTIFACTS: [(&str, &[u8], &[u8]); 4] = [
+const ARTIFACTS: [(&str, &[u8], &[u8]); 3] = [
     (
         "project",
         include_bytes!("../fixtures/project.contract"),
@@ -15,11 +15,6 @@ const ARTIFACTS: [(&str, &[u8], &[u8]); 4] = [
         "dao",
         include_bytes!("../fixtures/dao.contract"),
         include_bytes!("../fixtures/build-locks/dao.lock"),
-    ),
-    (
-        "calendar",
-        include_bytes!("../fixtures/calendar.contract"),
-        include_bytes!("../fixtures/build-locks/calendar.lock"),
     ),
     (
         "sandbox-probe",

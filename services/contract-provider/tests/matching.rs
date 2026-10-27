@@ -112,21 +112,13 @@ fn setup() -> (sp_io::TestExternalities, Account) {
     let bundles = Bundles::pinned().unwrap();
     let mut ext = new_externalities((1..=100).map(account).collect()).unwrap();
     let dao = ext.execute_with(|| {
-        let calendar = Contracts::bare_upload_code(
-            account(1),
-            bundles.code("calendar").unwrap().to_vec(),
-            None,
-            Determinism::Enforced,
-        )
-        .unwrap()
-        .code_hash;
         let created = Contracts::bare_instantiate(
             account(1),
             0,
             GAS,
             None,
             Code::Upload(bundles.code("dao").unwrap().to_vec()),
-            input("new", (calendar, account(99), account(99), seed())),
+            input("new", (account(99), account(99), seed())),
             b"matching-v5".to_vec(),
             DebugInfo::Skip,
             CollectEvents::Skip,
@@ -458,31 +450,15 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                 default_weekly_minutes: Minutes::new(600),
                 overrides: vec![],
             };
-            let uploaded = execute(
-                &client,
-                0,
-                1,
-                VmAction::Instantiate {
-                    bundle: "calendar".into(),
-                    salt: b"code-upload".to_vec(),
-                },
-                input("new", (account(1), account(99), [240u8; 16], &definition)),
-            )
-            .await
-            .unwrap();
-            assert_eq!(uploaded.status, Status::Success);
-            let code = H256::from(blake2_256(
-                Bundles::pinned().unwrap().code("calendar").unwrap(),
-            ));
             let created = execute(
                 &client,
-                1,
+                0,
                 1,
                 VmAction::Instantiate {
                     bundle: "dao".into(),
                     salt: b"matching-worker".to_vec(),
                 },
-                input("new", (code, account(99), account(99), seed())),
+                input("new", (account(99), account(99), seed())),
             )
             .await
             .unwrap();
@@ -499,7 +475,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                 },
                 calendar: definition,
             };
-            for (revision, origin) in [(2, 2), (3, 3)] {
+            for (revision, origin) in [(1, 2), (2, 3)] {
                 let outcome = execute(
                     &client,
                     revision,
@@ -531,13 +507,13 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
             let d1 = dao.clone();
             let data1 = data.clone();
             let first = tokio::spawn(async move {
-                execute(&c1, 4, 99, VmAction::Call { address: d1 }, data1).await
+                execute(&c1, 3, 99, VmAction::Call { address: d1 }, data1).await
             });
             let c2 = other.clone();
             let d2 = dao.clone();
             let data2 = data.clone();
             let second_call = tokio::spawn(async move {
-                execute(&c2, 4, 99, VmAction::Call { address: d2 }, data2).await
+                execute(&c2, 3, 99, VmAction::Call { address: d2 }, data2).await
             });
             let results = [first.await.unwrap(), second_call.await.unwrap()];
             assert_eq!(
@@ -557,7 +533,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
             let before = client.diagnostics().unwrap().result().await.unwrap();
             let rejected = execute(
                 &other,
-                5,
+                4,
                 99,
                 VmAction::Call {
                     address: dao.clone(),

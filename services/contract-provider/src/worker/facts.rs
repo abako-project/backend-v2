@@ -71,7 +71,6 @@ struct Bank {
 #[derive(Decode)]
 struct Dao {
     root: AccountId32,
-    _calendar_code: H256,
     _reservation_controller: AccountId32,
     _reference_controller: AccountId32,
     #[codec(skip)]
@@ -101,7 +100,6 @@ struct WorkerRecord {
     qualifications: QualificationCounts,
     mode: WorkerMode,
     coordinator_eligible: bool,
-    calendar: Account,
     calendar_id: EntityId,
     worker_score: ReputationView,
     coordinator_score: ReputationView,
@@ -125,14 +123,10 @@ struct RequestRecord {
     status: SkillRequestStatus,
     skill_id: Option<u32>,
 }
-// Standard ink Lazy/Mapping cells in the pinned Calendar contract. Each decoded
+// Standard account-keyed ink Mapping cells in Dao. Each decoded
 // value is fixed-size; no root reconstruction or byte-page codec is involved.
 #[derive(Decode)]
 struct CalendarHeader {
-    calendar_id: EntityId,
-    owner: AccountId32,
-    dao: Account,
-    controller: Account,
     default_minutes: u32,
     overrides: u32,
     reservations: u32,
@@ -231,8 +225,13 @@ impl<'a> Storage<'a> {
     ) -> Result<T, Error> {
         self.cell(address, (namespace, key))
     }
-    fn calendar(&mut self, address: &Account) -> Result<(CalendarView, Account, Account), Error> {
-        let header: CalendarHeader = self.cell(address, 0x4341_4c01u32)?;
+    fn calendar(
+        &mut self,
+        address: &Account,
+        owner: AccountId32,
+        calendar_id: EntityId,
+    ) -> Result<CalendarView, Error> {
+        let header: CalendarHeader = self.cell(address, (0x4341_4c01u32, owner))?;
         if header.reserved_weeks > header.reservations {
             return Err(Error::InvalidState);
         }
@@ -242,14 +241,14 @@ impl<'a> Storage<'a> {
         }
         let mut overrides = Vec::new();
         for index in 0..header.overrides {
-            let week: Week = self.cell(address, (0x4341_4c03u32, index))?;
-            let capacity = self.cell(address, (0x4341_4c02u32, week))?;
+            let week: Week = self.cell(address, (0x4341_4c03u32, (owner, index)))?;
+            let capacity = self.cell(address, (0x4341_4c02u32, (owner, week)))?;
             overrides.push(WeekOverride { week, capacity });
         }
         let mut reservations = Vec::new();
         let mut totals = BTreeMap::<Week, u32>::new();
         for index in 0..header.reservations {
-            let item: ReservationView = self.cell(address, (0x4341_4c04u32, index))?;
+            let item: ReservationView = self.cell(address, (0x4341_4c04u32, (owner, index)))?;
             let total = totals.entry(item.week).or_default();
             *total = total
                 .checked_add(item.minutes.get())
@@ -260,39 +259,27 @@ impl<'a> Storage<'a> {
             return Err(Error::InvalidState);
         }
         for index in 0..header.reserved_weeks {
-            let week: Week = self.cell(address, (0x4341_4c06u32, index))?;
-            let total: u32 = self.cell(address, (0x4341_4c05u32, week))?;
+            let week: Week = self.cell(address, (0x4341_4c06u32, (owner, index)))?;
+            let total: u32 = self.cell(address, (0x4341_4c05u32, (owner, week)))?;
             if totals.remove(&week) != Some(total) {
                 return Err(Error::InvalidState);
             }
         }
-        Ok((
-            CalendarView {
-                calendar_id: header.calendar_id,
-                owner: header.owner,
-                definition: CalendarDefinition {
-                    default_weekly_minutes: Minutes::new(header.default_minutes),
-                    overrides,
-                },
-                reservations,
+        Ok(CalendarView {
+            calendar_id,
+            owner,
+            definition: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(header.default_minutes),
+                overrides,
             },
-            header.dao,
-            header.controller,
-        ))
+            reservations,
+        })
     }
     fn workers(&mut self, state: &State, dao: &Dao) -> Result<Vec<WorkerCore>, Error> {
         let mut workers = Vec::new();
         for account in &dao.workers {
             let worker: WorkerRecord = self.value(&state.dao, 4, *account)?;
-            let (calendar, parent, controller): (CalendarView, Account, Account) =
-                self.calendar(&worker.calendar)?;
-            if calendar.owner != *account
-                || calendar.calendar_id != worker.calendar_id
-                || parent != state.dao
-                || controller != state.dao
-            {
-                return Err(Error::InvalidState);
-            }
+            let calendar = self.calendar(&state.dao, *account, worker.calendar_id)?;
             workers.push(WorkerCore {
                 account: *account,
                 content: worker.content,

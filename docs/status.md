@@ -23,7 +23,7 @@ Implemented behavior is not a claim of deployment or production readiness.
 | Providers | Native memory/SQLite and an isolated embedded ink runtime with one WASM authority |
 | Recovery | Fresh development initialization, atomic persistence and restart |
 
-The API, wallet and provider remain separate services. All three application
+The API, wallet and provider remain separate services. Both application
 contracts use ordinary ink storage; no custom paging helper or onchain URL parser
 is used. Metadata and task ownership are described in [architecture](architecture.md)
 and the [requirements](../specs/README.md).

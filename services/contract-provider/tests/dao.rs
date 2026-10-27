@@ -1,5 +1,5 @@
 //! Independent replay of native Dao traces against production ink WASM.
-//! Accounts/IDs are explicit fixtures; signed command routing remains pending.
+//! Explicit account/ID fixtures isolate contract behavior from signed transport.
 use contract_provider::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
 };
@@ -77,29 +77,17 @@ fn fixture() -> Value {
     ))
     .unwrap()
 }
-fn setup(seed: &Catalog, valid_code: bool) -> (sp_io::TestExternalities, Account) {
+fn setup(seed: &Catalog) -> (sp_io::TestExternalities, Account) {
     let bundles = Bundles::pinned().unwrap();
     let mut ext = new_externalities((1..=4).map(account).collect()).unwrap();
     let dao = ext.execute_with(|| {
-        let uploaded = Contracts::bare_upload_code(
-            account(1),
-            bundles.code("calendar").unwrap().to_vec(),
-            None,
-            Determinism::Enforced,
-        )
-        .unwrap();
-        let hash = if valid_code {
-            uploaded.code_hash
-        } else {
-            H256::repeat_byte(99)
-        };
         let created = Contracts::bare_instantiate(
             account(1),
             0,
             GAS,
             None,
             Code::Upload(bundles.code("dao").unwrap().to_vec()),
-            input("new", (hash, account(4), account(4), seed)),
+            input("new", (account(4), account(4), seed)),
             b"dao".to_vec(),
             DebugInfo::Skip,
             CollectEvents::Skip,
@@ -165,14 +153,11 @@ fn command_input(command: ProviderCommand, id: EntityId, origin: AccountId32) ->
 }
 
 #[test]
-fn canonical_dao_trace_cross_calls_and_restart() {
+fn canonical_dao_trace_and_restart() {
     let fixture = fixture();
     assert_eq!(fixture["schemaVersion"], 1);
     let initial: Projection = serde_json::from_value(fixture["initial"].clone()).unwrap();
-    let (mut ext, dao) = setup(
-        &(initial.0.clone(), initial.1.clone(), initial.2.clone()),
-        true,
-    );
+    let (mut ext, dao) = setup(&(initial.0.clone(), initial.1.clone(), initial.2.clone()));
     ext.execute_with(|| assert_eq!(projection(&dao), initial));
     for (index, step) in fixture["steps"].as_array().unwrap().iter().enumerate() {
         ext.execute_with(|| {
@@ -211,11 +196,11 @@ fn canonical_dao_trace_cross_calls_and_restart() {
 }
 
 #[test]
-fn failed_child_creation_leaves_no_worker_or_calendar() {
+fn invalid_calendar_leaves_no_worker_or_capacity() {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
     let seed = (initial.0, initial.1, initial.2);
     {
-        let (mut ext, dao) = setup(&seed, false);
+        let (mut ext, dao) = setup(&seed);
         ext.execute_with(|| {
             let before = digest(&projection(&dao));
             let request = protocol::provider_core::RegisterWorkerCoreRequest {
@@ -229,7 +214,13 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
                 },
                 calendar: CalendarDefinition {
                     default_weekly_minutes: Minutes::new(60),
-                    overrides: vec![],
+                    overrides: vec![
+                        WeekOverride {
+                            week: Week::new(2026, 1).unwrap(),
+                            capacity: Minutes::new(60)
+                        };
+                        2
+                    ],
                 },
             };
             let value = call(
@@ -238,12 +229,9 @@ fn failed_child_creation_leaves_no_worker_or_calendar() {
                 input("register_worker", (request, EntityId::from_bytes([8; 16]))),
             );
             assert!(value.did_revert());
+            assert_eq!(outcome::<Effect>(&value).unwrap_err(), "invalid_contract");
             assert_eq!(
-                outcome::<Effect>(&value).unwrap_err(),
-                "calendar_instantiation_failed"
-            );
-            assert_eq!(
-                read::<Option<Account>>(&dao, 1, "calendar_address", account(2)),
+                read::<Option<WorkerCore>>(&dao, 1, "worker", account(2)),
                 None
             );
             assert_eq!(digest(&projection(&dao)), before);
@@ -279,9 +267,9 @@ fn reject<T: Decode>(dao: &Account, caller: u8, name: &str, args: impl Encode, c
 }
 
 #[test]
-fn request_visibility_reference_guards_and_nested_calendar_permissions() {
+fn request_visibility_reference_guards_and_calendar_permissions() {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2), true);
+    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2));
     ext.execute_with(|| {
         write(&dao, 2, "register_worker", (registration(), [1_u8; 16]));
         let before = digest(&projection(&dao));
@@ -379,20 +367,12 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
         );
         write(&dao, 1, "delete_catalog_entry", (CatalogKind::Role, 90_u32));
 
-        let calendar: Option<Account> = read(&dao, 2, "calendar_address", account(2));
-        let calendar = calendar.unwrap();
-        let bundles = Bundles::pinned().unwrap();
-        assert_eq!(
-            Contracts::code_hash(&calendar),
-            Some(H256::from(blake2_256(bundles.code("calendar").unwrap())))
-        );
-        // Dao is an actual contract caller here, not the root fixture account.
-        reject::<()>(
-            &calendar,
+        reject::<Effect>(
+            &dao,
             1,
             "set_calendar",
             registration().calendar,
-            "calendar_owner_required",
+            "worker_not_found",
         );
         let week = Week::new(2026, 1).unwrap();
         let reference = ReservationView {
@@ -403,10 +383,11 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
             minutes: Minutes::ZERO,
         };
         reject::<()>(
-            &calendar,
-            4,
-            "reserve",
+            &dao,
+            2,
+            "reserve_calendar",
             (
+                account(2),
                 WeekWindow::new(week, week).unwrap(),
                 Minutes::new(60),
                 reference.clone(),
@@ -427,10 +408,14 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
             ),
         );
         assert_eq!(outcome::<()>(&value), Ok(()));
-        let reserved: CalendarView = read(&calendar, 2, "view", ());
+        let reserved: CalendarView =
+            read::<Result<CalendarView, String>>(&dao, 2, "calendar", account(2)).unwrap();
         write(&dao, 1, "promote_coordinator", account(2));
         write(&dao, 2, "set_worker_mode", WorkerMode::Coordinator);
-        assert_eq!(read::<CalendarView>(&calendar, 2, "view", ()), reserved);
+        assert_eq!(
+            read::<Result<CalendarView, String>>(&dao, 2, "calendar", account(2)).unwrap(),
+            reserved
+        );
         let before = digest(&projection(&dao));
         reject::<Effect>(
             &dao,
@@ -453,36 +438,37 @@ fn request_visibility_reference_guards_and_nested_calendar_permissions() {
             },
         );
         assert_eq!(
-            read::<CalendarView>(&calendar, 2, "view", ()).reservations,
+            read::<Result<CalendarView, String>>(&dao, 2, "calendar", account(2))
+                .unwrap()
+                .reservations,
             reserved.reservations
         );
     });
 }
 
 #[test]
-fn parent_storage_failure_discards_tentative_child_instance() {
+fn registration_gas_failure_discards_worker_and_calendar_records() {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2), true);
+    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2));
     ext.execute_with(|| {
         let request = registration();
-        // Measure the successful parent/child transaction, discard it, then
+        // Measure a successful registration, discard it, then
         // exhaust gas at its final boundary rather than relying on packed storage.
         let id=[8_u8;16];
-        let code_hash=H256::from(blake2_256(Bundles::pinned().unwrap().code("calendar").unwrap()));
-        let child=Contracts::contract_address(&dao,&code_hash,&input("new",(account(2),dao.clone(),id,&request.calendar)),&id);
+        let calendar_key=(0x4341_4c01u32,account(2)).encode();
         let data=input("register_worker",(request,id));
         let before=digest(&projection(&dao));
         sp_io::storage::start_transaction();
         let completed=Contracts::bare_call(account(2),dao.clone(),0,GAS,None,data.clone(),DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced);
         assert!(!completed.result.unwrap().did_revert());
-        assert!(Contracts::code_hash(&child).is_some());
+        assert!(Contracts::get_storage(dao.clone(),calendar_key.clone()).unwrap().is_some());
         sp_io::storage::rollback_transaction();
-        assert_eq!(Contracts::code_hash(&child),None);
+        assert_eq!(Contracts::get_storage(dao.clone(),calendar_key.clone()).unwrap(),None);
         let gas=frame_support::weights::Weight::from_parts(completed.gas_consumed.ref_time().checked_sub(1).unwrap(),GAS.proof_size());
         let result=Contracts::bare_call(account(2),dao.clone(),0,gas,None,data,DebugInfo::Skip,CollectEvents::Skip,Determinism::Enforced).result;
         assert!(matches!(result,Err(error) if error==pallet_contracts::Error::<contract_provider::Runtime>::OutOfGas.into()));
-        assert_eq!(Contracts::code_hash(&child),None);
-        assert_eq!(read::<Option<Account>>(&dao,1,"calendar_address",account(2)),None);
+        assert_eq!(Contracts::get_storage(dao.clone(),calendar_key.clone()).unwrap(),None);
+        assert_eq!(read::<Option<WorkerCore>>(&dao,1,"worker",account(2)),None);
         assert_eq!(digest(&projection(&dao)),before);
     });
 }

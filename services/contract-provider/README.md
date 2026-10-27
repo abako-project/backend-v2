@@ -1,6 +1,6 @@
 # Embedded contract provider
 
-This package runs Dao, Calendar and Project as ink! 5.1.1 WASM in one
+This package runs Dao and Project as ink! 5.1.1 WASM in one
 FRAME/pallet-contracts runtime. Local development needs no parachain nodes or
 block production. Frontends continue using the adapter’s REST/JSON and SSE API.
 
@@ -42,7 +42,7 @@ matching API, wallet and provider environment.
 | [src/provider.rs](src/provider.rs) | Existing private HTTP provider interface |
 | [fixtures/manifest.json](fixtures/manifest.json) | Source, WASM, ABI and build-lock pins |
 
-The bundle contains three application contracts and one private `sandbox-probe`
+The bundle contains two application contracts and one private `sandbox-probe`
 for traps, reverts, gas and persistence tests. Business rules live in the
 [canonical contracts](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime).
 The worker adds transport execution and persistence, not another business engine.
