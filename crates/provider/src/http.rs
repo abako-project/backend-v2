@@ -28,6 +28,9 @@ struct App<P> {
 }
 
 /// Serve a provider implementation through the authenticated private API.
+///
+/// # Errors
+/// Rejects a service token that is too short or contains line breaks.
 pub fn router<P: ProviderApi>(provider: P, service_token: &str) -> Result<Router> {
     if service_token.trim().len() < 32 || service_token.contains(['\r', '\n']) {
         return Err(Error::bad("invalid_service_token"));
