@@ -47,3 +47,11 @@ The signed prefix `KUNVENO-MOCK-V1!` and custody authentication context
 `kunveno:custody:sr25519:format=1:key=1:` intentionally retain their bytes.
 Changing display/component names must not invalidate accepted signatures or
 prevent wallet secrets from decrypting. Historical rename inventory remains in Git.
+
+Current content/evidence commitment hash prefixes also retain their original
+bytes. The owner confirmed on 2026-10-27 that this branding cleanup preserves
+working repository/registry URLs, deployed hostnames and protocol identifiers.
+Those technical references are not product display names.
+Pinned contract bundles retain their recorded contributor metadata and complete
+verified bytes: editing those labels changes the bundle identity used by saved
+checkpoints. Current contract manifests use Digesta for future builds.

@@ -3,7 +3,7 @@
 A marketplace backend for clients, coordinators and workers to plan projects,
 reserve team capacity, deliver milestones and settle payments. Deployments can
 choose DAO branding, currency display and terminology through `GET /api/platform`;
-the bundled profile is Abako for software projects.
+the bundled profile is Digesta for software projects.
 
 Local development needs no parachain network. The default provider uses Rust rules;
 the embedded contract provider runs the same canonical ink! v5 contracts in one

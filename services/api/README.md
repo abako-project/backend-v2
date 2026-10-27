@@ -10,7 +10,7 @@ served here. See `crates/protocol/API.md` and `contracts/openapi.json`.
 
 `GET /api/platform` returns DAO branding, currency display metadata, project
 types and terminology before login. It uses the same Origin/CORS rules as
-other public routes. The bundled profile is software/Abako; its `decimals: 0`
+other public routes. The bundled profile is software/Digesta; its `decimals: 0`
 matches current integer mock amounts. No balance, price or asset is converted.
 
 Set optional `PLATFORM_CONFIG_PATH` to a readable JSON file with the response

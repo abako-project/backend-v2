@@ -52,7 +52,7 @@ The isolated SDK policy is blocked by unwaived RUSTSEC-2026-0387 in crypto-bigin
 Application dependency findings and the unresolved project-license notice remain
 in [supply-chain status](security/supply-chain.md). Functional tests do not waive them.
 
-The independent abako-web frontend's task-result/notification compatibility was
+The independent marketplace frontend's task-result/notification compatibility was
 prepared in [PR 55](https://github.com/abako-project/abako-web/pull/55). Source review
 is not evidence of a deployed browser cutover. The [preview guide](operations/digesta-backend-preview.md)
 describes the existing mock-backed environment; source changes do not deploy it.

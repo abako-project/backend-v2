@@ -5762,7 +5762,7 @@
           "Contract"
         ],
         "summary": "Read public DAO branding and domain vocabulary",
-        "description": "Available before login. Serves validated startup configuration without querying the provider or database. Existing Origin restrictions apply. An unset PLATFORM_CONFIG_PATH uses the bundled software/Abako profile.",
+        "description": "Available before login. Serves validated startup configuration without querying the provider or database. Existing Origin restrictions apply. An unset PLATFORM_CONFIG_PATH uses the bundled software/Digesta profile.",
         "security": [],
         "responses": {
           "200": {
@@ -10895,7 +10895,7 @@
         "examples": [
           {
             "id": "software",
-            "name": "Abako",
+            "name": "Digesta",
             "tagline": "Decentralized Marketplace for Freelancers",
             "description": "Marketplace built around accountability for Web3 and software engineering teams.",
             "sector": "software",
@@ -10931,7 +10931,7 @@
               "skillsHelperText": "Include programming languages, frameworks, libraries, tools, or soft skills relevant to software engineering.",
               "backgroundHelperText": "Tell us about your experience, engineering journey, education, and notable software projects.",
               "emptyStateWorkerText": "Projects will appear here once you are assigned as a consultant or developer.",
-              "emptyStateClientText": "Create your first project proposal to get started with Abako."
+              "emptyStateClientText": "Create your first project proposal to get started with Digesta."
             }
           }
         ]

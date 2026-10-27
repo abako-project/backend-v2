@@ -6,7 +6,7 @@ type TestResult = Result<(), Box<dyn std::error::Error>>;
 #[test]
 fn bundled_profile_matches_public_contract_and_keeps_mock_units() -> TestResult {
     let profile = load(None)?;
-    assert_eq!(profile.name, "Abako");
+    assert_eq!(profile.name, "Digesta");
     assert_eq!(profile.currency.decimals, 0);
     let doc: Value = serde_json::from_str(include_str!("../../../../contracts/openapi.json"))?;
     let example = &doc["components"]["schemas"]["PlatformProfile"]["examples"][0];

@@ -12,13 +12,15 @@ different domains. Add `GET /api/platform` with the object shape supplied by
 the owner. One deployment serves one profile. The adapter owns this public
 presentation configuration; it is independent of custody and provider state.
 
-`requested-profile.json` preserves the owner's supplied example verbatim as
-JSON data. The approved runtime default uses `decimals: 0` for the current
+`requested-profile.json` records the owner's supplied profile with the current
+approved product name. The approved runtime default uses `decimals: 0` for the current
 mock integer units. Future chain integration may obtain actual asset metadata.
 
 This feature does not create tenant isolation, DAO selection, governance,
 dynamic administration, translations or new assets. It does not reinterpret
 existing money, mutate provider state or change worker matching.
+
+Branding: the owner confirmed Digesta as the default product name on 2026-10-27.
 
 ## Requirements
 
@@ -26,7 +28,7 @@ existing money, mutate provider state or change worker matching.
   `description`, `sector`, `currency`, `projectTypes` and `terminology`.
   Nested property names follow the user's camelCase example. All listed
   terminology fields, including the external-profile hints, are present.
-- PLATFORM-002: Ship the supplied software/Abako profile as the default.
+- PLATFORM-002: Ship the supplied software/Digesta profile as the default.
   Use currency decimals 0. Other fields retain the supplied values.
 - PLATFORM-003: An optional `PLATFORM_CONFIG_PATH` selects an operator-owned
   JSON file. Load and validate it once at startup. Invalid or unreadable

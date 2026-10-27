@@ -11,7 +11,7 @@ decoding at the provider. State authorization runs in the provider transaction.
 
 `GET /api/platform` is available before login and returns the configured
 `PlatformProfile`: id, name, tagline, description, sector, currency,
-projectTypes and terminology. The nested shape and complete software/Abako
+projectTypes and terminology. The nested shape and complete software/Digesta
 example are in OpenAPI. Existing Origin restrictions apply.
 
 The default currency decimals is 0, matching current integer mock amounts.
