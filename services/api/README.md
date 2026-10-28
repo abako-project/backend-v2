@@ -98,4 +98,12 @@ cargo clippy -p api --all-targets --all-features --locked -- -D warnings
 Adapter tests require a disposable PostgreSQL instance via
 `TEST_ADAPTER_DATABASE_URL`; see `src/tests.rs`. The integrated
 `scripts/poc-e2e.py` starts its own temporary PostgreSQL instance and uses real
-signing services with each mock storage backend.
+signing services and the contract provider.
+
+## Code map
+
+`http.rs` assembles public routes. Identity lives in `auth`, content in the named
+profile/project/proposal modules, and delivery in `operations` and `notifications`.
+`tasks` groups content execution, confirmation of contract membership, dispute
+holds, views and history. Its `store` module supplies one task-row codec and write
+path inside the caller's transaction. It does not own a separate queue or database.

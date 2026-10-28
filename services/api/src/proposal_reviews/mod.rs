@@ -43,7 +43,7 @@ async fn context(
         .into_iter()
         .find(|p| p.project_id == project_id)
         .ok_or(Error::NotFound)?;
-    let project = crate::task_views::project(project, session.view.account_id);
+    let project = crate::tasks::views::project(project, session.view.account_id);
     let project = project.ok_or(Error::NotFound)?;
     let proposal = project
         .proposals

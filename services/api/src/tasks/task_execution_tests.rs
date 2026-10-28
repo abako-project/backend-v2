@@ -1,4 +1,4 @@
-//! Real task execution in explicitly API-owned test cohorts. No production cutover.
+//! Real task execution in API-owned content with confirmed core membership.
 use super::*;
 use parity_scale_codec::Encode;
 use serde_json::Value;
@@ -19,11 +19,11 @@ struct Cohort {
     definition: TaskDefinition,
 }
 impl Cohort {
-    async fn new(api_owned: bool) -> Result<Self, Box<dyn std::error::Error>> {
-        Self::with_case(api_owned, None).await
+    async fn new(seed_tasks: bool) -> Result<Self, Box<dyn std::error::Error>> {
+        Self::with_case(seed_tasks, None).await
     }
     async fn with_case(
-        api_owned: bool,
+        seed_tasks: bool,
         case: Option<CaseSlot>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let fake = fake()?;
@@ -50,7 +50,7 @@ impl Cohort {
         let (owner, owner_cookie) = register(&app, "executor_owner").await?;
         let (worker, worker_cookie) = register(&app, "executor_worker").await?;
         let (client, client_cookie) = register(&app, "executor_client").await?;
-        let doc: Value = serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+        let doc: Value = serde_json::from_str(include_str!("../../../../contracts/openapi.json"))?;
         let mut project: ProjectView = serde_json::from_value(
             doc["components"]["schemas"]["ProjectView"]["examples"][0].clone(),
         )?;
@@ -64,7 +64,7 @@ impl Cohort {
         let known = stage_worker(&app, info().provider_instance_id, known).await?;
         fake.lock().await.snapshot.projects = vec![core];
         fake.lock().await.snapshot.workers = vec![known];
-        if api_owned {
+        if seed_tasks {
             stage_task_content(&app, info().provider_instance_id, project.clone()).await?;
             sqlx::query("UPDATE task_generations SET next_task_id=9")
                 .execute(&app.db)
@@ -113,7 +113,7 @@ impl Cohort {
         let Some(operations::Work::Task(job)) = operations::claim_work(&self.app).await? else {
             return Err(Error::Internal);
         };
-        crate::task_execution::process(&self.app, job).await
+        crate::tasks::execution::process(&self.app, job).await
     }
     async fn run(&self, actor: &Session, command: ProviderCommand) -> Result<OperationView, Error> {
         let id = self.queue(actor, command).await?;
@@ -441,9 +441,9 @@ async fn task_executor_serializes_global_ids_and_fences_stale_leases() -> TestRe
     let Some(operations::Work::Task(fresh)) = operations::claim_work(&c.app).await? else {
         return Err("reclaim".into());
     };
-    crate::task_execution::process(&c.app, stale).await?;
+    crate::tasks::execution::process(&c.app, stale).await?;
     assert!(c.tasks().await?.is_empty());
-    crate::task_execution::process(&c.app, fresh).await?;
+    crate::tasks::execution::process(&c.app, fresh).await?;
     assert_eq!(c.counter().await?, 9); // Classification cannot reserve an ID in PostgreSQL.
     c.finish(&c.owner, second).await?;
     assert_eq!(
@@ -511,8 +511,8 @@ async fn task_executor_first_writes_on_two_projects_share_allocator_without_lock
         .await?;
     let (a, b) = tokio::time::timeout(Duration::from_secs(5), async {
         tokio::join!(
-            crate::task_execution::process(&c.app, a),
-            crate::task_execution::process(&c.app, b)
+            crate::tasks::execution::process(&c.app, a),
+            crate::tasks::execution::process(&c.app, b)
         )
     })
     .await?;

@@ -4,7 +4,7 @@ use parity_scale_codec::Encode;
 use serde_json::{Value, json};
 
 fn task_command() -> Result<ProviderCommand, Box<dyn std::error::Error>> {
-    let doc: Value = serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+    let doc: Value = serde_json::from_str(include_str!("../../../../contracts/openapi.json"))?;
     let project: ProjectView =
         serde_json::from_value(doc["components"]["schemas"]["ProjectView"]["examples"][0].clone())?;
     let mut task: TaskDefinition = serde_json::from_value(
@@ -86,7 +86,7 @@ async fn retained_task_results_reopen_and_replay_both_routes_without_signing() -
     let id = OperationId::from_bytes([61; 16]);
     let (command, result, event) = retained_operation(&app, &alice, id, "Finalized").await?;
     let notification_id = retained_notification(&app, &event).await?;
-    let doc: Value = serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+    let doc: Value = serde_json::from_str(include_str!("../../../../contracts/openapi.json"))?;
     let mut project: ProjectView =
         serde_json::from_value(doc["components"]["schemas"]["ProjectView"]["examples"][0].clone())?;
     project.coordinator = alice.view.account_id;
@@ -637,14 +637,14 @@ async fn task_core_intent_schema_preserves_original_request_across_classificatio
             .fetch_one(&reopened.db)
             .await?;
         assert_eq!(
-            crate::task_execution::provider_intent(&row, &core)?,
+            crate::tasks::execution::provider_intent(&row, &core)?,
             Some(original.clone())
         );
         let mut wrong = core.clone();
         if let ProviderCommand::CreateTaskCore { assignees, .. } = &mut wrong {
             assignees.push(alice.view.account_id);
         }
-        assert!(crate::task_execution::provider_intent(&row, &wrong).is_err());
+        assert!(crate::tasks::execution::provider_intent(&row, &wrong).is_err());
         assert_eq!(
             operations::enqueue(&reopened, &alice, original.clone(), Some(id))
                 .await?

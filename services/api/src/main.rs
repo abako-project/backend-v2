@@ -21,12 +21,7 @@ mod reason_metadata;
 mod state;
 mod submission_comments;
 mod submission_presentations;
-mod task_execution;
-mod task_freezes;
-mod task_history;
-mod task_materialization;
-mod task_state;
-mod task_views;
+mod tasks;
 
 use state::{App, Config, Error};
 use std::{sync::Arc, time::Duration};
@@ -45,7 +40,7 @@ async fn main() -> Result<(), Error> {
     if std::env::args().len() != 1 {
         return Err(Error::Config);
     }
-    task_state::initialize_empty(&app).await?;
+    tasks::state::initialize_empty(&app).await?;
     auth::bootstrap(&app).await?;
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
     let (stop, stopping) = watch::channel(false);

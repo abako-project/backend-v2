@@ -248,8 +248,8 @@ pub(crate) async fn enqueue(
         || crate::proposal_metadata::needs_record(&command)
         || crate::reason_metadata::needs_record(&command)
         || crate::catalog_metadata::operation(&command)
-        || crate::task_freezes::kind(&command).is_some()
-        || crate::task_freezes::task_project(&command).is_some()
+        || crate::tasks::freezes::kind(&command).is_some()
+        || crate::tasks::freezes::task_project(&command).is_some()
     {
         Some(app.snapshot().await?.info.provider_instance_id)
     } else {
@@ -293,7 +293,7 @@ pub(crate) async fn enqueue(
     } else {
         command
     };
-    let task_project = crate::task_freezes::task_project(&command);
+    let task_project = crate::tasks::freezes::task_project(&command);
     let task_operation = task_project.is_some();
     if task_operation {
         let generation = generation.ok_or(Error::Dependency)?;
@@ -319,7 +319,7 @@ pub(crate) async fn enqueue(
         .bind(operation_id.to_string()).bind(session.view.principal_id.to_string()).bind(wallet.to_string()).bind(account.to_string())
         .bind(serde_json::to_string(&command)?).bind(command_bytes).bind(time).bind(time + 300).bind(time).bind(request_command_bytes).bind(generation.map(|id|id.to_string())).bind(catalog_operation).bind(name(initial_status)).bind(task_operation).bind(task_project.map(|id|id.to_string())).execute(&mut *tx).await?;
     if let Some(generation) = generation {
-        crate::task_freezes::capture(app, &mut tx, generation, operation_id, &command).await?;
+        crate::tasks::freezes::capture(app, &mut tx, generation, operation_id, &command).await?;
     }
     sqlx::query("INSERT INTO audit_records(principal_id, operation_id, event_kind, result_code, occurred_at) VALUES ($1, $2, 'operation_authorized', 'ok', $3)")
         .bind(session.view.principal_id.to_string()).bind(operation_id.to_string()).bind(time).execute(&mut *tx).await?;
@@ -380,7 +380,7 @@ pub(crate) async fn read(
                 .transpose()?,
             error_code: row.try_get("error_code")?,
             task_result: if row.try_get("task_operation")? {
-                crate::task_history::TaskOperation::read(&row)?.result
+                crate::tasks::history::TaskOperation::read(&row)?.result
             } else {
                 None
             },
@@ -419,7 +419,7 @@ impl Job {
             return Err(Error::Dependency);
         }
         let command = serde_json::from_str(row.try_get("command_json")?)?;
-        let task_intent = crate::task_execution::provider_intent(row, &command)?.is_some();
+        let task_intent = crate::tasks::execution::provider_intent(row, &command)?.is_some();
         Ok(Self {
             id: parse(row.try_get("operation_id")?)?,
             wallet: parse(row.try_get("wallet_id")?)?,
@@ -458,7 +458,7 @@ impl Job {
 
 pub(crate) enum Work {
     Provider(Box<Job>),
-    Task(crate::task_execution::Job),
+    Task(crate::tasks::execution::Job),
 }
 
 #[cfg(test)]
@@ -474,7 +474,7 @@ pub(crate) async fn claim_work(app: &App) -> Result<Option<Work>, Error> {
         return Ok(None);
     };
     if row.try_get::<bool, _>("task_operation")? {
-        Ok(Some(Work::Task(crate::task_execution::Job::new(
+        Ok(Some(Work::Task(crate::tasks::execution::Job::new(
             parse(row.try_get("operation_id")?)?,
             lease,
         ))))
@@ -526,10 +526,10 @@ async fn save(
         return Err(Error::Conflict("lease_lost"));
     }
     if job.task_intent && job.status == ProviderOperationStatus::Finalized {
-        crate::task_materialization::complete(&mut tx, job.id, job.task_allocation.as_ref())
+        crate::tasks::materialization::complete(&mut tx, job.id, job.task_allocation.as_ref())
             .await?;
     }
-    crate::task_freezes::complete(&mut tx, job.id).await?;
+    crate::tasks::freezes::complete(&mut tx, job.id).await?;
     if let Some(completion) = completion {
         crate::catalog_claims::publish(&mut tx, job.id, completion).await?;
     }
@@ -554,7 +554,7 @@ pub(crate) async fn process(app: &App, mut job: Job) -> Result<(), Error> {
     let outcome = async {
         advance(app, &mut job, time).await?;
         if job.task_intent && job.status == ProviderOperationStatus::Finalized {
-            job.task_allocation = crate::task_materialization::allocation(
+            job.task_allocation = crate::tasks::materialization::allocation(
                 app,
                 &job.command,
                 job.receipt.as_deref().ok_or(Error::Dependency)?,
@@ -830,7 +830,7 @@ pub(crate) async fn run(app: Arc<App>, mut stop: watch::Receiver<bool>) -> Resul
                     tasks.spawn(async move {
                         match job {
                             Work::Provider(job) => process(&worker, *job).await,
-                            Work::Task(job) => crate::task_execution::process(&worker, job).await,
+                            Work::Task(job) => crate::tasks::execution::process(&worker, job).await,
                         }
                     });
                 }

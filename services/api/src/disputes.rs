@@ -69,7 +69,7 @@ pub(crate) async fn present(
         .ok_or(Error::Dependency)?
         .title;
     let tasks =
-        crate::task_freezes::compose_case(app, generation, proposal.proposal_id, view.clone())
+        crate::tasks::freezes::compose_case(app, generation, proposal.proposal_id, view.clone())
             .await?;
     Ok((
         generation,

@@ -168,13 +168,13 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
     let expires: i64 = row.try_get("expires_at")?;
     let request = tokio::task::spawn_blocking(move || Request::read(&row)).await??;
     let Some(next) =
-        crate::task_freezes::lock_project(&mut tx, request.generation, request.project).await?
+        crate::tasks::freezes::lock_project(&mut tx, request.generation, request.project).await?
     else {
         return Err(Error::Conflict("task_state_missing"));
     };
-    match crate::task_freezes::hold(&mut tx, request.generation, request.project).await? {
-        crate::task_freezes::Hold::Clear => {}
-        crate::task_freezes::Hold::Confirmed(code) => {
+    match crate::tasks::freezes::hold(&mut tx, request.generation, request.project).await? {
+        crate::tasks::freezes::Hold::Clear => {}
+        crate::tasks::freezes::Hold::Confirmed(code) => {
             return finish(
                 tx,
                 job,
@@ -184,7 +184,7 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
             )
             .await;
         }
-        crate::task_freezes::Hold::Pending => {
+        crate::tasks::freezes::Hold::Pending => {
             let time = now()?;
             let changed=sqlx::query("UPDATE operations SET next_attempt_at=$3+1,lease_token=NULL,lease_until=NULL WHERE operation_id=$1 AND task_operation AND status='Queued' AND lease_token=$2 AND lease_until>$3")
                 .bind(job.id.to_string()).bind(&job.lease).bind(time).execute(&mut *tx).await?;
@@ -300,7 +300,8 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
     if let Some(command) = core_command {
         // Refuse missing/corrupt preimages before an irreversible core write.
         // Recovery after success must not introduce new content dependencies.
-        crate::task_views::current_state(&mut tx, request.generation, next, vec![project]).await?;
+        crate::tasks::views::current_state(&mut tx, request.generation, next, vec![project])
+            .await?;
         if storage.is_none() {
             sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$3,$4,$5,$6)")
                 .bind(request.generation.to_string()).bind(request.storage.to_string()).bind(request.project.to_string()).bind(proposal.to_string()).bind(revision.to_string()).bind(milestone.to_string()).execute(&mut *tx).await?;
@@ -323,7 +324,7 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
         let changed = match local_task(&project, request.storage, request.actor, &request.command) {
             Err(code) => Err(code),
             Ok(task_id) => {
-                let tasks = decode_tasks(rows, next)?;
+                let tasks = super::store::decode(rows, next)?;
                 if !tasks.iter().any(|task| task.task_id == task_id) {
                     // Core identity exists; missing API content is retryable, not deletion.
                     return Err(Error::Dependency);
@@ -358,38 +359,8 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
         sqlx::query("INSERT INTO task_storages(provider_instance_id,task_storage_id,project_id,proposal_id,proposal_revision,milestone_id) VALUES($1,$2,$3,$4,$5,$6)")
             .bind(&generation).bind(request.storage.to_string()).bind(request.project.to_string()).bind(proposal.to_string()).bind(revision.to_string()).bind(milestone.to_string()).execute(&mut *tx).await?;
     }
-    // Preserve the exact public vector order, including after deletion. The
-    // storage-local rewrite also keeps R3b2's ordinal integrity checks valid.
-    sqlx::query("DELETE FROM task_items WHERE provider_instance_id=$1 AND task_storage_id=$2")
-        .bind(&generation)
-        .bind(request.storage.to_string())
-        .execute(&mut *tx)
-        .await?;
-    let prepared = tokio::task::spawn_blocking(move || {
-        tasks
-            .into_iter()
-            .enumerate()
-            .map(|(ordinal, task)| {
-                let assignees = task
-                    .task
-                    .assignees
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>();
-                Ok::<_, Error>((
-                    i64::from(task.task_id),
-                    i64::try_from(ordinal).map_err(|_| Error::Dependency)?,
-                    serde_json::to_string(&task)?,
-                    assignees,
-                ))
-            })
-            .collect::<Result<Vec<_>, _>>()
-    })
-    .await??;
-    for (id, ordinal, payload, assignees) in &prepared {
-        sqlx::query("INSERT INTO task_items(provider_instance_id,task_id,task_storage_id,ordinal,payload,assignees) VALUES($1,$2,$3,$4,$5,$6)")
-            .bind(&generation).bind(id).bind(request.storage.to_string()).bind(ordinal).bind(payload).bind(assignees).execute(&mut *tx).await?;
-    }
+    let prepared = tokio::task::spawn_blocking(move || super::store::encode(tasks)).await??;
+    super::store::replace(&mut tx, request.generation, request.storage, prepared).await?;
     sqlx::query("UPDATE task_storages SET proposal_revision=$3 WHERE provider_instance_id=$1 AND task_storage_id=$2")
         .bind(&generation).bind(request.storage.to_string()).bind(revision.to_string()).execute(&mut *tx).await?;
     sqlx::query("UPDATE task_generations SET next_task_id=$2 WHERE provider_instance_id=$1")
@@ -427,32 +398,6 @@ async fn execute(app: &App, job: &Job) -> Result<(), Error> {
         origin: request.actor,
     };
     finish(tx, job, &request, ExecutionOutcome::Success, Some(event)).await
-}
-
-pub(crate) fn decode_tasks(rows: Vec<PgRow>, next: u32) -> Result<Vec<TaskView>, Error> {
-    rows.into_iter()
-        .enumerate()
-        .map(|(ordinal, row)| {
-            let task: TaskView = serde_json::from_str(row.try_get("payload")?)?;
-            task.task.validate().map_err(|_| Error::Dependency)?;
-            if task.task_id == 0
-                || task.task_id >= next
-                || i64::from(task.task_id) != row.try_get::<i64, _>("task_id")?
-                || i64::try_from(ordinal).map_err(|_| Error::Dependency)?
-                    != row.try_get::<i64, _>("ordinal")?
-                || task
-                    .task
-                    .assignees
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>()
-                    != row.try_get::<Vec<String>, _>("assignees")?
-            {
-                return Err(Error::Dependency);
-            }
-            Ok(task)
-        })
-        .collect()
 }
 
 fn authorize_task(

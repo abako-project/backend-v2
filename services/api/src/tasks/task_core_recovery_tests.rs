@@ -83,7 +83,7 @@ pub(in crate::tests) fn apply_fixture(
 
 pub(super) async fn step(app: &App) -> Result<(), Error> {
     match operations::claim_work(app).await?.ok_or(Error::Internal)? {
-        operations::Work::Task(job) => crate::task_execution::process(app, job).await,
+        operations::Work::Task(job) => crate::tasks::execution::process(app, job).await,
         operations::Work::Provider(job) => operations::process(app, *job).await,
     }
 }
@@ -222,12 +222,12 @@ async fn stale_task_lease_cannot_convert_or_overtake_another_wallet_in_the_same_
     else {
         return Err("wrong source".into());
     };
-    crate::task_execution::process(&c.app, stale).await?;
+    crate::tasks::execution::process(&c.app, stale).await?;
     assert_eq!(
         operations::read(&c.app, &c.owner, first).await?.status,
         ProviderOperationStatus::Queued
     );
-    crate::task_execution::process(&c.app, current).await?;
+    crate::tasks::execution::process(&c.app, current).await?;
     assert_eq!(
         operations::read(&c.app, &c.owner, first).await?.status,
         ProviderOperationStatus::AwaitingSignature

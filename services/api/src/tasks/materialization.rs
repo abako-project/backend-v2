@@ -56,7 +56,7 @@ pub(crate) async fn complete(
     let (original, receipt) = tokio::task::spawn_blocking(move || {
         let command: ProviderCommand = serde_json::from_str(row.try_get("command_json")?)?;
         let original =
-            crate::task_execution::provider_intent(&row, &command)?.ok_or(Error::Dependency)?;
+            crate::tasks::execution::provider_intent(&row, &command)?.ok_or(Error::Dependency)?;
         let receipt: OperationReceipt = serde_json::from_str(row.try_get("receipt_json")?)?;
         if receipt.operation_id != operation
             || receipt.origin != parse(row.try_get("account_id")?)?
@@ -73,7 +73,7 @@ pub(crate) async fn complete(
     }
     let project = original.project_id().ok_or(Error::Dependency)?;
     let generation = receipt.provider_instance_id;
-    let next = crate::task_freezes::lock_project(connection, generation, project)
+    let next = crate::tasks::freezes::lock_project(connection, generation, project)
         .await?
         .ok_or(Error::Dependency)?;
     let storage = match &original {
@@ -111,22 +111,14 @@ pub(crate) async fn complete(
         prepare(original, &receipt, allocated.as_ref(), rows, next)
     })
     .await??;
-    sqlx::query("DELETE FROM task_items WHERE provider_instance_id=$1 AND task_storage_id=$2")
-        .bind(generation.to_string())
-        .bind(storage.to_string())
-        .execute(&mut *connection)
-        .await?;
-    for (id, ordinal, payload, assignees) in prepared {
-        sqlx::query("INSERT INTO task_items(provider_instance_id,task_id,task_storage_id,ordinal,payload,assignees) VALUES($1,$2,$3,$4,$5,$6)")
-            .bind(generation.to_string()).bind(id).bind(storage.to_string()).bind(ordinal).bind(payload).bind(assignees).execute(&mut *connection).await?;
-    }
+    super::store::replace(connection, generation, storage, prepared).await?;
     sqlx::query("UPDATE task_generations SET next_task_id=GREATEST(next_task_id,$2) WHERE provider_instance_id=$1")
         .bind(generation.to_string()).bind(i64::from(next)).execute(connection).await?;
     Ok(())
 }
 
 struct Prepared {
-    rows: Vec<(i64, i64, String, Vec<String>)>,
+    rows: Vec<super::store::TaskRow>,
     next: u32,
 }
 
@@ -139,7 +131,7 @@ fn prepare(
 ) -> Result<Prepared, Error> {
     let project = original.project_id().ok_or(Error::Dependency)?;
     let storage = receipt.created_entity_id.ok_or(Error::Dependency)?;
-    let mut tasks = crate::task_execution::decode_tasks(rows, next)?;
+    let mut tasks = crate::tasks::store::decode(rows, next)?;
     let mut next = next;
     match original {
         ProviderCommand::CreateTask { task, .. } => {
@@ -181,22 +173,7 @@ fn prepare(
         }
         _ => return Err(Error::Dependency),
     }
-    let prepared = tasks
-        .into_iter()
-        .enumerate()
-        .map(|(ordinal, task)| {
-            Ok::<_, Error>((
-                i64::from(task.task_id),
-                i64::try_from(ordinal).map_err(|_| Error::Dependency)?,
-                serde_json::to_string(&task)?,
-                task.task
-                    .assignees
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect::<Vec<_>>(),
-            ))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
+    let prepared = super::store::encode(tasks)?;
     Ok(Prepared {
         rows: prepared,
         next,

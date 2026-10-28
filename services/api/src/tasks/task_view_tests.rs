@@ -16,7 +16,7 @@ async fn get(
 }
 async fn project(c: &Cohort, account: AccountId32) -> Result<Option<ProjectCore>, Error> {
     let raw = c.fake.lock().await.snapshot.projects[0].clone();
-    Ok(crate::task_views::project(raw, account))
+    Ok(crate::tasks::views::project(raw, account))
 }
 
 #[tokio::test]
@@ -262,7 +262,7 @@ async fn api_task_views_use_core_membership_and_validate_content_context() -> Te
         .await?
         .ok_or("core grants membership")?;
     let content =
-        crate::task_views::content(&c.app, info().provider_instance_id, selected.clone()).await?;
+        crate::tasks::views::content(&c.app, info().provider_instance_id, selected.clone()).await?;
     assert_eq!(
         content.storages[0].storage.tasks[0].task.assignees,
         vec![stranger]
@@ -272,7 +272,7 @@ async fn api_task_views_use_core_membership_and_validate_content_context() -> Te
         .execute(&c.app.db)
         .await?;
     assert!(matches!(
-        crate::task_views::content(&c.app, info().provider_instance_id, selected).await,
+        crate::tasks::views::content(&c.app, info().provider_instance_id, selected).await,
         Err(Error::Dependency)
     ));
     c.internal.finish().await?;
@@ -300,7 +300,7 @@ async fn api_task_views_keep_one_pg_snapshot_during_an_atomic_task_commit() -> T
     sqlx::query("LOCK TABLE task_items IN ACCESS EXCLUSIVE MODE")
         .execute(&mut *publisher)
         .await?;
-    let read = crate::task_views::content(&c.app, info().provider_instance_id, core.clone());
+    let read = crate::tasks::views::content(&c.app, info().provider_instance_id, core.clone());
     let publish = async {
         let blocked = blocked_task_reader(&c).await;
         if blocked.is_ok() {
@@ -316,7 +316,7 @@ async fn api_task_views_keep_one_pg_snapshot_during_an_atomic_task_commit() -> T
     committed?;
     assert_eq!(view?.storages[0].storage.tasks[0], original);
     assert_eq!(
-        crate::task_views::content(&c.app, info().provider_instance_id, core)
+        crate::tasks::views::content(&c.app, info().provider_instance_id, core)
             .await?
             .storages[0]
             .storage
@@ -622,7 +622,7 @@ async fn api_task_view_namespace_and_new_empty_storage_reads_do_not_reuse_old_ta
         .await?;
     let mut core = c.fake.lock().await.snapshot.projects[0].clone();
     core.proposals[0].milestones[0].task_storage.tasks.clear();
-    let other = crate::task_views::project(core, c.owner.view.account_id);
+    let other = crate::tasks::views::project(core, c.owner.view.account_id);
     assert!(
         other.ok_or("owner")?.proposals[0].milestones[0]
             .task_storage
@@ -658,7 +658,7 @@ async fn api_task_view_namespace_and_new_empty_storage_reads_do_not_reuse_old_ta
         .map(protocol::provider_core::TaskCore::from)
         .collect();
     assert!(matches!(
-        crate::task_views::content(&c.app, generation, core).await,
+        crate::tasks::views::content(&c.app, generation, core).await,
         Err(Error::Dependency)
     ));
     c.internal.finish().await?;

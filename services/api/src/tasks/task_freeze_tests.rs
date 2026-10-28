@@ -58,7 +58,7 @@ async fn finish_provider(
             .ok_or(Error::Internal)?
         {
             operations::Work::Provider(job) => operations::process(&c.app, *job).await?,
-            operations::Work::Task(job) => crate::task_execution::process(&c.app, job).await?,
+            operations::Work::Task(job) => crate::tasks::execution::process(&c.app, job).await?,
         }
     }
     Err(Error::Internal)
@@ -408,7 +408,7 @@ async fn task_freeze_and_task_edit_share_project_lock_in_both_race_orders() -> T
             if capture_first {
                 wait_project_waiters(&c, 1).await?;
             }
-            crate::task_execution::process(&c.app, job).await
+            crate::tasks::execution::process(&c.app, job).await
         };
         let freeze_future = async {
             if !capture_first {

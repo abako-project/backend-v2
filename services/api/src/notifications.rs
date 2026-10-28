@@ -102,7 +102,7 @@ fn view(row: &PgRow) -> Result<NotificationView, Error> {
             {
                 return Err(Error::Dependency);
             }
-            crate::task_history::TaskOperation::read(row)?.validate_event(task)?;
+            crate::tasks::history::TaskOperation::read(row)?.validate_event(task)?;
         }
     }
     Ok(NotificationView {
@@ -139,7 +139,7 @@ async fn enrich(
                             .any(|n| n.event.project_id() == Some(p.project_id))
                     })
                     .collect();
-                snapshot.projects = crate::task_views::visible(selected, account);
+                snapshot.projects = crate::tasks::views::visible(selected, account);
                 Some(snapshot)
             }
             Err(Error::Dependency | Error::NotFound) => None,

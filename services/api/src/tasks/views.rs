@@ -101,7 +101,7 @@ fn apply(
                     None if storage.tasks.is_empty() => {}
                     _ => return Err(Error::Dependency),
                 }
-                let content = crate::task_execution::decode_tasks(
+                let content = crate::tasks::store::decode(
                     tasks.remove(&storage.task_storage_id).unwrap_or_default(),
                     next,
                 )

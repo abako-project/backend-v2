@@ -9,7 +9,7 @@ pub(crate) async fn compose(
     generation: ProviderInstanceId,
     project: ProjectCore,
 ) -> Result<ProjectView, Error> {
-    let tasks = crate::task_views::content(app, generation, project.clone()).await?;
+    let tasks = crate::tasks::views::content(app, generation, project.clone()).await?;
     let mut tasks: BTreeMap<_, _> = tasks
         .storages
         .into_iter()

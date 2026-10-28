@@ -44,9 +44,9 @@ mod creation_metadata;
 mod proposal_documents;
 #[path = "reason_metadata_tests.rs"]
 mod reason_documents;
-#[path = "task_execution_tests.rs"]
+#[path = "tasks/task_execution_tests.rs"]
 mod task_execution;
-#[path = "task_history_tests.rs"]
+#[path = "tasks/task_history_tests.rs"]
 mod task_history;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
@@ -1798,14 +1798,14 @@ async fn task_initialization_is_repeatable_and_refuses_missing_content_after_cor
     );
     let internal = Server::start(router).await?;
     let app = app(&internal).await?;
-    crate::task_state::initialize_empty(&app).await?;
-    crate::task_state::initialize_empty(&app).await?;
+    crate::tasks::state::initialize_empty(&app).await?;
+    crate::tasks::state::initialize_empty(&app).await?;
     sqlx::query("UPDATE task_generations SET next_task_id=9")
         .execute(&app.db)
         .await?;
     state.lock().await.next_task_id = 9;
     state.lock().await.has_task_history = true;
-    crate::task_state::initialize_empty(&app).await?;
+    crate::tasks::state::initialize_empty(&app).await?;
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT next_task_id FROM task_generations")
             .fetch_one(&app.db)
@@ -1816,7 +1816,7 @@ async fn task_initialization_is_repeatable_and_refuses_missing_content_after_cor
         .execute(&app.db)
         .await?;
     assert!(matches!(
-        crate::task_state::initialize_empty(&app).await,
+        crate::tasks::state::initialize_empty(&app).await,
         Err(Error::Conflict("task_state_missing"))
     ));
     assert_eq!(

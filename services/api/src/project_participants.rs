@@ -77,7 +77,7 @@ pub(crate) async fn get(
         .into_iter()
         .find(|p| p.project_id == id)
         .ok_or(Error::NotFound)?;
-    let project = crate::task_views::project(project, session.view.account_id);
+    let project = crate::tasks::views::project(project, session.view.account_id);
     let project = project.ok_or(Error::NotFound)?;
     let (client, coordinator) = tokio::try_join!(
         participant(&app, project.client, true),

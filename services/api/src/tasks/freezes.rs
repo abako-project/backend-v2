@@ -111,7 +111,8 @@ pub(crate) async fn capture(
     if pending {
         return Err(Error::Conflict("task_core_pending"));
     }
-    let tasks = crate::task_views::current_state(connection, generation, next, vec![core]).await?;
+    let tasks =
+        crate::tasks::views::current_state(connection, generation, next, vec![core]).await?;
     let json =
         tokio::task::spawn_blocking(move || serde_json::to_string(&tasks.storages)).await??;
     sqlx::query("INSERT INTO task_freezes(operation_id,provider_instance_id,project_id,kind,snapshot_json) VALUES($1,$2,$3,$4,$5)")
@@ -189,7 +190,7 @@ pub(crate) async fn compose_case(
     sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         .execute(&mut *tx)
         .await?;
-    let Some(next) = crate::task_views::counter(&mut tx, generation).await? else {
+    let Some(next) = crate::tasks::views::counter(&mut tx, generation).await? else {
         return Err(Error::Dependency);
     };
     let view = accepted_case(&mut tx, generation, proposal, next, view).await?;
