@@ -250,16 +250,16 @@ No API exists to resolve or unlock the case. See [SPEC-0005](../specs/0005-dispu
 ## Run the executable flow
 
 ```sh
-cargo build -p api -p wallet -p native-provider --all-features --locked
+cargo build -p api -p wallet --all-features --locked
+cargo build --manifest-path services/contract-provider/Cargo.toml --locked
 python3 scripts/poc-e2e.py
 ```
 
 The script requires PostgreSQL's `initdb`, `pg_ctl` and `psql` commands. It
 starts a disposable PostgreSQL instance and local services, then runs the single-milestone
 happy path, the four-milestone 5/3/4/2 path, the dispute branch and auxiliary
-profile/Bramp/catalog checks on both SQLite and memory mock storage. It also
-scans bounded service logs for the generated secret markers. Use `--storage sqlite` or `--storage memory`
-to run only one backend. It is a signed backend E2E, not a browser E2E or a
+profile/Bramp/catalog checks against the contract provider. It also
+scans bounded service logs for generated secret markers. It is a signed backend E2E, not a browser E2E or a
 real-chain test.
 
 ### Project creation date

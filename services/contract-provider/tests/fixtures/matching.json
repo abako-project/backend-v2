@@ -1,3835 +1,4 @@
 {
-  "final": [
-    [
-      {
-        "content": {
-          "data": "0xd7d4058e036d2491084b9748719851e2ff9dd5b75b04ae87e9b601399f98336f",
-          "type": "Seed"
-        },
-        "fixed": true,
-        "id": 1
-      },
-      {
-        "content": {
-          "data": "0xffbdd9c137ef16c7d426d536ea21f64a00ba1cea4def2911600676eddf0aa8ef",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 2
-      },
-      {
-        "content": {
-          "data": "0x060e4c884c5fda04f9abf4b51f55e1812fd814b36927ec34bcbfbe5d73089b9c",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 3
-      },
-      {
-        "content": {
-          "data": "0x61a5473bc2bb15085de089a1fdc61e6d4cd770193e3a48415aaac50b29058288",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 4
-      },
-      {
-        "content": {
-          "data": "0x399ec5e21f2c0f2341f33eb4a7fbe5d96109a041b55be75585ac37a1d4d13d8d",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 5
-      },
-      {
-        "content": {
-          "data": "0x99acfa86a6d95e1afcb8df9ea3b6bf1e0ec274fa32fcce5b0f5b6e028af69fc1",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 6
-      },
-      {
-        "content": {
-          "data": "0xa9f10d1d2feb1f8c741f96897a6a15e55a2118672cd39c31c59eaedda1dda584",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 7
-      },
-      {
-        "content": {
-          "data": "0xf13a1fb69089432ebd740d199e2840dde4df4b375265608a95a20f3b08669c87",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 8
-      },
-      {
-        "content": {
-          "data": "0x0210f3524c7a3fa8317cb7f95f426eea6aa2f0cca4cc84eeac788ff2f3fe77fe",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 9
-      }
-    ],
-    [
-      {
-        "content": {
-          "data": "0xd0c82d3dde2304550815b98420846b0f88c567ac52bbc3edc55bb35f3bc8ca7f",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 1
-      },
-      {
-        "content": {
-          "data": "0xfcd9bbb23616ed0dd36347b2c157d6d95f9396a456f43204332c7fbaf7f9e9c5",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 2
-      },
-      {
-        "content": {
-          "data": "0xedf0e99c2ce69f91435af00a01e40b21a43a3af93fbef2005240eaff8cfa442b",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 3
-      },
-      {
-        "content": {
-          "data": "0xa17d80b32c63be8771ce9e6adf0fcabb857ed37749fd85f31f8e06d8718bdc43",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 4
-      },
-      {
-        "content": {
-          "data": "0x815efb8472568cc2b0eae8f359191e4eb1a93a5bad95abd29e244df4f82c2c4d",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 5
-      },
-      {
-        "content": {
-          "data": "0xc28d6608285c3553724d7f67bc18a736f7b060760f2f3d57b5e7adecc9624ccf",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 6
-      },
-      {
-        "content": {
-          "data": "0xcd38b21b15aeea8f649a57d4b4a97666fb6da2a743a77c0f4320f420d3f375de",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 7
-      },
-      {
-        "content": {
-          "data": "0x18d8003de8087df72224b41cc43770691529cdf6b505e15f45fa6f126ebc5589",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 8
-      },
-      {
-        "content": {
-          "data": "0x5bc804837e9e6cbcd628f1ac493f2817d3519ef573303da67324c9f1f113cb8e",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 9
-      },
-      {
-        "content": {
-          "data": "0xafede6e006fed84f5d6ebc590c626a9637dec2eaad8400b845a31a45a332b090",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 10
-      },
-      {
-        "content": {
-          "data": "0x7c366407658373fd2b2a6724ff06318a265e714a7af13efd5ec51223b6d7e712",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 11
-      },
-      {
-        "content": {
-          "data": "0xf5afd09bb42acf553e5b6125a5053c09b9e0aaeba48b26b05b9661385140406b",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 12
-      },
-      {
-        "content": {
-          "data": "0x4b177ad6f86f3ac3c016b8ec9dd883064afbf0590cb5e30f9d489afe82708570",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 13
-      },
-      {
-        "content": {
-          "data": "0x6b3ef16c26d8da91c1ee268c5bbf23e731cd76fbf93f011b6f3d5cb918185fdf",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 14
-      },
-      {
-        "content": {
-          "data": "0xf8caa368383a669722b95a1b656e0a5935a462ff3ab6d8c222db1c92ef495946",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 15
-      },
-      {
-        "content": {
-          "data": "0x8d02c416439b194f72b981ddda975c58d9b9b81ea241bd41b47d41d42cca110a",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 16
-      },
-      {
-        "content": {
-          "data": "0xddd2b090f87d665063d7f86813985deb50b4dcf5f9e53757c70c13d9c34f1252",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 17
-      },
-      {
-        "content": {
-          "data": "0x0dbadebe0942b496566d8efc6e60bd97c206ed5036c1cf1b4dd9f8105d51505f",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 18
-      },
-      {
-        "content": {
-          "data": "0xb924375b77a5451f428761a6b1a1f9d6214d7ba5b89072524c1728e56072f0dc",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 19
-      },
-      {
-        "content": {
-          "data": "0x5ad145101ac0db59937f82ec11cb55db99e9e80d45e8101c0d0805bc6af66d87",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 20
-      },
-      {
-        "content": {
-          "data": "0x265adcb39a9a1ccc20d67bd21022f59a0e958559bd4e0d53248482d99acc87e2",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 21
-      },
-      {
-        "content": {
-          "data": "0x59fa33793ce6f210f14e4126ae9951cc1f5c84be0a9d8d09435823473c2b8300",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 22
-      },
-      {
-        "content": {
-          "data": "0x6cbda7c3ac0c72deea1df21b5f9728da575d1bef5fab1d2caafbeca6d4b45f55",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 23
-      },
-      {
-        "content": {
-          "data": "0x3219db8f5d96279d989fbc7b615499f16e8b835152d1bce99fac2c6b7936f072",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 24
-      },
-      {
-        "content": {
-          "data": "0x28fb3c65eb91e4c942909a26ca095cb3c40686a0062a3d7d0396b3d1cde6155d",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 25
-      },
-      {
-        "content": {
-          "data": "0x14fe23946d8b7f11e21c8c4ae5a0527c2cbc76f43c461c5547b0d986141abdc9",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 26
-      },
-      {
-        "content": {
-          "data": "0xacec7a07a7167355f768fd5f7c6220925e0de3835fe9dc56ad4fcea882b5c5b5",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 27
-      },
-      {
-        "content": {
-          "data": "0x371b291e6cfb2e8259422c926504929f9a2d26b2fbc5df2aa593be5ef7077024",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 28
-      },
-      {
-        "content": {
-          "data": "0xc42906e36fa99ffd42dc9ccbd751ccb518be9e305e6f05be48c9b3d09fcc4c54",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 29
-      },
-      {
-        "content": {
-          "data": "0xffc66db3142a2b16bbc8867ceea6cd0204528c11f13028b66aee50ca5b2e9571",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 30
-      },
-      {
-        "content": {
-          "data": "0xa9bb6088e672e1c91497287e1714f80c7890bf4248855912646bbbfc41228ad4",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 31
-      },
-      {
-        "content": {
-          "data": "0xdefce274fe82d934251791e7bfd998acf9e16610973a6ec21ab557d8f8c9c2d0",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 32
-      },
-      {
-        "content": {
-          "data": "0xc94ce6588b434b551f112171d8f0b8d8fc47718b7019dc00954f64bff6c90765",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 33
-      }
-    ],
-    [
-      {
-        "origin": {
-          "data": "0xd0c82d3dde2304550815b98420846b0f88c567ac52bbc3edc55bb35f3bc8ca7f",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7,
-          8
-        ],
-        "skillId": 1
-      },
-      {
-        "origin": {
-          "data": "0xfcd9bbb23616ed0dd36347b2c157d6d95f9396a456f43204332c7fbaf7f9e9c5",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7
-        ],
-        "skillId": 2
-      },
-      {
-        "origin": {
-          "data": "0xedf0e99c2ce69f91435af00a01e40b21a43a3af93fbef2005240eaff8cfa442b",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7
-        ],
-        "skillId": 3
-      },
-      {
-        "origin": {
-          "data": "0xa17d80b32c63be8771ce9e6adf0fcabb857ed37749fd85f31f8e06d8718bdc43",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7
-        ],
-        "skillId": 4
-      },
-      {
-        "origin": {
-          "data": "0x815efb8472568cc2b0eae8f359191e4eb1a93a5bad95abd29e244df4f82c2c4d",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4
-        ],
-        "skillId": 5
-      },
-      {
-        "origin": {
-          "data": "0xc28d6608285c3553724d7f67bc18a736f7b060760f2f3d57b5e7adecc9624ccf",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4
-        ],
-        "skillId": 6
-      },
-      {
-        "origin": {
-          "data": "0xcd38b21b15aeea8f649a57d4b4a97666fb6da2a743a77c0f4320f420d3f375de",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          4
-        ],
-        "skillId": 7
-      },
-      {
-        "origin": {
-          "data": "0x18d8003de8087df72224b41cc43770691529cdf6b505e15f45fa6f126ebc5589",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 8
-      },
-      {
-        "origin": {
-          "data": "0x5bc804837e9e6cbcd628f1ac493f2817d3519ef573303da67324c9f1f113cb8e",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 9
-      },
-      {
-        "origin": {
-          "data": "0xafede6e006fed84f5d6ebc590c626a9637dec2eaad8400b845a31a45a332b090",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 10
-      },
-      {
-        "origin": {
-          "data": "0x7c366407658373fd2b2a6724ff06318a265e714a7af13efd5ec51223b6d7e712",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          4,
-          7,
-          9
-        ],
-        "skillId": 11
-      },
-      {
-        "origin": {
-          "data": "0xf5afd09bb42acf553e5b6125a5053c09b9e0aaeba48b26b05b9661385140406b",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          4,
-          8
-        ],
-        "skillId": 12
-      },
-      {
-        "origin": {
-          "data": "0x4b177ad6f86f3ac3c016b8ec9dd883064afbf0590cb5e30f9d489afe82708570",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7,
-          9
-        ],
-        "skillId": 13
-      },
-      {
-        "origin": {
-          "data": "0x6b3ef16c26d8da91c1ee268c5bbf23e731cd76fbf93f011b6f3d5cb918185fdf",
-          "type": "Seed"
-        },
-        "roleIds": [
-          7,
-          9
-        ],
-        "skillId": 14
-      },
-      {
-        "origin": {
-          "data": "0xf8caa368383a669722b95a1b656e0a5935a462ff3ab6d8c222db1c92ef495946",
-          "type": "Seed"
-        },
-        "roleIds": [
-          7,
-          9
-        ],
-        "skillId": 15
-      },
-      {
-        "origin": {
-          "data": "0x8d02c416439b194f72b981ddda975c58d9b9b81ea241bd41b47d41d42cca110a",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          7
-        ],
-        "skillId": 16
-      },
-      {
-        "origin": {
-          "data": "0xddd2b090f87d665063d7f86813985deb50b4dcf5f9e53757c70c13d9c34f1252",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          7
-        ],
-        "skillId": 17
-      },
-      {
-        "origin": {
-          "data": "0x0dbadebe0942b496566d8efc6e60bd97c206ed5036c1cf1b4dd9f8105d51505f",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          7
-        ],
-        "skillId": 18
-      },
-      {
-        "origin": {
-          "data": "0xb924375b77a5451f428761a6b1a1f9d6214d7ba5b89072524c1728e56072f0dc",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          6,
-          7
-        ],
-        "skillId": 19
-      },
-      {
-        "origin": {
-          "data": "0x5ad145101ac0db59937f82ec11cb55db99e9e80d45e8101c0d0805bc6af66d87",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          6,
-          8,
-          9
-        ],
-        "skillId": 20
-      },
-      {
-        "origin": {
-          "data": "0x265adcb39a9a1ccc20d67bd21022f59a0e958559bd4e0d53248482d99acc87e2",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4,
-          5
-        ],
-        "skillId": 21
-      },
-      {
-        "origin": {
-          "data": "0x59fa33793ce6f210f14e4126ae9951cc1f5c84be0a9d8d09435823473c2b8300",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          5
-        ],
-        "skillId": 22
-      },
-      {
-        "origin": {
-          "data": "0x6cbda7c3ac0c72deea1df21b5f9728da575d1bef5fab1d2caafbeca6d4b45f55",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 23
-      },
-      {
-        "origin": {
-          "data": "0x3219db8f5d96279d989fbc7b615499f16e8b835152d1bce99fac2c6b7936f072",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 24
-      },
-      {
-        "origin": {
-          "data": "0x28fb3c65eb91e4c942909a26ca095cb3c40686a0062a3d7d0396b3d1cde6155d",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          7
-        ],
-        "skillId": 25
-      },
-      {
-        "origin": {
-          "data": "0x14fe23946d8b7f11e21c8c4ae5a0527c2cbc76f43c461c5547b0d986141abdc9",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          7
-        ],
-        "skillId": 26
-      },
-      {
-        "origin": {
-          "data": "0xacec7a07a7167355f768fd5f7c6220925e0de3835fe9dc56ad4fcea882b5c5b5",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 27
-      },
-      {
-        "origin": {
-          "data": "0x371b291e6cfb2e8259422c926504929f9a2d26b2fbc5df2aa593be5ef7077024",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          5,
-          7
-        ],
-        "skillId": 28
-      },
-      {
-        "origin": {
-          "data": "0xc42906e36fa99ffd42dc9ccbd751ccb518be9e305e6f05be48c9b3d09fcc4c54",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          5,
-          7
-        ],
-        "skillId": 29
-      },
-      {
-        "origin": {
-          "data": "0xffc66db3142a2b16bbc8867ceea6cd0204528c11f13028b66aee50ca5b2e9571",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          3,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 30
-      },
-      {
-        "origin": {
-          "data": "0xa9bb6088e672e1c91497287e1714f80c7890bf4248855912646bbbfc41228ad4",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 31
-      },
-      {
-        "origin": {
-          "data": "0xdefce274fe82d934251791e7bfd998acf9e16610973a6ec21ab557d8f8c9c2d0",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 32
-      },
-      {
-        "origin": {
-          "data": "0xc94ce6588b434b551f112171d8f0b8d8fc47718b7019dc00954f64bff6c90765",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 33
-      }
-    ],
-    [
-      {
-        "account": "0x0202020202020202020202020202020202020202020202020202020202020202",
-        "calendar": {
-          "calendarId": "0x462b6207545181dbd3adc8708af35b4d",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0202020202020202020202020202020202020202020202020202020202020202",
-          "reservations": [
-            {
-              "milestoneId": "0x65656565656565656565656565656565",
-              "minutes": 30,
-              "projectId": "0x64646464646464646464646464646464",
-              "requirementKey": null,
-              "week": {
-                "isoYear": 2026,
-                "week": 1
-              }
-            },
-            {
-              "milestoneId": "0x66666666666666666666666666666666",
-              "minutes": 30,
-              "projectId": "0x64646464646464646464646464646464",
-              "requirementKey": null,
-              "week": {
-                "isoYear": 2026,
-                "week": 2
-              }
-            },
-            {
-              "milestoneId": "0x6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c",
-              "minutes": 30,
-              "projectId": "0x6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b",
-              "requirementKey": null,
-              "week": {
-                "isoYear": 2026,
-                "week": 3
-              }
-            },
-            {
-              "milestoneId": "0x6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f",
-              "minutes": 30,
-              "projectId": "0x6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e",
-              "requirementKey": null,
-              "week": {
-                "isoYear": 2026,
-                "week": 3
-              }
-            }
-          ]
-        },
-        "content": {
-          "data": {
-            "hash": "0xf27b931105077609e31b5d62daf203006a24794776c931d2458a2450bf554122",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": true,
-        "coordinatorScore": {
-          "ratedMinutes": 210,
-          "weightedScoreSum": "101000"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 10,
-          "weightedScoreSum": "5000"
-        }
-      },
-      {
-        "account": "0x0303030303030303030303030303030303030303030303030303030303030303",
-        "calendar": {
-          "calendarId": "0x8650208247846eff5a1c62ecf28ac666",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0303030303030303030303030303030303030303030303030303030303030303",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x5fd6182fb23de5be908dbda1fa16bb36139cdc08271f0b652363852e7c92f725",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": true,
-        "coordinatorScore": {
-          "ratedMinutes": 10,
-          "weightedScoreSum": "5000"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 10,
-          "weightedScoreSum": "1000"
-        }
-      },
-      {
-        "account": "0x0404040404040404040404040404040404040404040404040404040404040404",
-        "calendar": {
-          "calendarId": "0xa2a90a02d2594fc2737474a858c99645",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0404040404040404040404040404040404040404040404040404040404040404",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x17ef320917e6e87e9044024e56c775ca77128dcfe72c4834da5dd8dd14b440c0",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 11,
-          "weightedScoreSum": "1100"
-        }
-      },
-      {
-        "account": "0x0505050505050505050505050505050505050505050505050505050505050505",
-        "calendar": {
-          "calendarId": "0x73d85d5945a412edd3f7f247e42f99bb",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0505050505050505050505050505050505050505050505050505050505050505",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x5e6a5ef8b2b913b07cab8f1dc724cd6e0f77ae2c3379f7b056e165a82fc490c1",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 9,
-          "weightedScoreSum": "4500"
-        }
-      },
-      {
-        "account": "0x0606060606060606060606060606060606060606060606060606060606060606",
-        "calendar": {
-          "calendarId": "0x043f3f5b8e6becf99a1bebf57e05b867",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0606060606060606060606060606060606060606060606060606060606060606",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xa1b2bc2eb5054e589b868f6a2825a1f39d63e646f1719e589fc8d947122b5fe4",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 9,
-          "weightedScoreSum": "4500"
-        }
-      },
-      {
-        "account": "0x0707070707070707070707070707070707070707070707070707070707070707",
-        "calendar": {
-          "calendarId": "0xf692897885c0cb20a3e4cd106a0b15bc",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0707070707070707070707070707070707070707070707070707070707070707",
-          "reservations": [
-            {
-              "milestoneId": "0x65656565656565656565656565656565",
-              "minutes": 40,
-              "projectId": "0x64646464646464646464646464646464",
-              "requirementKey": 1,
-              "week": {
-                "isoYear": 2026,
-                "week": 1
-              }
-            },
-            {
-              "milestoneId": "0x66666666666666666666666666666666",
-              "minutes": 40,
-              "projectId": "0x64646464646464646464646464646464",
-              "requirementKey": 1,
-              "week": {
-                "isoYear": 2026,
-                "week": 2
-              }
-            }
-          ]
-        },
-        "content": {
-          "data": {
-            "hash": "0xab2a4be52104aa2444eaed51c1599d3328a6f309d935d88f6dc49709d8205e2a",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 37,
-          "weightedScoreSum": "14800"
-        }
-      },
-      {
-        "account": "0x0808080808080808080808080808080808080808080808080808080808080808",
-        "calendar": {
-          "calendarId": "0xbf78043c41c5229ffd6576a91ac80e7e",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": [
-              {
-                "capacity": 0,
-                "week": {
-                  "isoYear": 2026,
-                  "week": 1
-                }
-              }
-            ]
-          },
-          "owner": "0x0808080808080808080808080808080808080808080808080808080808080808",
-          "reservations": [
-            {
-              "milestoneId": "0x6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c6c",
-              "minutes": 10,
-              "projectId": "0x6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b6b",
-              "requirementKey": 1,
-              "week": {
-                "isoYear": 2026,
-                "week": 3
-              }
-            }
-          ]
-        },
-        "content": {
-          "data": {
-            "hash": "0x6b7bbd55796f5e959716d55d59b1cfad4336e375b9d03ee1fdebfbdcb01cb0f8",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 13,
-          "weightedScoreSum": "6500"
-        }
-      },
-      {
-        "account": "0x0909090909090909090909090909090909090909090909090909090909090909",
-        "calendar": {
-          "calendarId": "0xb0d6878faae801dd851a85fe96d3b17e",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0909090909090909090909090909090909090909090909090909090909090909",
-          "reservations": [
-            {
-              "milestoneId": "0x65656565656565656565656565656565",
-              "minutes": 40,
-              "projectId": "0x64646464646464646464646464646464",
-              "requirementKey": 2,
-              "week": {
-                "isoYear": 2026,
-                "week": 1
-              }
-            },
-            {
-              "milestoneId": "0x66666666666666666666666666666666",
-              "minutes": 40,
-              "projectId": "0x64646464646464646464646464646464",
-              "requirementKey": 2,
-              "week": {
-                "isoYear": 2026,
-                "week": 2
-              }
-            }
-          ]
-        },
-        "content": {
-          "data": {
-            "hash": "0x662f3d0c333c13bda76e9830bed234ca5007626f03a28941dc2f7d7c7e281fc8",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 53,
-          "weightedScoreSum": "15900"
-        }
-      },
-      {
-        "account": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
-        "calendar": {
-          "calendarId": "0xe7480f7cdeb295f6cfe468e81823e7de",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": [
-              {
-                "capacity": 0,
-                "week": {
-                  "isoYear": 2026,
-                  "week": 1
-                }
-              }
-            ]
-          },
-          "owner": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
-          "reservations": [
-            {
-              "milestoneId": "0x66666666666666666666666666666666",
-              "minutes": 40,
-              "projectId": "0x64646464646464646464646464646464",
-              "requirementKey": 3,
-              "week": {
-                "isoYear": 2026,
-                "week": 2
-              }
-            }
-          ]
-        },
-        "content": {
-          "data": {
-            "hash": "0x314cfcf1a38daae56417460be11c1987988834e0fe4ed0bd05233facd580a4b9",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            2
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 13,
-          "weightedScoreSum": "6500"
-        }
-      },
-      {
-        "account": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
-        "calendar": {
-          "calendarId": "0x7f982207bff99f3c0196518bbded3666",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x58c59a82c63c12e21f3b950609781a08428d1cb9c9755ab1ae8961a18c9af461",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": true,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Coordinator",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-        "calendar": {
-          "calendarId": "0x597aacfb5a1744166ff5e0a6e641206e",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xa71e96b669d3b158ea052a89eab52dac4da0e1308f928e8df05ae444a7af97c2",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": true,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Coordinator",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
-        "calendar": {
-          "calendarId": "0x2ac61ed2accce69a92acbb2b2f312d60",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x6e3b35f75492e9bf089b70fd133412a6c1647d2a14fffe877c97f95d59d3e0c2",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
-        "calendar": {
-          "calendarId": "0x0da0959392a6f0f49f074c64ac9f2604",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x68bd452d9bef484a7208df002778dfddf64dd7032c8c778477b8dfdbcba11fdc",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
-        "calendar": {
-          "calendarId": "0xacaa88f9a319dedee7d729fab59da20b",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xc8f7526615d509862c85e324d4641731fd94171af3903655f2c3683f8594dbb9",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1010101010101010101010101010101010101010101010101010101010101010",
-        "calendar": {
-          "calendarId": "0xcaeb5e7018fffb52e24ec79633e0fe1d",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1010101010101010101010101010101010101010101010101010101010101010",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x06af07d087d4c4c12e0a91b1ebe7a60192d006e62ca051fb7158599feb1e743e",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1111111111111111111111111111111111111111111111111111111111111111",
-        "calendar": {
-          "calendarId": "0x74ed346d4cc835e1945348805e28c48b",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1111111111111111111111111111111111111111111111111111111111111111",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x109de02e139e36df4fe2fefc6ce0bb24befaf82d3829623eebbd9f423995e036",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1212121212121212121212121212121212121212121212121212121212121212",
-        "calendar": {
-          "calendarId": "0xca4bce725a44e2822994d952e077596c",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1212121212121212121212121212121212121212121212121212121212121212",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xadcb2e3e987df92836c61f09b25edee066f01094c238843e855f12bc80c3f1c4",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1313131313131313131313131313131313131313131313131313131313131313",
-        "calendar": {
-          "calendarId": "0xc458f38fd60805f351861dc82258a343",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1313131313131313131313131313131313131313131313131313131313131313",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xf8684e9c12e3c53431670bf585e1a85bbfc1d2753c51a8ab6f9a0670f44de705",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1414141414141414141414141414141414141414141414141414141414141414",
-        "calendar": {
-          "calendarId": "0x9aadcc746e1ee3c89cded850beceece0",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1414141414141414141414141414141414141414141414141414141414141414",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x05a3380400e9a69864dcba51e5a09a0eecde766cd5fb493dafb1e97ea0c884f8",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1515151515151515151515151515151515151515151515151515151515151515",
-        "calendar": {
-          "calendarId": "0x13dbb624c1fad6bc738de0ea7db831d5",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1515151515151515151515151515151515151515151515151515151515151515",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x20140ca17cf20b97070011c4d7298b8a37b3b7d6f1cf528d1cd04276f193fc8c",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1616161616161616161616161616161616161616161616161616161616161616",
-        "calendar": {
-          "calendarId": "0xe96e8e73f9d3bac6793e43ab2085c551",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1616161616161616161616161616161616161616161616161616161616161616",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x76402cb92c9957c7e6845f39e3677b8aee3a0d7f79788ec0108b6023a76e2ca8",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1717171717171717171717171717171717171717171717171717171717171717",
-        "calendar": {
-          "calendarId": "0x8d42c935e9444730088459a2a5342119",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1717171717171717171717171717171717171717171717171717171717171717",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xef62cd3f1b3336f772cf12b46414e88abdc5f44d3ea4e96ca6795bec8d0cba6b",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1818181818181818181818181818181818181818181818181818181818181818",
-        "calendar": {
-          "calendarId": "0x0581ecb18166fe68e0cda573a5a51a6a",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1818181818181818181818181818181818181818181818181818181818181818",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x6f256fd1d40ba9382f9df4db431dfd7642494562b803791176c3c3e6b0e6ff4f",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1919191919191919191919191919191919191919191919191919191919191919",
-        "calendar": {
-          "calendarId": "0xd9c963d42e1113cccda56bca67d460d7",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1919191919191919191919191919191919191919191919191919191919191919",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xc3bc326bab278c5605b9a0dd24beb3f15f09b8807139a47f3c24b0f5cb6c907d",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
-        "calendar": {
-          "calendarId": "0xf231b6a5e267933029a97e021bef2c6c",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x77f152a387dfb5abbca2f7725a564c4a6fe9082540febd569cefaccc42aa3fea",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
-        "calendar": {
-          "calendarId": "0x52683e5cbb0e5c167f04b1dc749163bf",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x2a20eb255727099dcf44948c76284f9bf03fce09ccf75801001312113778452d",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
-        "calendar": {
-          "calendarId": "0x26e166e29ab703f5533eae4561bcf27d",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x5f9fb5d13bdc6e91aed6e1e3b2d4fa4cc0933f2bed6db744dced319b108717a0",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d",
-        "calendar": {
-          "calendarId": "0xecb53f8387cb617287ea943103180b71",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x1ba8cc6da2d1dfe9d5b3200191aae7d3a330be7c486e71886119c55515a778ee",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
-        "calendar": {
-          "calendarId": "0x25c8f86f7023c3085891701a77084295",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xff1a8a63cbca7b88c237e22f6d50ab1cf3212d8649bfbf539b8b2870eee07e9a",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
-        "calendar": {
-          "calendarId": "0xb8466a3c91ec34d37d042ef39295fbe1",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x826eeee543e37207bc1c92edb72293d7d38f9b8b1c710a6d8f4daee258c8e1d0",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2020202020202020202020202020202020202020202020202020202020202020",
-        "calendar": {
-          "calendarId": "0x6a34445bfefc10f1a5a26f7a21620663",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2020202020202020202020202020202020202020202020202020202020202020",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xac1264acd9f3ea4f2e57d72ce138df64342ecaf317f8cbb4c44a8c7cad706892",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2121212121212121212121212121212121212121212121212121212121212121",
-        "calendar": {
-          "calendarId": "0x4e3a1f5999f0b7729afc0d9e6c3f5ddc",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2121212121212121212121212121212121212121212121212121212121212121",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x1c637d00f369a81f3dc88ee38d97a5362aaf00cebecd26fb694bf4932f44b4cb",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2222222222222222222222222222222222222222222222222222222222222222",
-        "calendar": {
-          "calendarId": "0x1fcfab352c8b5d27e4985deeab5c9c6d",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2222222222222222222222222222222222222222222222222222222222222222",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x6a6606bd3b531f1d111ce6444e338225634522f54cfc71efb6e5a31dfe91f3ce",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2323232323232323232323232323232323232323232323232323232323232323",
-        "calendar": {
-          "calendarId": "0xc779290287bd136591ee6d828ca7d933",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2323232323232323232323232323232323232323232323232323232323232323",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x89375aaa706c5c7ab42d83f51ffbe8e0e77821566831bd95257d29094f63c1b7",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2424242424242424242424242424242424242424242424242424242424242424",
-        "calendar": {
-          "calendarId": "0x73d4d63a483bed16ec03544f823f9dac",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2424242424242424242424242424242424242424242424242424242424242424",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x11bb249a8bacf0313af3ab8b52afd344cfb31df789a0a90ef2de6b9c76fb927b",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2525252525252525252525252525252525252525252525252525252525252525",
-        "calendar": {
-          "calendarId": "0xc419f7eb360d5cd28c50a8d7d2c12760",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2525252525252525252525252525252525252525252525252525252525252525",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x088cbcfe4735fb9475e543d1c41aa9fe1147624cbe90538fe16251f78f3d6dbf",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2626262626262626262626262626262626262626262626262626262626262626",
-        "calendar": {
-          "calendarId": "0xf17824d429eb80f8d8f9f5381f0aa4d3",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2626262626262626262626262626262626262626262626262626262626262626",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x5c8b201e36ccc6fb113fac5d5e8aeaf4ee615942d8ea0d4ee9bda8bdf3f5c7af",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2727272727272727272727272727272727272727272727272727272727272727",
-        "calendar": {
-          "calendarId": "0xc09deb8765a868642cf6a05bfca7307b",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2727272727272727272727272727272727272727272727272727272727272727",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xc0b6528d5d699b56287435ea8d222575eb8834d102a7e2ab08d4a22bdf22097a",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2828282828282828282828282828282828282828282828282828282828282828",
-        "calendar": {
-          "calendarId": "0xd1af31216f0afd738b22608a63fb8866",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2828282828282828282828282828282828282828282828282828282828282828",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x26615b7e8c5c5f0ccfe3c8a33298d3451cb4e1d50c709ca15f20741f3d74282f",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2929292929292929292929292929292929292929292929292929292929292929",
-        "calendar": {
-          "calendarId": "0x887c4fb04ce3f63d84e9612a525a0e11",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2929292929292929292929292929292929292929292929292929292929292929",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xede6e30821e0342e1961246e207887c13771f79fd7809fda7d288d98a11903bc",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
-        "calendar": {
-          "calendarId": "0x1b8c20cde2dbb43cd3c709b290ac50dc",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xaf259c376cf434561571d0a70a9e0bcb3aef5dcab42402e287e37304b667355a",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
-        "calendar": {
-          "calendarId": "0xdf436289cb9beaf0a2ab358f0314219d",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xc0f465b30e5644fd87f512278220a0e7450560e4cca5abb3c0a5b5fb47630a4a",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c",
-        "calendar": {
-          "calendarId": "0xdef458101be7a815f7326d61ed8285aa",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xb4630c74095cdecb4c7cc585fdca08300a42f64736bce5f8e62768243999b6c4",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d",
-        "calendar": {
-          "calendarId": "0x1504c1e1e49787fd647c86a40781dc16",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x9c39d2de2cc351aad573ec9ac99d3b28dc1d491d4c2e3e362365e74ce86be2d9",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e",
-        "calendar": {
-          "calendarId": "0x677b67728f1cba216c9ec05d145ade1f",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x572aaa39e634aee9d6479d80e435c9ee56af5fe28335f4d32991de4d1604f462",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f",
-        "calendar": {
-          "calendarId": "0xe0a5a13b8ce77c3637aafba0d0ef8b34",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x614e2aeb0093453b00bfca1d0d66d584a2a9a69ca7f3618971b892ae1c8237f7",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3030303030303030303030303030303030303030303030303030303030303030",
-        "calendar": {
-          "calendarId": "0xb224d699c13717320771aa24b42d871f",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3030303030303030303030303030303030303030303030303030303030303030",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x4c7a611b5f794965a298969f409375dcdf2517618246304e3c6c0e06a7c6cc89",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3131313131313131313131313131313131313131313131313131313131313131",
-        "calendar": {
-          "calendarId": "0xebbe5df3320bb3d7e4ce2c177685c233",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3131313131313131313131313131313131313131313131313131313131313131",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xe4e20d3da4fe9430de10167a625cbdd4b823c0ac5e93c2d0f700fe2494953fbd",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3232323232323232323232323232323232323232323232323232323232323232",
-        "calendar": {
-          "calendarId": "0x0a0776ce094836d8f4082ef542e9d882",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3232323232323232323232323232323232323232323232323232323232323232",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x65966fcf5293739e51f8cc404d42998dd0a0b479ae5a2303f14d5e2c170f5f68",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3333333333333333333333333333333333333333333333333333333333333333",
-        "calendar": {
-          "calendarId": "0x20058981e288922dd35e2b1763b48791",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3333333333333333333333333333333333333333333333333333333333333333",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x776b316208057279f53fc86fcdc5b1d011cc6f307736e726a021811b2008765a",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3434343434343434343434343434343434343434343434343434343434343434",
-        "calendar": {
-          "calendarId": "0x44452fe6106e73dd3368b4c41f7cfcee",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3434343434343434343434343434343434343434343434343434343434343434",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x9e66c050a3bb97f3f15e7862b8f6a5bca2fc8ddd78850ff1cfbf7e7cc2f03201",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3535353535353535353535353535353535353535353535353535353535353535",
-        "calendar": {
-          "calendarId": "0x1b713d16d6ad321c723a0bd357895047",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3535353535353535353535353535353535353535353535353535353535353535",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x6f3603ee41659f3d55a58774584a2cb27faafbbe23ac8f6456b226a81ce0adc8",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3636363636363636363636363636363636363636363636363636363636363636",
-        "calendar": {
-          "calendarId": "0x885516510c7ccf999ccd5b018ef21e38",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3636363636363636363636363636363636363636363636363636363636363636",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xe348a673f9e42a0fd0f7f89eb394781c5978bb513c2f81483161033e5623b7fd",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3737373737373737373737373737373737373737373737373737373737373737",
-        "calendar": {
-          "calendarId": "0x6e3ac5c4242fdb050cf1d04539893ebf",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3737373737373737373737373737373737373737373737373737373737373737",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x90f7ca70d3638adda3fb0abb91174900d176560e2ad84ee1dcf2bb7484d7f614",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3838383838383838383838383838383838383838383838383838383838383838",
-        "calendar": {
-          "calendarId": "0xbeaeb9f27a606984930078a5dca9260d",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3838383838383838383838383838383838383838383838383838383838383838",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xf0ae4c1c6658b5c022955e5c751aba764c64e66deb209b14d29c14c1e944cfaa",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3939393939393939393939393939393939393939393939393939393939393939",
-        "calendar": {
-          "calendarId": "0x0898cd68fb2a35bfd719e9117a3e2d2a",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3939393939393939393939393939393939393939393939393939393939393939",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xcf619be33f4cc95316565ea50bf95826aceb6fe0448375d630b3777d7ebf9041",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a",
-        "calendar": {
-          "calendarId": "0x5984cf516ffe030b6c02057a2c9a7a7f",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x7222ac8feb02143e08522e5e0647e8741d5b454cc07f6a80d224c24fa4151eed",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b",
-        "calendar": {
-          "calendarId": "0x73b0dc70d0f26a290bf76b685f90f353",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x1e309981552e1142e010a4737279f81cf9d83a19157ca25bd2645bb1b724737b",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
-        "calendar": {
-          "calendarId": "0x1442d37903b9da6e3528d3b809e7e08f",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x47e550440a6b7e9d683609d47fc14c1ba5395c274edde9c7f2bd5f81944a3fb9",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d",
-        "calendar": {
-          "calendarId": "0x5cc6ade7f81ee4dc221d964782ae6de7",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x1d79b1c894dac314d7950e1c064ae684d3df07ac9efcee5989526be73776a70a",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
-        "calendar": {
-          "calendarId": "0x10310431fab10106df7990994c4c8f7b",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xc6765de27f336c7cbee3fedd04ddfd95ca23bde0dcc9003618a12c616c7415c5",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
-        "calendar": {
-          "calendarId": "0x81894a46e469e79734f4a76824b01dc4",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x2b675f9b87e176164894f92ab5d1297318a3690add50550f2820f77519497375",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4040404040404040404040404040404040404040404040404040404040404040",
-        "calendar": {
-          "calendarId": "0xbd1f393ff55189711166fe82615e3f54",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4040404040404040404040404040404040404040404040404040404040404040",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x3beab1e192dcec4aa6c7a1d9ead0b421f55b0c04538e4a434b51fc253f06bfec",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4141414141414141414141414141414141414141414141414141414141414141",
-        "calendar": {
-          "calendarId": "0x5f08deb17fc34e37fa76e1c8fcbe3c57",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4141414141414141414141414141414141414141414141414141414141414141",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x2e73eaed9d7ed0f18f90967d63792fe0295a4f58c85b7913b7882519071851c9",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4242424242424242424242424242424242424242424242424242424242424242",
-        "calendar": {
-          "calendarId": "0x32038786f4803ddcc9a7bbed5ae672df",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4242424242424242424242424242424242424242424242424242424242424242",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x914e883db769079893220e2e5816c834b7e7bf06d33e60cc9cf6ce8f96c8a824",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4343434343434343434343434343434343434343434343434343434343434343",
-        "calendar": {
-          "calendarId": "0xa795ffedd3e1ffc297b3ed881b559524",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4343434343434343434343434343434343434343434343434343434343434343",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x9432e90aa87c42c70a85a2a93eddcdda5f3cb94dc42a68e12b9a7d81d6ba6d56",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4444444444444444444444444444444444444444444444444444444444444444",
-        "calendar": {
-          "calendarId": "0xd0a9aeb6ddc74ad7e8cf694ab8af7387",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4444444444444444444444444444444444444444444444444444444444444444",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xe53ca3fa50e6ce97136358824dc79762617ba6559404be8939e2520769f23e5d",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4545454545454545454545454545454545454545454545454545454545454545",
-        "calendar": {
-          "calendarId": "0x8447118b10d9197a32fd6ac2706272d3",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4545454545454545454545454545454545454545454545454545454545454545",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xc7328a2aa535a5b1d5f4cdaf81af9cc32309063ec17a7241604226c4ae3f6dae",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4646464646464646464646464646464646464646464646464646464646464646",
-        "calendar": {
-          "calendarId": "0x9cc7fee7c1da5022265cdfae00b1075f",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4646464646464646464646464646464646464646464646464646464646464646",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xffff56410788ffbe34c92c22413fd516cfd09741cb906667ebe6e267427c51b9",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4747474747474747474747474747474747474747474747474747474747474747",
-        "calendar": {
-          "calendarId": "0xd542b35a09e60487dcd7e82f20618e82",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4747474747474747474747474747474747474747474747474747474747474747",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x22ff95d3ae88ebe586e307f3e86c13832dc1012f722c2408b94c86da39b729b3",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4848484848484848484848484848484848484848484848484848484848484848",
-        "calendar": {
-          "calendarId": "0x3b41f065c25a0711cae9cb68b5bb012d",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4848484848484848484848484848484848484848484848484848484848484848",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x0a34186ea9e3cfbfd88fb6d5ddafe72f4b372df6ba8f2d1c53770d5a39d22518",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4949494949494949494949494949494949494949494949494949494949494949",
-        "calendar": {
-          "calendarId": "0x67d1cb92a68c8d2cfb315efaaad0a9f4",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4949494949494949494949494949494949494949494949494949494949494949",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xaaf0f5ce5409dad6771d2cbf018277cff8255ce85536ad4d15e881235bce8b32",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a",
-        "calendar": {
-          "calendarId": "0x0c8be8ae5344015f22603b14b620c289",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x7b8af283d115e51fb788b3348da8c2393093ec5a4346924789e6357b0219a821",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b",
-        "calendar": {
-          "calendarId": "0x2da5ce2582dbf5b9f3f62e399573cebf",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xc6c57db7e30117e033931304eea0df0986149c92e5c91c09af135c237a268668",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c",
-        "calendar": {
-          "calendarId": "0x449f169a3f3d6c00200727395f584cd0",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x716f45be4e0661ef2e9a7eb3d4b2f374da00c16808fe7c328c31383bb3132ded",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
-        "calendar": {
-          "calendarId": "0xa8b0ae7f4c6744c3c29a10f38c3e233b",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xfa18fd701ee7c3f4d7a38584de4a8c3a58735b35b45b0fa8d9e8f9548e2d2cc6",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e",
-        "calendar": {
-          "calendarId": "0xda06889cb7365b587bc61255e1b96f74",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0xe93c0694345b132cadf2029766657185ee1817c00449cf7988ea53f367fe9c80",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f",
-        "calendar": {
-          "calendarId": "0x4beae71969446ece57e227e5b65ccb48",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f",
-          "reservations": []
-        },
-        "content": {
-          "data": {
-            "hash": "0x7d7dc2266288feb37a63a4c71da2bf037dd5e5160b71a8bf5144a514e1218a06",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      },
-      {
-        "account": "0x5050505050505050505050505050505050505050505050505050505050505050",
-        "calendar": {
-          "calendarId": "0x8d3206141b5add1921776ae488916b66",
-          "definition": {
-            "defaultWeeklyMinutes": 600,
-            "overrides": []
-          },
-          "owner": "0x5050505050505050505050505050505050505050505050505050505050505050",
-          "reservations": [
-            {
-              "milestoneId": "0x6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f",
-              "minutes": 10,
-              "projectId": "0x6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e",
-              "requirementKey": 1,
-              "week": {
-                "isoYear": 2026,
-                "week": 3
-              }
-            }
-          ]
-        },
-        "content": {
-          "data": {
-            "hash": "0xad7de957d27512dcfd5cbb891f54bf0f0d61f342f103b6a6571b0446a18cddd8",
-            "operationId": "0x00000000000000000000000000000000"
-          },
-          "type": "Creation"
-        },
-        "coordinatorEligible": false,
-        "coordinatorScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        },
-        "mode": "Worker",
-        "qualifications": {
-          "roleIds": [
-            3
-          ],
-          "skillIds": [
-            1,
-            33
-          ]
-        },
-        "workerScore": {
-          "ratedMinutes": 0,
-          "weightedScoreSum": "0"
-        }
-      }
-    ],
-    []
-  ],
   "initial": [
     [
       {
@@ -4607,7 +776,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 2",
+            "content": {
+              "hash": "0xf27b931105077609e31b5d62daf203006a24794776c931d2458a2450bf554122",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4618,7 +790,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
@@ -4649,7 +821,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 3",
+            "content": {
+              "hash": "0x5fd6182fb23de5be908dbda1fa16bb36139cdc08271f0b652363852e7c92f725",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4660,7 +835,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
@@ -4691,7 +866,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 4",
+            "content": {
+              "hash": "0x17ef320917e6e87e9044024e56c775ca77128dcfe72c4834da5dd8dd14b440c0",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4702,7 +880,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0404040404040404040404040404040404040404040404040404040404040404",
@@ -4733,7 +911,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 5",
+            "content": {
+              "hash": "0x5e6a5ef8b2b913b07cab8f1dc724cd6e0f77ae2c3379f7b056e165a82fc490c1",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4743,7 +924,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0505050505050505050505050505050505050505050505050505050505050505",
@@ -4774,7 +955,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 6",
+            "content": {
+              "hash": "0xa1b2bc2eb5054e589b868f6a2825a1f39d63e646f1719e589fc8d947122b5fe4",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4784,7 +968,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0606060606060606060606060606060606060606060606060606060606060606",
@@ -4815,7 +999,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 7",
+            "content": {
+              "hash": "0xab2a4be52104aa2444eaed51c1599d3328a6f309d935d88f6dc49709d8205e2a",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4826,7 +1013,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0707070707070707070707070707070707070707070707070707070707070707",
@@ -4857,7 +1044,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 8",
+            "content": {
+              "hash": "0x6b7bbd55796f5e959716d55d59b1cfad4336e375b9d03ee1fdebfbdcb01cb0f8",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4868,7 +1058,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0808080808080808080808080808080808080808080808080808080808080808",
@@ -4899,7 +1089,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 9",
+            "content": {
+              "hash": "0x662f3d0c333c13bda76e9830bed234ca5007626f03a28941dc2f7d7c7e281fc8",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4910,7 +1103,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0909090909090909090909090909090909090909090909090909090909090909",
@@ -4941,7 +1134,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 10",
+            "content": {
+              "hash": "0x314cfcf1a38daae56417460be11c1987988834e0fe4ed0bd05233facd580a4b9",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -4952,7 +1148,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a",
@@ -6001,7 +2197,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 11",
+            "content": {
+              "hash": "0x58c59a82c63c12e21f3b950609781a08428d1cb9c9755ab1ae8961a18c9af461",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -6011,7 +2210,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
@@ -6100,7 +2299,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 12",
+            "content": {
+              "hash": "0xa71e96b669d3b158ea052a89eab52dac4da0e1308f928e8df05ae444a7af97c2",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -6110,7 +2312,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c",
@@ -7735,7 +3937,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 13",
+            "content": {
+              "hash": "0x6e3b35f75492e9bf089b70fd133412a6c1647d2a14fffe877c97f95d59d3e0c2",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -7745,7 +3950,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d",
@@ -7776,7 +3981,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 14",
+            "content": {
+              "hash": "0x68bd452d9bef484a7208df002778dfddf64dd7032c8c778477b8dfdbcba11fdc",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -7786,7 +3994,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e",
@@ -7817,7 +4025,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 15",
+            "content": {
+              "hash": "0xc8f7526615d509862c85e324d4641731fd94171af3903655f2c3683f8594dbb9",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -7827,7 +4038,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f",
@@ -7858,7 +4069,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 16",
+            "content": {
+              "hash": "0x06af07d087d4c4c12e0a91b1ebe7a60192d006e62ca051fb7158599feb1e743e",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -7868,7 +4082,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1010101010101010101010101010101010101010101010101010101010101010",
@@ -7899,7 +4113,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 17",
+            "content": {
+              "hash": "0x109de02e139e36df4fe2fefc6ce0bb24befaf82d3829623eebbd9f423995e036",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -7909,7 +4126,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1111111111111111111111111111111111111111111111111111111111111111",
@@ -7940,7 +4157,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 18",
+            "content": {
+              "hash": "0xadcb2e3e987df92836c61f09b25edee066f01094c238843e855f12bc80c3f1c4",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -7950,7 +4170,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1212121212121212121212121212121212121212121212121212121212121212",
@@ -7981,7 +4201,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 19",
+            "content": {
+              "hash": "0xf8684e9c12e3c53431670bf585e1a85bbfc1d2753c51a8ab6f9a0670f44de705",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -7991,7 +4214,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1313131313131313131313131313131313131313131313131313131313131313",
@@ -8022,7 +4245,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 20",
+            "content": {
+              "hash": "0x05a3380400e9a69864dcba51e5a09a0eecde766cd5fb493dafb1e97ea0c884f8",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8032,7 +4258,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1414141414141414141414141414141414141414141414141414141414141414",
@@ -8063,7 +4289,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 21",
+            "content": {
+              "hash": "0x20140ca17cf20b97070011c4d7298b8a37b3b7d6f1cf528d1cd04276f193fc8c",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8073,7 +4302,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1515151515151515151515151515151515151515151515151515151515151515",
@@ -8104,7 +4333,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 22",
+            "content": {
+              "hash": "0x76402cb92c9957c7e6845f39e3677b8aee3a0d7f79788ec0108b6023a76e2ca8",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8114,7 +4346,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1616161616161616161616161616161616161616161616161616161616161616",
@@ -8145,7 +4377,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 23",
+            "content": {
+              "hash": "0xef62cd3f1b3336f772cf12b46414e88abdc5f44d3ea4e96ca6795bec8d0cba6b",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8155,7 +4390,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1717171717171717171717171717171717171717171717171717171717171717",
@@ -8186,7 +4421,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 24",
+            "content": {
+              "hash": "0x6f256fd1d40ba9382f9df4db431dfd7642494562b803791176c3c3e6b0e6ff4f",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8196,7 +4434,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1818181818181818181818181818181818181818181818181818181818181818",
@@ -8227,7 +4465,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 25",
+            "content": {
+              "hash": "0xc3bc326bab278c5605b9a0dd24beb3f15f09b8807139a47f3c24b0f5cb6c907d",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8237,7 +4478,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1919191919191919191919191919191919191919191919191919191919191919",
@@ -8268,7 +4509,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 26",
+            "content": {
+              "hash": "0x77f152a387dfb5abbca2f7725a564c4a6fe9082540febd569cefaccc42aa3fea",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8278,7 +4522,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a",
@@ -8309,7 +4553,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 27",
+            "content": {
+              "hash": "0x2a20eb255727099dcf44948c76284f9bf03fce09ccf75801001312113778452d",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8319,7 +4566,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b",
@@ -8350,7 +4597,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 28",
+            "content": {
+              "hash": "0x5f9fb5d13bdc6e91aed6e1e3b2d4fa4cc0933f2bed6db744dced319b108717a0",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8360,7 +4610,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c",
@@ -8391,7 +4641,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 29",
+            "content": {
+              "hash": "0x1ba8cc6da2d1dfe9d5b3200191aae7d3a330be7c486e71886119c55515a778ee",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8401,7 +4654,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d",
@@ -8432,7 +4685,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 30",
+            "content": {
+              "hash": "0xff1a8a63cbca7b88c237e22f6d50ab1cf3212d8649bfbf539b8b2870eee07e9a",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8442,7 +4698,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e",
@@ -8473,7 +4729,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 31",
+            "content": {
+              "hash": "0x826eeee543e37207bc1c92edb72293d7d38f9b8b1c710a6d8f4daee258c8e1d0",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8483,7 +4742,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f",
@@ -8514,7 +4773,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 32",
+            "content": {
+              "hash": "0xac1264acd9f3ea4f2e57d72ce138df64342ecaf317f8cbb4c44a8c7cad706892",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8524,7 +4786,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2020202020202020202020202020202020202020202020202020202020202020",
@@ -8555,7 +4817,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 33",
+            "content": {
+              "hash": "0x1c637d00f369a81f3dc88ee38d97a5362aaf00cebecd26fb694bf4932f44b4cb",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8565,7 +4830,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2121212121212121212121212121212121212121212121212121212121212121",
@@ -8596,7 +4861,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 34",
+            "content": {
+              "hash": "0x6a6606bd3b531f1d111ce6444e338225634522f54cfc71efb6e5a31dfe91f3ce",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8606,7 +4874,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2222222222222222222222222222222222222222222222222222222222222222",
@@ -8637,7 +4905,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 35",
+            "content": {
+              "hash": "0x89375aaa706c5c7ab42d83f51ffbe8e0e77821566831bd95257d29094f63c1b7",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8647,7 +4918,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2323232323232323232323232323232323232323232323232323232323232323",
@@ -8678,7 +4949,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 36",
+            "content": {
+              "hash": "0x11bb249a8bacf0313af3ab8b52afd344cfb31df789a0a90ef2de6b9c76fb927b",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8688,7 +4962,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2424242424242424242424242424242424242424242424242424242424242424",
@@ -8719,7 +4993,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 37",
+            "content": {
+              "hash": "0x088cbcfe4735fb9475e543d1c41aa9fe1147624cbe90538fe16251f78f3d6dbf",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8729,7 +5006,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2525252525252525252525252525252525252525252525252525252525252525",
@@ -8760,7 +5037,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 38",
+            "content": {
+              "hash": "0x5c8b201e36ccc6fb113fac5d5e8aeaf4ee615942d8ea0d4ee9bda8bdf3f5c7af",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8770,7 +5050,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2626262626262626262626262626262626262626262626262626262626262626",
@@ -8801,7 +5081,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 39",
+            "content": {
+              "hash": "0xc0b6528d5d699b56287435ea8d222575eb8834d102a7e2ab08d4a22bdf22097a",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8811,7 +5094,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2727272727272727272727272727272727272727272727272727272727272727",
@@ -8842,7 +5125,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 40",
+            "content": {
+              "hash": "0x26615b7e8c5c5f0ccfe3c8a33298d3451cb4e1d50c709ca15f20741f3d74282f",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8852,7 +5138,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2828282828282828282828282828282828282828282828282828282828282828",
@@ -8883,7 +5169,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 41",
+            "content": {
+              "hash": "0xede6e30821e0342e1961246e207887c13771f79fd7809fda7d288d98a11903bc",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8893,7 +5182,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2929292929292929292929292929292929292929292929292929292929292929",
@@ -8924,7 +5213,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 42",
+            "content": {
+              "hash": "0xaf259c376cf434561571d0a70a9e0bcb3aef5dcab42402e287e37304b667355a",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8934,7 +5226,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a",
@@ -8965,7 +5257,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 43",
+            "content": {
+              "hash": "0xc0f465b30e5644fd87f512278220a0e7450560e4cca5abb3c0a5b5fb47630a4a",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -8975,7 +5270,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b",
@@ -9006,7 +5301,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 44",
+            "content": {
+              "hash": "0xb4630c74095cdecb4c7cc585fdca08300a42f64736bce5f8e62768243999b6c4",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9016,7 +5314,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c",
@@ -9047,7 +5345,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 45",
+            "content": {
+              "hash": "0x9c39d2de2cc351aad573ec9ac99d3b28dc1d491d4c2e3e362365e74ce86be2d9",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9057,7 +5358,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d",
@@ -9088,7 +5389,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 46",
+            "content": {
+              "hash": "0x572aaa39e634aee9d6479d80e435c9ee56af5fe28335f4d32991de4d1604f462",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9098,7 +5402,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e",
@@ -9129,7 +5433,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 47",
+            "content": {
+              "hash": "0x614e2aeb0093453b00bfca1d0d66d584a2a9a69ca7f3618971b892ae1c8237f7",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9139,7 +5446,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f",
@@ -9170,7 +5477,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 48",
+            "content": {
+              "hash": "0x4c7a611b5f794965a298969f409375dcdf2517618246304e3c6c0e06a7c6cc89",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9180,7 +5490,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3030303030303030303030303030303030303030303030303030303030303030",
@@ -9211,7 +5521,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 49",
+            "content": {
+              "hash": "0xe4e20d3da4fe9430de10167a625cbdd4b823c0ac5e93c2d0f700fe2494953fbd",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9221,7 +5534,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3131313131313131313131313131313131313131313131313131313131313131",
@@ -9252,7 +5565,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 50",
+            "content": {
+              "hash": "0x65966fcf5293739e51f8cc404d42998dd0a0b479ae5a2303f14d5e2c170f5f68",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9262,7 +5578,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3232323232323232323232323232323232323232323232323232323232323232",
@@ -9293,7 +5609,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 51",
+            "content": {
+              "hash": "0x776b316208057279f53fc86fcdc5b1d011cc6f307736e726a021811b2008765a",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9303,7 +5622,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3333333333333333333333333333333333333333333333333333333333333333",
@@ -9334,7 +5653,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 52",
+            "content": {
+              "hash": "0x9e66c050a3bb97f3f15e7862b8f6a5bca2fc8ddd78850ff1cfbf7e7cc2f03201",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9344,7 +5666,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3434343434343434343434343434343434343434343434343434343434343434",
@@ -9375,7 +5697,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 53",
+            "content": {
+              "hash": "0x6f3603ee41659f3d55a58774584a2cb27faafbbe23ac8f6456b226a81ce0adc8",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9385,7 +5710,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3535353535353535353535353535353535353535353535353535353535353535",
@@ -9416,7 +5741,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 54",
+            "content": {
+              "hash": "0xe348a673f9e42a0fd0f7f89eb394781c5978bb513c2f81483161033e5623b7fd",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9426,7 +5754,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3636363636363636363636363636363636363636363636363636363636363636",
@@ -9457,7 +5785,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 55",
+            "content": {
+              "hash": "0x90f7ca70d3638adda3fb0abb91174900d176560e2ad84ee1dcf2bb7484d7f614",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9467,7 +5798,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3737373737373737373737373737373737373737373737373737373737373737",
@@ -9498,7 +5829,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 56",
+            "content": {
+              "hash": "0xf0ae4c1c6658b5c022955e5c751aba764c64e66deb209b14d29c14c1e944cfaa",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9508,7 +5842,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3838383838383838383838383838383838383838383838383838383838383838",
@@ -9539,7 +5873,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 57",
+            "content": {
+              "hash": "0xcf619be33f4cc95316565ea50bf95826aceb6fe0448375d630b3777d7ebf9041",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9549,7 +5886,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3939393939393939393939393939393939393939393939393939393939393939",
@@ -9580,7 +5917,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 58",
+            "content": {
+              "hash": "0x7222ac8feb02143e08522e5e0647e8741d5b454cc07f6a80d224c24fa4151eed",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9590,7 +5930,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a",
@@ -9621,7 +5961,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 59",
+            "content": {
+              "hash": "0x1e309981552e1142e010a4737279f81cf9d83a19157ca25bd2645bb1b724737b",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9631,7 +5974,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b",
@@ -9662,7 +6005,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 60",
+            "content": {
+              "hash": "0x47e550440a6b7e9d683609d47fc14c1ba5395c274edde9c7f2bd5f81944a3fb9",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9672,7 +6018,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c",
@@ -9703,7 +6049,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 61",
+            "content": {
+              "hash": "0x1d79b1c894dac314d7950e1c064ae684d3df07ac9efcee5989526be73776a70a",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9713,7 +6062,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d3d",
@@ -9744,7 +6093,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 62",
+            "content": {
+              "hash": "0xc6765de27f336c7cbee3fedd04ddfd95ca23bde0dcc9003618a12c616c7415c5",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9754,7 +6106,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e",
@@ -9785,7 +6137,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 63",
+            "content": {
+              "hash": "0x2b675f9b87e176164894f92ab5d1297318a3690add50550f2820f77519497375",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9795,7 +6150,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f",
@@ -9826,7 +6181,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 64",
+            "content": {
+              "hash": "0x3beab1e192dcec4aa6c7a1d9ead0b421f55b0c04538e4a434b51fc253f06bfec",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9836,7 +6194,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4040404040404040404040404040404040404040404040404040404040404040",
@@ -9867,7 +6225,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 65",
+            "content": {
+              "hash": "0x2e73eaed9d7ed0f18f90967d63792fe0295a4f58c85b7913b7882519071851c9",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9877,7 +6238,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4141414141414141414141414141414141414141414141414141414141414141",
@@ -9908,7 +6269,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 66",
+            "content": {
+              "hash": "0x914e883db769079893220e2e5816c834b7e7bf06d33e60cc9cf6ce8f96c8a824",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9918,7 +6282,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4242424242424242424242424242424242424242424242424242424242424242",
@@ -9949,7 +6313,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 67",
+            "content": {
+              "hash": "0x9432e90aa87c42c70a85a2a93eddcdda5f3cb94dc42a68e12b9a7d81d6ba6d56",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -9959,7 +6326,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4343434343434343434343434343434343434343434343434343434343434343",
@@ -9990,7 +6357,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 68",
+            "content": {
+              "hash": "0xe53ca3fa50e6ce97136358824dc79762617ba6559404be8939e2520769f23e5d",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10000,7 +6370,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4444444444444444444444444444444444444444444444444444444444444444",
@@ -10031,7 +6401,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 69",
+            "content": {
+              "hash": "0xc7328a2aa535a5b1d5f4cdaf81af9cc32309063ec17a7241604226c4ae3f6dae",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10041,7 +6414,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4545454545454545454545454545454545454545454545454545454545454545",
@@ -10072,7 +6445,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 70",
+            "content": {
+              "hash": "0xffff56410788ffbe34c92c22413fd516cfd09741cb906667ebe6e267427c51b9",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10082,7 +6458,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4646464646464646464646464646464646464646464646464646464646464646",
@@ -10113,7 +6489,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 71",
+            "content": {
+              "hash": "0x22ff95d3ae88ebe586e307f3e86c13832dc1012f722c2408b94c86da39b729b3",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10123,7 +6502,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4747474747474747474747474747474747474747474747474747474747474747",
@@ -10154,7 +6533,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 72",
+            "content": {
+              "hash": "0x0a34186ea9e3cfbfd88fb6d5ddafe72f4b372df6ba8f2d1c53770d5a39d22518",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10164,7 +6546,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4848484848484848484848484848484848484848484848484848484848484848",
@@ -10195,7 +6577,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 73",
+            "content": {
+              "hash": "0xaaf0f5ce5409dad6771d2cbf018277cff8255ce85536ad4d15e881235bce8b32",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10205,7 +6590,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4949494949494949494949494949494949494949494949494949494949494949",
@@ -10236,7 +6621,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 74",
+            "content": {
+              "hash": "0x7b8af283d115e51fb788b3348da8c2393093ec5a4346924789e6357b0219a821",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10246,7 +6634,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a",
@@ -10277,7 +6665,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 75",
+            "content": {
+              "hash": "0xc6c57db7e30117e033931304eea0df0986149c92e5c91c09af135c237a268668",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10287,7 +6678,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b",
@@ -10318,7 +6709,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 76",
+            "content": {
+              "hash": "0x716f45be4e0661ef2e9a7eb3d4b2f374da00c16808fe7c328c31383bb3132ded",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10328,7 +6722,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c",
@@ -10359,7 +6753,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 77",
+            "content": {
+              "hash": "0xfa18fd701ee7c3f4d7a38584de4a8c3a58735b35b45b0fa8d9e8f9548e2d2cc6",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10369,7 +6766,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d",
@@ -10400,7 +6797,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 78",
+            "content": {
+              "hash": "0xe93c0694345b132cadf2029766657185ee1817c00449cf7988ea53f367fe9c80",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10410,7 +6810,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e",
@@ -10441,7 +6841,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 79",
+            "content": {
+              "hash": "0x7d7dc2266288feb37a63a4c71da2bf037dd5e5160b71a8bf5144a514e1218a06",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10451,7 +6854,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f",
@@ -10482,7 +6885,10 @@
               "defaultWeeklyMinutes": 600,
               "overrides": []
             },
-            "displayName": "Candidate 80",
+            "content": {
+              "hash": "0xad7de957d27512dcfd5cbb891f54bf0f0d61f342f103b6a6571b0446a18cddd8",
+              "operationId": "0x00000000000000000000000000000000"
+            },
             "qualifications": {
               "roleIds": [
                 3
@@ -10493,7 +6899,7 @@
               ]
             }
           },
-          "type": "RegisterWorker"
+          "type": "RegisterWorkerCore"
         },
         "kind": "command",
         "origin": "0x5050505050505050505050505050505050505050505050505050505050505050",

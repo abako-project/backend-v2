@@ -19,8 +19,8 @@ bash scripts/verify.sh app
   directory is needed.
 
 Application verification runs formatting, workspace check, strict Clippy,
-workspace tests, doctests, the mock's isolated memory/SQLite feature combinations,
-workspace build, frontend WASM check and the real-service E2E in both mock modes.
+workspace tests, doctests, workspace build, frontend WASM check, the contract
+provider functional gate and real-service E2E against SQLite persistence.
 It uses Cargo's built-in test runner; Nextest is not a prerequisite.
 
 `scripts/test_postgres.py` starts disposable PostgreSQL for workspace tests and
@@ -33,8 +33,9 @@ is respected when selecting the E2E binaries.
 To run only backend E2E after building:
 
 ```sh
-cargo build -p api -p wallet -p native-provider --all-features --locked
-python3 scripts/poc-e2e.py
+cargo build -p api -p wallet --all-features --locked
+cargo build --manifest-path services/contract-provider/Cargo.toml --locked
+python3 scripts/poc-e2e.py --provider-binary services/contract-provider/target/debug/contract-provider
 ```
 
 These are API checks. Browser behavior and the external frontend require a
@@ -103,7 +104,7 @@ credentials are not persisted, and verification has read-only repository access.
 
 Version tags still require the tagged commit to belong to `master`. Only after
 shared verification succeeds does Release publish the three backend images.
-Image names and tag conventions are unchanged; see [release policy](../docs/operations/release.md).
+The provider image is now `digesta-contract-provider`; see [release policy](../docs/operations/release.md).
 The container/gateway and dependency-policy commands are explicit separate checks,
 not silently included in the PR application gate.
 
@@ -121,11 +122,6 @@ The SDK policy expires on 2026-12-01 and accepts only its recorded package/versi
 licenses and advisory IDs. A changed SDK lock requires a new review. The root
 application policy and its existing findings remain unchanged.
 
-The contract-provider workflow covers `crates/protocol/`, `crates/provider/` and
-`services/native-provider/`; native helpers are used only by its golden-trace tests. It installs the already reviewed cargo-deny 0.20.2 with its locked
-tool dependencies and runs the policy wrapper before compatibility tests. This
-checks the exact SDK lock, review expiry, current advisories, licenses and sources;
-it does not grant exceptions to the root application policy. The tool's published
-metadata declares Rust 1.88.0 and MIT OR Apache-2.0; it is a CI checker and adds no
-application or SDK dependency. Direct cargo-deny without the wrapper would skip
-the approved fingerprint and expiry checks.
+The application workflow checks both workspaces and the exact-lock SDK policy.
+It installs the reviewed cargo-deny 0.20.2 with locked tool dependencies. The same
+workflow gates image publication, so the unwaived SDK finding blocks release.

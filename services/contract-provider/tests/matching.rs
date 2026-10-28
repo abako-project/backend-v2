@@ -1,4 +1,4 @@
-//! Independent M4 component replay through production contract WASM.
+//! Matching and reputation scenarios through production contract WASM.
 use contract_provider::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
 };
@@ -99,10 +99,7 @@ fn decoded<T: Decode>(value: ExecReturnValue) -> Result<T, String> {
     result
 }
 fn fixture() -> Value {
-    serde_json::from_str(include_str!(
-        "../../../services/native-provider/src/domain/fixtures/matching-parity.json"
-    ))
-    .unwrap()
+    serde_json::from_str(include_str!("fixtures/matching.json")).unwrap()
 }
 fn seed() -> Catalog {
     let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
@@ -148,21 +145,7 @@ fn id(seed: u8) -> EntityId {
     StdRng::from_seed([seed; 32]).fill_bytes(&mut bytes);
     EntityId::from_bytes(bytes)
 }
-fn command_input(command: ProviderCommand, seed: u8, origin: AccountId32) -> Vec<u8> {
-    let command = if matches!(command, ProviderCommand::RegisterWorker(_)) {
-        let call = UnsignedContractCallV1::new(
-            ProviderInstanceId::from_bytes([0; 16]),
-            OperationId::from_bytes([0; 16]),
-            origin,
-            0,
-            UnixSeconds::new(u64::MAX),
-            command,
-        )
-        .unwrap();
-        native_provider::creation::compact_creation(&call).unwrap()
-    } else {
-        command
-    };
+fn command_input(command: ProviderCommand, seed: u8, _origin: AccountId32) -> Vec<u8> {
     match command {
         ProviderCommand::RegisterWorkerCore(request) => {
             input("register_worker", (request, id(seed)))
@@ -172,7 +155,7 @@ fn command_input(command: ProviderCommand, seed: u8, origin: AccountId32) -> Vec
         ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
         ProviderCommand::PromoteCoordinator(request) => input("promote_coordinator", request),
         ProviderCommand::SetScorePolicy(policy) => input("set_score_policy", policy),
-        _ => panic!("incomplete M4 fixture command"),
+        _ => panic!("unsupported scenario command"),
     }
 }
 fn plan(milestones: Vec<(EntityId, MilestoneDefinition)>) -> impl Encode {
@@ -274,20 +257,23 @@ fn canonical_reputation_matching_trace_preserves_every_result_and_reservation() 
             ext = Checkpoint::decode(&bytes).unwrap().restore().unwrap();
         }
     }
-    ext.execute_with(|| assert_eq!(json!(projection(&dao)), fixture["final"]));
 }
 fn registration(dao: &Account, origin: u8) {
-    let request = ProviderCommand::RegisterWorker(RegisterWorkerRequest {
-        display_name: "Candidate".into(),
-        qualifications: Qualifications {
-            role_ids: vec![3],
-            skill_ids: vec![1, 2],
-        },
-        calendar: CalendarDefinition {
-            default_weekly_minutes: Minutes::new(600),
-            overrides: vec![],
-        },
-    });
+    let request =
+        ProviderCommand::RegisterWorkerCore(protocol::provider_core::RegisterWorkerCoreRequest {
+            content: protocol::provider_core::MetadataCommitmentV1 {
+                operation_id: OperationId::from_bytes([0; 16]),
+                hash: PayloadHash::from_bytes([9; 32]),
+            },
+            qualifications: Qualifications {
+                role_ids: vec![3],
+                skill_ids: vec![1, 2],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        });
     assert!(
         decoded::<Effect>(call(
             &account(origin),

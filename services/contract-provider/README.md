@@ -4,9 +4,9 @@ This package runs Dao and Project as ink! 5.1.1 WASM in one
 FRAME/pallet-contracts runtime. Local development needs no parachain nodes or
 block production. Frontends continue using the adapter’s REST/JSON and SSE API.
 
-The SDK has a separate Cargo workspace and lockfile. The standalone native
-provider remains the normal application build until the SDK dependency policy
-passes. It is not executed inside this runtime. See [policy](policy/README.md)
+The SDK has a separate Cargo workspace and lockfile to keep API builds light.
+This is the only development provider. Release remains blocked until the dependency
+policy passes. See [policy](policy/README.md)
 and [current limits](../../docs/status.md).
 
 ## Build and run
@@ -52,8 +52,8 @@ application manifest changes its bundle identity once; older checkpoints are
 rejected and never silently reset. Business rules live in the
 [canonical contracts](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime).
 The worker adds transport execution and persistence, not another business engine.
-Shared execution/HTTP code comes from `provider`; production builds do not depend
-on `native-provider`. The retained golden-trace tests use native conversion helpers.
+Shared execution/HTTP code comes from `provider`; there is no second business engine. Scenario tests send current core commands
+directly and retain permission, matching and reservation assertions.
 
 ## Boundaries and persistence
 
@@ -95,7 +95,7 @@ After building the application binaries, run the real adapter/wallet/PostgreSQL
 scenarios against the embedded provider:
 
 ```sh
-python3 scripts/poc-e2e.py --storage sqlite \
+python3 scripts/poc-e2e.py \
   --provider-binary services/contract-provider/target/release/contract-provider
 ```
 

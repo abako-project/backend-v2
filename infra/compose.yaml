@@ -53,23 +53,22 @@ services:
       start_period: 15s
       retries: 12
 
-  native-provider:
+  contract-provider:
     <<: *backend
-    image: digesta-native-provider:local
+    image: digesta-contract-provider:local
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
-      target: native-provider
+      target: contract-provider
     environment:
       BIND_ADDR: 0.0.0.0:8082
-      MOCK_STORAGE: sqlite
-      MOCK_DATABASE_URL: sqlite:///data/mock.sqlite?mode=rwc
+      CONTRACT_DATABASE_PATH: /data/contracts.sqlite
       MOCK_ROOT_ACCOUNT_FILE: /run/secrets/root-account.hex
       INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
     secrets: [root-account.hex, service-token]
     volumes:
       - type: bind
-        source: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/data/mock
+        source: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/data/contracts
         target: /data
         bind: {create_host_path: false}
     networks: [backend]
@@ -92,7 +91,7 @@ services:
       ADAPTER_DATABASE_URL: ${ADAPTER_DATABASE_URL:-postgres://digesta:digesta-local-only@postgres:5432/digesta_adapter}
       OPENAPI_PATH: /app/contracts/openapi.json
       CUSTODY_URL: http://wallet:8081
-      MOCK_PROVIDER_URL: http://native-provider:8082
+      MOCK_PROVIDER_URL: http://contract-provider:8082
       INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
       BOOTSTRAP_ADMIN_USERNAME: admin
       BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/bootstrap-admin-password
@@ -106,7 +105,7 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       wallet: {condition: service_healthy}
-      native-provider: {condition: service_healthy}
+      contract-provider: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8080/health]
       interval: 5s

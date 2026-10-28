@@ -1039,10 +1039,27 @@ async fn unsupported_planning_prices_reject_durably_without_contract_mutation() 
 
 #[tokio::test]
 async fn consolidated_ratings_reject_empty_team_votes_and_settle_exact_reputation() {
+    rating_settlement(false).await;
+    rating_settlement(true).await;
+}
+
+async fn rating_settlement(delegated: bool) {
     let database = Database::new();
     let worker = database.open().await;
     let client = worker.client();
     let (project_id, proposal_id, milestone_id) = ready(&client).await;
+    if delegated {
+        apply(
+            &client,
+            1,
+            104,
+            ProviderCommand::SetScorePolicy(
+                ScorePolicy::new(Percentage::new(0).unwrap(), Percentage::new(100).unwrap())
+                    .unwrap(),
+            ),
+        )
+        .await;
+    }
     let call = approval(&client, project_id, proposal_id).await;
     assert_eq!(
         ProviderApi::execute(&client, call, NOW)
@@ -1094,8 +1111,12 @@ async fn consolidated_ratings_reject_empty_team_votes_and_settle_exact_reputatio
             milestone_id,
             request: AcceptMilestoneCompletionRequest {
                 submission_id: submitted.created_entity_id.unwrap(),
-                coordinator_score: Score::new(5).unwrap(),
-                team_rating: TeamRating::Client(Score::new(5).unwrap()),
+                coordinator_score: Score::new(if delegated { 3 } else { 5 }).unwrap(),
+                team_rating: if delegated {
+                    TeamRating::DelegateToCoordinator
+                } else {
+                    TeamRating::Client(Score::new(5).unwrap())
+                },
             },
         },
     )
@@ -1114,7 +1135,14 @@ async fn consolidated_ratings_reject_empty_team_votes_and_settle_exact_reputatio
             &member.worker_score
         };
         assert_eq!(score.rated_minutes, 60);
-        assert_eq!(score.weighted_score_sum, 30_000);
+        assert_eq!(
+            score.weighted_score_sum,
+            if delegated && seed == 2 {
+                18_000
+            } else {
+                30_000
+            }
+        );
     }
     worker.shutdown().await.unwrap();
     let worker = database.open().await;

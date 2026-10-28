@@ -5,10 +5,10 @@ reserve team capacity, deliver milestones and settle payments. Deployments can
 choose DAO branding, currency display and terminology through `GET /api/platform`;
 the bundled profile is Digesta for software projects.
 
-Local development needs no parachain network. The default provider uses Rust rules;
-the embedded contract provider runs the same canonical ink! v5 contracts in one
-runtime. Both use simulated assets and real signatures. Neither submits transactions
-to Kreivo. See [current capabilities and limits](docs/status.md).
+Local development needs no parachain network. The contract provider runs the
+canonical ink! v5 contracts in one embedded runtime, using simulated assets and
+real signatures. It does not submit transactions to Kreivo. See
+[current capabilities and limits](docs/status.md).
 
 ## Run
 
@@ -46,7 +46,6 @@ for transaction, content, notification and recovery boundaries.
 |---|---|
 | [api](services/api/README.md) | Public API, identity, content and operation reconciliation |
 | [wallet](services/wallet/README.md) | Custodial keys and durable signing jobs |
-| [native-provider](services/native-provider/README.md) | Standalone native development provider |
 | [provider](crates/provider/README.md) | Shared signature/replay handling and provider HTTP interface |
 | [protocol](crates/protocol/README.md) | API types, signed commands and validated values |
 | [contract-provider](services/contract-provider/README.md) | Embedded WASM provider, pinned contracts and runtime tests |

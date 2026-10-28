@@ -13,7 +13,7 @@ export LOCAL_UID="$(id -u)"
 export LOCAL_GID="$(id -g)"
 export DIGESTA_LOCAL_DIR="$(mktemp -d /tmp/digesta-local.XXXXXX)"
 install -d -m 700 "$DIGESTA_LOCAL_DIR/secrets" \
-  "$DIGESTA_LOCAL_DIR/data/custody" "$DIGESTA_LOCAL_DIR/data/mock"
+  "$DIGESTA_LOCAL_DIR/data/custody" "$DIGESTA_LOCAL_DIR/data/contracts"
 cargo run --locked -p wallet -- init-dev-secrets "$DIGESTA_LOCAL_DIR/secrets"
 docker compose -f infra/compose.yaml config --quiet
 docker compose -f infra/compose.yaml up --build -d --wait
@@ -81,7 +81,7 @@ Use credentialed browser requests and the session-bound CSRF token. Do not use w
 
 ```sh
 # Backend-only builds do not install browser tooling or compile browser WASM.
-docker compose -f infra/compose.yaml build api wallet native-provider
+docker compose -f infra/compose.yaml build api wallet contract-provider
 docker compose -f infra/compose.yaml build frontend
 docker compose -f infra/compose.yaml exec gateway nginx -t
 docker compose -f infra/compose.yaml ps

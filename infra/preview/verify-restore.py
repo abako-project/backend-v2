@@ -40,7 +40,7 @@ def verify_restore():
     try:
         statuses = json.loads(subprocess.check_output(["docker", "inspect",
             "digesta-preview-api-1", "digesta-preview-wallet-1",
-            "digesta-preview-native-provider-1", "digesta-preview-postgres-1"], timeout=30))
+            "digesta-preview-contract-provider-1", "digesta-preview-postgres-1"], timeout=30))
         if any(container["State"]["Running"] for container in statuses):
             raise ValueError("candidate must be fully stopped for a coherent backup")
         run("tar", "--numeric-owner", "-cpf", str(backup / "state.tar"), "-C", str(STATE), "data", "secrets")

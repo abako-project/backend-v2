@@ -29,7 +29,7 @@ def verify_compose():
     config = json.loads(run(*args, "config", "--format", "json", env=env).stdout)
     services = config["services"]
     assert config["name"] == "digesta-local"
-    assert set(services) == {"api", "wallet", "native-provider", "frontend", "gateway", "postgres"}
+    assert set(services) == {"api", "wallet", "contract-provider", "frontend", "gateway", "postgres"}
     assert {name for name, svc in services.items() if svc.get("ports")} == {"gateway"}
     assert services["gateway"]["ports"][0]["host_ip"] == "127.0.0.1"
     assert services["gateway"]["ports"][0]["published"] == "8088"
@@ -42,7 +42,7 @@ def verify_compose():
     assert postgres["environment"]["POSTGRES_USER"] == "digesta"
     assert postgres["environment"]["POSTGRES_DB"] == "digesta_adapter"
     assert postgres["volumes"][0]["source"] == "adapter-postgres-data"
-    for name in {"wallet", "native-provider", "api", "frontend"}:
+    for name in {"wallet", "contract-provider", "api", "frontend"}:
         assert services[name]["image"].startswith("digesta-"), name
     for name, service in services.items():
         for volume in service.get("volumes", []):
@@ -55,7 +55,7 @@ def verify_compose():
         assert service["cap_drop"] == ["ALL"], name
         assert "no-new-privileges:true" in service["security_opt"], name
         assert len(service["tmpfs"]) == 1 and "size=" in service["tmpfs"][0], name
-        if name in {"wallet", "native-provider"}:
+        if name in {"wallet", "contract-provider"}:
             assert set(service["networks"]) == {"backend"}, name
     assert not services["frontend"].get("secrets")
     assert not services["gateway"].get("secrets")
@@ -67,7 +67,7 @@ def verify_compose():
     ).stdout)
     assert "build" not in override["services"]["frontend"]
     assert override["services"]["frontend"]["image"] == "team/frontend:verification"
-    for name in {"api", "wallet", "native-provider"}:
+    for name in {"api", "wallet", "contract-provider"}:
         assert override["services"][name] == services[name], name
     print("Compose isolation and external frontend override: PASS")
 

@@ -2065,29 +2065,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "native-provider"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "getrandom 0.4.3",
- "parity-scale-codec",
- "protocol",
- "provider",
- "rand 0.10.2",
- "reqwest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sqlx",
- "subxt-signer",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "next_tuple"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

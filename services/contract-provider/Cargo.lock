@@ -764,7 +764,6 @@ dependencies = [
  "axum",
  "frame-support",
  "frame-system",
- "native-provider",
  "pallet-assets",
  "pallet-balances",
  "pallet-contracts",
@@ -1600,7 +1599,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "r-efi 6.0.0",
- "rand_core 0.10.1",
 ]
 
 [[package]]
@@ -2375,26 +2373,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "native-provider"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "getrandom 0.4.3",
- "parity-scale-codec",
- "protocol",
- "provider",
- "rand 0.10.2",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "nohash-hasher"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3041,7 +3019,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
 dependencies = [
  "chacha20",
- "getrandom 0.4.3",
  "rand_core 0.10.1",
 ]
 

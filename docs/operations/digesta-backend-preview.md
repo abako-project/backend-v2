@@ -191,3 +191,10 @@ docker compose --env-file /opt/digesta/preview/deployment.env \
 Stopping it leaves its public proxy route in place and returns upstream errors;
 remove the added dev-site API block with a validated configuration change when
 withdrawing the preview. Preserve all data, secrets and legacy services.
+
+The source now requires matching reviewed `API_IMAGE`, `WALLET_IMAGE` and
+`CONTRACT_PROVIDER_IMAGE` digests for a fresh installation. Pass them through
+`provision.py --api-image ... --wallet-image ... --provider-image ...`.
+Earlier native-provider stores are incompatible; use separately initialized state.
+This source change neither resets nor upgrades the running preview. Publication
+remains blocked by the SDK dependency policy.

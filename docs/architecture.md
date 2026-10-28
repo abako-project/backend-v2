@@ -8,7 +8,7 @@ inside one provider runtime, not independently deployed backend services.
 |---|---|---|
 | Adapter | Identity/sessions, profiles, immutable content, catalog names/uniqueness, task text/progress, accepted dispute snapshots, operations and notifications | PostgreSQL |
 | Wallet | Principal/wallet binding, encrypted seeds, signing jobs and audit | SQLite |
-| Provider | Catalog IDs/qualification facts, calendars, commercial terms, task IDs/allocator/assignees, lifecycle, exact funds, reputation, nonces, receipts and core events | Native memory/SQLite, or embedded runtime checkpoint in its own SQLite |
+| Provider | Catalog IDs/qualification facts, calendars, commercial terms, task IDs/allocator/assignees, lifecycle, exact funds, reputation, nonces, receipts and core events | Embedded runtime checkpoint in its own SQLite |
 | Frontend | Presentation and local UI state | No authoritative business store |
 
 Services use each other's authenticated HTTP interfaces, never another service's
@@ -19,11 +19,9 @@ records the REST/frontend boundary.
 
 ## Execution
 
-The normal mock executes native Rust rules. The isolated
-[contract provider](../services/contract-provider/README.md) runs Dao and
-Project WASM in one runtime with a single WASM execution path.
-Both use `provider` for the private HTTP interface, generation, signatures, nonces,
-idempotency, receipts and event cursors. Browser-safe values and wire messages live
+The [contract provider](../services/contract-provider/README.md) runs Dao and
+Project WASM in one runtime. Its transport shell handles generation, signatures,
+nonces, idempotency, receipts and event cursors. Browser-safe values and wire messages live
 in `protocol`; server-side execution stays separate. Wallet owns keys; provider never signs.
 
 For a core mutation, the adapter records the original request and immutable
@@ -33,8 +31,7 @@ blocks conflicting work. Retrying cannot invent a replacement operation.
 Provider state, receipts and events commit atomically; captured time and entropy
 are retained for exact replay. Generation prevents retargeting old signed calls.
 
-Native SQLite stores one serialized state row, an explicit development throughput
-trade-off. The embedded provider checkpoints complete runtime and child-trie state.
+The provider checkpoints complete runtime and child-trie state.
 Contracts use ordinary ink fields and keyed collections; Project history scans
 still have finite gas/memory costs. No node or block production runs locally.
 

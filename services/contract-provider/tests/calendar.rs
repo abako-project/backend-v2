@@ -1,4 +1,4 @@
-//! Calendar parity, permissions and persistence through Dao’s public WASM API.
+//! Calendar behavior, permissions and persistence through Dao’s public WASM API.
 use contract_provider::{
     Account, GAS, Runtime,
     worker::{Action, Client, Invocation, Outcome, ShellChanges, Status, Worker},
@@ -173,12 +173,9 @@ fn run(future: impl std::future::Future<Output = ()>) {
 }
 
 #[test]
-fn canonical_calendar_parity_cases_and_restart() {
+fn calendar_cases_and_restart() {
     run(async {
-        let fixture: Value = serde_json::from_str(include_str!(
-            "../../../services/native-provider/src/calendar/fixtures/parity.json"
-        ))
-        .unwrap();
+        let fixture: Value = serde_json::from_str(include_str!("fixtures/calendar.json")).unwrap();
         assert_eq!(fixture["schemaVersion"], 1);
         for case in fixture["cases"].as_array().unwrap() {
             let db = Database::new();
@@ -234,7 +231,7 @@ fn canonical_calendar_parity_cases_and_restart() {
                         "set_calendar",
                         from_value::<CalendarDefinition>(action["definition"].clone()).unwrap(),
                     ),
-                    _ => panic!("unknown parity action"),
+                    _ => panic!("unknown calendar action"),
                 };
                 let outcome = if mutating {
                     let result = client

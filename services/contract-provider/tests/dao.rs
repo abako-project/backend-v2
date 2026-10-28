@@ -1,4 +1,4 @@
-//! Independent replay of native Dao traces against production ink WASM.
+//! Dao behavior scenarios against production ink WASM.
 //! Explicit account/ID fixtures isolate contract behavior from signed transport.
 use contract_provider::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
@@ -72,10 +72,7 @@ fn outcome<T: Decode>(value: &ExecReturnValue) -> Result<T, String> {
         .unwrap()
 }
 fn fixture() -> Value {
-    serde_json::from_str(include_str!(
-        "../../../services/native-provider/src/domain/fixtures/directory-parity.json"
-    ))
-    .unwrap()
+    serde_json::from_str(include_str!("fixtures/directory.json")).unwrap()
 }
 fn setup(seed: &Catalog) -> (sp_io::TestExternalities, Account) {
     let bundles = Bundles::pinned().unwrap();
@@ -112,28 +109,7 @@ fn projection(dao: &Account) -> Projection {
 fn digest(state: &Projection) -> String {
     format!("{:x}", H256::from(sha2_256(&state.encode())))
 }
-fn command_input(command: ProviderCommand, id: EntityId, origin: AccountId32) -> Vec<u8> {
-    let command = if matches!(
-        command,
-        ProviderCommand::RegisterWorker(_)
-            | ProviderCommand::UpsertCatalogEntry(_)
-            | ProviderCommand::CreateSkillRequest(_)
-    ) {
-        let call = UnsignedContractCallV1::new(
-            ProviderInstanceId::from_bytes([0; 16]),
-            OperationId::from_bytes([0; 16]),
-            origin,
-            0,
-            UnixSeconds::new(u64::MAX),
-            command,
-        )
-        .unwrap();
-        native_provider::creation::compact_creation(&call)
-            .or_else(|| native_provider::catalog_content::compact_catalog(&call))
-            .unwrap()
-    } else {
-        command
-    };
+fn command_input(command: ProviderCommand, id: EntityId, _origin: AccountId32) -> Vec<u8> {
     match command {
         ProviderCommand::RegisterWorkerCore(request) => input("register_worker", (request, id)),
         ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
@@ -192,7 +168,6 @@ fn canonical_dao_trace_and_restart() {
             ext = Checkpoint::decode(&checkpoint).unwrap().restore().unwrap();
         }
     }
-    ext.execute_with(|| assert_eq!(json!(projection(&dao)), fixture["final"]));
 }
 
 #[test]

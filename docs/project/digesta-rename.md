@@ -7,7 +7,7 @@ implements [SPEC-0009](../../specs/0009-digesta-rename/spec.md).
 ## Published images
 
 The next successful version-tag release publishes `digesta-api`,
-`digesta-wallet` and `digesta-native-provider` under
+`digesta-wallet` and `digesta-contract-provider` under
 `ghcr.io/<repository-owner>/`. The workflow lowercases the actual GitHub owner;
 it does not create or rename an organization. The current Git remote belongs
 to `abako-project`, so the current destination is

@@ -770,7 +770,7 @@ def scan_secret_logs(logs):
                     f"{service} log disclosed {name}")
 
 
-def run(storage, binaries, scenario=exercise, provider_binary=None):
+def run(binaries, scenario=exercise, provider_binary=None):
     with ExitStack() as stack:
         directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="digesta-e2e-")))
         logs = []
@@ -794,11 +794,11 @@ def run(storage, binaries, scenario=exercise, provider_binary=None):
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
         }, logs)
         provider_port = available_port()
-        launch(stack, provider_binary or binaries / "native-provider", provider_port, {
-            **common, "MOCK_DATABASE_URL": f"sqlite://{directory}/mock.sqlite?mode=rwc",
+        launch(stack, provider_binary or ROOT / "services/contract-provider/target/debug/contract-provider", provider_port, {
+            **common,
             "CONTRACT_DATABASE_PATH": str(directory / "contracts.sqlite"),
             "ENABLE_MOCK_FUNDING": "true",
-            "MOCK_STORAGE": storage, "MOCK_ROOT_ACCOUNT_FILE": str(secret_dir / "root-account.hex"),
+            "MOCK_ROOT_ACCOUNT_FILE": str(secret_dir / "root-account.hex"),
         }, logs)
         proxy = LossyProvider(provider_port)
         proxy_thread = threading.Thread(target=proxy.serve_forever, daemon=True)
@@ -821,19 +821,13 @@ def run(storage, binaries, scenario=exercise, provider_binary=None):
             "Authorization": "Bearer " + (secret_dir / "service-token").read_text().strip(),
         })
         scan_secret_logs(logs)
-        print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle")
+        print(f"PASS contracts {scenario.__name__}: signed REST lifecycle")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--storage", choices=("sqlite", "memory", "both"), default="both")
     parser.add_argument("--binaries", type=Path, default=ROOT / "target/debug")
     parser.add_argument("--provider-binary", type=Path, help="explicit contract-provider executable")
     arguments = parser.parse_args()
-    if arguments.provider_binary and arguments.storage != "sqlite":
-        parser.error("the contract-provider uses SQLite; set --storage sqlite")
-    for selected in (("sqlite", "memory") if arguments.storage == "both" else (arguments.storage,)):
-        run(selected, arguments.binaries.resolve(), provider_binary=arguments.provider_binary)
-        run(selected, arguments.binaries.resolve(), exercise_multi_milestone, arguments.provider_binary)
-        run(selected, arguments.binaries.resolve(), exercise_dispute, arguments.provider_binary)
-        run(selected, arguments.binaries.resolve(), exercise_auxiliary, arguments.provider_binary)
+    for scenario in (exercise, exercise_multi_milestone, exercise_dispute, exercise_auxiliary):
+        run(arguments.binaries.resolve(), scenario, arguments.provider_binary)

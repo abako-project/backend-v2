@@ -34,6 +34,25 @@ failure-atomicity tests. Replace historical golden archives with small fresh
 scenarios. Record source changes, measured reduction and review in the existing PRs.
 No dependency-policy waiver, image publication or deployment is authorized.
 
+## Single contract provider amendment (2026-10-28)
+
+Owner approved removing the native provider entirely and simplifying the backend
+in three independently reviewed milestones: retire native execution and its build
+matrix; consolidate contract-provider support and reads while preserving a clear
+future Kreivo boundary; consolidate API task/operation plumbing. Contracts remain
+the only business authority. Keep the SDK workspace isolated when that keeps API
+builds lighter. No dependency-policy waiver or publication is authorized.
+
+Preserve frontend behavior by default. A demonstrably beneficial public breaking
+change may be proposed separately with its frontend impact; do not silently force
+it into this cleanup or modify the independent team's frontend. Verify its current
+operation-result and notification compatibility before deployment.
+
+Keep actual chain transport for a later integration. Its design must cover chain
+signing/caller identity, submission and finality recovery, and durable contract
+events including direct chain calls. Local returned effects are not chain events.
+Record review and verification in the existing PR, not new milestone documents.
+
 ## Calendar consolidation amendment (2026-10-27)
 
 The owner approved folding Calendar into Dao as an internal module. The two

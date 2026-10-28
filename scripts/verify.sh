@@ -16,13 +16,12 @@ case "${1:-app}" in
     cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
     python3 scripts/test_postgres.py cargo test --workspace --all-targets --all-features --locked
     cargo test --workspace --all-features --doc --locked
-    cargo test -p native-provider --no-default-features --features storage-memory,mock-seed --locked
-    cargo test -p native-provider --no-default-features --features storage-sqlite,mock-seed --locked
-    # Restore both compiled storage choices after the feature-matrix builds.
     cargo build --workspace --all-targets --all-features --locked
     cargo check -p example-web --target wasm32-unknown-unknown --locked
     target_dir="$(cargo metadata --no-deps --format-version 1 --locked | python3 -c 'import json, sys; print(json.load(sys.stdin)["target_directory"])')"
-    python3 scripts/poc-e2e.py --binaries "$target_dir/debug"
+    bash scripts/verify.sh contract-provider
+    provider_target="$(cargo metadata --manifest-path services/contract-provider/Cargo.toml --no-deps --format-version 1 --locked | python3 -c 'import json, sys; print(json.load(sys.stdin)["target_directory"])')"
+    python3 scripts/poc-e2e.py --binaries "$target_dir/debug" --provider-binary "$provider_target/debug/contract-provider"
     ;;
   contract-provider)
     manifest=services/contract-provider/Cargo.toml
@@ -38,7 +37,7 @@ case "${1:-app}" in
   containers)
     # Rendering uses synthetic values; no application secret is read.
     python3 infra/verify.py
-    for service in api wallet native-provider; do
+    for service in api wallet contract-provider; do
       docker build -f infra/backend.Dockerfile --target "$service" -t "digesta-$service:verification" .
     done
     ;;

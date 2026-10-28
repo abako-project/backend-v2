@@ -20,7 +20,7 @@ Implemented behavior is not a claim of deployment or production readiness.
 | Disputes | Opening on the current rejection, project freeze, public arguments and a private case conversation |
 | Delivery | Durable operations, idempotent replay, uncertain-outcome recovery and recipient notifications/SSE |
 | Platform | One configurable DAO profile per deployment: branding, vocabulary, project types and currency display |
-| Providers | Native memory/SQLite and an isolated embedded ink runtime with one WASM authority |
+| Providers | One embedded ink runtime with one WASM authority |
 | Recovery | Fresh development initialization, atomic persistence and restart |
 
 The API, wallet and provider remain separate services. Both application
@@ -43,11 +43,10 @@ and the [requirements](../specs/README.md).
 
 ## Release gates
 
-The standalone native provider remains the default until the isolated SDK passes
-its dependency policy. Promotion also needs controlled-host performance acceptance
-and frontend deployment verification. This development environment starts with
-clean matching data; historical migration and rollback releases are not required.
-Larger histories remain subject to finite resource limits.
+The contract provider is the only development execution engine. Release remains
+blocked until its dependency policy passes; controlled-host performance acceptance
+and frontend deployment verification also remain open. Development starts with
+clean matching data; no historical migration is provided.
 
 The isolated SDK policy is blocked by unwaived RUSTSEC-2026-0387 in crypto-bigint.
 Application dependency findings and the unresolved project-license notice remain

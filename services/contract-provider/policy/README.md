@@ -73,11 +73,10 @@ constant-time. The scoped maintenance/license approval above does not cover this
 advisory. No crypto upgrade or expanded exception is part of the cleanup.
 
 The crate consolidation and renames change local packages and their dependency
-edges in Cargo.lock. All external package records (versions, sources, checksums
-and dependencies) are identical to the previously reviewed lock. `check.py` pins
+edges in Cargo.lock. External versions, sources and checksums are unchanged. Removing the native test
+dependency also removes unused getrandom/rand feature edges. `check.py` pins
 the resulting hash; exceptions and the 2026-12-01 expiry remain unchanged. This
-fingerprint renewal is not a dependency-policy waiver. The native provider is a
-test-only dependency for retained golden traces, not a production dependency.
+fingerprint renewal is not a dependency-policy waiver. The native test dependency has been removed.
 
 The graph includes the existing SDK's unsafe/native/cryptographic transitives,
 SQLite and the shared execution/HTTP components. It accepts only pinned artifacts;

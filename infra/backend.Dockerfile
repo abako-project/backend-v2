@@ -13,10 +13,11 @@ COPY apps/example-web/src ./apps/example-web/src
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/workspace/target \
-    cargo build --locked --release -p api -p wallet -p native-provider \
+    cargo build --locked --release -p api -p wallet \
     && install -D target/release/api /out/api \
     && install -D target/release/wallet /out/wallet \
-    && install -D target/release/native-provider /out/native-provider
+    && CARGO_TARGET_DIR=/workspace/target/contracts cargo build --locked --release --manifest-path services/contract-provider/Cargo.toml --bin contract-provider \
+    && install -D target/contracts/release/contract-provider /out/contract-provider
 
 FROM debian:bookworm-slim AS runtime
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl libgcc-s1 libssl3 \
@@ -33,6 +34,6 @@ FROM runtime AS wallet
 COPY --from=build /out/wallet /usr/local/bin/wallet
 ENTRYPOINT ["/usr/local/bin/wallet"]
 
-FROM runtime AS native-provider
-COPY --from=build /out/native-provider /usr/local/bin/native-provider
-ENTRYPOINT ["/usr/local/bin/native-provider"]
+FROM runtime AS contract-provider
+COPY --from=build /out/contract-provider /usr/local/bin/contract-provider
+ENTRYPOINT ["/usr/local/bin/contract-provider"]

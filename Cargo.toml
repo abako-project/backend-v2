@@ -4,7 +4,6 @@ members = [
   "crates/bloque-rs",
   "crates/protocol",
   "crates/provider",
-  "services/native-provider",
   "services/wallet",
   "services/api",
   "apps/example-web",
