@@ -1,6 +1,6 @@
 # Database schemas
 
-The API owns PostgreSQL tables initialized by `services/api/migrations`.
+The API owns PostgreSQL tables initialized by `services/api/schema.sql`.
 The wallet owns SQLite migrations in `services/wallet/migrations`.
 The contract provider owns its SQLite checkpoint schema; runtime state and the
 operation shell commit together. There are no cross-service foreign keys.

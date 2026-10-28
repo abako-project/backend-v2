@@ -1,5 +1,5 @@
-//! Consumer forms for future adapter-owned task operations. Current task writers
-//! still produce provider receipts and events; these types do not enable cutover.
+//! Results and notifications for API-owned task text and progress edits.
+//! Task creation, deletion and membership changes use provider receipts and events.
 
 use crate::{
     AccountId32, DomainEvent, DomainEventKind, EntityId, ExecutionOutcome, OperationId,

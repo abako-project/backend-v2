@@ -1,5 +1,5 @@
 use super::*;
-// Transport fixtures supply successful core facts; the native/WASM signed tests
+// Transport fixtures supply successful core facts; the signed WASM tests
 // independently exercise contract authorization, allocation and event behavior.
 pub(in crate::tests) fn apply_fixture(
     fake: &mut Fake,

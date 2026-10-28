@@ -40,9 +40,10 @@ public reverse proxy. Ports: adapter 8080, custody 8081, provider 8082.
 | Provider | GET /internal/accounts/{account}/nonce | — | AccountNonce |
 | Provider | POST /internal/contracts/call | SignedContractCallV1 | OperationReceipt |
 | Provider | GET /internal/receipts/{operationId} | — | OperationReceipt or 404 |
+| Provider | GET /internal/task-allocations/{operationId} | — | TaskAllocation: confirmed task ID and its receipt, or 404 |
 | Provider | GET /internal/events?after=0&limit=100 | — | ProviderEvents |
-| Provider | GET /internal/task-state | — | Private TaskStateV1: one selected task graph and retained global next key |
-| Provider | GET /internal/snapshot | — | ProviderSnapshot |
+| Provider | GET /internal/task-state | — | Private TaskState: current task identities, assignees and global allocator |
+| Provider | GET /internal/snapshot | — | CoreSnapshot: contract facts without API-owned content |
 | Provider | GET /internal/bramp/deposits/{depositId}?account={account} | — | Owner/system-only DepositView |
 | Provider | GET /internal/bramp/withdrawals/{withdrawalId}?account={account} | — | Owner/system-only WithdrawalView |
 
