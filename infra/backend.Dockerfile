@@ -2,6 +2,8 @@
 FROM rust:1.96.1-bookworm AS build
 WORKDIR /workspace
 ENV RUSTUP_TOOLCHAIN=1.96.1
+# FRAME compilation is memory intensive; callers may raise this on larger builders.
+ARG CARGO_BUILD_JOBS=2
 RUN apt-get update && apt-get install -y --no-install-recommends gcc libc6-dev pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 COPY Cargo.toml Cargo.lock ./
