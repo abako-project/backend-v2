@@ -60,8 +60,8 @@ impl Error {
     }
 }
 
-impl From<crate::execution::Error> for Error {
-    fn from(error: crate::execution::Error) -> Self {
+impl From<super::execution::Error> for Error {
+    fn from(error: super::execution::Error) -> Self {
         if error.is_infrastructure() {
             Self::unavailable()
         } else if error.code() == "invalid_contract" {

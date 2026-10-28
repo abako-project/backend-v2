@@ -1,5 +1,5 @@
-//! Transport effect boundary shared by native and contract providers.
-use crate::Result;
+//! Transport effect boundary for contract execution.
+use super::Result;
 use protocol::provider_core::CoreDisputeView;
 use protocol::provider_core::CoreSnapshot;
 use protocol::provider_core::SkillRequestCore;

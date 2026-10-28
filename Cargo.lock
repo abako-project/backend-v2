@@ -2472,21 +2472,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "provider"
-version = "0.1.0"
-dependencies = [
- "axum",
- "getrandom 0.4.3",
- "protocol",
- "schnorrkel",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "quinn"
 version = "0.11.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"

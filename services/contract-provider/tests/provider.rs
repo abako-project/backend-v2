@@ -1,10 +1,10 @@
 //! Small current-state scenarios: independent outcomes, ordinary commands and durable restart.
+use contract_provider::transport::ProviderApi;
 use contract_provider::{
     EXECUTION_GAS,
     worker::{Client, Configuration, Worker},
 };
 use protocol::*;
-use provider::ProviderApi;
 use sp_core::{Pair, sr25519};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::{

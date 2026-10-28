@@ -1,4 +1,4 @@
-//! Isolated ink! v5 compatibility runtime and explicit local provider candidate.
+//! Embedded ink! v5 runtime and local contract execution.
 #![allow(deprecated)] // pallet-contracts retains the pre-v6 Randomness interface.
 
 use frame_support::{
@@ -12,6 +12,7 @@ pub mod assets;
 pub mod bundle;
 pub mod checkpoint;
 mod provider;
+pub mod transport;
 pub mod worker;
 
 #[derive(Debug)]

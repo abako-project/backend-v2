@@ -1,10 +1,10 @@
 //! Local contract provider, initialized through constructors and persisted as one current state.
+use contract_provider::transport::router;
 use contract_provider::{
     EXECUTION_GAS,
     worker::{Configuration, Worker},
 };
 use protocol::AccountId32;
-use provider::router;
 use std::{env, error::Error, fs, path::PathBuf};
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 fn secret(name: &str) -> Result<String> {

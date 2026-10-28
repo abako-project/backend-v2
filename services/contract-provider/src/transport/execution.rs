@@ -1,5 +1,5 @@
-//! Shared signed-operation shell. Engines own business rules; storage commits
-//! the returned shell and tentative engine state in the same transaction.
+//! Signed-operation shell. Contracts own business rules; storage commits
+//! the returned shell and tentative runtime state in the same transaction.
 #![allow(clippy::missing_errors_doc)]
 
 use protocol::{
@@ -90,7 +90,7 @@ pub struct RecordedCall {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub allocated_task_id: Option<u32>,
 }
-/// Internal storage model shared by the two engines, never a browser DTO.
+/// Internal storage model for local contract execution, never a browser DTO.
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Shell {
     /// Generation, trusted root and payload version.

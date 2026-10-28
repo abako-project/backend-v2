@@ -2,6 +2,7 @@
 //!
 //! Raw fixtures supply opaque envelopes; signed fixtures use the real shell.
 //! Neither this module nor callers may infer non-execution from a lost response.
+use crate::transport::execution::Shell;
 use crate::{
     Account, Contracts, GAS, ProofError, Timestamp,
     bundle::{Bundles, Identity},
@@ -12,7 +13,6 @@ use frame_support::weights::Weight;
 use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism};
 use parity_scale_codec::{Decode, Encode};
 use protocol::{AccountId32, OperationReceipt, SignedContractCallV1, UnixSeconds};
-use provider::execution::Shell;
 use sp_core::H256;
 use sp_runtime::DispatchError;
 use sqlx::{
@@ -89,9 +89,9 @@ pub enum Error {
     ExecutionLimit(Weight),
     InvalidState,
     Invariant(&'static str),
-    Shell(provider::execution::Error),
+    Shell(crate::transport::execution::Error),
     IncompleteCoverage,
-    Provider(provider::Error),
+    Provider(crate::transport::Error),
 }
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -123,8 +123,8 @@ impl From<ProofError> for Error {
         Self::Runtime(e)
     }
 }
-impl From<provider::execution::Error> for Error {
-    fn from(error: provider::execution::Error) -> Self {
+impl From<crate::transport::execution::Error> for Error {
+    fn from(error: crate::transport::execution::Error) -> Self {
         Self::Shell(error)
     }
 }
@@ -228,7 +228,7 @@ impl Client {
     /// Read one committed revision on the dedicated worker. Shell reads do not load domain state.
     pub(crate) fn read<T: Send + 'static>(
         &self,
-        read: impl FnOnce(&mut reads::Reader) -> provider::Result<T> + Send + 'static,
+        read: impl FnOnce(&mut reads::Reader) -> crate::transport::Result<T> + Send + 'static,
     ) -> Result<Ticket<T>, Error> {
         if !matches!(self.mode, Mode::Contracts { .. }) {
             return Err(Error::InvalidState);

@@ -18,7 +18,7 @@ use protocol::{AccountId32, EntityId, OperationId, SignedContractCallV1, UnixSec
 use serde::Deserialize;
 use tokio::sync::Semaphore;
 
-use crate::{Error, ProviderApi, Result};
+use super::{Error, ProviderApi, Result};
 
 #[derive(Clone)]
 struct App<P> {

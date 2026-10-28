@@ -1,14 +1,14 @@
 //! Existing private HTTP provider contract over the bounded runtime worker.
+use crate::transport::{ProviderApi, Result};
 use crate::worker::{Client, Error, Ticket};
 use protocol::provider_core::CoreSnapshot;
 use protocol::*;
-use provider::{ProviderApi, Result};
 
-fn transport(error: Error) -> provider::Error {
+fn transport(error: Error) -> crate::transport::Error {
     match error {
         Error::Provider(error) => error,
         Error::Shell(error) => error.into(),
-        _ => provider::Error::unavailable(),
+        _ => crate::transport::Error::unavailable(),
     }
 }
 async fn result<T>(ticket: std::result::Result<Ticket<T>, Error>) -> Result<T> {
@@ -50,7 +50,7 @@ impl ProviderApi for Client {
     }
     async fn events(&self, after: u64, limit: usize) -> Result<ProviderEvents> {
         if !(1..=1000).contains(&limit) {
-            return Err(provider::Error::bad("invalid_event_limit"));
+            return Err(crate::transport::Error::bad("invalid_event_limit"));
         }
         result(self.read_shell(move |shell| {
             let events: Vec<_> = shell
@@ -73,7 +73,7 @@ impl ProviderApi for Client {
         call: SignedContractCallV1,
         now: UnixSeconds,
     ) -> Result<OperationReceipt> {
-        // This pre-queue limit is an invalid envelope, as in native admission.
+        // This pre-queue limit rejects an invalid envelope before admission.
         let ticket = match self.execute_signed(call, now) {
             Err(Error::Limit) => return Err(ContractError::InvalidPayload.into()),
             ticket => ticket,

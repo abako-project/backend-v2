@@ -3,7 +3,6 @@ resolver = "3"
 members = [
   "crates/bloque-rs",
   "crates/protocol",
-  "crates/provider",
   "services/wallet",
   "services/api",
   "apps/example-web",
@@ -17,7 +16,6 @@ repository = "https://github.com/abako-project/backend-v2"
 
 [workspace.dependencies]
 schnorrkel = { version = "=0.11.5", default-features = false, features = ["std"] }
-provider = { version = "0.1.0", path = "crates/provider" }
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 protocol = { version = "0.1.0", path = "crates/protocol" }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }

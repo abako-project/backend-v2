@@ -1,4 +1,4 @@
-//! Shared provider execution and authenticated HTTP interface.
+//! Provider execution and authenticated HTTP interface.
 
 mod api;
 mod error;

@@ -39,7 +39,7 @@ matching API, wallet and provider environment.
 | [configuration.rs](src/worker/configuration.rs) | Fresh constructor-based startup |
 | [dao.rs](src/worker/dao.rs), [projects.rs](src/worker/projects.rs) | Signed command routing into WASM |
 | [reads.rs](src/worker/reads.rs), [facts.rs](src/worker/facts.rs), [project_storage.rs](src/worker/project_storage.rs) | Current ink storage reads and private API views |
-| [src/provider.rs](src/provider.rs) | Existing private HTTP provider interface |
+| [src/transport](src/transport), [src/provider.rs](src/provider.rs) | Private HTTP, signed operations and runtime connection |
 | [fixtures/manifest.json](fixtures/manifest.json) | Source, WASM, ABI and build-lock pins |
 
 The normal bundle contains only Dao and Project. The private `sandbox-probe`
@@ -52,7 +52,7 @@ application manifest changes its bundle identity once; older checkpoints are
 rejected and never silently reset. Business rules live in the
 [canonical contracts](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime).
 The worker adds transport execution and persistence, not another business engine.
-Shared execution/HTTP code comes from `provider`; there is no second business engine. Scenario tests send current core commands
+The `transport` module owns the private HTTP and signed-operation shell; there is no second business engine. Scenario tests send current core commands
 directly and retain permission, matching and reservation assertions.
 
 ## Boundaries and persistence
@@ -104,3 +104,23 @@ permissions, replay, failure recovery and restart. Functional verification is no
 controlled-host latency acceptance or evidence of a deployed browser cutover.
 Record commands, tested revisions and limitations in the
 [review PR](https://github.com/abako-project/backend-v2/pull/24).
+
+## Kreivo integration boundary
+
+The API uses the private transport interface; it does not access the runtime or
+checkpoint database. `worker` and `checkpoint` are specific to embedded execution.
+Contract ABI routing lives in `worker/dao.rs` and `worker/projects.rs`. Keep that
+mapping independent of a future chain transport; do not reproduce business rules.
+
+A Kreivo integration must prepare actual signed chain transactions, preserve the
+contract caller, track submission through finality, and reconcile exact submitted
+bytes after interruption. The local envelope nonce and SQLite receipt are not
+chain finality. Existing frontend operation polling can represent the waiting
+period without exposing signing or runtime APIs.
+
+The contracts currently return effects to the runner. Chain ingestion needs durable
+contract events or equivalent chain evidence for allocated IDs and execution-time
+recipients, including calls submitted outside this API. This requires a focused
+contracts follow-up and verification against the deployed runtime. Current reads
+still use pinned storage layouts; replacing them with ABI queries requires bounded
+queries for enumeration/history, rather than unbounded full-state return values.

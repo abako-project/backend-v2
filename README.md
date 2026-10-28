@@ -46,7 +46,6 @@ for transaction, content, notification and recovery boundaries.
 |---|---|
 | [api](services/api/README.md) | Public API, identity, content and operation reconciliation |
 | [wallet](services/wallet/README.md) | Custodial keys and durable signing jobs |
-| [provider](crates/provider/README.md) | Shared signature/replay handling and provider HTTP interface |
 | [protocol](crates/protocol/README.md) | API types, signed commands and validated values |
 | [contract-provider](services/contract-provider/README.md) | Embedded WASM provider, pinned contracts and runtime tests |
 | [example-web](apps/example-web/README.md) | Independent example frontend |

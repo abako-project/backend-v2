@@ -1,7 +1,7 @@
 //! Read one committed revision. No native engine, replay or state comparison is involved.
 use super::*;
+use crate::transport::{Error as ApiError, Result as ApiResult};
 use protocol::{provider_core::*, *};
-use provider::{Error as ApiError, Result as ApiResult};
 
 pub(crate) struct Reader {
     stored: Stored,

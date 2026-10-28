@@ -764,15 +764,16 @@ dependencies = [
  "axum",
  "frame-support",
  "frame-system",
+ "getrandom 0.4.3",
  "pallet-assets",
  "pallet-balances",
  "pallet-contracts",
  "pallet-timestamp",
  "parity-scale-codec",
  "protocol",
- "provider",
  "rand 0.10.2",
  "scale-info",
+ "schnorrkel",
  "serde",
  "serde_json",
  "sp-core",
@@ -780,7 +781,9 @@ dependencies = [
  "sp-runtime",
  "sp-state-machine",
  "sqlx",
+ "thiserror 2.0.21",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2957,21 +2960,6 @@ dependencies = [
  "serde",
  "thiserror 2.0.21",
  "url",
-]
-
-[[package]]
-name = "provider"
-version = "0.1.0"
-dependencies = [
- "axum",
- "getrandom 0.4.3",
- "protocol",
- "schnorrkel",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
 ]
 
 [[package]]
