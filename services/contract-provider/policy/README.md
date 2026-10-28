@@ -2,7 +2,8 @@
 
 Status: **APPROVED for provider-integration work**, owner confirmation 2026-10-22.
 The owner approved the four maintenance advisories and thirteen exact package
-license exceptions below. Approval does not cover extra exceptions, authority
+license exceptions below. The scoped crypto-bigint exception below was additionally approved on 2026-10-28.
+Approval does not cover further exceptions, authority
 promotion, release publication or deployment. The application root policy is
 unchanged; SDK policy has its own explicit verification command.
 
@@ -66,11 +67,11 @@ explain why package-level permissions are narrower than a global allowlist.
 
 ## Current status and lock identity
 
-The policy is blocked by unwaived
+The owner approved the scoped development exception for
 [RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387.html) in
-`crypto-bigint 0.5.5`. It reports timing variability in operations intended to be
-constant-time. The scoped maintenance/license approval above does not cover this
-advisory. No expanded exception is currently approved or enabled.
+`crypto-bigint 0.5.5` on 2026-10-28. The advisory concerns timing variability in
+operations intended to be constant-time. This is an exposure-based acceptance,
+not a patched dependency; scope and evidence follow below.
 
 The crate consolidation and renames change local packages and their dependency
 edges in Cargo.lock. External versions, sources and checksums are unchanged. Removing the native test
@@ -120,7 +121,7 @@ artifact requires reassessment. See the exact published sources for
 [sp-core ECDSA](https://docs.rs/crate/sp-core/38.1.0/source/src/ecdsa.rs) and
 [FRAME public-key conversion](https://docs.rs/crate/frame-support/43.0.0/source/src/crypto/ecdsa.rs).
 
-### Proposed exception — not approved or enabled
+### Approved development exception (2026-10-28)
 
 Accept only RUSTSEC-2026-0387 for crypto-bigint 0.5.5 in the current embedded
 **development provider and its development container artifact**, under the existing
@@ -129,12 +130,12 @@ source and license checks and the root application policy. Do not extend this ac
 arbitrary contract uploads, provider-side signing/custody, a keystore, or real-chain
 use. Changes to targets, features or these capabilities require a fresh review;
 the lock fingerprint alone does not constrain them.
-This acceptance would apply to the existing SDK release-verification check and
-remove this advisory as an image-publication blocker. It does not approve an
+This acceptance applies to the existing SDK release-verification check and
+removes this advisory as an image-publication blocker. It does not approve an
 actual image publication, deployment or production use; those still require their
 separate owner approval and checks.
 
-If approved, add one advisory ID to the existing policy and reference this exposure
-review in its reason. Do not fork cryptographic code or change the SDK graph to
-make the scanner pass. Revisit when upstream adopts the fixed dependency path.
-Until explicitly approved, the policy and release workflow remain blocked.
+The owner approved this exact proposal in the current conversation on 2026-10-28.
+The policy now ignores this one advisory ID under the unchanged fingerprint and
+expiry. No SDK dependency or cryptographic source was changed. Revisit when
+upstream adopts the fixed dependency path. New advisories remain blocking.

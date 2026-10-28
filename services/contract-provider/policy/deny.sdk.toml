@@ -1,8 +1,9 @@
-# Owner approved 2026-10-22 for SDK provider-integration work only.
+# Owner approved maintenance/licenses 2026-10-22; scoped development advisory 2026-10-28.
 [advisories]
 yanked = "deny"
 unmaintained = "all"
 ignore = [
+  { id = "RUSTSEC-2026-0387", reason = "Owner approved 2026-10-28 for exact-lock std development provider/image; exposure review in policy/README.md; review by 2026-12-01" },
   { id = "RUSTSEC-2025-0161", reason = "SPEC-0013 integration approved 2026-10-22; locked graph enforced by check.py; review by 2026-12-01" },
   { id = "RUSTSEC-2022-0061", reason = "SPEC-0013 integration approved 2026-10-22; locked graph enforced by check.py; review by 2026-12-01" },
   { id = "RUSTSEC-2024-0436", reason = "SPEC-0013 integration approved 2026-10-22; locked graph enforced by check.py; review by 2026-12-01" },

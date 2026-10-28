@@ -197,4 +197,4 @@ The source now requires matching reviewed `API_IMAGE`, `WALLET_IMAGE` and
 `provision.py --api-image ... --wallet-image ... --provider-image ...`.
 Earlier native-provider stores are incompatible; use separately initialized state.
 This source change neither resets nor upgrades the running preview. Publication
-remains blocked by the SDK dependency policy.
+requires the current SDK dependency check and separate owner approval.

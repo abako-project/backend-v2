@@ -10,6 +10,11 @@ and requested continued implementation. The approved scope and review expiry
 are in `services/contract-provider/policy/`. This does not approve additional exceptions,
 authority promotion, publication or deployment.
 
+On 2026-10-28 the owner additionally approved the exact-lock, expiring development
+provider/image exception for RUSTSEC-2026-0387 documented in the SDK policy guide.
+It covers the release-verification check, not publication/deployment or real-chain
+use; no other vulnerability exception is approved.
+
 The owner-approved fresh-install amendment in SPEC-0015 supersedes the historical
 migration, maintained-native-comparison and two-release rollback requirements below.
 Public API behavior and current execution safety requirements remain in force.

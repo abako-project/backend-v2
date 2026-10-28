@@ -52,8 +52,8 @@ bash scripts/verify.sh contract-provider-dependencies
 ```
 
 The first checks formatting, all targets/features, strict Clippy, tests, doctests
-and build. The second enforces the existing exact-lock/expiring policy; its known
-security finding remains unwaived. See the [runtime guide](../services/contract-provider/README.md)
+and build. The second enforces the exact-lock/expiring policy, including the
+owner-approved development exception recorded in the policy guide. See the [runtime guide](../services/contract-provider/README.md)
 for artifact reproduction and real-service tests. Performance acceptance needs
 a controlled idle host; functional tests do not establish latency acceptance. Keep build output and temporary databases on disk if
 `/tmp` is RAM-backed. Record current results in the PR.
@@ -124,4 +124,5 @@ application policy and its existing findings remain unchanged.
 
 The application workflow checks both workspaces and the exact-lock SDK policy.
 It installs the reviewed cargo-deny 0.20.2 with locked tool dependencies. The same
-workflow gates image publication, so the unwaived SDK finding blocks release.
+workflow gates image publication; a changed lock, expired review or unaccepted
+finding blocks release.

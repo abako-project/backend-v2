@@ -43,12 +43,14 @@ and the [requirements](../specs/README.md).
 
 ## Release gates
 
-The contract provider is the only development execution engine. Release remains
-blocked until its dependency policy passes; controlled-host performance acceptance
-and frontend deployment verification also remain open. Development starts with
+The contract provider is the only development execution engine. Release requires
+the current dependency-policy check; controlled-host performance acceptance
+and frontend deployment verification remain open. Development starts with
 clean matching data; no historical migration is provided.
 
-The isolated SDK policy is blocked by unwaived RUSTSEC-2026-0387 in crypto-bigint.
+The isolated SDK policy includes an owner-approved development-only exception
+for RUSTSEC-2026-0387 in crypto-bigint, expiring 2026-12-01. The vulnerable
+dependency is unchanged; see the [scope and exposure review](../services/contract-provider/policy/README.md).
 Application dependency findings and the unresolved project-license notice remain
 in [supply-chain status](security/supply-chain.md). Functional tests do not waive them.
 

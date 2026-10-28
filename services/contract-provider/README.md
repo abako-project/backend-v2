@@ -5,8 +5,8 @@ FRAME/pallet-contracts runtime. Local development needs no parachain nodes or
 block production. Frontends continue using the adapter’s REST/JSON and SSE API.
 
 The SDK has a separate Cargo workspace and lockfile to keep API builds light.
-This is the only development provider. Release remains blocked until the dependency
-policy passes. See [policy](policy/README.md)
+This is the only development provider. Release verification enforces its
+exact-lock dependency policy, including the approved development exception. See [policy](policy/README.md)
 and [current limits](../../docs/status.md).
 
 ## Build and run
