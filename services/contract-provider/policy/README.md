@@ -70,7 +70,7 @@ The policy is blocked by unwaived
 [RUSTSEC-2026-0387](https://rustsec.org/advisories/RUSTSEC-2026-0387.html) in
 `crypto-bigint 0.5.5`. It reports timing variability in operations intended to be
 constant-time. The scoped maintenance/license approval above does not cover this
-advisory. No crypto upgrade or expanded exception is part of the cleanup.
+advisory. No expanded exception is currently approved or enabled.
 
 The crate consolidation and renames change local packages and their dependency
 edges in Cargo.lock. External versions, sources and checksums are unchanged. Removing the native test
@@ -84,3 +84,57 @@ there is no arbitrary WASM upload endpoint. The complete earlier dependency revi
 is available in [Git](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/tools/ink-sandbox/dependencies.md).
 Run the policy command for current advisory data; functional tests are not security
 clearance and do not authorize promotion or deployment.
+
+## Upgrade investigation (2026-10-28)
+
+There is no published compatible update that removes this finding. The latest
+published `pallet-contracts 50.0.0` uses `frame-support 49.0.0` and `sp-core 43.0.0`;
+both still require `k256 ^0.13.4`. That requires `elliptic-curve ^0.13.8`, which
+requires `crypto-bigint ^0.5`. No patched 0.5 release is published. Upgrading the
+whole SDK would retain the finding. Both SDK dependencies on k256 are non-optional.
+The fixed RustCrypto path is `k256 0.14.0` → `elliptic-curve 0.14.3` →
+`crypto-bigint ^0.7.8`, requiring an upstream SDK API update or a maintained fork.
+The current upstream SDK manifest also still selects k256 0.13.4.
+
+Primary metadata: [pallet-contracts dependencies](https://crates.io/api/v1/crates/pallet-contracts/50.0.0/dependencies),
+[frame-support dependencies](https://crates.io/api/v1/crates/frame-support/49.0.0/dependencies),
+[sp-core dependencies](https://crates.io/api/v1/crates/sp-core/43.0.0/dependencies),
+[old elliptic-curve dependencies](https://crates.io/api/v1/crates/elliptic-curve/0.13.8/dependencies),
+[new elliptic-curve dependencies](https://crates.io/api/v1/crates/elliptic-curve/0.14.3/dependencies).
+
+Exposure review of the locked development provider:
+
+- `sp-core 38.1.0` has `std` enabled. Its ECDSA key creation, signing and recovery
+  use `secp256k1`; k256 secret-key paths are guarded by `cfg(not(feature = "std"))`.
+- `frame-support 43.0.0` uses k256 to decompress a public key for an Ethereum
+  address. This does not process secret key material.
+- Provider admission verifies sr25519 signatures through schnorrkel. It holds no
+  user signing seeds and registers no keystore extension. Wallet signing remains
+  in its separate service using sr25519.
+- Normal execution loads only the verified Dao/Project artifacts. Neither their
+  build locks nor the root application lock contains crypto-bigint or k256.
+
+These are source/feature observations, not a proof of absence of timing leakage
+or a waiver of the advisory. A new target, feature set, key-handling path or
+artifact requires reassessment. See the exact published sources for
+[sp-core ECDSA](https://docs.rs/crate/sp-core/38.1.0/source/src/ecdsa.rs) and
+[FRAME public-key conversion](https://docs.rs/crate/frame-support/43.0.0/source/src/crypto/ecdsa.rs).
+
+### Proposed exception — not approved or enabled
+
+Accept only RUSTSEC-2026-0387 for crypto-bigint 0.5.5 in the current embedded
+**development provider and its development container artifact**, under the existing
+exact SDK lock fingerprint and 2026-12-01 expiry. Preserve all other advisory,
+source and license checks and the root application policy. Do not extend this acceptance to no-std runtime builds,
+arbitrary contract uploads, provider-side signing/custody, a keystore, or real-chain
+use. Changes to targets, features or these capabilities require a fresh review;
+the lock fingerprint alone does not constrain them.
+This acceptance would apply to the existing SDK release-verification check and
+remove this advisory as an image-publication blocker. It does not approve an
+actual image publication, deployment or production use; those still require their
+separate owner approval and checks.
+
+If approved, add one advisory ID to the existing policy and reference this exposure
+review in its reason. Do not fork cryptographic code or change the SDK graph to
+make the scanner pass. Revisit when upstream adopts the fixed dependency path.
+Until explicitly approved, the policy and release workflow remain blocked.
