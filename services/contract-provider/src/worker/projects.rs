@@ -9,6 +9,12 @@ fn input(name: &str, args: impl Encode) -> Vec<u8> {
     data.extend(args.encode());
     data
 }
+// These variants are contract inputs, separate from stored review records.
+#[derive(Encode)]
+enum ReviewReason<'a> {
+    Evidence(Reference),
+    Comment(&'a protocol::EntityId),
+}
 fn command_input(
     command: &ProviderCommand,
     seed: [u8; 32],
@@ -24,28 +30,30 @@ fn command_input(
             milestone_id,
             request,
             ..
-        } => input(
-            "submit_milestone",
-            (
-                milestone_id,
-                if request.deliverable.is_none() {
-                    None::<Reference>
-                } else {
-                    return Err(Error::IncompleteCoverage);
-                },
-                seed,
-            ),
-        ),
+        } => {
+            if request.deliverable.is_some() {
+                return Err(Error::IncompleteCoverage);
+            }
+            input(
+                "submit_milestone",
+                (
+                    milestone_id,
+                    Option::<Reference>::None,
+                    Option::<Vec<protocol::WorkerRating>>::None,
+                    seed,
+                ),
+            )
+        }
         ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
             milestone_id,
             worker_ratings,
             ..
         } => input(
-            "submit_rated_milestone",
+            "submit_milestone",
             (
                 milestone_id,
                 Option::<Reference>::None,
-                worker_ratings,
+                Some(worker_ratings),
                 seed,
             ),
         ),
@@ -53,18 +61,24 @@ fn command_input(
             milestone_id,
             submission_id,
             ..
-        } => input("accept_milestone", (milestone_id, submission_id)),
+        } => input(
+            "accept_milestone",
+            (
+                milestone_id,
+                submission_id,
+                Option::<(u8, protocol::TeamRating)>::None,
+            ),
+        ),
         ProviderCommand::AcceptMilestoneCompletion {
             milestone_id,
             request,
             ..
         } => input(
-            "accept_rated_milestone",
+            "accept_milestone",
             (
                 milestone_id,
                 request.submission_id,
-                request.coordinator_score,
-                &request.team_rating,
+                Some((request.coordinator_score, &request.team_rating)),
             ),
         ),
         ProviderCommand::RejectMilestoneDelivery {
@@ -73,18 +87,22 @@ fn command_input(
             comment_id,
             ..
         } => input(
-            "reject_milestone_comment",
-            (milestone_id, submission_id, comment_id),
+            "reject_milestone",
+            (
+                milestone_id,
+                submission_id,
+                ReviewReason::Comment(comment_id),
+            ),
         ),
         ProviderCommand::EvaluateProject { request, .. } => {
             input("evaluate_project", &request.ratings)
         }
         ProviderCommand::OpenDisputeWithComment(request) => input(
-            "open_dispute_comment",
+            "open_dispute",
             (
                 request.milestone_id,
                 request.rejected_submission_id,
-                request.comment_id,
+                ReviewReason::Comment(&request.comment_id),
                 seed,
                 event_cursor,
             ),
@@ -94,16 +112,15 @@ fn command_input(
             evidence,
             worker_ratings,
             ..
-        } => {
-            let reference = Some(Reference::Committed(evidence.clone()));
-            match worker_ratings {
-                Some(ratings) => input(
-                    "submit_rated_milestone",
-                    (milestone_id, reference, ratings, seed),
-                ),
-                None => input("submit_milestone", (milestone_id, reference, seed)),
-            }
-        }
+        } => input(
+            "submit_milestone",
+            (
+                milestone_id,
+                Some(Reference::Committed(evidence.clone())),
+                worker_ratings,
+                seed,
+            ),
+        ),
         ProviderCommand::RejectMilestoneCommitted {
             milestone_id,
             submission_id,
@@ -114,7 +131,7 @@ fn command_input(
             (
                 milestone_id,
                 submission_id,
-                Reference::Committed(evidence.clone()),
+                ReviewReason::Evidence(Reference::Committed(evidence.clone())),
             ),
         ),
         ProviderCommand::OpenDisputeCommitted {
@@ -127,7 +144,7 @@ fn command_input(
             (
                 milestone_id,
                 rejected_submission_id,
-                Reference::Committed(evidence.clone()),
+                ReviewReason::Evidence(Reference::Committed(evidence.clone())),
                 seed,
                 event_cursor,
             ),
@@ -137,24 +154,20 @@ fn command_input(
             evidence,
             ..
         } => input(
-            "respond_dispute",
+            "respond_to_dispute",
             (dispute_id, Reference::Committed(evidence.clone())),
         ),
-
         ProviderCommand::CreateProjectCore(content) => input("create_project", (content, seed)),
         ProviderCommand::SetCompensationPolicy(policy) => input("set_compensation_policy", policy),
         ProviderCommand::CreateProposalCore {
             proposal, content, ..
-        } => input("create_proposal_core", (proposal, content, seed)),
+        } => input("create_proposal", (proposal, content, seed)),
         ProviderCommand::UpdateProposalCore {
             proposal_id,
             proposal,
             content,
             ..
-        } => input(
-            "update_proposal_core",
-            (proposal_id, proposal, content, seed),
-        ),
+        } => input("update_proposal", (proposal_id, proposal, content, seed)),
         ProviderCommand::DeleteProposal { proposal_id, .. } => {
             input("delete_proposal", proposal_id)
         }
@@ -170,7 +183,7 @@ fn command_input(
             proposal_id,
             content,
             ..
-        } => input("request_proposal_changes_core", (proposal_id, content)),
+        } => input("request_proposal_changes", (proposal_id, content)),
         ProviderCommand::WithdrawProposal {
             proposal_id,
             expected_revision,
@@ -179,36 +192,59 @@ fn command_input(
         ProviderCommand::AcceptPlanningDelivery {
             expected_revision, ..
         } => input("accept_planning_delivery", expected_revision),
+        // Unsupported API operations need only a real read of current Project state.
         ProviderCommand::QuotePlanning { .. } | ProviderCommand::AcceptPlanningQuote { .. } => {
-            input("removed_planning_price", ())
+            input("view", ())
         }
         ProviderCommand::CreateTaskCore {
             task_storage_id,
             assignees,
             ..
-        } => input("create_task_core", (task_storage_id, assignees)),
+        } => input("create_task", (task_storage_id, assignees)),
         ProviderCommand::SetTaskAssigneesCore {
             task_storage_id,
             task_id,
             assignees,
             ..
-        } => input(
-            "set_task_assignees_core",
-            (task_storage_id, task_id, assignees),
-        ),
+        } => input("set_task_assignees", (task_storage_id, task_id, assignees)),
         ProviderCommand::DeleteTask {
             task_storage_id,
             task_id,
             expected_revision,
             ..
         } => input("delete_task", (task_storage_id, task_id, expected_revision)),
-        ProviderCommand::CancelProjectCore { content, .. } => input("cancel_project_core", content),
-        ProviderCommand::DisputePlanningCore { content, .. } => {
-            input("dispute_planning_core", content)
-        }
+        ProviderCommand::CancelProjectCore { content, .. } => input("cancel_project", content),
+        ProviderCommand::DisputePlanningCore { content, .. } => input("dispute_planning", content),
         _ => return Err(Error::IncompleteCoverage),
     })
 }
+
+/// Preserve the API rejection of unsupported planning-price commands. The saved
+/// outcome is the actual metered view call, never invented contract return bytes.
+pub(super) fn unsupported_planning(
+    command: &ProviderCommand,
+    outcome: &Outcome,
+) -> Result<Option<&'static str>, Error> {
+    if !matches!(
+        command,
+        ProviderCommand::QuotePlanning { .. } | ProviderCommand::AcceptPlanningQuote { .. }
+    ) || outcome.status != Status::Success
+    {
+        return Ok(None);
+    }
+    let project =
+        Result::<protocol::provider_core::ProjectCore, u8>::decode_all(&mut &outcome.data[..])
+            .map_err(|_| Error::InvalidState)?
+            .map_err(|_| Error::InvalidState)?;
+    Ok(Some(if project.cancelled {
+        "project_cancelled"
+    } else if project.active_dispute_id.is_some() {
+        "project_disputed"
+    } else {
+        "separate_planning_price_removed"
+    }))
+}
+
 pub(super) fn execute(
     ext: &mut sp_io::TestExternalities,
     bundles: &Bundles,

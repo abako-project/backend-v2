@@ -458,7 +458,10 @@ pub(super) fn evaluate(
         )?,
         Err(error) => return Err(error),
     };
-    let transition = transition(&outcome)?;
+    let transition = match super::projects::unsupported_planning(command, &outcome)? {
+        Some(code) => Err(code),
+        None => transition(&outcome)?,
+    };
     // Resource/VM failures are infrastructure, not canonical business rejections.
     // Whole-provider retries must retain the nonce and original durable state.
     {

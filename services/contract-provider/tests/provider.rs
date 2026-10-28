@@ -319,6 +319,44 @@ async fn exhausted_execution_preserves_admission_and_existing_empty_store_is_rej
     settings.gas_limit = frame_support::weights::Weight::from_parts(1, 1);
     let worker = Worker::open(database.0.clone(), settings).await.unwrap();
     let client = worker.client();
+    let pool = database.pool().await;
+    let stored = sqlx::query_as::<_, (Vec<u8>, Vec<u8>, i64)>(
+        "SELECT runtime, shell, revision FROM provider_state WHERE singleton = 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    let unsupported = sign(
+        &client,
+        1,
+        2,
+        ProviderCommand::AcceptPlanningQuote {
+            project_id: EntityId::from_bytes([99; 16]),
+            expected_revision: 0,
+        },
+    )
+    .await;
+    assert!(matches!(
+        client
+            .execute_signed(unsupported.clone(), NOW)
+            .unwrap()
+            .result()
+            .await,
+        Err(contract_provider::worker::Error::ExecutionLimit(_))
+    ));
+    assert_eq!(client.nonce(account(1)).await.unwrap().nonce, 0);
+    assert_eq!(
+        client.receipt(unsupported.call.operation_id).await.unwrap(),
+        None
+    );
+    let after = sqlx::query_as::<_, (Vec<u8>, Vec<u8>, i64)>(
+        "SELECT runtime, shell, revision FROM provider_state WHERE singleton = 1",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(after, stored);
+    pool.close().await;
     let call = sign(&client, 1, 1, fund(37)).await;
     assert!(matches!(
         client
@@ -871,5 +909,215 @@ async fn committed_rejection_dispute_freeze_and_private_reader_survive_restart()
     worker.shutdown().await.unwrap();
     let worker = database.open().await;
     assert_eq!(worker.client().dispute(id).await.unwrap(), view);
+    let client = worker.client();
+    let denied = ProviderApi::execute(
+        &client,
+        sign(
+            &client,
+            2,
+            104,
+            ProviderCommand::AcceptPlanningQuote {
+                project_id,
+                expected_revision: 0,
+            },
+        )
+        .await,
+        NOW,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        denied.outcome,
+        ExecutionOutcome::Failed("project_disputed".into())
+    );
+    worker.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn unsupported_planning_prices_reject_durably_without_contract_mutation() {
+    let database = Database::new();
+    let worker = database.open().await;
+    let client = worker.client();
+    let (project_id, _, _) = project(&client).await;
+    let before = client.snapshot().await.unwrap();
+    let window = WeekWindow::new(Week::new(2026, 1).unwrap(), Week::new(2026, 2).unwrap()).unwrap();
+    let commands = [
+        ProviderCommand::QuotePlanning {
+            project_id,
+            quote: PlanningQuote {
+                fee: Money::new(10),
+                minutes: Minutes::new(60),
+                window,
+            },
+        },
+        ProviderCommand::AcceptPlanningQuote {
+            project_id,
+            expected_revision: 0,
+        },
+    ];
+    let missing = sign(
+        &client,
+        2,
+        99,
+        ProviderCommand::AcceptPlanningQuote {
+            project_id: EntityId::from_bytes([99; 16]),
+            expected_revision: 0,
+        },
+    )
+    .await;
+    let missing_receipt = ProviderApi::execute(&client, missing.clone(), NOW)
+        .await
+        .unwrap();
+    assert_eq!(
+        missing_receipt.outcome,
+        ExecutionOutcome::Failed("project_not_found".into())
+    );
+    assert_eq!(
+        client.receipt(missing.call.operation_id).await.unwrap(),
+        Some(missing_receipt.clone())
+    );
+    assert_eq!(
+        ProviderApi::execute(&client, missing, NOW).await.unwrap(),
+        missing_receipt
+    );
+    let mut replay = None;
+    for (index, command) in commands.into_iter().enumerate() {
+        let call = sign(&client, 2, 100 + index as u8, command).await;
+        let receipt = ProviderApi::execute(&client, call.clone(), NOW)
+            .await
+            .unwrap();
+        assert_eq!(
+            receipt.outcome,
+            ExecutionOutcome::Failed("separate_planning_price_removed".into())
+        );
+        assert_eq!(receipt.first_event_cursor, None);
+        assert_eq!(receipt.last_event_cursor, None);
+        assert_eq!(client.snapshot().await.unwrap().projects, before.projects);
+        assert_eq!(client.snapshot().await.unwrap().balances, before.balances);
+        replay = Some((call, receipt));
+    }
+    apply(
+        &client,
+        2,
+        102,
+        ProviderCommand::CancelProjectCore {
+            project_id,
+            content: content(102),
+        },
+    )
+    .await;
+    let denied = ProviderApi::execute(
+        &client,
+        sign(
+            &client,
+            2,
+            103,
+            ProviderCommand::AcceptPlanningQuote {
+                project_id,
+                expected_revision: 0,
+            },
+        )
+        .await,
+        NOW,
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        denied.outcome,
+        ExecutionOutcome::Failed("project_cancelled".into())
+    );
+    worker.shutdown().await.unwrap();
+    let worker = database.open().await;
+    let client = worker.client();
+    let (call, receipt) = replay.unwrap();
+    assert_eq!(
+        ProviderApi::execute(&client, call, NOW).await.unwrap(),
+        receipt
+    );
+    worker.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn consolidated_ratings_reject_empty_team_votes_and_settle_exact_reputation() {
+    let database = Database::new();
+    let worker = database.open().await;
+    let client = worker.client();
+    let (project_id, proposal_id, milestone_id) = ready(&client).await;
+    let call = approval(&client, project_id, proposal_id).await;
+    assert_eq!(
+        ProviderApi::execute(&client, call, NOW)
+            .await
+            .unwrap()
+            .outcome,
+        ExecutionOutcome::Success
+    );
+    let before = client.snapshot().await.unwrap();
+    let invalid = sign(
+        &client,
+        2,
+        105,
+        ProviderCommand::SubmitMilestoneCommitted {
+            project_id,
+            milestone_id,
+            evidence: evidence(105),
+            worker_ratings: Some(vec![]),
+        },
+    )
+    .await;
+    let rejected = ProviderApi::execute(&client, invalid, NOW).await.unwrap();
+    assert_eq!(
+        rejected.outcome,
+        ExecutionOutcome::Failed("worker_ratings_mismatch".into())
+    );
+    assert_eq!(client.snapshot().await.unwrap(), before);
+    let submitted = apply(
+        &client,
+        2,
+        106,
+        ProviderCommand::SubmitMilestoneCommitted {
+            project_id,
+            milestone_id,
+            evidence: evidence(106),
+            worker_ratings: Some(vec![WorkerRating {
+                worker: account(3),
+                score: Score::new(5).unwrap(),
+            }]),
+        },
+    )
+    .await;
+    apply(
+        &client,
+        4,
+        107,
+        ProviderCommand::AcceptMilestoneCompletion {
+            project_id,
+            milestone_id,
+            request: AcceptMilestoneCompletionRequest {
+                submission_id: submitted.created_entity_id.unwrap(),
+                coordinator_score: Score::new(5).unwrap(),
+                team_rating: TeamRating::Client(Score::new(5).unwrap()),
+            },
+        },
+    )
+    .await;
+    let settled = client.snapshot().await.unwrap();
+    assert!(settled.projects[0].completed);
+    for seed in [2, 3] {
+        let member = settled
+            .workers
+            .iter()
+            .find(|member| member.account == account(seed))
+            .unwrap();
+        let score = if seed == 2 {
+            &member.coordinator_score
+        } else {
+            &member.worker_score
+        };
+        assert_eq!(score.rated_minutes, 60);
+        assert_eq!(score.weighted_score_sum, 30_000);
+    }
+    worker.shutdown().await.unwrap();
+    let worker = database.open().await;
+    assert_eq!(worker.client().snapshot().await.unwrap(), settled);
     worker.shutdown().await.unwrap();
 }
