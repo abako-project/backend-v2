@@ -71,7 +71,6 @@ dependencies = [
  "thiserror 2.0.20",
  "tokio",
  "tokio-stream",
- "tower-http",
  "tracing",
  "tracing-subscriber",
  "webauthn-authenticator-rs",
@@ -3891,12 +3890,10 @@ dependencies = [
  "futures-util",
  "http",
  "http-body",
- "http-body-util",
  "pin-project-lite",
  "tower",
  "tower-layer",
  "tower-service",
- "tracing",
  "url",
 ]
 
