@@ -1,0 +1,1063 @@
+{
+  "schemaVersion": 1,
+  "steps": [
+    {
+      "capturedId": "0xb0d6878faae801dd851a85fe96d3b17e",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "content": {
+            "hash": "0x1ed798a40e7e5f0f84bf1b042d04f3dad408c69091e588a4eeaf6ddce371900a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              999
+            ]
+          }
+        },
+        "type": "RegisterWorkerCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "unknown_qualification"
+      },
+      "stateDigest": "afb4552f7213ef3d5d714ba4efa2f241540c267c044d740d4cbce2f8184e768f"
+    },
+    {
+      "capturedId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "content": {
+            "hash": "0x1ed798a40e7e5f0f84bf1b042d04f3dad408c69091e588a4eeaf6ddce371900a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              1
+            ]
+          }
+        },
+        "type": "RegisterWorkerCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "kind": "WorkerRegistered",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "3ac3ae446dffb7ac83ad4c403c54f9fbe2408a6a6ebda05e0e185bc05c9a9c9c"
+    },
+    {
+      "capturedId": "0x7f982207bff99f3c0196518bbded3666",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "content": {
+            "hash": "0x1ed798a40e7e5f0f84bf1b042d04f3dad408c69091e588a4eeaf6ddce371900a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              999
+            ]
+          }
+        },
+        "type": "RegisterWorkerCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "worker_exists"
+      },
+      "stateDigest": "3ac3ae446dffb7ac83ad4c403c54f9fbe2408a6a6ebda05e0e185bc05c9a9c9c"
+    },
+    {
+      "capturedId": "0x597aacfb5a1744166ff5e0a6e641206e",
+      "command": {
+        "data": {
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              999
+            ]
+          }
+        },
+        "type": "UpdateQualifications"
+      },
+      "origin": "0x0404040404040404040404040404040404040404040404040404040404040404",
+      "outcome": {
+        "error": "unknown_qualification"
+      },
+      "stateDigest": "3ac3ae446dffb7ac83ad4c403c54f9fbe2408a6a6ebda05e0e185bc05c9a9c9c"
+    },
+    {
+      "capturedId": "0x2ac61ed2accce69a92acbb2b2f312d60",
+      "command": {
+        "data": {
+          "qualifications": {
+            "roleIds": [
+              2
+            ],
+            "skillIds": [
+              1
+            ]
+          }
+        },
+        "type": "UpdateQualifications"
+      },
+      "origin": "0x0404040404040404040404040404040404040404040404040404040404040404",
+      "outcome": {
+        "error": "worker_not_found"
+      },
+      "stateDigest": "3ac3ae446dffb7ac83ad4c403c54f9fbe2408a6a6ebda05e0e185bc05c9a9c9c"
+    },
+    {
+      "capturedId": "0x0da0959392a6f0f49f074c64ac9f2604",
+      "command": {
+        "data": {
+          "mode": "Coordinator"
+        },
+        "type": "SetWorkerMode"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "coordinator_not_eligible"
+      },
+      "stateDigest": "3ac3ae446dffb7ac83ad4c403c54f9fbe2408a6a6ebda05e0e185bc05c9a9c9c"
+    },
+    {
+      "capturedId": "0xacaa88f9a319dedee7d729fab59da20b",
+      "command": {
+        "data": {
+          "account": "0x0202020202020202020202020202020202020202020202020202020202020202"
+        },
+        "type": "PromoteCoordinator"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "error": "system_origin_required"
+      },
+      "stateDigest": "3ac3ae446dffb7ac83ad4c403c54f9fbe2408a6a6ebda05e0e185bc05c9a9c9c"
+    },
+    {
+      "capturedId": "0xcaeb5e7018fffb52e24ec79633e0fe1d",
+      "command": {
+        "data": {
+          "account": "0x0202020202020202020202020202020202020202020202020202020202020202"
+        },
+        "type": "PromoteCoordinator"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CoordinatorPromoted",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "ad5378fa857c59f9726eadd96103cada40a205ad07732cd3206ff8a6c3a427c5"
+    },
+    {
+      "capturedId": "0x74ed346d4cc835e1945348805e28c48b",
+      "command": {
+        "data": {
+          "mode": "Coordinator"
+        },
+        "type": "SetWorkerMode"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "WorkerUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "3c243bdd049fdf792d53bcd874b4027f63ca33157582d379cc559a4a1aeda7c5"
+    },
+    {
+      "capturedId": "0xca4bce725a44e2822994d952e077596c",
+      "command": {
+        "data": {
+          "calendar": {
+            "defaultWeeklyMinutes": 600,
+            "overrides": []
+          },
+          "content": {
+            "hash": "0x353fc2c2c6a9485bba081356c27eb685d9d4b27a2aeee0e5711d7900ddae7918",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "qualifications": {
+            "roleIds": [
+              3
+            ],
+            "skillIds": [
+              3
+            ]
+          }
+        },
+        "type": "RegisterWorkerCore"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "effect": {
+          "entityId": "0xca4bce725a44e2822994d952e077596c",
+          "kind": "WorkerRegistered",
+          "recipients": [
+            "0x0303030303030303030303030303030303030303030303030303030303030303"
+          ]
+        }
+      },
+      "stateDigest": "a403e18db5af3f4b259e1e41927d67d66ad60744eec329a3e4bd0ee0114583c5"
+    },
+    {
+      "capturedId": "0xc458f38fd60805f351861dc82258a343",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x0c5ea66e34113ead95c96111e716d32843bfd70fa2d826fc4949f60ea631d2dc",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 80,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "system_origin_required"
+      },
+      "stateDigest": "a403e18db5af3f4b259e1e41927d67d66ad60744eec329a3e4bd0ee0114583c5"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0xee26a7a38a359945b6bf6b007185ff0843fd3472af4fe88b3a77bae5702a6355",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 1,
+          "kind": "Role"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "fixed_coordinator_role"
+      },
+      "stateDigest": "a403e18db5af3f4b259e1e41927d67d66ad60744eec329a3e4bd0ee0114583c5"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 1,
+          "kind": "Role"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "fixed_coordinator_role"
+      },
+      "stateDigest": "a403e18db5af3f4b259e1e41927d67d66ad60744eec329a3e4bd0ee0114583c5"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 2,
+          "kind": "Role"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_in_use"
+      },
+      "stateDigest": "a403e18db5af3f4b259e1e41927d67d66ad60744eec329a3e4bd0ee0114583c5"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "id": 1,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_in_use"
+      },
+      "stateDigest": "a403e18db5af3f4b259e1e41927d67d66ad60744eec329a3e4bd0ee0114583c5"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x1c98ba299e63521634666dba311e5cfbc750dbc078b22dca8101f07a49ab5292",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 80,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "072f34f29a27a4cf51942bb8e05946758c69d2575e46d7651e8f7636f758b02d"
+    },
+    {
+      "capturedId": "0x9aadcc746e1ee3c89cded850beceece0",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x3eb5e2fdeea712e8cf80df5de5f8a55848b5ca404cc20b3ec8578029e61a77dc",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequestCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0x9aadcc746e1ee3c89cded850beceece0",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "14237893c061d5cc1ba7f9ede3b8892dd8bf5fe8f2f3a1895e4bdda0ca263d8f"
+    },
+    {
+      "capturedId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x19443a1ce194bb5b44a25ff7d135921893e7861ff4d533cf79e03884c6905d34",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequestCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "5a79b5687536e294c59ac4ec3e435094edaf7dd06d0b33344936ba2d907a2fcb"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x35246cd5bb4746d655bd7c28311292e0604d86d5047c680f82f8d7f2b64e8763",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequestCore"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0303030303030303030303030303030303030303030303030303030303030303"
+          ]
+        }
+      },
+      "stateDigest": "d35ec9b25c3534dfb6ca753551a84706db228e9d8a9b376414633ba46e736700"
+    },
+    {
+      "capturedId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x8d154bead316db8df933f26f6ef8032c71f9468f54d769789014c93e88a9b72e",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequestCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "error": "request_id_collision"
+      },
+      "stateDigest": "d35ec9b25c3534dfb6ca753551a84706db228e9d8a9b376414633ba46e736700"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0303030303030303030303030303030303030303030303030303030303030303",
+      "outcome": {
+        "error": "system_origin_required"
+      },
+      "stateDigest": "d35ec9b25c3534dfb6ca753551a84706db228e9d8a9b376414633ba46e736700"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x13dbb624c1fad6bc738de0ea7db831d5"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0x13dbb624c1fad6bc738de0ea7db831d5",
+          "kind": "SkillRequestApproved",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "de05559037ab0ae9927777bc8cec632c5ebd9f95229a009a29d80aed1b54998d"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+          "kind": "SkillRequestApproved",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0303030303030303030303030303030303030303030303030303030303030303"
+          ]
+        }
+      },
+      "stateDigest": "d36390127d45ae6ca7b715d9ff317ccb68f099dda2a51f87f7484aa5e046292e"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "skill_request_decided"
+      },
+      "stateDigest": "d36390127d45ae6ca7b715d9ff317ccb68f099dda2a51f87f7484aa5e046292e"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0xe96e8e73f9d3bac6793e43ab2085c551"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "skill_request_decided"
+      },
+      "stateDigest": "d36390127d45ae6ca7b715d9ff317ccb68f099dda2a51f87f7484aa5e046292e"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x70c4159fc6e3a66a5530ae8e6fa3dd36676f6de3fe737326370e204dd998409d",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 81,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "cd4cfea31ee6a1ebc308f55e20d88c5efb85397b40f29b915c081c18531d51ce"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "id": 81,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "eb8b3e32d8408497d3a9e78d6c00721df7b4ebed0f074deed719230bc1e9fe68"
+    },
+    {
+      "capturedId": "0xe96e8e73f9d3bac6793e43ab2085c551",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x95d9b205e278c100c1f3121842b5e92012c9750c9e1e27948b7fc222f7a00da4",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 90,
+          "kind": "Role"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "7a247202c9aadbb2c28c925431859361ef0f32f988f14a177b8ff170e3a7d866"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0xb9ee7fc47d4686c8e9a8c1139b7208352c8942f7597780efc63a4e280123c67a",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "roleIds": [
+            90
+          ]
+        },
+        "type": "CreateSkillRequestCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0x8d42c935e9444730088459a2a5342119",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "0e071eb4301d8c39b61eba9822f04e0fcf4e9ca351099471e63f7f00a9b59531"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "id": 90,
+          "kind": "Role"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "886726aa2e973e5cbf349091de90784af161031672fd837fb8d6c28b5ecc95e8"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x8d42c935e9444730088459a2a5342119"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "unknown_role"
+      },
+      "stateDigest": "886726aa2e973e5cbf349091de90784af161031672fd837fb8d6c28b5ecc95e8"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0x8d42c935e9444730088459a2a5342119"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0x8d42c935e9444730088459a2a5342119",
+          "kind": "SkillRequestRejected",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "74f0e6d6ec2bdd86f58103ad5d300850c2f6ba440d5bf7697933bf6e10dfe9a8"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "qualifications": {
+            "roleIds": [
+              3
+            ],
+            "skillIds": [
+              2
+            ]
+          }
+        },
+        "type": "UpdateQualifications"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "WorkerUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "10c28b6c9e91cedcf780a1995af3365fce69950fe8cdb1ce94a30508511b85c4"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "id": 2,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_in_use"
+      },
+      "stateDigest": "10c28b6c9e91cedcf780a1995af3365fce69950fe8cdb1ce94a30508511b85c4"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "id": 999,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_entry_not_found"
+      },
+      "stateDigest": "10c28b6c9e91cedcf780a1995af3365fce69950fe8cdb1ce94a30508511b85c4"
+    },
+    {
+      "capturedId": "0x8d42c935e9444730088459a2a5342119",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0xa1b1565dc9034c2b1b7170c384e2a8f4ed48eff9019b6c1319931e77037195ae",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 4294967295,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "d7f9ac3e90456125fc3668a75b5dab2c779a16390a6c4e9f69902e593e820ddf"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x6ada237360f515c0d443de7ca67d1f40e98bcd29cc9650a46097542fc7b40abc",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "roleIds": [
+            3
+          ]
+        },
+        "type": "CreateSkillRequestCore"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+          "kind": "SkillRequested",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "33c5f65990b298f6fbf2dae9df0dcb8bd3fd466f4bc0872da888f3314a3de47e"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "decision": "Approve",
+          "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "error": "catalog_id_exhausted"
+      },
+      "stateDigest": "33c5f65990b298f6fbf2dae9df0dcb8bd3fd466f4bc0872da888f3314a3de47e"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "decision": "Reject",
+          "requestId": "0x0581ecb18166fe68e0cda573a5a51a6a"
+        },
+        "type": "DecideSkillRequest"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+          "kind": "SkillRequestRejected",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101",
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "97538b4d9f4bf0b436cdd1c65332e297432fcc71b45a27a53296b16a4a0680a9"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "id": 4294967295,
+          "kind": "Skill"
+        },
+        "type": "DeleteCatalogEntry"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "b069d141d3656e7bc01ad07d86e4beb4cde3d09f08b5f513864509ce87c5c607"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "defaultWeeklyMinutes": 37,
+          "overrides": [
+            {
+              "capacity": 0,
+              "week": {
+                "isoYear": 2026,
+                "week": 53
+              }
+            }
+          ]
+        },
+        "type": "SetCalendar"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": "0xe7480f7cdeb295f6cfe468e81823e7de",
+          "kind": "CalendarUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "4bf2124c0ca479613264f1482cdaa15089521231528e550ceefc1b5b673a040e"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "mode": "Worker"
+        },
+        "type": "SetWorkerMode"
+      },
+      "origin": "0x0202020202020202020202020202020202020202020202020202020202020202",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "WorkerUpdated",
+          "recipients": [
+            "0x0202020202020202020202020202020202020202020202020202020202020202"
+          ]
+        }
+      },
+      "stateDigest": "a6fbc69e3b6085c5b779854debd87f7c3692f5f95f0e77ac9f4ac98e225420cf"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x3a1a2d63d25364ca044448f93041ccda05e2c0a6eead7a76c3bd403082febeb8",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 80,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "25a7f6e6a400c204878270cc333e1df82716d4739dda034bfdd3abe590981102"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0xba5d12c08b4185c1cc38f0cb465752c32cf058b9aead99dfba5c19fcda0d35df",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 82,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "ebc9230334c414738e696a9dc7c86eee8816348c85885adba66fb5470b8a410e"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x4d2b70cb7d5ec62ece736ba88031272256bb04d9657067e3fb43f28762b6acb1",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 83,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "c1f172ab261c9efb480c5eab4816fd240952cfacc4243d2c02f82a7d185f9ac0"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x2c355595d347274e91779f8175feb9a2c403490f05194dbdb7b4a004c87b79f6",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 83,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "7d17a286773179a3db605e126d81ab52e5d81894557122131530d80bb2cb1cc9"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0xbe6df2b3c980079396b1e24d2645b4f2ec43472b6a7d662b1042e28b366c0cb1",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 84,
+          "kind": "Skill"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "7110a789298b430c84f37f2ad39ce40ab4637dc0b0731d920b4f22c1678b8007"
+    },
+    {
+      "capturedId": "0x0581ecb18166fe68e0cda573a5a51a6a",
+      "command": {
+        "data": {
+          "content": {
+            "hash": "0x5d0fe05a8602b4d0f4d0b8ac0b3c883b3eaf3b2b7e21525dbb3c7eabb9722d8e",
+            "operationId": "0x00000000000000000000000000000000"
+          },
+          "id": 91,
+          "kind": "Role"
+        },
+        "type": "UpsertCatalogEntryCore"
+      },
+      "origin": "0x0101010101010101010101010101010101010101010101010101010101010101",
+      "outcome": {
+        "effect": {
+          "entityId": null,
+          "kind": "CatalogUpdated",
+          "recipients": [
+            "0x0101010101010101010101010101010101010101010101010101010101010101"
+          ]
+        }
+      },
+      "stateDigest": "9c53adda40f637a2d1867e5811d01db02f48838233022ec7a902e46fc56a8abf"
+    }
+  ]
+}

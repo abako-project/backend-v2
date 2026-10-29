@@ -84,15 +84,20 @@ class Client:
         self.session = self.request("POST", path, body, 201 if path.endswith("/register") else 200)
         return self.session["accountId"]
 
-    def command(self, method, path, body=None, operation_id=None, expected_outcome="Success"):
+    def command(self, method, path, body=None, operation_id=None, expected_outcome="Success", expected_status="Finalized"):
         key = operation_id or "0x" + secrets.token_hex(16)
         reference = self.request(method, path, body, 202, {"Idempotency-Key": key})
         require(reference["operationId"] == key, "adapter changed caller idempotency key")
         deadline = time.monotonic() + 45
         while time.monotonic() < deadline:
             operation = self.request("GET", "/api/operations/" + key)
-            if operation["status"] == "Finalized":
-                receipt = operation["receipt"]
+            if operation["status"] == expected_status:
+                if expected_status != "Finalized":
+                    require(operation["receipt"] is None, "adapter admission fabricated a provider receipt")
+                    return operation
+                require((operation.get("receipt") is None) != (operation.get("taskResult") is None),
+                        "finality must have exactly one real result source")
+                receipt = operation.get("receipt") or operation.get("taskResult")
                 require(receipt["outcome"]["type"] == expected_outcome,
                         f"expected {expected_outcome}, got {receipt['outcome'].get('type')}: "
                         f"{receipt['outcome'].get('code')}")
@@ -331,7 +336,9 @@ def exercise(base, admin_password, proxy):
     task_id = milestone["taskStorage"]["tasks"][0]["taskId"]
     task["assignees"] = [worker_account]
     coordinator.command("PUT", storage_path + "/tasks/" + str(task_id), task)
-    worker.command("PATCH", storage_path + f"/tasks/{task_id}/progress", {"status": "Done", "loggedMinutes": 999})
+    progress = worker.command("PATCH", storage_path + f"/tasks/{task_id}/progress", {"status": "Done", "loggedMinutes": 999})
+    require(progress["receipt"] is None and progress["taskResult"]["outcome"]["type"] == "Success",
+            "local progress fabricated a core receipt")
     milestone_path = project_path + "/milestones/" + milestone["milestoneId"]
     submission = coordinator.command("POST", milestone_path + "/request-completion", {
         "deliverable": {"url": "https://example.test/delivery"},
@@ -672,7 +679,7 @@ def exercise_bramp(base, admin, owner, outsider):
     withdrawal_path = "/api/bramp/withdrawals/" + withdrawal_id
     require(owner.request("GET", withdrawal_path)["status"] == "Pending"
             and int(owner.request("GET", "/api/balance")["available"]) == initial + 5,
-            "pending withdrawal did not hold free KVN")
+            "pending withdrawal did not hold free payment units")
     outsider.request("GET", withdrawal_path, expected=404)
     outsider.request("POST", withdrawal_path + "/cancel", expected=404)
     owner.command("POST", withdrawal_path + "/cancel")
@@ -724,8 +731,8 @@ def exercise_catalog(admin, worker, outsider):
             "approval silently qualified the worker")
     duplicate = worker.command("POST", "/api/catalog/skill-requests",
                                {"name": "  " + skill_name.upper() + "  ", "roleIds": [3]},
-                               expected_outcome="Failed")
-    require(duplicate["receipt"]["outcome"]["code"] == "skill_name_exists",
+                               expected_status="Rejected")
+    require(duplicate["errorCode"] == "skill_name_exists",
             "normalized duplicate created a second global skill")
 
 
@@ -733,7 +740,7 @@ def exercise_auxiliary(base, admin_password, _proxy):
     """Typed REST checks beyond the original project and dispute paths."""
     visitor = Client(base)
     profile = visitor.request("GET", "/api/platform")
-    expected = json.loads((ROOT / "services/adapter-api/src/platform/default.json").read_text())
+    expected = json.loads((ROOT / "services/api/src/platform/default.json").read_text())
     require(profile == expected, "public platform profile differs from its startup default")
     require(profile["currency"]["decimals"] == 0, "platform changed mock amount units")
     visitor.request("GET", "/api/platform", expected=403,
@@ -763,7 +770,7 @@ def scan_secret_logs(logs):
                     f"{service} log disclosed {name}")
 
 
-def run(storage, binaries, scenario=exercise):
+def run(binaries, scenario=exercise, provider_binary=None):
     with ExitStack() as stack:
         directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="digesta-e2e-")))
         logs = []
@@ -777,23 +784,29 @@ def run(storage, binaries, scenario=exercise):
         )
         require(all(len(marker) >= 12 for _, marker in Client.secret_markers),
                 "secret marker too short for reliable scanning")
-        wallet_port, provider_port, adapter_port = [available_port() for _ in range(3)]
         common = {"INTERNAL_SERVICE_TOKEN_FILE": str(secret_dir / "service-token")}
+        # These are candidates, not reservations. Let each service bind before
+        # choosing the next port; choose the adapter port after the proxy binds.
+        wallet_port = available_port()
         wallet = launch(stack, binaries / "wallet", wallet_port, {
             **common, "CUSTODY_DATABASE_URL": f"sqlite://{directory}/custody.sqlite?mode=rwc",
             "CUSTODY_MASTER_KEY_FILE": str(secret_dir / "master-key.hex"),
             "CUSTODY_ROOT_SEED_FILE": str(secret_dir / "root-seed.hex"),
         }, logs)
-        launch(stack, binaries / "mock-provider", provider_port, {
-            **common, "MOCK_DATABASE_URL": f"sqlite://{directory}/mock.sqlite?mode=rwc",
-            "MOCK_STORAGE": storage, "MOCK_ROOT_ACCOUNT_FILE": str(secret_dir / "root-account.hex"),
+        provider_port = available_port()
+        launch(stack, provider_binary or ROOT / "services/contract-provider/target/debug/contract-provider", provider_port, {
+            **common,
+            "CONTRACT_DATABASE_PATH": str(directory / "contracts.sqlite"),
+            "ENABLE_MOCK_FUNDING": "true",
+            "MOCK_ROOT_ACCOUNT_FILE": str(secret_dir / "root-account.hex"),
         }, logs)
         proxy = LossyProvider(provider_port)
         proxy_thread = threading.Thread(target=proxy.serve_forever, daemon=True)
         proxy_thread.start()
         stack.callback(proxy.server_close)
         stack.callback(proxy.shutdown)
-        adapter = launch(stack, binaries / "adapter-api", adapter_port, {
+        adapter_port = available_port()
+        adapter = launch(stack, binaries / "api", adapter_port, {
             **common, "ADAPTER_DATABASE_URL": adapter_database_url,
             "CUSTODY_URL": f"http://127.0.0.1:{wallet_port}",
             "MOCK_PROVIDER_URL": f"http://127.0.0.1:{proxy.server_port}",
@@ -808,16 +821,13 @@ def run(storage, binaries, scenario=exercise):
             "Authorization": "Bearer " + (secret_dir / "service-token").read_text().strip(),
         })
         scan_secret_logs(logs)
-        print(f"PASS {storage} {scenario.__name__}: signed REST lifecycle")
+        print(f"PASS contracts {scenario.__name__}: signed REST lifecycle")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--storage", choices=("sqlite", "memory", "both"), default="both")
     parser.add_argument("--binaries", type=Path, default=ROOT / "target/debug")
+    parser.add_argument("--provider-binary", type=Path, help="explicit contract-provider executable")
     arguments = parser.parse_args()
-    for selected in (("sqlite", "memory") if arguments.storage == "both" else (arguments.storage,)):
-        run(selected, arguments.binaries.resolve())
-        run(selected, arguments.binaries.resolve(), exercise_multi_milestone)
-        run(selected, arguments.binaries.resolve(), exercise_dispute)
-        run(selected, arguments.binaries.resolve(), exercise_auxiliary)
+    for scenario in (exercise, exercise_multi_milestone, exercise_dispute, exercise_auxiliary):
+        run(arguments.binaries.resolve(), scenario, arguments.provider_binary)

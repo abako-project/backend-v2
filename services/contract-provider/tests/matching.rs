@@ -1,0 +1,505 @@
+//! Matching and reputation scenarios through production contract WASM.
+use contract_provider::{
+    Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
+};
+use pallet_contracts::{Code, CollectEvents, DebugInfo, ExecReturnValue};
+use parity_scale_codec::{Decode, DecodeAll, Encode};
+use protocol::provider_core::WorkerCore;
+use protocol::*;
+use rand::{Rng, SeedableRng, rngs::StdRng};
+use serde::{Deserialize, Serialize};
+#[path = "support/dao.rs"]
+mod common;
+use common::*;
+use serde_json::{Value, json};
+
+#[derive(Deserialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+enum Action {
+    Command {
+        origin: AccountId32,
+        command: ProviderCommand,
+        seed: u8,
+    },
+    Contributions {
+        project_id: EntityId,
+        author: AccountId32,
+        votes: Vec<(AccountId32, u8, u8, u32)>,
+    },
+    Coordinator {
+        client: AccountId32,
+        week: Week,
+        seed: u8,
+    },
+    Assign {
+        project_id: EntityId,
+        client: AccountId32,
+        coordinator: AccountId32,
+        milestones: Vec<(EntityId, MilestoneDefinition)>,
+        seed: u8,
+    },
+}
+fn decoded<T: Decode>(value: ExecReturnValue) -> Result<T, String> {
+    let result = Result::<Result<T, String>, u8>::decode_all(&mut &value.data[..])
+        .unwrap()
+        .unwrap();
+    assert_eq!(value.did_revert(), result.is_err());
+    result
+}
+fn fixture() -> Value {
+    serde_json::from_str(include_str!("fixtures/matching.json")).unwrap()
+}
+fn setup() -> (sp_io::TestExternalities, Account) {
+    let bundles = Bundles::pinned().unwrap();
+    let mut ext = new_externalities((1..=100).map(account).collect()).unwrap();
+    let dao = ext.execute_with(|| {
+        let created = Contracts::bare_instantiate(
+            account(1),
+            0,
+            GAS,
+            None,
+            Code::Upload(bundles.code("dao").unwrap().to_vec()),
+            input("new", (account(99), account(99), catalog())),
+            b"matching-v5".to_vec(),
+            DebugInfo::Skip,
+            CollectEvents::Skip,
+        )
+        .result
+        .unwrap();
+        assert!(!created.result.did_revert());
+        created.account_id
+    });
+    (ext, dao)
+}
+fn id(seed: u8) -> EntityId {
+    let mut bytes = [0; 16];
+    StdRng::from_seed([seed; 32]).fill_bytes(&mut bytes);
+    EntityId::from_bytes(bytes)
+}
+fn command_input(command: ProviderCommand, seed: u8, _origin: AccountId32) -> Vec<u8> {
+    match command {
+        ProviderCommand::RegisterWorkerCore(request) => {
+            input("register_worker", (request, id(seed)))
+        }
+        ProviderCommand::UpdateQualifications(request) => input("update_qualifications", request),
+        ProviderCommand::SetCalendar(definition) => input("set_calendar", definition),
+        ProviderCommand::SetWorkerMode(request) => input("set_worker_mode", request),
+        ProviderCommand::PromoteCoordinator(request) => input("promote_coordinator", request),
+        ProviderCommand::SetScorePolicy(policy) => input("set_score_policy", policy),
+        _ => panic!("unsupported scenario command"),
+    }
+}
+fn plan(milestones: Vec<(EntityId, MilestoneDefinition)>) -> impl Encode {
+    milestones
+        .into_iter()
+        .map(|(id, definition)| {
+            (
+                id,
+                definition.window,
+                definition.coordinator_minutes,
+                definition
+                    .requirements
+                    .into_iter()
+                    .map(|r| (r.key, r.role_id, r.skill_ids, r.minutes))
+                    .collect::<Vec<_>>(),
+            )
+        })
+        .collect::<Vec<_>>()
+}
+fn observed<T: Serialize>(result: Result<T, String>) -> Value {
+    match result {
+        Ok(value) => json!({"ok":value}),
+        Err(error) => json!({"error":error}),
+    }
+}
+fn apply(dao: &Account, action: Action) -> Value {
+    match action {
+        Action::Command {
+            origin,
+            command,
+            seed,
+        } => observed(decoded::<Effect>(call(
+            &Account::new(origin.into_bytes()),
+            dao,
+            command_input(command, seed, origin),
+        ))),
+        Action::Contributions {
+            project_id,
+            author,
+            votes,
+        } => observed(decoded::<()>(call(
+            &account(99),
+            dao,
+            input("apply_reputation", (project_id, author, votes)),
+        ))),
+        Action::Coordinator { client, week, seed } => {
+            observed(decoded::<(AccountId32, EntityId)>(call(
+                &account(99),
+                dao,
+                input("select_coordinator", (client, week, [seed; 32])),
+            )))
+        }
+        Action::Assign {
+            project_id,
+            client,
+            coordinator,
+            milestones,
+            seed,
+        } => observed(decoded::<Vec<Vec<(u32, AccountId32)>>>(call(
+            &account(99),
+            dao,
+            input(
+                "assign_team",
+                (
+                    project_id,
+                    client,
+                    coordinator,
+                    plan(milestones),
+                    [seed; 32],
+                ),
+            ),
+        ))),
+    }
+}
+#[test]
+fn canonical_reputation_matching_trace_preserves_every_result_and_reservation() {
+    let fixture = fixture();
+    assert_eq!(fixture["schemaVersion"], 1);
+    let (mut ext, dao) = setup();
+    for (index, step) in fixture["steps"].as_array().unwrap().iter().enumerate() {
+        ext.execute_with(|| {
+            assert_eq!(
+                apply(
+                    &dao,
+                    serde_json::from_value(step["action"].clone()).unwrap()
+                ),
+                step["outcome"],
+                "step {index}"
+            );
+            assert_eq!(
+                digest(&projection(&dao)),
+                step["stateDigest"],
+                "step {index}"
+            );
+            assert_eq!(
+                json!(read::<ScorePolicy>(&dao, 1, "score_policy", ())),
+                fixture["policies"][step["policy"].as_str().unwrap()],
+                "step {index}"
+            );
+        });
+        if index % 30 == 29 {
+            let bytes = Checkpoint::capture(ext).unwrap().to_bytes().unwrap();
+            ext = Checkpoint::decode(&bytes).unwrap().restore().unwrap();
+        }
+    }
+}
+fn registration(dao: &Account, origin: u8) {
+    let request =
+        ProviderCommand::RegisterWorkerCore(protocol::provider_core::RegisterWorkerCoreRequest {
+            content: protocol::provider_core::MetadataCommitmentV1 {
+                operation_id: OperationId::from_bytes([0; 16]),
+                hash: PayloadHash::from_bytes([9; 32]),
+            },
+            qualifications: Qualifications {
+                role_ids: vec![3],
+                skill_ids: vec![1, 2],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        });
+    assert!(
+        decoded::<Effect>(call(
+            &account(origin),
+            dao,
+            command_input(request, origin, AccountId32::from_bytes([origin; 32]))
+        ))
+        .is_ok()
+    );
+}
+#[test]
+fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes() {
+    let (mut ext, dao) = setup();
+    ext.execute_with(|| {
+        registration(&dao, 2);
+        registration(&dao, 3);
+        let before = digest(&projection(&dao));
+        let votes = vec![(account(2), 0u8, 5u8, 37u32)];
+        let vote_input = input("apply_reputation", ([90u8; 16], account(1), &votes));
+        for caller in [1, 2, 3] {
+            assert_eq!(
+                decoded::<()>(call(&account(caller), &dao, vote_input.clone())).unwrap_err(),
+                "reservation_controller_required"
+            );
+            let week = Week::new(2026, 1).unwrap();
+            assert_eq!(
+                decoded::<(AccountId32, EntityId)>(call(
+                    &account(caller),
+                    &dao,
+                    input("select_coordinator", (account(1), week, [0u8; 32]))
+                ))
+                .unwrap_err(),
+                "reservation_controller_required"
+            );
+            assert_eq!(
+                decoded::<Vec<Vec<(u32, AccountId32)>>>(call(
+                    &account(caller),
+                    &dao,
+                    input(
+                        "assign_team",
+                        (
+                            [90u8; 16],
+                            account(1),
+                            account(2),
+                            Vec::<u8>::new(),
+                            [0u8; 32]
+                        )
+                    )
+                ))
+                .unwrap_err(),
+                "reservation_controller_required"
+            );
+        }
+        assert_eq!(digest(&projection(&dao)), before);
+        assert!(decoded::<()>(call(&account(99), &dao, vote_input.clone())).is_ok());
+        let once = digest(&projection(&dao));
+        let policy = ScorePolicy::new(Percentage::new(50).unwrap(), Percentage::new(50).unwrap())
+            .unwrap()
+            .with_coordinator_vote_weights(100, 0)
+            .unwrap();
+        assert!(
+            decoded::<Effect>(call(&account(1), &dao, input("set_score_policy", policy))).is_ok()
+        );
+        assert!(decoded::<()>(call(&account(99), &dao, vote_input)).is_ok());
+        assert_eq!(digest(&projection(&dao)), once);
+        let conflict = input(
+            "apply_reputation",
+            ([90u8; 16], account(1), vec![(account(2), 0u8, 1u8, 37u32)]),
+        );
+        assert_eq!(
+            decoded::<()>(call(&account(99), &dao, conflict)).unwrap_err(),
+            "evaluation_conflict"
+        );
+        assert_eq!(digest(&projection(&dao)), once);
+        for invalid in [
+            vec![(account(2), 0u8, 5u8, 99u32), (account(3), 0, 0, 37)],
+            vec![(account(2), 0u8, 5u8, 99u32), (account(101), 0, 5, 37)],
+        ] {
+            assert!(
+                decoded::<()>(call(
+                    &account(99),
+                    &dao,
+                    input("apply_reputation", ([91u8; 16], account(1), invalid))
+                ))
+                .is_err()
+            );
+            assert_eq!(digest(&projection(&dao)), once);
+        }
+        // Invalid policy bytes fail ink decoding, before any domain mutation.
+        let malformed = call(
+            &account(1),
+            &dao,
+            input("set_score_policy", [50u8, 50, 0, 0]),
+        );
+        assert!(malformed.did_revert());
+        assert_eq!(malformed.data, [1, 1]);
+        assert_eq!(read::<ScorePolicy>(&dao, 1, "score_policy", ()), policy);
+    });
+}
+
+#[test]
+fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
+    use contract_provider::worker::{
+        Action as VmAction, Error, Invocation, ShellChanges, Status, Worker,
+    };
+    use std::{
+        path::Path,
+        time::{SystemTime, UNIX_EPOCH},
+    };
+    async fn execute(
+        client: &contract_provider::worker::Client,
+        revision: i64,
+        caller: u8,
+        action: VmAction,
+        data: Vec<u8>,
+    ) -> Result<contract_provider::worker::Outcome, Error> {
+        client
+            .execute(
+                revision,
+                Invocation {
+                    caller: account(caller),
+                    action,
+                    input: data,
+                    gas: GAS,
+                    timestamp_ms: 1_700_000_000_000,
+                },
+                ShellChanges {
+                    success: vec![1],
+                    rejection: vec![0],
+                },
+            )
+            .unwrap()
+            .result()
+            .await
+    }
+    async fn start(path: &Path) -> Worker {
+        Worker::start(
+            path.to_path_buf(),
+            vec![account(1), account(2), account(3), account(99)],
+            vec![],
+        )
+        .await
+        .unwrap()
+    }
+    tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+            let path = std::env::temp_dir().join(format!(
+                "ink-matching-{}-{}.sqlite",
+                std::process::id(),
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            let worker = start(&path).await;
+            let client = worker.client();
+            let definition = CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            };
+            let created = execute(
+                &client,
+                0,
+                1,
+                VmAction::Instantiate {
+                    bundle: "dao".into(),
+                    salt: b"matching-worker".to_vec(),
+                },
+                input("new", (account(99), account(99), catalog())),
+            )
+            .await
+            .unwrap();
+            assert_eq!(created.status, Status::Success);
+            let dao = created.address.unwrap();
+            let request = protocol::provider_core::RegisterWorkerCoreRequest {
+                content: protocol::provider_core::MetadataCommitmentV1 {
+                    operation_id: OperationId::from_bytes([0; 16]),
+                    hash: PayloadHash::from_bytes([9; 32]),
+                },
+                qualifications: Qualifications {
+                    role_ids: vec![3],
+                    skill_ids: vec![1, 2],
+                },
+                calendar: definition,
+            };
+            for (revision, origin) in [(1, 2), (2, 3)] {
+                let outcome = execute(
+                    &client,
+                    revision,
+                    origin,
+                    VmAction::Call {
+                        address: dao.clone(),
+                    },
+                    input("register_worker", (&request, id(origin))),
+                )
+                .await
+                .unwrap();
+                assert_eq!(outcome.status, Status::Success);
+            }
+            let second = start(&path).await;
+            let other = second.client();
+            let week = Week::new(2026, 1).unwrap();
+            let milestones = vec![(
+                [111u8; 16],
+                WeekWindow::new(week, week).unwrap(),
+                0u32,
+                vec![(1u32, 2u32, vec![1u32, 2], 600u32)],
+            )];
+            let data = input(
+                "assign_team",
+                ([110u8; 16], account(1), account(2), milestones, [19u8; 32]),
+            );
+            // Both async tasks enqueue work on separate dedicated OS workers.
+            let c1 = client.clone();
+            let d1 = dao.clone();
+            let data1 = data.clone();
+            let first = tokio::spawn(async move {
+                execute(&c1, 3, 99, VmAction::Call { address: d1 }, data1).await
+            });
+            let c2 = other.clone();
+            let d2 = dao.clone();
+            let data2 = data.clone();
+            let second_call = tokio::spawn(async move {
+                execute(&c2, 3, 99, VmAction::Call { address: d2 }, data2).await
+            });
+            let results = [first.await.unwrap(), second_call.await.unwrap()];
+            assert_eq!(
+                results
+                    .iter()
+                    .filter(|r| matches!(r,Ok(v) if v.status==Status::Success))
+                    .count(),
+                1
+            );
+            assert_eq!(
+                results
+                    .iter()
+                    .filter(|r| matches!(r, Err(Error::StaleRevision)))
+                    .count(),
+                1
+            );
+            let before = client.diagnostics().unwrap().result().await.unwrap();
+            let rejected = execute(
+                &other,
+                4,
+                99,
+                VmAction::Call {
+                    address: dao.clone(),
+                },
+                data,
+            )
+            .await
+            .unwrap();
+            assert_eq!(rejected.status, Status::Reverted);
+            assert_eq!(
+                Result::<Result<Vec<Vec<(u32, AccountId32)>>, String>, u8>::decode_all(
+                    &mut &rejected.data[..]
+                )
+                .unwrap()
+                .unwrap()
+                .unwrap_err(),
+                "no_available_candidate"
+            );
+            assert_eq!(
+                other.diagnostics().unwrap().result().await.unwrap().root,
+                before.root
+            );
+            worker.shutdown().await.unwrap();
+            second.shutdown().await.unwrap();
+            let restarted = start(&path).await;
+            let outcome = restarted
+                .client()
+                .query(Invocation {
+                    caller: account(1),
+                    action: VmAction::Call { address: dao },
+                    input: input("worker", account(3)),
+                    gas: GAS,
+                    timestamp_ms: 1_700_000_000_000,
+                })
+                .unwrap()
+                .result()
+                .await
+                .unwrap();
+            let worker = Result::<Option<WorkerCore>, u8>::decode_all(&mut &outcome.data[..])
+                .unwrap()
+                .unwrap()
+                .unwrap();
+            assert_eq!(worker.calendar.reservations.len(), 1);
+            assert_eq!(worker.calendar.reservations[0].minutes, Minutes::new(600));
+            restarted.shutdown().await.unwrap();
+            std::fs::remove_file(path).unwrap();
+        });
+}

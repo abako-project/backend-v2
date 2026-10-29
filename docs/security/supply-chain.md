@@ -1,6 +1,6 @@
 # Supply-Chain Security
 
-The workspace commits Cargo.lock and uses locked builds. Dependency selection records are in [poc-baseline.md](../dependencies/poc-baseline.md); detailed package findings are in [the dependency audit](../dependencies/poc-audit-2026-09-10.md).
+The workspace commits Cargo.lock and uses locked builds. Dependency selection records are in [poc-baseline.md](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/docs/dependencies/poc-baseline.md); detailed package findings are in [the dependency audit](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/docs/dependencies/poc-audit-2026-09-10.md).
 
 ```sh
 cargo deny check

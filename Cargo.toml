@@ -2,12 +2,10 @@
 resolver = "3"
 members = [
   "crates/bloque-rs",
-  "crates/domain-primitives",
-  "crates/generated-contracts",
-  "services/mock-provider",
+  "crates/protocol",
   "services/wallet",
-  "services/adapter-api",
-  "apps/leptos-web",
+  "services/api",
+  "apps/example-web",
 ]
 
 [workspace.package]
@@ -18,11 +16,10 @@ repository = "https://github.com/abako-project/backend-v2"
 
 [workspace.dependencies]
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
-domain-primitives = { version = "0.1.0", path = "crates/domain-primitives" }
-generated-contracts = { version = "0.1.0", path = "crates/generated-contracts" }
+protocol = { version = "0.1.0", path = "crates/protocol" }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
-tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "net", "sync", "time", "signal"] }
-sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite-bundled"] }
+tokio = { version = "1.53.3", features = ["macros", "rt-multi-thread", "net", "sync", "time", "signal"] }
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 url = "2.5.8"
@@ -30,7 +27,6 @@ tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt"] }
 thiserror = "2.0.20"
 reqwest = { version = "0.13.4", default-features = false, features = ["json", "query"] }
-tower-http = { version = "0.6.11", default-features = false, features = ["cors", "trace", "limit"] }
 tokio-stream = { version = "0.1.18", features = ["sync", "time"] }
 uuid = { version = "1.24.1", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4.3"

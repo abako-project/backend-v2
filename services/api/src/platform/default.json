@@ -1,0 +1,41 @@
+{
+  "id": "software",
+  "name": "Digesta",
+  "tagline": "Decentralized Marketplace for Freelancers",
+  "description": "Marketplace built around accountability for Web3 and software engineering teams.",
+  "sector": "software",
+  "currency": {
+    "symbol": "UNIT",
+    "name": "Development payment asset",
+    "decimals": 0
+  },
+  "projectTypes": [
+    "Smart Contract",
+    "Frontend",
+    "Full Stack",
+    "Mobile App",
+    "MVP",
+    "Audit",
+    "DevOps & Infrastructure",
+    "Other"
+  ],
+  "terminology": {
+    "workerRole": "Developer",
+    "workerRolePlural": "Developers",
+    "clientRole": "Client",
+    "coordinatorRole": "Coordinator",
+    "workerPitch": "I'm looking to work in Web3 & software projects",
+    "clientPitch": "I'm looking for specialized talent. I need consultants, project leaders, and developers.",
+    "externalProfile": {
+      "id": "github",
+      "label": "GitHub username (optional)",
+      "placeholder": "yourusername",
+      "icon": "ri-github-line",
+      "helpText": "Public GitHub profile to showcase your code and contributions."
+    },
+    "skillsHelperText": "Include programming languages, frameworks, libraries, tools, or soft skills relevant to software engineering.",
+    "backgroundHelperText": "Tell us about your experience, engineering journey, education, and notable software projects.",
+    "emptyStateWorkerText": "Projects will appear here once you are assigned as a consultant or developer.",
+    "emptyStateClientText": "Create your first project proposal to get started with Digesta."
+  }
+}

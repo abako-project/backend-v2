@@ -1,0 +1,48 @@
+[package]
+name = "contract-provider"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96.1"
+publish = false
+license = "Apache-2.0"
+
+# Keep FRAME dependencies out of ordinary API and frontend builds.
+[workspace]
+resolver = "3"
+
+[features]
+default = ["std"]
+std = []
+
+[dependencies]
+axum = { version = "=0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
+tracing = "=0.1.44"
+thiserror = "=2.0.21"
+getrandom = "=0.4.3"
+schnorrkel = { version = "=0.11.5", default-features = false, features = ["std"] }
+protocol = { version = "=0.1.0", path = "../../crates/protocol" }
+serde = { version = "1.0.229", features = ["derive"] }
+frame-support = "=43.0.0"
+frame-system = "=43.0.0"
+pallet-balances = "=44.0.0"
+pallet-assets = "=46.1.0"
+pallet-contracts = "=43.0.0"
+pallet-timestamp = "=42.0.0"
+sp-core = "=38.1.0"
+sp-io = "=43.0.0"
+sp-runtime = "=44.0.0"
+parity-scale-codec = { version = "=3.7.5", features = ["derive"] }
+scale-info = { version = "=2.11.6", features = ["derive"] }
+serde_json = "1.0"
+rand = { version = "=0.10.2", default-features = false, features = ["std_rng"] }
+sp-state-machine = "=0.48.0"
+tokio = { version = "=1.53.3", features = ["rt", "rt-multi-thread", "sync", "time", "net", "signal", "macros"] }
+sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "sqlite-bundled"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("runtime-benchmarks"))'] }
+
+[profile.dev]
+debug = 0
+incremental = false

@@ -8,13 +8,13 @@ The frontend remains at `web.dev.abako.xyz`; frontend delivery is managed separa
 - API base: <https://dev.abako.xyz/api/>
 - OpenAPI: <https://dev.abako.xyz/api/openapi.json> (80 paths)
 - Current approved scope: [SPEC-0011](../../specs/0011-backend-dev-host/spec.md)
-- Current verification: [DEPLOY-002 handoff](../../progress/handoffs/DEPLOY-002.md)
+- Current verification: [DEPLOY-002 handoff](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/progress/handoffs/DEPLOY-002.md)
 - Initial deployment: [SPEC-0010](../../specs/0010-backend-preview-deployment/spec.md)
-  and [DEPLOY-001 evidence](../../progress/handoffs/DEPLOY-001.md)
+  and [DEPLOY-001 evidence](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/progress/handoffs/DEPLOY-001.md)
 
 ## Test accounts
 
-These are shared development fixtures, with at least 1000 mock KVN each at
+These are shared development fixtures, with at least 1000 mock payment units each at
 seeding time. Transactions can change their balances. All assets are simulated.
 
 | Usernames | Password pattern | Example |
@@ -191,3 +191,10 @@ docker compose --env-file /opt/digesta/preview/deployment.env \
 Stopping it leaves its public proxy route in place and returns upstream errors;
 remove the added dev-site API block with a validated configuration change when
 withdrawing the preview. Preserve all data, secrets and legacy services.
+
+The source now requires matching reviewed `API_IMAGE`, `WALLET_IMAGE` and
+`CONTRACT_PROVIDER_IMAGE` digests for a fresh installation. Pass them through
+`provision.py --api-image ... --wallet-image ... --provider-image ...`.
+Earlier native-provider stores are incompatible; use separately initialized state.
+This source change neither resets nor upgrades the running preview. Publication
+requires the current SDK dependency check and separate owner approval.
