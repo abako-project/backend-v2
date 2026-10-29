@@ -48,6 +48,8 @@ mod reason_documents;
 mod task_execution;
 #[path = "tasks/task_history_tests.rs"]
 mod task_history;
+#[path = "tasks/test_support.rs"]
+mod task_support;
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 const PASSWORD: &str = "adapter-test-password-123";
@@ -309,7 +311,7 @@ async fn submit(
         last_event_cursor: None,
         finalized_at: UnixSeconds::new(u64::try_from(now()?).map_err(|_| Error::Internal)?),
     };
-    let receipt = task_execution::core_recovery::apply_fixture(&mut fake, &call, receipt)?;
+    let receipt = task_support::apply_fixture(&mut fake, &call, receipt)?;
     fake.receipts.insert(call.operation_id, receipt.clone());
     if fake.lose_reply {
         fake.lose_reply = false;

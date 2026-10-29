@@ -5,67 +5,13 @@ use contract_provider::{
 };
 use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism, ExecReturnValue};
 use parity_scale_codec::{Decode, DecodeAll, Encode};
-use protocol::provider_core::{CatalogEntryCore, SkillRequestCore, SkillRoleCore, WorkerCore};
+#[path = "support/dao.rs"]
+mod common;
+use common::*;
+use protocol::provider_core::{SkillRequestCore, WorkerCore};
 use protocol::*;
-use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use sp_core::{
-    H256,
-    hashing::{blake2_256, sha2_256},
-};
 
-type Projection = (
-    Vec<CatalogEntryCore>,
-    Vec<CatalogEntryCore>,
-    Vec<SkillRoleCore>,
-    Vec<WorkerCore>,
-    Vec<SkillRequestCore>,
-);
-type Catalog = (
-    Vec<CatalogEntryCore>,
-    Vec<CatalogEntryCore>,
-    Vec<SkillRoleCore>,
-);
-#[derive(Debug, Encode, Decode, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-struct Effect {
-    kind: DomainEventKind,
-    entity_id: Option<EntityId>,
-    recipients: Vec<AccountId32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    allocated_task_id: Option<u32>,
-}
-
-fn account(n: u8) -> Account {
-    Account::new([n; 32])
-}
-fn input(name: &str, args: impl Encode) -> Vec<u8> {
-    let mut bytes = blake2_256(name.as_bytes())[..4].to_vec();
-    bytes.extend(args.encode());
-    bytes
-}
-fn call(origin: &Account, dao: &Account, data: Vec<u8>) -> ExecReturnValue {
-    Contracts::bare_call(
-        origin.clone(),
-        dao.clone(),
-        0,
-        GAS,
-        None,
-        data,
-        DebugInfo::Skip,
-        CollectEvents::Skip,
-        Determinism::Enforced,
-    )
-    .result
-    .unwrap()
-}
-fn read<T: Decode>(dao: &Account, caller: u8, name: &str, args: impl Encode) -> T {
-    let value = call(&account(caller), dao, input(name, args));
-    assert!(!value.did_revert());
-    Result::<T, u8>::decode_all(&mut &value.data[..])
-        .unwrap()
-        .unwrap()
-}
 fn outcome<T: Decode>(value: &ExecReturnValue) -> Result<T, String> {
     Result::<Result<T, String>, u8>::decode_all(&mut &value.data[..])
         .unwrap()
@@ -96,19 +42,6 @@ fn setup(seed: &Catalog) -> (sp_io::TestExternalities, Account) {
     });
     (ext, dao)
 }
-fn projection(dao: &Account) -> Projection {
-    let (roles, skills, associations): Catalog = read(dao, 1, "catalog", ());
-    (
-        roles,
-        skills,
-        associations,
-        read(dao, 1, "workers", ()),
-        read(dao, 1, "skill_requests", ()),
-    )
-}
-fn digest(state: &Projection) -> String {
-    format!("{:x}", H256::from(sha2_256(&state.encode())))
-}
 fn command_input(command: ProviderCommand, id: EntityId, _origin: AccountId32) -> Vec<u8> {
     match command {
         ProviderCommand::RegisterWorkerCore(request) => input("register_worker", (request, id)),
@@ -132,7 +65,7 @@ fn command_input(command: ProviderCommand, id: EntityId, _origin: AccountId32) -
 fn canonical_dao_trace_and_restart() {
     let fixture = fixture();
     assert_eq!(fixture["schemaVersion"], 1);
-    let initial: Projection = serde_json::from_value(fixture["initial"].clone()).unwrap();
+    let initial = initial();
     let (mut ext, dao) = setup(&(initial.0.clone(), initial.1.clone(), initial.2.clone()));
     ext.execute_with(|| assert_eq!(projection(&dao), initial));
     for (index, step) in fixture["steps"].as_array().unwrap().iter().enumerate() {
@@ -172,8 +105,7 @@ fn canonical_dao_trace_and_restart() {
 
 #[test]
 fn invalid_calendar_leaves_no_worker_or_capacity() {
-    let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    let seed = (initial.0, initial.1, initial.2);
+    let seed = catalog();
     {
         let (mut ext, dao) = setup(&seed);
         ext.execute_with(|| {
@@ -243,8 +175,7 @@ fn reject<T: Decode>(dao: &Account, caller: u8, name: &str, args: impl Encode, c
 
 #[test]
 fn request_visibility_reference_guards_and_calendar_permissions() {
-    let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2));
+    let (mut ext, dao) = setup(&catalog());
     ext.execute_with(|| {
         write(&dao, 2, "register_worker", (registration(), [1_u8; 16]));
         let before = digest(&projection(&dao));
@@ -423,8 +354,7 @@ fn request_visibility_reference_guards_and_calendar_permissions() {
 
 #[test]
 fn registration_gas_failure_discards_worker_and_calendar_records() {
-    let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    let (mut ext, dao) = setup(&(initial.0, initial.1, initial.2));
+    let (mut ext, dao) = setup(&catalog());
     ext.execute_with(|| {
         let request = registration();
         // Measure a successful registration, discard it, then

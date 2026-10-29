@@ -16,32 +16,15 @@ type Effect = (
 );
 use serde_json::{Value, from_value, json};
 use sp_core::hashing::blake2_256;
-use std::{
-    path::PathBuf,
-    sync::atomic::{AtomicU64, Ordering},
-};
+#[path = "support/database.rs"]
+mod database;
+use database::Database;
 
-static NEXT: AtomicU64 = AtomicU64::new(0);
-struct Database(PathBuf);
 impl Database {
-    fn new() -> Self {
-        Self(std::env::temp_dir().join(format!(
-            "ink-calendar-{}-{}.sqlite",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        )))
-    }
     async fn start(&self) -> Worker {
         Worker::start(self.0.clone(), (1..=4).map(account).collect(), vec![])
             .await
             .unwrap()
-    }
-}
-impl Drop for Database {
-    fn drop(&mut self) {
-        if self.0.exists() {
-            std::fs::remove_file(&self.0).unwrap();
-        }
     }
 }
 fn account(n: u8) -> Account {
@@ -178,7 +161,7 @@ fn calendar_cases_and_restart() {
         let fixture: Value = serde_json::from_str(include_str!("fixtures/calendar.json")).unwrap();
         assert_eq!(fixture["schemaVersion"], 1);
         for case in fixture["cases"].as_array().unwrap() {
-            let db = Database::new();
+            let db = Database::new("calendar");
             let worker = db.start().await;
             let client = worker.client();
             let mut expected_view: CalendarView = from_value(case["initial"].clone()).unwrap();
@@ -308,7 +291,7 @@ fn calendar_cases_and_restart() {
 #[test]
 fn caller_permissions_and_dry_runs_preserve_calendar() {
     run(async {
-        let db = Database::new();
+        let db = Database::new("calendar");
         let worker = db.start().await;
         let client = worker.client();
         let definition = CalendarDefinition {
@@ -408,7 +391,7 @@ fn caller_permissions_and_dry_runs_preserve_calendar() {
 #[test]
 fn malformed_week_ranges_and_gas_exhaustion_do_not_commit() {
     run(async {
-        let db = Database::new();
+        let db = Database::new("calendar");
         let worker = db.start().await;
         let client = worker.client();
         let address = deploy(
@@ -483,7 +466,7 @@ fn malformed_week_ranges_and_gas_exhaustion_do_not_commit() {
 #[test]
 fn competing_reservations_observe_committed_capacity() {
     run(async {
-        let db = Database::new();
+        let db = Database::new("calendar");
         let first = db.start().await;
         let second = db.start().await;
         let one = first.client();
@@ -549,7 +532,7 @@ fn competing_reservations_observe_committed_capacity() {
 #[test]
 fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
     run(async {
-        let db = Database::new();
+        let db = Database::new("calendar");
         let worker = db.start().await;
         let client = worker.client();
         let address = deploy(
@@ -696,7 +679,7 @@ fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
 #[test]
 fn workers_keep_independent_overrides_and_reservations_after_restart() {
     run(async {
-        let db = Database::new();
+        let db = Database::new("calendar");
         let worker = db.start().await;
         let client = worker.client();
         let week = Week::new(2026, 1).unwrap();

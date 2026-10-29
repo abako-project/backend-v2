@@ -7,24 +7,12 @@ use contract_provider::{
 use protocol::*;
 use sp_core::{Pair, sr25519};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use std::{
-    path::PathBuf,
-    sync::atomic::{AtomicU64, Ordering},
-};
+#[path = "support/database.rs"]
+mod database;
+use database::Database;
 
 const NOW: UnixSeconds = UnixSeconds::new(100);
-static NEXT: AtomicU64 = AtomicU64::new(0);
-struct Database(PathBuf);
 impl Database {
-    fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
-            "contract-provider-{}-{}.sqlite",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        assert!(!path.exists());
-        Self(path)
-    }
     async fn pool(&self) -> sqlx::SqlitePool {
         SqlitePoolOptions::new()
             .max_connections(1)
@@ -34,13 +22,6 @@ impl Database {
     }
     async fn open(&self) -> Worker {
         Worker::open(self.0.clone(), configuration()).await.unwrap()
-    }
-}
-impl Drop for Database {
-    fn drop(&mut self) {
-        if self.0.exists() {
-            std::fs::remove_file(&self.0).unwrap();
-        }
     }
 }
 fn account(seed: u8) -> AccountId32 {
@@ -94,7 +75,7 @@ async fn balance(client: &Client) -> Money {
 
 #[tokio::test]
 async fn fresh_genesis_execution_replay_permissions_and_restart() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let before = client.snapshot().await.unwrap();
@@ -167,7 +148,7 @@ async fn fresh_genesis_execution_replay_permissions_and_restart() {
 
 #[tokio::test]
 async fn failed_commit_rolls_back_money_nonce_receipt_and_events() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let before = client.snapshot().await.unwrap();
@@ -207,7 +188,7 @@ async fn failed_commit_rolls_back_money_nonce_receipt_and_events() {
 
 #[tokio::test]
 async fn bank_reads_enforce_owner_or_system_and_credits_once() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let amount = PositiveAmount::new(Money::new(37)).unwrap();
@@ -314,7 +295,7 @@ async fn bank_reads_enforce_owner_or_system_and_credits_once() {
 
 #[tokio::test]
 async fn exhausted_execution_preserves_admission_and_existing_empty_store_is_rejected() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let mut settings = configuration();
     settings.gas_limit = frame_support::weights::Weight::from_parts(1, 1);
     let worker = Worker::open(database.0.clone(), settings).await.unwrap();
@@ -411,7 +392,7 @@ async fn apply(
 }
 #[tokio::test]
 async fn task_identity_membership_private_allocation_and_event_audience_use_current_contracts() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let (project_id, proposal_id, task_storage_id) = project(&client).await;
@@ -718,7 +699,7 @@ fn funds(snapshot: &protocol::provider_core::CoreSnapshot, owner: u8) -> Money {
 }
 #[tokio::test]
 async fn project_approval_commit_failure_reservation_settlement_and_restart() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let (project_id, proposal_id, milestone_id) = ready(&client).await;
@@ -838,7 +819,7 @@ async fn project_approval_commit_failure_reservation_settlement_and_restart() {
 }
 #[tokio::test]
 async fn committed_rejection_dispute_freeze_and_private_reader_survive_restart() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let (project_id, proposal_id, milestone_id) = ready(&client).await;
@@ -935,7 +916,7 @@ async fn committed_rejection_dispute_freeze_and_private_reader_survive_restart()
 
 #[tokio::test]
 async fn unsupported_planning_prices_reject_durably_without_contract_mutation() {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let (project_id, _, _) = project(&client).await;
@@ -1044,7 +1025,7 @@ async fn consolidated_ratings_reject_empty_team_votes_and_settle_exact_reputatio
 }
 
 async fn rating_settlement(delegated: bool) {
-    let database = Database::new();
+    let database = Database::new("provider");
     let worker = database.open().await;
     let client = worker.client();
     let (project_id, proposal_id, milestone_id) = ready(&client).await;

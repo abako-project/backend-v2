@@ -1,772 +1,19 @@
 {
-  "initial": [
-    [
-      {
-        "content": {
-          "data": "0xd7d4058e036d2491084b9748719851e2ff9dd5b75b04ae87e9b601399f98336f",
-          "type": "Seed"
-        },
-        "fixed": true,
-        "id": 1
-      },
-      {
-        "content": {
-          "data": "0xffbdd9c137ef16c7d426d536ea21f64a00ba1cea4def2911600676eddf0aa8ef",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 2
-      },
-      {
-        "content": {
-          "data": "0x060e4c884c5fda04f9abf4b51f55e1812fd814b36927ec34bcbfbe5d73089b9c",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 3
-      },
-      {
-        "content": {
-          "data": "0x61a5473bc2bb15085de089a1fdc61e6d4cd770193e3a48415aaac50b29058288",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 4
-      },
-      {
-        "content": {
-          "data": "0x399ec5e21f2c0f2341f33eb4a7fbe5d96109a041b55be75585ac37a1d4d13d8d",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 5
-      },
-      {
-        "content": {
-          "data": "0x99acfa86a6d95e1afcb8df9ea3b6bf1e0ec274fa32fcce5b0f5b6e028af69fc1",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 6
-      },
-      {
-        "content": {
-          "data": "0xa9f10d1d2feb1f8c741f96897a6a15e55a2118672cd39c31c59eaedda1dda584",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 7
-      },
-      {
-        "content": {
-          "data": "0xf13a1fb69089432ebd740d199e2840dde4df4b375265608a95a20f3b08669c87",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 8
-      },
-      {
-        "content": {
-          "data": "0x0210f3524c7a3fa8317cb7f95f426eea6aa2f0cca4cc84eeac788ff2f3fe77fe",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 9
-      }
-    ],
-    [
-      {
-        "content": {
-          "data": "0xd0c82d3dde2304550815b98420846b0f88c567ac52bbc3edc55bb35f3bc8ca7f",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 1
-      },
-      {
-        "content": {
-          "data": "0xfcd9bbb23616ed0dd36347b2c157d6d95f9396a456f43204332c7fbaf7f9e9c5",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 2
-      },
-      {
-        "content": {
-          "data": "0xedf0e99c2ce69f91435af00a01e40b21a43a3af93fbef2005240eaff8cfa442b",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 3
-      },
-      {
-        "content": {
-          "data": "0xa17d80b32c63be8771ce9e6adf0fcabb857ed37749fd85f31f8e06d8718bdc43",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 4
-      },
-      {
-        "content": {
-          "data": "0x815efb8472568cc2b0eae8f359191e4eb1a93a5bad95abd29e244df4f82c2c4d",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 5
-      },
-      {
-        "content": {
-          "data": "0xc28d6608285c3553724d7f67bc18a736f7b060760f2f3d57b5e7adecc9624ccf",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 6
-      },
-      {
-        "content": {
-          "data": "0xcd38b21b15aeea8f649a57d4b4a97666fb6da2a743a77c0f4320f420d3f375de",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 7
-      },
-      {
-        "content": {
-          "data": "0x18d8003de8087df72224b41cc43770691529cdf6b505e15f45fa6f126ebc5589",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 8
-      },
-      {
-        "content": {
-          "data": "0x5bc804837e9e6cbcd628f1ac493f2817d3519ef573303da67324c9f1f113cb8e",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 9
-      },
-      {
-        "content": {
-          "data": "0xafede6e006fed84f5d6ebc590c626a9637dec2eaad8400b845a31a45a332b090",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 10
-      },
-      {
-        "content": {
-          "data": "0x7c366407658373fd2b2a6724ff06318a265e714a7af13efd5ec51223b6d7e712",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 11
-      },
-      {
-        "content": {
-          "data": "0xf5afd09bb42acf553e5b6125a5053c09b9e0aaeba48b26b05b9661385140406b",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 12
-      },
-      {
-        "content": {
-          "data": "0x4b177ad6f86f3ac3c016b8ec9dd883064afbf0590cb5e30f9d489afe82708570",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 13
-      },
-      {
-        "content": {
-          "data": "0x6b3ef16c26d8da91c1ee268c5bbf23e731cd76fbf93f011b6f3d5cb918185fdf",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 14
-      },
-      {
-        "content": {
-          "data": "0xf8caa368383a669722b95a1b656e0a5935a462ff3ab6d8c222db1c92ef495946",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 15
-      },
-      {
-        "content": {
-          "data": "0x8d02c416439b194f72b981ddda975c58d9b9b81ea241bd41b47d41d42cca110a",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 16
-      },
-      {
-        "content": {
-          "data": "0xddd2b090f87d665063d7f86813985deb50b4dcf5f9e53757c70c13d9c34f1252",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 17
-      },
-      {
-        "content": {
-          "data": "0x0dbadebe0942b496566d8efc6e60bd97c206ed5036c1cf1b4dd9f8105d51505f",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 18
-      },
-      {
-        "content": {
-          "data": "0xb924375b77a5451f428761a6b1a1f9d6214d7ba5b89072524c1728e56072f0dc",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 19
-      },
-      {
-        "content": {
-          "data": "0x5ad145101ac0db59937f82ec11cb55db99e9e80d45e8101c0d0805bc6af66d87",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 20
-      },
-      {
-        "content": {
-          "data": "0x265adcb39a9a1ccc20d67bd21022f59a0e958559bd4e0d53248482d99acc87e2",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 21
-      },
-      {
-        "content": {
-          "data": "0x59fa33793ce6f210f14e4126ae9951cc1f5c84be0a9d8d09435823473c2b8300",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 22
-      },
-      {
-        "content": {
-          "data": "0x6cbda7c3ac0c72deea1df21b5f9728da575d1bef5fab1d2caafbeca6d4b45f55",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 23
-      },
-      {
-        "content": {
-          "data": "0x3219db8f5d96279d989fbc7b615499f16e8b835152d1bce99fac2c6b7936f072",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 24
-      },
-      {
-        "content": {
-          "data": "0x28fb3c65eb91e4c942909a26ca095cb3c40686a0062a3d7d0396b3d1cde6155d",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 25
-      },
-      {
-        "content": {
-          "data": "0x14fe23946d8b7f11e21c8c4ae5a0527c2cbc76f43c461c5547b0d986141abdc9",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 26
-      },
-      {
-        "content": {
-          "data": "0xacec7a07a7167355f768fd5f7c6220925e0de3835fe9dc56ad4fcea882b5c5b5",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 27
-      },
-      {
-        "content": {
-          "data": "0x371b291e6cfb2e8259422c926504929f9a2d26b2fbc5df2aa593be5ef7077024",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 28
-      },
-      {
-        "content": {
-          "data": "0xc42906e36fa99ffd42dc9ccbd751ccb518be9e305e6f05be48c9b3d09fcc4c54",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 29
-      },
-      {
-        "content": {
-          "data": "0xffc66db3142a2b16bbc8867ceea6cd0204528c11f13028b66aee50ca5b2e9571",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 30
-      },
-      {
-        "content": {
-          "data": "0xa9bb6088e672e1c91497287e1714f80c7890bf4248855912646bbbfc41228ad4",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 31
-      },
-      {
-        "content": {
-          "data": "0xdefce274fe82d934251791e7bfd998acf9e16610973a6ec21ab557d8f8c9c2d0",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 32
-      },
-      {
-        "content": {
-          "data": "0xc94ce6588b434b551f112171d8f0b8d8fc47718b7019dc00954f64bff6c90765",
-          "type": "Seed"
-        },
-        "fixed": false,
-        "id": 33
-      }
-    ],
-    [
-      {
-        "origin": {
-          "data": "0xd0c82d3dde2304550815b98420846b0f88c567ac52bbc3edc55bb35f3bc8ca7f",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7,
-          8
-        ],
-        "skillId": 1
-      },
-      {
-        "origin": {
-          "data": "0xfcd9bbb23616ed0dd36347b2c157d6d95f9396a456f43204332c7fbaf7f9e9c5",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7
-        ],
-        "skillId": 2
-      },
-      {
-        "origin": {
-          "data": "0xedf0e99c2ce69f91435af00a01e40b21a43a3af93fbef2005240eaff8cfa442b",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7
-        ],
-        "skillId": 3
-      },
-      {
-        "origin": {
-          "data": "0xa17d80b32c63be8771ce9e6adf0fcabb857ed37749fd85f31f8e06d8718bdc43",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7
-        ],
-        "skillId": 4
-      },
-      {
-        "origin": {
-          "data": "0x815efb8472568cc2b0eae8f359191e4eb1a93a5bad95abd29e244df4f82c2c4d",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4
-        ],
-        "skillId": 5
-      },
-      {
-        "origin": {
-          "data": "0xc28d6608285c3553724d7f67bc18a736f7b060760f2f3d57b5e7adecc9624ccf",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4
-        ],
-        "skillId": 6
-      },
-      {
-        "origin": {
-          "data": "0xcd38b21b15aeea8f649a57d4b4a97666fb6da2a743a77c0f4320f420d3f375de",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          4
-        ],
-        "skillId": 7
-      },
-      {
-        "origin": {
-          "data": "0x18d8003de8087df72224b41cc43770691529cdf6b505e15f45fa6f126ebc5589",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 8
-      },
-      {
-        "origin": {
-          "data": "0x5bc804837e9e6cbcd628f1ac493f2817d3519ef573303da67324c9f1f113cb8e",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 9
-      },
-      {
-        "origin": {
-          "data": "0xafede6e006fed84f5d6ebc590c626a9637dec2eaad8400b845a31a45a332b090",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 10
-      },
-      {
-        "origin": {
-          "data": "0x7c366407658373fd2b2a6724ff06318a265e714a7af13efd5ec51223b6d7e712",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          4,
-          7,
-          9
-        ],
-        "skillId": 11
-      },
-      {
-        "origin": {
-          "data": "0xf5afd09bb42acf553e5b6125a5053c09b9e0aaeba48b26b05b9661385140406b",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          4,
-          8
-        ],
-        "skillId": 12
-      },
-      {
-        "origin": {
-          "data": "0x4b177ad6f86f3ac3c016b8ec9dd883064afbf0590cb5e30f9d489afe82708570",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          7,
-          9
-        ],
-        "skillId": 13
-      },
-      {
-        "origin": {
-          "data": "0x6b3ef16c26d8da91c1ee268c5bbf23e731cd76fbf93f011b6f3d5cb918185fdf",
-          "type": "Seed"
-        },
-        "roleIds": [
-          7,
-          9
-        ],
-        "skillId": 14
-      },
-      {
-        "origin": {
-          "data": "0xf8caa368383a669722b95a1b656e0a5935a462ff3ab6d8c222db1c92ef495946",
-          "type": "Seed"
-        },
-        "roleIds": [
-          7,
-          9
-        ],
-        "skillId": 15
-      },
-      {
-        "origin": {
-          "data": "0x8d02c416439b194f72b981ddda975c58d9b9b81ea241bd41b47d41d42cca110a",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          7
-        ],
-        "skillId": 16
-      },
-      {
-        "origin": {
-          "data": "0xddd2b090f87d665063d7f86813985deb50b4dcf5f9e53757c70c13d9c34f1252",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          7
-        ],
-        "skillId": 17
-      },
-      {
-        "origin": {
-          "data": "0x0dbadebe0942b496566d8efc6e60bd97c206ed5036c1cf1b4dd9f8105d51505f",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          7
-        ],
-        "skillId": 18
-      },
-      {
-        "origin": {
-          "data": "0xb924375b77a5451f428761a6b1a1f9d6214d7ba5b89072524c1728e56072f0dc",
-          "type": "Seed"
-        },
-        "roleIds": [
-          3,
-          6,
-          7
-        ],
-        "skillId": 19
-      },
-      {
-        "origin": {
-          "data": "0x5ad145101ac0db59937f82ec11cb55db99e9e80d45e8101c0d0805bc6af66d87",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          6,
-          8,
-          9
-        ],
-        "skillId": 20
-      },
-      {
-        "origin": {
-          "data": "0x265adcb39a9a1ccc20d67bd21022f59a0e958559bd4e0d53248482d99acc87e2",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4,
-          5
-        ],
-        "skillId": 21
-      },
-      {
-        "origin": {
-          "data": "0x59fa33793ce6f210f14e4126ae9951cc1f5c84be0a9d8d09435823473c2b8300",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          5
-        ],
-        "skillId": 22
-      },
-      {
-        "origin": {
-          "data": "0x6cbda7c3ac0c72deea1df21b5f9728da575d1bef5fab1d2caafbeca6d4b45f55",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          4
-        ],
-        "skillId": 23
-      },
-      {
-        "origin": {
-          "data": "0x3219db8f5d96279d989fbc7b615499f16e8b835152d1bce99fac2c6b7936f072",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 24
-      },
-      {
-        "origin": {
-          "data": "0x28fb3c65eb91e4c942909a26ca095cb3c40686a0062a3d7d0396b3d1cde6155d",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          7
-        ],
-        "skillId": 25
-      },
-      {
-        "origin": {
-          "data": "0x14fe23946d8b7f11e21c8c4ae5a0527c2cbc76f43c461c5547b0d986141abdc9",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          7
-        ],
-        "skillId": 26
-      },
-      {
-        "origin": {
-          "data": "0xacec7a07a7167355f768fd5f7c6220925e0de3835fe9dc56ad4fcea882b5c5b5",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 27
-      },
-      {
-        "origin": {
-          "data": "0x371b291e6cfb2e8259422c926504929f9a2d26b2fbc5df2aa593be5ef7077024",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          5,
-          7
-        ],
-        "skillId": 28
-      },
-      {
-        "origin": {
-          "data": "0xc42906e36fa99ffd42dc9ccbd751ccb518be9e305e6f05be48c9b3d09fcc4c54",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          5,
-          7
-        ],
-        "skillId": 29
-      },
-      {
-        "origin": {
-          "data": "0xffc66db3142a2b16bbc8867ceea6cd0204528c11f13028b66aee50ca5b2e9571",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          3,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 30
-      },
-      {
-        "origin": {
-          "data": "0xa9bb6088e672e1c91497287e1714f80c7890bf4248855912646bbbfc41228ad4",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 31
-      },
-      {
-        "origin": {
-          "data": "0xdefce274fe82d934251791e7bfd998acf9e16610973a6ec21ab557d8f8c9c2d0",
-          "type": "Seed"
-        },
-        "roleIds": [
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 32
-      },
-      {
-        "origin": {
-          "data": "0xc94ce6588b434b551f112171d8f0b8d8fc47718b7019dc00954f64bff6c90765",
-          "type": "Seed"
-        },
-        "roleIds": [
-          1,
-          2,
-          3,
-          4,
-          5,
-          6,
-          7,
-          8,
-          9
-        ],
-        "skillId": 33
-      }
-    ],
-    [],
-    []
-  ],
   "schemaVersion": 1,
+  "policies": {
+    "equalVotes": {
+      "clientPercent": 50,
+      "coordinatorClientVoteWeight": 1,
+      "coordinatorPercent": 50,
+      "coordinatorWorkerVoteWeight": 1
+    },
+    "workerWeightedVotes": {
+      "clientPercent": 50,
+      "coordinatorClientVoteWeight": 0,
+      "coordinatorPercent": 50,
+      "coordinatorWorkerVoteWeight": 2
+    }
+  },
   "steps": [
     {
       "action": {
@@ -805,12 +52,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "aeea57197640ea2efd7fb0a3bb15d8902c26e01e937381c1c9e205a137b6d77f"
     },
     {
@@ -850,12 +92,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "ef0ca05c44c31c18b0c0ad2b33cd8af847c81103e54220abfa7e4786160a54bb"
     },
     {
@@ -895,12 +132,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "073d4596024058137451ff1c1c2378ef20a601bcb48e8093feeb36eb46d789a2"
     },
     {
@@ -939,12 +171,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "15449ae32e38ad1db9a4079772a6d96f6e5c03b60b56d7c11e1f91cba2d1f407"
     },
     {
@@ -983,12 +210,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "1a3a68d2e630b75a376731f33e5adb3df3d0b5e4cbfa50c47353a63fcb712c5f"
     },
     {
@@ -1028,12 +250,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "24c85129e9a248ad109ca495914bfeea9fe376b02525ec9af8842956a50f14f3"
     },
     {
@@ -1073,12 +290,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "0908ce1a1b22177fa16edb2d330f8085f1dcd4eeb1379a8aace36f57543cb9d6"
     },
     {
@@ -1118,12 +330,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "12760381d9f2efe5f3910de7c735062ee055506cfdce90883e0eb399b7f6e41d"
     },
     {
@@ -1163,12 +370,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "725d06cbca638bec97168354b2331149e16cbcc6f329deb0011b196d9eb319bd"
     },
     {
@@ -1192,12 +394,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "f853afdbfb1558721cad8ba1cc4c0836740a48c1b6750c212df491df180d6fe4"
     },
     {
@@ -1221,12 +418,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "2ed97dda2cf8f1743da36587b39d1703ec5ab874e1ce4ad45092ca53849cf2bb"
     },
     {
@@ -1250,12 +442,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "5c498147aebba19e8e4e5803e13a896bfaff9fcfa1e334e705a06b9544127d54"
     },
     {
@@ -1279,12 +466,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "847ea4ab5004917bae091a5a74efe2716800eed8ec97460dac2c529c86971dec"
     },
     {
@@ -1364,12 +546,7 @@
       "outcome": {
         "ok": null
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "83e1c245a6828b51316f9b6a58912d8e631e398e9f17db6f0c727427cf13fbbd"
     },
     {
@@ -1402,12 +579,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "d62582ca9b561d6be7eaee5f9fd0c3fb54d8e462ea290c41e136f6f77e2530f1"
     },
     {
@@ -1440,12 +612,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "1a6de9ee10d0248a644a703e202e8dd98b827613bb4428ee7778b0bae4a229b3"
     },
     {
@@ -1464,12 +631,7 @@
           "0x3301e8d7e754db2cf57b0a4ca73f253c"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "1a6de9ee10d0248a644a703e202e8dd98b827613bb4428ee7778b0bae4a229b3"
     },
     {
@@ -1488,12 +650,7 @@
           "0x462b6207545181dbd3adc8708af35b4d"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "1a6de9ee10d0248a644a703e202e8dd98b827613bb4428ee7778b0bae4a229b3"
     },
     {
@@ -1518,12 +675,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "99b9097388a15f6b9ecf55d1556c5f09119db2c78996bae00148e87266800378"
     },
     {
@@ -1542,12 +694,7 @@
           "0x8650208247846eff5a1c62ecf28ac666"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "99b9097388a15f6b9ecf55d1556c5f09119db2c78996bae00148e87266800378"
     },
     {
@@ -1572,12 +719,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "1a6de9ee10d0248a644a703e202e8dd98b827613bb4428ee7778b0bae4a229b3"
     },
     {
@@ -1598,12 +740,7 @@
       "outcome": {
         "error": "system_origin_required"
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 1,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 1
-      },
+      "policy": "equalVotes",
       "stateDigest": "1a6de9ee10d0248a644a703e202e8dd98b827613bb4428ee7778b0bae4a229b3"
     },
     {
@@ -1630,12 +767,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "1a6de9ee10d0248a644a703e202e8dd98b827613bb4428ee7778b0bae4a229b3"
     },
     {
@@ -1661,12 +793,7 @@
       "outcome": {
         "ok": null
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "e4ca4bb577d8b009743374cd46eddb5a2958845ddb79a8c74aff972757585fab"
     },
     {
@@ -1799,12 +926,7 @@
           ]
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "519afc4dcc0d5c9519390b1eee2704137149a72e996158c2a8ca98cc44997fdb"
     },
     {
@@ -1860,12 +982,7 @@
       "outcome": {
         "error": "no_available_candidate"
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "519afc4dcc0d5c9519390b1eee2704137149a72e996158c2a8ca98cc44997fdb"
     },
     {
@@ -1942,12 +1059,7 @@
       "outcome": {
         "error": "no_available_candidate"
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "519afc4dcc0d5c9519390b1eee2704137149a72e996158c2a8ca98cc44997fdb"
     },
     {
@@ -1991,12 +1103,7 @@
       "outcome": {
         "error": "missing_skills"
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "519afc4dcc0d5c9519390b1eee2704137149a72e996158c2a8ca98cc44997fdb"
     },
     {
@@ -2028,12 +1135,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "227bf890090835f478a58a32c4507e1d9569c602861e9dc80544e1351f40acd1"
     },
     {
@@ -2064,12 +1166,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "f684b8587d82d13126575110415eddab46e8c8c21d4dfdbd92ba578e395ad5d4"
     },
     {
@@ -2123,12 +1220,7 @@
           ]
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "3a172b5166e37e27c55eb596027d7a85e12a86117ee65c1e024b16f37ab750ec"
     },
     {
@@ -2152,12 +1244,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "44e28df465ff1cdf21c1c20202367348cc772e9828126234b3fc78da2a88bc6e"
     },
     {
@@ -2181,12 +1268,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "3be8eabd0c61a63ba744f6dba3f4b45a99ef7f58d782571ec6cfc85f5e57c6c3"
     },
     {
@@ -2225,12 +1307,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "8dc567c4e27467491921eb6d197c1d93f251b49800f85384e2b933a49b3d8994"
     },
     {
@@ -2254,12 +1331,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "dee572c84da3b45e67ff83b8fa5621f2de171c8a9d6bebc51f7ae01d8e3a4b2b"
     },
     {
@@ -2283,12 +1355,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "fd76629a9ca1b89bdd19f271987fc91a51197138d12211b3c52db9909052efcc"
     },
     {
@@ -2327,12 +1394,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "ce9014b030d5e9dfdd2737c40919807d278614496994ba69ee9db3967e574956"
     },
     {
@@ -2356,12 +1418,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "5fac795567af9356f435c44efddb5bb476123220203d2bc10f69be6b89d4af94"
     },
     {
@@ -2385,12 +1442,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2409,12 +1461,7 @@
           "0x0755f953811fce125f2683d50429c3bb"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2433,12 +1480,7 @@
           "0xe754db2cf57b0a4ca73f253c7053ad2b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2457,12 +1499,7 @@
           "0x545181dbd3adc8708af35b4ddb04168a"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2481,12 +1518,7 @@
           "0x47846eff5a1c62ecf28ac6661e2a99db"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2505,12 +1537,7 @@
           "0xd2594fc2737474a858c996451fcfd288"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2529,12 +1556,7 @@
           "0x45a412edd3f7f247e42f99bb73a867f0"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2553,12 +1575,7 @@
           "0x8e6becf99a1bebf57e05b8676c079534"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2577,12 +1594,7 @@
           "0x85c0cb20a3e4cd106a0b15bc360794f1"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2601,12 +1613,7 @@
           "0x41c5229ffd6576a91ac80e7ec4cc65a0"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2625,12 +1632,7 @@
           "0xaae801dd851a85fe96d3b17ea2150086"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2649,12 +1651,7 @@
           "0xdeb295f6cfe468e81823e7de2abd6eb6"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2673,12 +1670,7 @@
           "0xbff99f3c0196518bbded366638002e45"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2697,12 +1689,7 @@
           "0x5a1744166ff5e0a6e641206e993941ca"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2721,12 +1708,7 @@
           "0xaccce69a92acbb2b2f312d60cd338971"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2745,12 +1727,7 @@
           "0x92a6f0f49f074c64ac9f2604b2494a32"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2769,12 +1746,7 @@
           "0xa319dedee7d729fab59da20b8b5958eb"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2793,12 +1765,7 @@
           "0x18fffb52e24ec79633e0fe1d1f768e02"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2817,12 +1784,7 @@
           "0x4cc835e1945348805e28c48b2b27818a"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2841,12 +1803,7 @@
           "0x5a44e2822994d952e077596c17f69f7a"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2865,12 +1822,7 @@
           "0xd60805f351861dc82258a3436b7be664"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2889,12 +1841,7 @@
           "0x6e1ee3c89cded850beceece0aa304332"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2913,12 +1860,7 @@
           "0xc1fad6bc738de0ea7db831d5901f4f4f"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2937,12 +1879,7 @@
           "0xf9d3bac6793e43ab2085c5515b8202fa"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2961,12 +1898,7 @@
           "0xe9444730088459a2a53421197a72773b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -2985,12 +1917,7 @@
           "0x8166fe68e0cda573a5a51a6afbd77070"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3009,12 +1936,7 @@
           "0x2e1113cccda56bca67d460d75426974b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3033,12 +1955,7 @@
           "0xe267933029a97e021bef2c6c2d15b7da"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3057,12 +1974,7 @@
           "0xbb0e5c167f04b1dc749163bf6fc9085b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3081,12 +1993,7 @@
           "0x9ab703f5533eae4561bcf27dfc376727"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3105,12 +2012,7 @@
           "0x87cb617287ea943103180b71e1dde058"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3129,12 +2031,7 @@
           "0x7023c3085891701a77084295dbf1eb34"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3153,12 +2050,7 @@
           "0x91ec34d37d042ef39295fbe12022be2f"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3177,12 +2069,7 @@
           "0xfefc10f1a5a26f7a216206635fbc7fc4"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3201,12 +2088,7 @@
           "0x99f0b7729afc0d9e6c3f5ddcbec88e03"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3225,12 +2107,7 @@
           "0x2c8b5d27e4985deeab5c9c6d53db5bdc"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3249,12 +2126,7 @@
           "0x87bd136591ee6d828ca7d9337c344871"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3273,12 +2145,7 @@
           "0x483bed16ec03544f823f9dac8997dbd9"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3297,12 +2164,7 @@
           "0x360d5cd28c50a8d7d2c12760adf8f254"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3321,12 +2183,7 @@
           "0x29eb80f8d8f9f5381f0aa4d336fc769a"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3345,12 +2202,7 @@
           "0x65a868642cf6a05bfca7307b7af41ca4"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3369,12 +2221,7 @@
           "0x6f0afd738b22608a63fb8866c43f6bda"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3393,12 +2240,7 @@
           "0x4ce3f63d84e9612a525a0e111b3544f8"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3417,12 +2259,7 @@
           "0xe2dbb43cd3c709b290ac50dcd2be2a87"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3441,12 +2278,7 @@
           "0xcb9beaf0a2ab358f0314219d20254d9c"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3465,12 +2297,7 @@
           "0x1be7a815f7326d61ed8285aa45ea31c2"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3489,12 +2316,7 @@
           "0xe49787fd647c86a40781dc162dc98ba4"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3513,12 +2335,7 @@
           "0x8f1cba216c9ec05d145ade1f332764b0"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3537,12 +2354,7 @@
           "0x8ce77c3637aafba0d0ef8b345705ad1b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3561,12 +2373,7 @@
           "0xc13717320771aa24b42d871f838eb8aa"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3585,12 +2392,7 @@
           "0x320bb3d7e4ce2c177685c233eac5759b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3609,12 +2411,7 @@
           "0x094836d8f4082ef542e9d882ebcdc3de"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3633,12 +2430,7 @@
           "0xe288922dd35e2b1763b4879156d7dba3"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3657,12 +2449,7 @@
           "0x106e73dd3368b4c41f7cfcee7bf2c546"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3681,12 +2468,7 @@
           "0xd6ad321c723a0bd35789504710a34d05"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3705,12 +2487,7 @@
           "0x0c7ccf999ccd5b018ef21e3827cbeab3"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3729,12 +2506,7 @@
           "0x242fdb050cf1d04539893ebf8836db45"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3753,12 +2525,7 @@
           "0x7a606984930078a5dca9260d1aad905e"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3777,12 +2544,7 @@
           "0xfb2a35bfd719e9117a3e2d2ad3c12d69"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3801,12 +2563,7 @@
           "0x6ffe030b6c02057a2c9a7a7fc580990d"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3825,12 +2582,7 @@
           "0xd0f26a290bf76b685f90f35320b84eb1"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3849,12 +2601,7 @@
           "0x03b9da6e3528d3b809e7e08f9e87747b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3873,12 +2620,7 @@
           "0xf81ee4dc221d964782ae6de712262c6b"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3897,12 +2639,7 @@
           "0xfab10106df7990994c4c8f7b671a5b2f"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3921,12 +2658,7 @@
           "0xe469e79734f4a76824b01dc465b8ef5d"
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bcebf6e8f7fc8cc4536c9aa0fdca48f44d93fd9f3511dda32170b9aae6a29d78"
     },
     {
@@ -3965,12 +2697,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "7ac5429edcea3f87b4b8d8638dd0752da5ec0de2b1e24f7cd4dd0fc3a555ffff"
     },
     {
@@ -4009,12 +2736,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "217d6ea480a556b27603e3941baf7e4c08d2f6376b545f3fe51b73179053b36b"
     },
     {
@@ -4053,12 +2775,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "68441485845de24f93b650ca0950ab0acc26dda24441d33378833280f17e6e8d"
     },
     {
@@ -4097,12 +2814,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "21e06d5ff80f8f567cc135ffc317fd84f8fcbc213c53b0587ca7b6529661da5b"
     },
     {
@@ -4141,12 +2853,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "d8072fd1d08b8e1a6dbbf344fbfbcb42f9fa7bbf8e62fb00cdedf98bcd4c56be"
     },
     {
@@ -4185,12 +2892,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "2b5ceaead98014e7fbac4573df4448fb1a6b243d0f07b14e95278dfe55f5b946"
     },
     {
@@ -4229,12 +2931,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "f4a0e2317973cafb34a1ecfdaa240b8051a4369807ccdad01a9b30d2c75f99a4"
     },
     {
@@ -4273,12 +2970,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "6cbb0225ddd270b36f806ecf45c07e97c3b2d080253561513f05904f413315cf"
     },
     {
@@ -4317,12 +3009,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "66fdb91bb21ecf0c0ed3617b22c8a55e739f8e27121f67b09ab599cf54953263"
     },
     {
@@ -4361,12 +3048,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "5d74dee4f0841e766592bffedf0384637cb22c8af30b856d48f07929fa2b87d3"
     },
     {
@@ -4405,12 +3087,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "87433daffde81701f4e11af66805abd61e4c7ce533360d73d1734b4c0348144f"
     },
     {
@@ -4449,12 +3126,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "cf94b708b1f2fb9903767a00603fd7db3c47db36af03aa72f58d7921867f61a6"
     },
     {
@@ -4493,12 +3165,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "97862e4df38f92a8b83cb63b44b186768394fa06d842f4ec0777d93d857a4edb"
     },
     {
@@ -4537,12 +3204,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "07372a98988d04135a8f83a10c62652b535f24ec6df5ea20cdb1fbb49acfc975"
     },
     {
@@ -4581,12 +3243,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "161c921957e8364e098f50be3764c1459cb9c5655fc76a555c7a87c000895f75"
     },
     {
@@ -4625,12 +3282,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "da49a4e66567ad380868906a6641fdd8a3154f874c57c635567dbf3b0007e637"
     },
     {
@@ -4669,12 +3321,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "79a4102ff32916167d64b1b4ea2c0596538fb398b314197d3146819ddbb866ca"
     },
     {
@@ -4713,12 +3360,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "fa3e8e3df8d1a5fd32aa9871f607f83464deaac95a68a39d1310f7d196bb47f3"
     },
     {
@@ -4757,12 +3399,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "7c0239426091f8a73d19c0bd72e8a416057ddc5145383377024948bfe95309ce"
     },
     {
@@ -4801,12 +3438,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "defeedaabb717eda6e105b15a7be7c8c5196de29b41f08f5261b252aad34be77"
     },
     {
@@ -4845,12 +3477,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "9c6220cca6a5698d96ecbb87f6af1ceab4052ea471c161b1c1ddfa75acde89ee"
     },
     {
@@ -4889,12 +3516,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "66376342557a283dd811aa766357e6b2647c0b7684a70314bb83a98d5940d4dc"
     },
     {
@@ -4933,12 +3555,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "eac7e271082da8dca73bc1b2248abb8d24873158e59eeee1ab84a4c5b413b73b"
     },
     {
@@ -4977,12 +3594,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "743b956212de9ff879c1eed3073f8029d3bd7546cdfd4a6d9d799f98baa6d8c7"
     },
     {
@@ -5021,12 +3633,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "69ce66a1257b380996638da62e8c45908ac39911e4bd7bcd6b844e1dedcb1611"
     },
     {
@@ -5065,12 +3672,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "81258c129a6d3e221600b23cec28728df080b56e4d9dafecb7adddd3e0bb00c2"
     },
     {
@@ -5109,12 +3711,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "9007987e04884be8372fe6dd593e4e26ebb9741a05c597a2d61dc846875fa6ab"
     },
     {
@@ -5153,12 +3750,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "40db36d7fa5a6f0e114755b93b83cd97d9297cbaf27c9ebab467b34295032991"
     },
     {
@@ -5197,12 +3789,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "ac218e24db538c1825cfce4ae97783e3b10e690b8a1c06527f577c706192e6e5"
     },
     {
@@ -5241,12 +3828,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "53c56ac863f289ddd71323aa20a48bfc9d9978d4b467564d07d253ce028d6184"
     },
     {
@@ -5285,12 +3867,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "97ffc76abe319db5b664f0bb2e6a4e58c7993c4e4686c3e34d08e3b7e5114ee7"
     },
     {
@@ -5329,12 +3906,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "6bc1c98013f51e3557544a099a6ccf6b995e401c09c3be37efaf82a25853fd1d"
     },
     {
@@ -5373,12 +3945,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "91ab303a949ac7e7e269e590951bf31dad865912b66da1167e955dea1189f5da"
     },
     {
@@ -5417,12 +3984,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "08bdb40585a9b703d7570be4bddc6029f3fa0e104e33a4eefd9347637f0ba2e0"
     },
     {
@@ -5461,12 +4023,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "71c52110f77979d3ed60fca53b112453d1b3fb561da6e73d47d51e17d8175ffd"
     },
     {
@@ -5505,12 +4062,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "f40ad73cd793c585c575878514c1d67d4f93a11624ef539461ce0cfba6873700"
     },
     {
@@ -5549,12 +4101,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "dfaf25847ea9f6a5829edf6bbf067040b7cfa170da28889c154043fed55b3639"
     },
     {
@@ -5593,12 +4140,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "42ed50968916dee0a812df07ab435903507f79fb2069af93ca1c955e9a437530"
     },
     {
@@ -5637,12 +4179,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "f8782286013c6b5704e7b593d118e5e67a5ed8eaf0f9520d2090f125deaa7e75"
     },
     {
@@ -5681,12 +4218,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "954f411cee1206be6cd37844f2a68622d5c7243bd6e6b52016353ec5352ade38"
     },
     {
@@ -5725,12 +4257,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "f06828c073e69d88c7497777ec6cb7873d7513d758ecf2e04fa66ef651066d2a"
     },
     {
@@ -5769,12 +4296,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "0f714723a9d71a573e567ba117d518dd6a59b84c9eb02f3a55317bab4875ea21"
     },
     {
@@ -5813,12 +4335,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "d1f5662df44fab1d96b34d09627fbe13c5594263e1abe20af3a090ac7f3a5efd"
     },
     {
@@ -5857,12 +4374,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "98b3f5d94e9098214effe6c0822ce8b02e7cf8b047c1a1f6941ffbd3797d88d0"
     },
     {
@@ -5901,12 +4413,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "1a7431ba7afa6880bbab57dd412c242939bdd0abf6927e256b1e811e65c4a835"
     },
     {
@@ -5945,12 +4452,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "73304642bf7b81baf8c3c710776019d4dff4bc89c100e6b5d3025d13e54072af"
     },
     {
@@ -5989,12 +4491,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "5e8e73d7265bbdb86df84be6da238f785e73ad0cf54cfe46df0b1dfbd88bdae2"
     },
     {
@@ -6033,12 +4530,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "0aa028cdf44ae83630431159ba716dd06329e3786ed0c14689c76b245a8df7e5"
     },
     {
@@ -6077,12 +4569,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "b801e5bd57e60f4029b0abed4a98e21d72433c16b138c0e55749578220591783"
     },
     {
@@ -6121,12 +4608,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "a5f70ffba0ec64c082266dfff4a81aec89e80bb1b6ad099fb5b6266fa20adc8b"
     },
     {
@@ -6165,12 +4647,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "833042eec016a41362b14486b23c0f618587f166bcbf0b4b1be6eeaa34e51daa"
     },
     {
@@ -6209,12 +4686,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "fb888cf84c14c97af549c8d848f3bbb2bf19dcfc5e91f82e5e00a869782be527"
     },
     {
@@ -6253,12 +4725,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "5203409e044f4a1fe3a479a3363a711715602aa64d5cc66c86460335e1a4773b"
     },
     {
@@ -6297,12 +4764,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "1d0b7bd982275f6e9ebba4c41e0425227fa39cb22b9e8d72678e5c76147460a4"
     },
     {
@@ -6341,12 +4803,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "bd0cb799109695c12c82f4ec113ef5d47d52eefa322a1e9baa93189e7b323cda"
     },
     {
@@ -6385,12 +4842,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "d71903e908142f9872ee193521a14baa0ad62abc62c3744b3ebd05bd1b5ce940"
     },
     {
@@ -6429,12 +4881,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "ccdc61e0b0367452a0a8c585d6e1499facb861913b03efbaf77586151a5d185c"
     },
     {
@@ -6473,12 +4920,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "1b5ccae666d30c69300ee529446cf68d158cac860fa313183eeb0d37c2751798"
     },
     {
@@ -6517,12 +4959,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "2196fa788a451e75ab8fb4b37714dfe043f4ede4bd37c3848c85b850370ac8ec"
     },
     {
@@ -6561,12 +4998,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "c9a0f11f64d49a4aacd01b2eb8bca7698187c7d31c781e365018fe1c29dc932b"
     },
     {
@@ -6605,12 +5037,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "d7a478cb3d2bd2877ec0a692843d2d2b71dc865aa97a74f6482c136980ada9db"
     },
     {
@@ -6649,12 +5076,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "d319eb95233b6c182011eb7f6069c324e384198d9893fc37a1e82163a0f93c00"
     },
     {
@@ -6693,12 +5115,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "6c227d90e154ff5684327e98b990d5d5a856a2f977e447b3ab02b6d5a311b431"
     },
     {
@@ -6737,12 +5154,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "7b58228177d904518ad2fd1c7c0cb1edf189cda5fbdb81ff8f5ff99bf204ba11"
     },
     {
@@ -6781,12 +5193,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "84e501667276ff9013444dee929e420c6fb8179559ecd2d2a891eed541e2cbe6"
     },
     {
@@ -6825,12 +5232,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "3cf70cad80c390a901510f4a721d9322cbf5e1f84e417d285114020ac96588d5"
     },
     {
@@ -6869,12 +5271,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "459f1344fc39850b9a534366b87b2b468fb3ab821d731bffac1f2c91fd50e983"
     },
     {
@@ -6914,12 +5311,7 @@
           ]
         }
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "40f534534b2bd90a22c4eae30e35f3694d40e6361705fab0fda0f796c81b5e52"
     },
     {
@@ -6973,12 +5365,7 @@
           ]
         ]
       },
-      "policy": {
-        "clientPercent": 50,
-        "coordinatorClientVoteWeight": 0,
-        "coordinatorPercent": 50,
-        "coordinatorWorkerVoteWeight": 2
-      },
+      "policy": "workerWeightedVotes",
       "stateDigest": "43546708b2436f1656a827df31e07a237de09272649a2b660d4d716647eeb763"
     }
   ]

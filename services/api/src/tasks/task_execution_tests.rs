@@ -1,165 +1,8 @@
 //! Real task execution in API-owned content with confirmed core membership.
+use super::task_support::*;
 use super::*;
-use parity_scale_codec::Encode;
 use serde_json::Value;
 
-type CaseSlot = Arc<Mutex<Option<protocol::provider_core::CoreDisputeView>>>;
-
-struct Cohort {
-    app: Arc<App>,
-    internal: Server,
-    fake: Arc<Mutex<Fake>>,
-    owner: Session,
-    owner_cookie: String,
-    worker: Session,
-    worker_cookie: String,
-    client: Session,
-    client_cookie: String,
-    project: ProjectView,
-    definition: TaskDefinition,
-}
-impl Cohort {
-    async fn new(seed_tasks: bool) -> Result<Self, Box<dyn std::error::Error>> {
-        Self::with_case(seed_tasks, None).await
-    }
-    async fn with_case(
-        seed_tasks: bool,
-        case: Option<CaseSlot>,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let fake = fake()?;
-        let router = internal(fake.clone());
-        let router = if let Some(case) = case {
-            router.route(
-                "/internal/disputes/{id}",
-                get(move |Path(id): Path<String>| {
-                    let case = case.clone();
-                    async move {
-                        let view = case.lock().await.clone().ok_or(Error::NotFound)?;
-                        if view.dispute.dispute_id.to_string() != id {
-                            return Err(Error::NotFound);
-                        }
-                        Ok::<_, Error>(Json(view))
-                    }
-                }),
-            )
-        } else {
-            router
-        };
-        let internal = Server::start(router).await?;
-        let app = app(&internal).await?;
-        let (owner, owner_cookie) = register(&app, "executor_owner").await?;
-        let (worker, worker_cookie) = register(&app, "executor_worker").await?;
-        let (client, client_cookie) = register(&app, "executor_client").await?;
-        let doc: Value = serde_json::from_str(include_str!("../../../../contracts/openapi.json"))?;
-        let mut project: ProjectView = serde_json::from_value(
-            doc["components"]["schemas"]["ProjectView"]["examples"][0].clone(),
-        )?;
-        project.coordinator = owner.view.account_id;
-        project.client = client.view.account_id;
-        project.proposals[0].status = ProposalStatus::Draft;
-        let core =
-            stage_project_without_tasks(&app, info().provider_instance_id, project.clone()).await?;
-        let mut known = content::source_worker();
-        known.account = worker.view.account_id;
-        let known = stage_worker(&app, info().provider_instance_id, known).await?;
-        fake.lock().await.snapshot.projects = vec![core];
-        fake.lock().await.snapshot.workers = vec![known];
-        if seed_tasks {
-            stage_task_content(&app, info().provider_instance_id, project.clone()).await?;
-            sqlx::query("UPDATE task_generations SET next_task_id=9")
-                .execute(&app.db)
-                .await?;
-        }
-        let mut definition: TaskDefinition = serde_json::from_value(
-            doc["components"]["schemas"]["TaskDefinition"]["examples"][0].clone(),
-        )?;
-        definition.assignees = vec![worker.view.account_id];
-        definition.description = "λ\0".repeat(20_000);
-        Ok(Self {
-            app,
-            internal,
-            fake,
-            owner,
-            owner_cookie,
-            worker,
-            worker_cookie,
-            client,
-            client_cookie,
-            project,
-            definition,
-        })
-    }
-    fn create(&self) -> ProviderCommand {
-        ProviderCommand::CreateTask {
-            project_id: self.project.project_id,
-            task_storage_id: self.storage(),
-            task: self.definition.clone(),
-        }
-    }
-    fn storage(&self) -> EntityId {
-        self.project.proposals[0].milestones[0]
-            .task_storage
-            .task_storage_id
-    }
-    async fn queue(&self, actor: &Session, command: ProviderCommand) -> Result<OperationId, Error> {
-        let id = OperationId::from_bytes(crate::state::random()?);
-        let time = now()?;
-        sqlx::query("INSERT INTO operations(operation_id,principal_id,wallet_id,account_id,command_json,command_bytes,request_command_bytes,status,next_attempt_at,expires_at,created_at,provider_instance_id,task_operation,task_project_id) VALUES($1,$2,$3,$4,$5,$6,$6,'Queued',0,$7,$8,$9,TRUE,$10)")
-            .bind(id.to_string()).bind(actor.view.principal_id.to_string()).bind(actor.wallet.to_string()).bind(actor.view.account_id.to_string())
-            .bind(serde_json::to_string(&command)?).bind(command.encode()).bind(time+300).bind(time).bind(info().provider_instance_id.to_string()).bind(command.project_id().map(|id| id.to_string())).execute(&self.app.db).await?;
-        Ok(id)
-    }
-    async fn step(&self) -> Result<(), Error> {
-        let Some(operations::Work::Task(job)) = operations::claim_work(&self.app).await? else {
-            return Err(Error::Internal);
-        };
-        crate::tasks::execution::process(&self.app, job).await
-    }
-    async fn run(&self, actor: &Session, command: ProviderCommand) -> Result<OperationView, Error> {
-        let id = self.queue(actor, command).await?;
-        self.finish(actor, id).await
-    }
-    async fn finish(&self, actor: &Session, id: OperationId) -> Result<OperationView, Error> {
-        for _ in 0..16 {
-            let view = operations::read(&self.app, actor, id).await?;
-            if matches!(
-                view.status,
-                ProviderOperationStatus::Finalized
-                    | ProviderOperationStatus::Rejected
-                    | ProviderOperationStatus::Expired
-            ) {
-                return Ok(view);
-            }
-            core_recovery::step(&self.app).await?;
-        }
-        Err(Error::Internal)
-    }
-    async fn tasks(&self) -> Result<Vec<TaskView>, Error> {
-        let payloads: Vec<String> =
-            sqlx::query_scalar("SELECT payload FROM task_items ORDER BY ordinal")
-                .fetch_all(&self.app.db)
-                .await?;
-        payloads
-            .into_iter()
-            .map(|s| serde_json::from_str(&s).map_err(Error::from))
-            .collect()
-    }
-    async fn counter(&self) -> Result<i64, Error> {
-        Ok(
-            sqlx::query_scalar("SELECT next_task_id FROM task_generations")
-                .fetch_one(&self.app.db)
-                .await?,
-        )
-    }
-}
-fn outcome(operation: &OperationView) -> Result<&ExecutionOutcome, Box<dyn std::error::Error>> {
-    assert_eq!(operation.status, ProviderOperationStatus::Finalized);
-    match (&operation.receipt, &operation.task_result) {
-        (Some(receipt), None) => Ok(&receipt.outcome),
-        (None, Some(result)) => Ok(&result.outcome),
-        _ => Err("finalized task must have exactly one result source".into()),
-    }
-}
 #[tokio::test]
 async fn task_executor_refuses_missing_generation_before_public_admission() -> TestResult {
     let c = Cohort::new(false).await?;
@@ -191,7 +34,8 @@ async fn task_executor_refuses_missing_generation_before_public_admission() -> T
 #[tokio::test]
 async fn task_executor_uses_core_receipts_for_identity_and_api_results_for_progress() -> TestResult
 {
-    let c = Cohort::new(true).await?;
+    let mut c = Cohort::new(true).await?;
+    c.definition.description = "λ\0".repeat(20_000);
     let before = c.fake.lock().await.snapshot.clone();
     let created = c.run(&c.owner, c.create()).await?;
     assert_eq!(outcome(&created)?, &ExecutionOutcome::Success);
@@ -734,4 +578,4 @@ mod freezes;
 mod views;
 
 #[path = "task_core_recovery_tests.rs"]
-pub(super) mod core_recovery;
+mod core_recovery;

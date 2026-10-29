@@ -20,7 +20,7 @@ async fn project(c: &Cohort, account: AccountId32) -> Result<Option<ProjectCore>
 }
 
 #[tokio::test]
-async fn api_task_views_grant_and_remove_task_only_access_without_r1_copies() -> TestResult {
+async fn api_task_views_grant_and_remove_access_from_confirmed_membership() -> TestResult {
     let c = Cohort::new(true).await?;
     let server = Server::start(http::router(c.app.clone())).await?;
     let path = format!("/api/projects/{}", c.project.project_id);

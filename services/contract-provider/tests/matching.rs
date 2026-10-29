@@ -2,39 +2,17 @@
 use contract_provider::{
     Account, Contracts, GAS, bundle::Bundles, checkpoint::Checkpoint, new_externalities,
 };
-use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism, ExecReturnValue};
+use pallet_contracts::{Code, CollectEvents, DebugInfo, ExecReturnValue};
 use parity_scale_codec::{Decode, DecodeAll, Encode};
-use protocol::provider_core::{CatalogEntryCore, SkillRequestCore, SkillRoleCore, WorkerCore};
+use protocol::provider_core::WorkerCore;
 use protocol::*;
 use rand::{Rng, SeedableRng, rngs::StdRng};
 use serde::{Deserialize, Serialize};
+#[path = "support/dao.rs"]
+mod common;
+use common::*;
 use serde_json::{Value, json};
-use sp_core::{
-    H256,
-    hashing::{blake2_256, sha2_256},
-};
 
-type Projection = (
-    Vec<CatalogEntryCore>,
-    Vec<CatalogEntryCore>,
-    Vec<SkillRoleCore>,
-    Vec<WorkerCore>,
-    Vec<SkillRequestCore>,
-);
-type Catalog = (
-    Vec<CatalogEntryCore>,
-    Vec<CatalogEntryCore>,
-    Vec<SkillRoleCore>,
-);
-#[derive(Debug, Decode, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct Effect {
-    kind: DomainEventKind,
-    entity_id: Option<EntityId>,
-    recipients: Vec<AccountId32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    allocated_task_id: Option<u32>,
-}
 #[derive(Deserialize)]
 #[serde(tag = "kind", rename_all = "camelCase")]
 enum Action {
@@ -61,36 +39,6 @@ enum Action {
         seed: u8,
     },
 }
-fn account(n: u8) -> Account {
-    Account::new([n; 32])
-}
-fn input(name: &str, args: impl Encode) -> Vec<u8> {
-    let mut bytes = blake2_256(name.as_bytes())[..4].to_vec();
-    bytes.extend(args.encode());
-    bytes
-}
-fn call(origin: &Account, dao: &Account, input: Vec<u8>) -> ExecReturnValue {
-    Contracts::bare_call(
-        origin.clone(),
-        dao.clone(),
-        0,
-        GAS,
-        None,
-        input,
-        DebugInfo::Skip,
-        CollectEvents::Skip,
-        Determinism::Enforced,
-    )
-    .result
-    .unwrap()
-}
-fn read<T: Decode>(dao: &Account, name: &str) -> T {
-    let value = call(&account(1), dao, input(name, ()));
-    assert!(!value.did_revert());
-    Result::<T, u8>::decode_all(&mut &value.data[..])
-        .unwrap()
-        .unwrap()
-}
 fn decoded<T: Decode>(value: ExecReturnValue) -> Result<T, String> {
     let result = Result::<Result<T, String>, u8>::decode_all(&mut &value.data[..])
         .unwrap()
@@ -100,10 +48,6 @@ fn decoded<T: Decode>(value: ExecReturnValue) -> Result<T, String> {
 }
 fn fixture() -> Value {
     serde_json::from_str(include_str!("fixtures/matching.json")).unwrap()
-}
-fn seed() -> Catalog {
-    let initial: Projection = serde_json::from_value(fixture()["initial"].clone()).unwrap();
-    (initial.0, initial.1, initial.2)
 }
 fn setup() -> (sp_io::TestExternalities, Account) {
     let bundles = Bundles::pinned().unwrap();
@@ -115,7 +59,7 @@ fn setup() -> (sp_io::TestExternalities, Account) {
             GAS,
             None,
             Code::Upload(bundles.code("dao").unwrap().to_vec()),
-            input("new", (account(99), account(99), seed())),
+            input("new", (account(99), account(99), catalog())),
             b"matching-v5".to_vec(),
             DebugInfo::Skip,
             CollectEvents::Skip,
@@ -126,19 +70,6 @@ fn setup() -> (sp_io::TestExternalities, Account) {
         created.account_id
     });
     (ext, dao)
-}
-fn projection(dao: &Account) -> Projection {
-    let (roles, skills, metadata): Catalog = read(dao, "catalog");
-    (
-        roles,
-        skills,
-        metadata,
-        read(dao, "workers"),
-        read(dao, "skill_requests"),
-    )
-}
-fn digest(dao: &Account) -> String {
-    format!("{:x}", H256::from(sha2_256(&projection(dao).encode())))
 }
 fn id(seed: u8) -> EntityId {
     let mut bytes = [0; 16];
@@ -245,10 +176,14 @@ fn canonical_reputation_matching_trace_preserves_every_result_and_reservation() 
                 step["outcome"],
                 "step {index}"
             );
-            assert_eq!(digest(&dao), step["stateDigest"], "step {index}");
             assert_eq!(
-                json!(read::<ScorePolicy>(&dao, "score_policy")),
-                step["policy"],
+                digest(&projection(&dao)),
+                step["stateDigest"],
+                "step {index}"
+            );
+            assert_eq!(
+                json!(read::<ScorePolicy>(&dao, 1, "score_policy", ())),
+                fixture["policies"][step["policy"].as_str().unwrap()],
                 "step {index}"
             );
         });
@@ -289,7 +224,7 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
     ext.execute_with(|| {
         registration(&dao, 2);
         registration(&dao, 3);
-        let before = digest(&dao);
+        let before = digest(&projection(&dao));
         let votes = vec![(account(2), 0u8, 5u8, 37u32)];
         let vote_input = input("apply_reputation", ([90u8; 16], account(1), &votes));
         for caller in [1, 2, 3] {
@@ -326,9 +261,9 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
                 "reservation_controller_required"
             );
         }
-        assert_eq!(digest(&dao), before);
+        assert_eq!(digest(&projection(&dao)), before);
         assert!(decoded::<()>(call(&account(99), &dao, vote_input.clone())).is_ok());
-        let once = digest(&dao);
+        let once = digest(&projection(&dao));
         let policy = ScorePolicy::new(Percentage::new(50).unwrap(), Percentage::new(50).unwrap())
             .unwrap()
             .with_coordinator_vote_weights(100, 0)
@@ -337,7 +272,7 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
             decoded::<Effect>(call(&account(1), &dao, input("set_score_policy", policy))).is_ok()
         );
         assert!(decoded::<()>(call(&account(99), &dao, vote_input)).is_ok());
-        assert_eq!(digest(&dao), once);
+        assert_eq!(digest(&projection(&dao)), once);
         let conflict = input(
             "apply_reputation",
             ([90u8; 16], account(1), vec![(account(2), 0u8, 1u8, 37u32)]),
@@ -346,7 +281,7 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
             decoded::<()>(call(&account(99), &dao, conflict)).unwrap_err(),
             "evaluation_conflict"
         );
-        assert_eq!(digest(&dao), once);
+        assert_eq!(digest(&projection(&dao)), once);
         for invalid in [
             vec![(account(2), 0u8, 5u8, 99u32), (account(3), 0, 0, 37)],
             vec![(account(2), 0u8, 5u8, 99u32), (account(101), 0, 5, 37)],
@@ -359,7 +294,7 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
                 ))
                 .is_err()
             );
-            assert_eq!(digest(&dao), once);
+            assert_eq!(digest(&projection(&dao)), once);
         }
         // Invalid policy bytes fail ink decoding, before any domain mutation.
         let malformed = call(
@@ -369,7 +304,7 @@ fn project_hooks_require_controller_and_failed_vote_batch_rolls_back_all_changes
         );
         assert!(malformed.did_revert());
         assert_eq!(malformed.data, [1, 1]);
-        assert_eq!(read::<ScorePolicy>(&dao, "score_policy"), policy);
+        assert_eq!(read::<ScorePolicy>(&dao, 1, "score_policy", ()), policy);
     });
 }
 
@@ -444,7 +379,7 @@ fn competing_sqlite_workers_observe_committed_capacity_and_restart() {
                     bundle: "dao".into(),
                     salt: b"matching-worker".to_vec(),
                 },
-                input("new", (account(99), account(99), seed())),
+                input("new", (account(99), account(99), catalog())),
             )
             .await
             .unwrap();

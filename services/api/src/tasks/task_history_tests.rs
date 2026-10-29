@@ -1,4 +1,4 @@
-//! Seeded future histories test the reader bridge, not API task execution.
+//! Retained API edit results and notifications, independent of current core state.
 use super::*;
 use parity_scale_codec::Encode;
 use serde_json::{Value, json};
@@ -10,13 +10,14 @@ fn task_command() -> Result<ProviderCommand, Box<dyn std::error::Error>> {
     let mut task: TaskDefinition = serde_json::from_value(
         doc["components"]["schemas"]["TaskDefinition"]["examples"][0].clone(),
     )?;
-    task.description = "λ\0".repeat(20_000);
+    task.description = "Retained task description".into();
     task.assignees.clear();
-    Ok(ProviderCommand::CreateTask {
+    Ok(ProviderCommand::EditTask {
         project_id: project.project_id,
         task_storage_id: project.proposals[0].milestones[0]
             .task_storage
             .task_storage_id,
+        task_id: 9,
         task,
     })
 }
@@ -26,9 +27,9 @@ async fn retained_operation(
     session: &Session,
     id: OperationId,
     status: &str,
+    command: ProviderCommand,
 ) -> Result<(ProviderCommand, TaskOperationResult, AdapterTaskEvent), Box<dyn std::error::Error>> {
-    let command = task_command()?;
-    let ProviderCommand::CreateTask {
+    let ProviderCommand::EditTask {
         project_id,
         task_storage_id,
         ..
@@ -45,7 +46,7 @@ async fn retained_operation(
         source: TaskEventSource::AdapterTask,
         provider_instance_id: info().provider_instance_id,
         operation_id: id,
-        kind: TaskEventKind::Created,
+        kind: TaskEventKind::Updated,
         project_id: *project_id,
         task_storage_id: *task_storage_id,
         recipients: vec![session.view.account_id],
@@ -63,8 +64,7 @@ async fn retained_operation(
 
 async fn retained_notification(app: &App, event: &AdapterTaskEvent) -> Result<i64, Error> {
     let mut tx = app.db.begin().await?;
-    // A fixture follows the documented future-writer protocol. No production
-    // API task writer is introduced by this helper.
+    // Seed history directly so reader checks do not depend on task execution.
     sqlx::query("SELECT pg_advisory_xact_lock(621008)")
         .execute(&mut *tx)
         .await?;
@@ -84,7 +84,12 @@ async fn retained_task_results_reopen_and_replay_both_routes_without_signing() -
     let (alice, cookie) = register(&app, "task_history_alice").await?;
     let (bob, _) = register(&app, "task_history_bob").await?;
     let id = OperationId::from_bytes([61; 16]);
-    let (command, result, event) = retained_operation(&app, &alice, id, "Finalized").await?;
+    let mut command = task_command()?;
+    if let ProviderCommand::EditTask { task, .. } = &mut command {
+        task.description = "λ\0".repeat(20_000);
+    }
+    let (command, result, event) =
+        retained_operation(&app, &alice, id, "Finalized", command).await?;
     let notification_id = retained_notification(&app, &event).await?;
     let doc: Value = serde_json::from_str(include_str!("../../../../contracts/openapi.json"))?;
     let mut project: ProjectView =
@@ -106,20 +111,21 @@ async fn retained_task_results_reopen_and_replay_both_routes_without_signing() -
     ));
     let server = Server::start(http::router(reopened.clone())).await?;
     let client = reqwest::Client::new();
-    let ProviderCommand::CreateTask {
+    let ProviderCommand::EditTask {
         project_id,
         task_storage_id,
+        task_id,
         task,
     } = command
     else {
         return Err("wrong fixture command".into());
     };
     for path in [
-        format!("/api/projects/{project_id}/task-storages/{task_storage_id}/tasks"),
-        format!("/api/task-storages/{task_storage_id}/tasks"),
+        format!("/api/projects/{project_id}/task-storages/{task_storage_id}/tasks/{task_id}"),
+        format!("/api/task-storages/{task_storage_id}/tasks/{task_id}"),
     ] {
         let response = client
-            .post(format!("{}{path}", server.url))
+            .put(format!("{}{path}", server.url))
             .header(header::COOKIE, &cookie)
             .header(header::ORIGIN, "http://localhost:8088")
             .header("X-CSRF-Token", &alice.view.csrf_token)
@@ -137,8 +143,8 @@ async fn retained_task_results_reopen_and_replay_both_routes_without_signing() -
     changed.title.push_str(" conflicting retry");
     assert_eq!(
         client
-            .post(format!(
-                "{}/api/projects/{project_id}/task-storages/{task_storage_id}/tasks",
+            .put(format!(
+                "{}/api/projects/{project_id}/task-storages/{task_storage_id}/tasks/{task_id}",
                 server.url
             ))
             .header(header::COOKIE, &cookie)
@@ -204,7 +210,7 @@ async fn retained_task_queue_never_enters_signer_or_overtakes_wallet_fifo() -> T
     let (alice, _) = register(&app, "task_queue_alice").await?;
     let (bob, _) = register(&app, "task_queue_bob").await?;
     let id = OperationId::from_bytes([62; 16]);
-    retained_operation(&app, &alice, id, "Queued").await?;
+    retained_operation(&app, &alice, id, "Queued", task_command()?).await?;
     let later = operations::enqueue(&app, &alice, create(), None).await?;
     assert!(operations::claim(&app).await?.is_none());
     let other = operations::enqueue(&app, &bob, create(), None).await?;
@@ -242,8 +248,7 @@ async fn stale_provider_job_refuses_api_owned_work_before_signing() -> TestResul
     let (alice, _) = register(&app, "task_stale_alice").await?;
     let reference = operations::enqueue(&app, &alice, create(), None).await?;
     let job = operations::claim(&app).await?.ok_or("job missing")?;
-    // Simulate an unsupported in-place ownership change after dispatch. No
-    // real migration may convert in-flight work this way.
+    // An inconsistent dispatch must fail before signing API-owned work.
     sqlx::query("UPDATE operations SET task_operation=TRUE,status='Queued',provider_instance_id=$1,command_json=$2,command_bytes=$3 WHERE operation_id=$4")
         .bind(info().provider_instance_id.to_string()).bind(serde_json::to_string(&task_command()?)?)
         .bind(task_command()?.encode()).bind(reference.operation_id.to_string()).execute(&app.db).await?;
@@ -268,8 +273,14 @@ async fn mixed_notification_history_keeps_one_sse_cursor_and_provider_cursor() -
     let internal = Server::start(internal(fake()?)).await?;
     let app = app(&internal).await?;
     let (alice, cookie) = register(&app, "task_sse_alice").await?;
-    let (_, _, event) =
-        retained_operation(&app, &alice, OperationId::from_bytes([63; 16]), "Finalized").await?;
+    let (_, _, event) = retained_operation(
+        &app,
+        &alice,
+        OperationId::from_bytes([63; 16]),
+        "Finalized",
+        task_command()?,
+    )
+    .await?;
     let provider = |cursor| DomainEvent {
         provider_instance_id: info().provider_instance_id,
         cursor,
@@ -363,7 +374,8 @@ async fn task_history_rejects_mismatched_context_and_rolls_back_read_mark() -> T
     let app = app(&internal).await?;
     let (alice, _) = register(&app, "task_binding_alice").await?;
     let id = OperationId::from_bytes([64; 16]);
-    let (_, result, event) = retained_operation(&app, &alice, id, "Finalized").await?;
+    let (_, result, event) =
+        retained_operation(&app, &alice, id, "Finalized", task_command()?).await?;
     let notification = retained_notification(&app, &event).await?;
     let original = serde_json::to_value(&event)?;
     for (field, value) in [
@@ -474,7 +486,8 @@ async fn task_history_constraints_preserve_truthful_source_and_existing_rows() -
     let app = app(&internal).await?;
     let (alice, _) = register(&app, "task_constraint_alice").await?;
     let id = OperationId::from_bytes([65; 16]);
-    let (_, result, event) = retained_operation(&app, &alice, id, "Finalized").await?;
+    let (_, result, event) =
+        retained_operation(&app, &alice, id, "Finalized", task_command()?).await?;
     let notification = retained_notification(&app, &event).await?;
     for update in [
         "UPDATE operations SET receipt_json='{}' WHERE task_operation",
@@ -599,10 +612,11 @@ async fn task_core_intent_schema_preserves_original_request_across_classificatio
     let app = app(&internal).await?;
     let (alice, _) = register(&app, "task_core_intent").await?;
     let id = OperationId::from_bytes([67; 16]);
-    let (original, _, _) = retained_operation(&app, &alice, id, "Queued").await?;
-    let ProviderCommand::CreateTask {
+    let (original, _, _) = retained_operation(&app, &alice, id, "Queued", task_command()?).await?;
+    let ProviderCommand::EditTask {
         project_id,
         task_storage_id,
+        task_id,
         task,
     } = &original
     else {
@@ -614,12 +628,13 @@ async fn task_core_intent_schema_preserves_original_request_across_classificatio
         .execute(&app.db)
         .await?;
     let upgraded = App::new(test_config(app.config.database_url.clone(), &internal)?).await?;
-    let core = ProviderCommand::CreateTaskCore {
+    let core = ProviderCommand::SetTaskAssigneesCore {
         project_id: *project_id,
         task_storage_id: *task_storage_id,
+        task_id: *task_id,
         assignees: task.assignees.clone(),
     };
-    // Schema fixture only: production classification is introduced by the writer.
+    // Isolate schema/replay checks from the separately tested execution classifier.
     sqlx::query("UPDATE operations SET task_operation=FALSE,status='AwaitingSignature',command_json=$2,command_bytes=$3 WHERE operation_id=$1 AND task_operation AND status='Queued'")
         .bind(id.to_string()).bind(serde_json::to_string(&core)?).bind(core.encode())
         .execute(&upgraded.db).await?;
@@ -641,7 +656,7 @@ async fn task_core_intent_schema_preserves_original_request_across_classificatio
             Some(original.clone())
         );
         let mut wrong = core.clone();
-        if let ProviderCommand::CreateTaskCore { assignees, .. } = &mut wrong {
+        if let ProviderCommand::SetTaskAssigneesCore { assignees, .. } = &mut wrong {
             assignees.push(alice.view.account_id);
         }
         assert!(crate::tasks::execution::provider_intent(&row, &wrong).is_err());
