@@ -41,13 +41,9 @@ fn artifact(name: &str) -> Vec<u8> {
         unhex(&format!("0x{expected}")),
         "{name}: immutable artifact hash"
     );
-    let lock = fs::read(
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("tests/fixtures/build-locks")
-            .join(format!("{name}.lock")),
-    )
-    .unwrap();
-    let expected = manifest["contracts"][name]["lockSha256"].as_str().unwrap();
+    let lock =
+        fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join("fixtures/contracts.lock")).unwrap();
+    let expected = manifest["lockSha256"].as_str().unwrap();
     assert_eq!(
         sha2_256(&lock).to_vec(),
         unhex(&format!("0x{expected}")),

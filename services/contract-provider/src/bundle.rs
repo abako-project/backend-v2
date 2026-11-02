@@ -5,17 +5,10 @@ use sp_core::hashing::{blake2_256, sha2_256};
 use std::collections::BTreeMap;
 
 const MANIFEST: &[u8] = include_bytes!("../fixtures/manifest.json");
-const ARTIFACTS: [(&str, &[u8], &[u8]); 2] = [
-    (
-        "project",
-        include_bytes!("../fixtures/project.contract"),
-        include_bytes!("../fixtures/build-locks/project.lock"),
-    ),
-    (
-        "dao",
-        include_bytes!("../fixtures/dao.contract"),
-        include_bytes!("../fixtures/build-locks/dao.lock"),
-    ),
+const BUILD_LOCK: &[u8] = include_bytes!("../fixtures/contracts.lock");
+const ARTIFACTS: [(&str, &[u8]); 2] = [
+    ("project", include_bytes!("../fixtures/project.contract")),
+    ("dao", include_bytes!("../fixtures/dao.contract")),
 ];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Encode, Decode, DecodeWithMemTracking)]
@@ -57,8 +50,8 @@ impl Bundles {
             return Err(ProofError::Bundle);
         }
         let mut code = BTreeMap::new();
-        for (name, artifact, lock) in ARTIFACTS {
-            code.insert(name, verify(artifact, lock, &manifest["contracts"][name])?);
+        for (name, artifact) in ARTIFACTS {
+            code.insert(name, verify(artifact, BUILD_LOCK, &manifest, name)?);
         }
         #[cfg(test)]
         tests::insert_probe(&mut code)?;
@@ -94,10 +87,16 @@ fn hex(value: &str) -> Result<Vec<u8>, ProofError> {
 fn field<'a>(value: &'a serde_json::Value, key: &str) -> Result<&'a str, ProofError> {
     value[key].as_str().ok_or(ProofError::Bundle)
 }
-fn verify(artifact: &[u8], lock: &[u8], entry: &serde_json::Value) -> Result<Vec<u8>, ProofError> {
+fn verify(
+    artifact: &[u8],
+    lock: &[u8],
+    manifest: &serde_json::Value,
+    name: &str,
+) -> Result<Vec<u8>, ProofError> {
+    let entry = &manifest["contracts"][name];
     if artifact.len() > 1024 * 1024
         || sha2_256(artifact).as_slice() != hex(field(entry, "artifactSha256")?)?
-        || sha2_256(lock).as_slice() != hex(field(entry, "lockSha256")?)?
+        || sha2_256(lock).as_slice() != hex(field(manifest, "lockSha256")?)?
     {
         return Err(ProofError::Bundle);
     }
@@ -128,8 +127,9 @@ mod tests {
             "sandbox-probe",
             verify(
                 include_bytes!("../tests/fixtures/sandbox-probe.contract"),
-                include_bytes!("../tests/fixtures/build-locks/sandbox-probe.lock"),
-                &manifest["contracts"]["sandbox-probe"],
+                BUILD_LOCK,
+                &manifest,
+                "sandbox-probe",
             )?,
         );
         Ok(())
@@ -138,11 +138,11 @@ mod tests {
     #[test]
     fn rejects_artifact_or_build_lock_changes() {
         let manifest: serde_json::Value = serde_json::from_slice(super::MANIFEST).unwrap();
-        let (name, original, lock) = ARTIFACTS[0];
+        let (name, original) = ARTIFACTS[0];
         let mut changed = original.to_vec();
         changed[10] ^= 1;
-        assert!(verify(&changed, lock, &manifest["contracts"][name]).is_err());
-        assert!(verify(original, b"wrong lock", &manifest["contracts"][name]).is_err());
+        assert!(verify(&changed, BUILD_LOCK, &manifest, name).is_err());
+        assert!(verify(original, b"wrong lock", &manifest, name).is_err());
         assert_eq!(Bundles::pinned().unwrap().identity(), Identity::pinned());
         assert_ne!(Identity::pinned().bundles, sha2_256(super::MANIFEST));
         assert!(Bundles::pinned().unwrap().code("sandbox-probe").is_ok());

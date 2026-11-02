@@ -27,8 +27,10 @@ def main():
     fixtures = HERE / ("tests/fixtures" if args.test_fixtures else "fixtures")
     manifest = json.loads((fixtures / "manifest.json").read_text())
     version = subprocess.check_output(["cargo", "contract", "--version"], text=True)
-    if not version.startswith("cargo-contract-contract 5.0.3-"):
-        raise SystemExit("This bundle requires cargo-contract 5.0.3")
+    toolchain = manifest["contractToolchain"]
+    revision = toolchain["cargoContractRevision"]
+    if not version.startswith(f"cargo-contract-contract {toolchain['cargoContract']}-{revision[:7]}-"):
+        raise SystemExit(f"This bundle requires cargo-contract revision {revision}")
     with tempfile.TemporaryDirectory(prefix="ink-v5-rebuild-") as temporary:
         directory = Path(temporary)
         archive = directory / "source.tar"
@@ -38,29 +40,26 @@ def main():
             source.extractall(directory / "source", filter="data")
         if args.contract and set(args.contract) - manifest["contracts"].keys():
             raise SystemExit("Unknown contract fixture")
+        lock = HERE / "fixtures/contracts.lock"
+        source_lock = directory / "source/Cargo.lock"
+        if digest(lock) != manifest["lockSha256"] or digest(source_lock) != manifest["lockSha256"]:
+            raise SystemExit("Shared build lock mismatch")
         for name, entry in manifest["contracts"].items():
             if args.contract and name not in args.contract:
                 continue
-            lock = fixtures / "build-locks" / f"{name}.lock"
-            if digest(lock) != entry["lockSha256"]:
-                raise SystemExit(f"{name}: build lock mismatch")
-            contract = directory / "source"
-            if args.test_fixtures:
-                contract /= "tests/fixtures"
-            contract /= name
-            shutil.copyfile(lock, contract / "Cargo.lock")
-            command = ["cargo", "+1.88.0", "contract", "build", "--release", "--manifest-path", str(contract / "Cargo.toml")]
+            command = ["bash", str(directory / "source/build.sh"), name]
             if args.offline:
                 command.append("--offline")
             # Never reuse an application's target directory for the contract toolchain.
             environment = dict(os.environ)
             environment.pop("CARGO_TARGET_DIR", None)
-            environment["INK_STATIC_BUFFER_SIZE"] = str(entry.get("staticBufferBytes", 16384))
             subprocess.run(command, env=environment, check=True)
-            if digest(contract / "Cargo.lock") != entry["lockSha256"]:
+            if digest(source_lock) != manifest["lockSha256"]:
                 raise SystemExit(f"{name}: build changed the pinned lockfile")
             artifact_name = name.replace("-", "_")
-            built = json.loads((contract / "target/ink" / f"{artifact_name}.contract").read_text())
+            target = directory / "source/target" / name
+            output = target / "ink" / artifact_name
+            built = json.loads((output / f"{artifact_name}.contract").read_text())
             pinned = json.loads((fixtures / f"{name}.contract").read_text())
             if built["source"]["hash"] != entry["wasmBlake2b256"]:
                 raise SystemExit(f"{name}: WASM differs from the pinned bundle")
@@ -68,8 +67,8 @@ def main():
                 if built[key] != pinned[key]:
                     raise SystemExit(f"{name}: {key} metadata differs")
             print(f"{name}: pinned WASM and ABI reproduced", flush=True)
-            # Each contract has its own target; retain only the current build.
-            shutil.rmtree(contract / "target")
+            # build.sh isolates each contract so buffer checks cannot clean its siblings.
+            shutil.rmtree(target)
 
 
 if __name__ == "__main__":

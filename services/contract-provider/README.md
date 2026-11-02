@@ -83,13 +83,19 @@ checkpoint using different artifacts.
 
 ## Verification
 
-Reproduce the pinned artifacts from a committed contracts checkout. Use a disk-backed
+Reproduce the pinned artifacts from a committed contracts checkout. Dao, Project
+and the test probe share one contracts workspace and the lock pinned in
+`fixtures/contracts.lock`; application and probe bundles remain separate. Use a disk-backed
 `TMPDIR` outside the backend Cargo workspace for this independent build:
 
 ```sh
+cargo +1.86.0 install --git https://github.com/use-ink/cargo-contract --rev 6ccabdc3d10665dd186ef8b2237be6e856fc818b --locked
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline --test-fixtures
 ```
+
+The manifests pin this tool revision because older v5 builds discard the lockfile
+for workspace members. The rebuild command checks that revision before compiling.
 
 After building the application binaries, run the real adapter/wallet/PostgreSQL
 scenarios against the embedded provider:
