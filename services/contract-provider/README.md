@@ -89,13 +89,14 @@ and the test probe share one contracts workspace and the lock pinned in
 `TMPDIR` outside the backend Cargo workspace for this independent build:
 
 ```sh
-cargo +1.86.0 install --git https://github.com/use-ink/cargo-contract --rev 6ccabdc3d10665dd186ef8b2237be6e856fc818b --locked
+cargo +1.86.0 install --git https://github.com/use-ink/cargo-contract --rev 013305adc77d6f8b93dfc9cdb404710942dd738c --locked
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline --test-fixtures
 ```
 
-The manifests pin this tool revision because older v5 builds discard the lockfile
-for workspace members. The rebuild command checks that revision before compiling.
+The manifests pin this tool revision to preserve workspace lockfiles and make
+local dependency builds reproducible. See the [upstream fix](https://github.com/use-ink/cargo-contract/pull/2205).
+The rebuild command checks that revision before compiling.
 
 After building the application binaries, run the real adapter/wallet/PostgreSQL
 scenarios against the embedded provider:

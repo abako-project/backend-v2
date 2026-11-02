@@ -272,18 +272,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dao"
-version = "0.1.0"
-source = "git+https://github.com/abako-dev/contracts.git?rev=87ac5da186e20e95d02e80fd34a6c8178c00b7aa#87ac5da186e20e95d02e80fd34a6c8178c00b7aa"
-dependencies = [
- "chrono",
- "ink",
- "parity-scale-codec",
- "rand 0.10.2",
- "scale-info",
-]
-
-[[package]]
 name = "darling"
 version = "0.14.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -982,7 +970,7 @@ name = "project"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "dao 0.1.0 (git+https://github.com/abako-dev/contracts.git?rev=87ac5da186e20e95d02e80fd34a6c8178c00b7aa)",
+ "dao",
  "ink",
  "parity-scale-codec",
  "rand 0.10.2",
