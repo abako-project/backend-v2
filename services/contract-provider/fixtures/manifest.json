@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "a230a8bc60472e8c7c4178d171218799c2bf1b13",
+  "sourceCommit": "c53c3f3254fbb904e94f460a9cf3bbf6b86a9f24",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
     "cargoContract": "5.0.3",
-    "cargoContractRevision": "013305adc77d6f8b93dfc9cdb404710942dd738c"
+    "cargoContractRevision": "7cc1c1a121d137f08384eed0dd9108e6f619c832"
   },
   "runtime": "pallet-contracts-43.0.0-frame-43.0.0",
   "contracts": {
