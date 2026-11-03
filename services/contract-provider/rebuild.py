@@ -26,11 +26,6 @@ def main():
     args = parser.parse_args()
     fixtures = HERE / ("tests/fixtures" if args.test_fixtures else "fixtures")
     manifest = json.loads((fixtures / "manifest.json").read_text())
-    version = subprocess.check_output(["cargo", "contract", "--version"], text=True)
-    toolchain = manifest["contractToolchain"]
-    revision = toolchain["cargoContractRevision"]
-    if not version.startswith(f"cargo-contract-contract {toolchain['cargoContract']}-{revision[:7]}-"):
-        raise SystemExit(f"This bundle requires cargo-contract revision {revision}")
     with tempfile.TemporaryDirectory(prefix="ink-v5-rebuild-") as temporary:
         directory = Path(temporary)
         archive = directory / "source.tar"

@@ -47,13 +47,10 @@ lives under `tests/fixtures/`, with a separate manifest, and is loaded into the
 worker only under `cfg(test)`. Its worker regressions live in
 [src/worker/persistence_tests.rs](src/worker/persistence_tests.rs). Probe changes do
 not change the application bundle identity. Test checkpoints have a distinct
-identity and cannot reopen as application state. Removing the probe from the
-application manifest changes its bundle identity once; older checkpoints are
-rejected and never silently reset. Business rules live in the
+identity and cannot reopen as application state. Business rules live in the
 [canonical contracts](https://github.com/abako-dev/contracts/tree/review/ink-v5-runtime).
-The worker adds transport execution and persistence, not another business engine.
-The `transport` module owns the private HTTP and signed-operation shell; there is no second business engine. Scenario tests send current core commands
-directly and retain permission, matching and reservation assertions.
+The worker handles execution and persistence; `transport` owns private HTTP and
+signed operations. Scenario tests check permissions, matching and reservations.
 
 ## Boundaries and persistence
 
@@ -83,20 +80,18 @@ checkpoint using different artifacts.
 
 ## Verification
 
-Reproduce the pinned artifacts from a committed contracts checkout. Dao, Project
-and the test probe share one contracts workspace and the lock pinned in
-`fixtures/contracts.lock`; application and probe bundles remain separate. Use a disk-backed
-`TMPDIR` outside the backend Cargo workspace for this independent build:
+To check the bundled artifacts, install cargo-contract v5 and point the rebuild
+command at a contracts checkout. Use a disk-backed `TMPDIR` outside this workspace:
 
 ```sh
-cargo +1.86.0 install --git https://github.com/use-ink/cargo-contract --rev 7cc1c1a121d137f08384eed0dd9108e6f619c832 --locked
+cargo +1.86.0 install --git https://github.com/use-ink/cargo-contract --branch v5.x.x --locked
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline --test-fixtures
 ```
 
-The manifests pin this tool revision to preserve workspace lockfiles and make
-local dependency builds reproducible. See the [merged upstream fix](https://github.com/use-ink/cargo-contract/pull/2205).
-The rebuild command checks that revision before compiling.
+The manifests record the source and tool revisions used to build the artifacts.
+Rebuilds check the shared lockfile, WASM and ABI. If a later v5 branch revision
+changes the output, use the tool revision recorded in the manifest.
 
 After building the application binaries, run the real adapter/wallet/PostgreSQL
 scenarios against the embedded provider:

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "c53c3f3254fbb904e94f460a9cf3bbf6b86a9f24",
+  "sourceCommit": "a0532843d00477ad2423e1cccc36d5b5f62c2f17",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
