@@ -5,10 +5,9 @@ use parity_scale_codec::{Decode, DecodeAll, Encode};
 use protocol::provider_core::{CatalogEntryCore, SkillRequestCore, SkillRoleCore, WorkerCore};
 use protocol::*;
 use serde::{Deserialize, Serialize};
-use sp_core::{
-    H256,
-    hashing::{blake2_256, sha2_256},
-};
+use sp_core::H256;
+
+use sp_io::hashing::{blake2_256, sha2_256};
 
 pub type Projection = (
     Vec<CatalogEntryCore>,

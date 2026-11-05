@@ -3,6 +3,8 @@
 Status: **APPROVED for provider-integration work**, owner confirmation 2026-10-22.
 The owner approved the four maintenance advisories and thirteen exact package
 license exceptions below. The scoped crypto-bigint exception below was additionally approved on 2026-10-28.
+The owner refreshed six package entries and the lock identity for SDK stable2609 on
+2026-11-05. Advisory exceptions, development-only scope and expiry are unchanged.
 Approval does not cover further exceptions, authority
 promotion, release publication or deployment. The application root policy is
 unchanged; SDK policy has its own explicit verification command.
@@ -53,8 +55,8 @@ combined executable. Distribution obligations remain a separate release decision
 
 | Expression | Exact packages |
 |---|---|
-| GPL-3.0-only | polkadot-core-primitives 20.0.0; polkadot-parachain-primitives 19.0.0; staging-xcm 19.0.0; staging-xcm-builder 23.0.0; staging-xcm-executor 22.0.0; xcm-procedural 11.0.2 |
-| CC0-1.0 | bitcoin_hashes 0.13.1; hex-conservative 0.1.2; parity-bip39 2.0.1; secp256k1 0.28.2; secp256k1-sys 0.9.2; tiny-keccak 2.0.2 |
+| GPL-3.0-only | polkadot-core-primitives 25.0.0; polkadot-parachain-primitives 24.0.0; staging-xcm 25.0.0; staging-xcm-builder 31.0.0; staging-xcm-executor 29.0.1; xcm-procedural 11.0.2 |
+| CC0-1.0 | bitcoin_hashes 0.13.1; hex-conservative 0.1.2; bip39 2.2.2; secp256k1 0.28.2; secp256k1-sys 0.9.2; tiny-keccak 2.0.2 |
 | Apache-2.0 WITH LLVM-exception | wasmparser-nostd 0.100.2 |
 
 These arrive through pallet-contracts' SDK/XCM, crypto and WASM dependency paths.
@@ -73,11 +75,12 @@ The owner approved the scoped development exception for
 operations intended to be constant-time. This is an exposure-based acceptance,
 not a patched dependency; scope and evidence follow below.
 
-The crate consolidation and renames change local packages and their dependency
-edges in Cargo.lock. External versions, sources and checksums are unchanged. Removing the native test
-dependency also removes unused getrandom/rand feature edges. `check.py` pins
-the resulting hash; exceptions and the 2026-12-01 expiry remain unchanged. This
-fingerprint renewal is not a dependency-policy waiver. The native test dependency has been removed.
+The SDK stable2609 update was reviewed on 2026-11-05. The five updated GPL package
+entries retain GPL-3.0-only; `bip39 2.2.2` replaces `parity-bip39` under CC0-1.0.
+The scanner found no additional advisory exceptions. The cryptographic exposure
+review below was repeated against the new versions. `check.py` pins the reviewed
+lock; the 2026-12-01 expiry and development-only restrictions remain unchanged.
+Runtime checkpoints include this lock identity and require fresh development state.
 
 The graph includes the existing SDK's unsafe/native/cryptographic transitives,
 SQLite and the shared execution/HTTP components. It accepts only pinned artifacts;
@@ -86,10 +89,10 @@ is available in [Git](https://github.com/abako-project/backend-v2/blob/1964a56d8
 Run the policy command for current advisory data; functional tests are not security
 clearance and do not authorize promotion or deployment.
 
-## Upgrade investigation (2026-10-28)
+## Cryptographic dependency review (2026-11-05)
 
-There is no published compatible update that removes this finding. The latest
-published `pallet-contracts 50.0.0` uses `frame-support 49.0.0` and `sp-core 43.0.0`;
+There is no published compatible update that removes this finding. The reviewed
+`pallet-contracts 51.0.0` uses `frame-support 49.0.1` and `sp-core 43.0.0`;
 both still require `k256 ^0.13.4`. That requires `elliptic-curve ^0.13.8`, which
 requires `crypto-bigint ^0.5`. No patched 0.5 release is published. Upgrading the
 whole SDK would retain the finding. Both SDK dependencies on k256 are non-optional.
@@ -97,17 +100,17 @@ The fixed RustCrypto path is `k256 0.14.0` → `elliptic-curve 0.14.3` →
 `crypto-bigint ^0.7.8`, requiring an upstream SDK API update or a maintained fork.
 The current upstream SDK manifest also still selects k256 0.13.4.
 
-Primary metadata: [pallet-contracts dependencies](https://crates.io/api/v1/crates/pallet-contracts/50.0.0/dependencies),
-[frame-support dependencies](https://crates.io/api/v1/crates/frame-support/49.0.0/dependencies),
+Primary metadata: [pallet-contracts dependencies](https://crates.io/api/v1/crates/pallet-contracts/51.0.0/dependencies),
+[frame-support dependencies](https://crates.io/api/v1/crates/frame-support/49.0.1/dependencies),
 [sp-core dependencies](https://crates.io/api/v1/crates/sp-core/43.0.0/dependencies),
 [old elliptic-curve dependencies](https://crates.io/api/v1/crates/elliptic-curve/0.13.8/dependencies),
 [new elliptic-curve dependencies](https://crates.io/api/v1/crates/elliptic-curve/0.14.3/dependencies).
 
 Exposure review of the locked development provider:
 
-- `sp-core 38.1.0` has `std` enabled. Its ECDSA key creation, signing and recovery
+- `sp-core 43.0.0` has `std` enabled. Its ECDSA key creation, signing and recovery
   use `secp256k1`; k256 secret-key paths are guarded by `cfg(not(feature = "std"))`.
-- `frame-support 43.0.0` uses k256 to decompress a public key for an Ethereum
+- `frame-support 49.0.1` uses k256 to decompress a public key for an Ethereum
   address. This does not process secret key material.
 - Provider admission verifies sr25519 signatures through schnorrkel. It holds no
   user signing seeds and registers no keystore extension. Wallet signing remains
@@ -118,8 +121,8 @@ Exposure review of the locked development provider:
 These are source/feature observations, not a proof of absence of timing leakage
 or a waiver of the advisory. A new target, feature set, key-handling path or
 artifact requires reassessment. See the exact published sources for
-[sp-core ECDSA](https://docs.rs/crate/sp-core/38.1.0/source/src/ecdsa.rs) and
-[FRAME public-key conversion](https://docs.rs/crate/frame-support/43.0.0/source/src/crypto/ecdsa.rs).
+[sp-core ECDSA](https://docs.rs/crate/sp-core/43.0.0/source/src/ecdsa.rs) and
+[FRAME public-key conversion](https://docs.rs/crate/frame-support/49.0.1/source/src/crypto/ecdsa.rs).
 
 ### Approved development exception (2026-10-28)
 
@@ -136,6 +139,7 @@ actual image publication, deployment or production use; those still require thei
 separate owner approval and checks.
 
 The owner approved this exact proposal in the current conversation on 2026-10-28.
-The policy now ignores this one advisory ID under the unchanged fingerprint and
-expiry. No SDK dependency or cryptographic source was changed. Revisit when
-upstream adopts the fixed dependency path. New advisories remain blocking.
+The policy ignores this one advisory ID under the reviewed lock fingerprint and
+unchanged expiry. The 2026-11-05 SDK update preserves this scoped exception after
+repeating the exposure review. Revisit when upstream adopts the fixed dependency
+path. New advisories remain blocking.

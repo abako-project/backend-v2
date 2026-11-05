@@ -4,7 +4,7 @@ use crate::{
 };
 use frame_support::weights::Weight;
 use parity_scale_codec::{DecodeAll, Encode};
-use sp_core::hashing::blake2_256;
+use sp_io::hashing::blake2_256;
 use sqlx::{
     Row,
     sqlite::{SqliteConnectOptions, SqlitePoolOptions},

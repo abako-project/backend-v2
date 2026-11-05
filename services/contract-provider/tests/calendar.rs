@@ -15,7 +15,7 @@ type Effect = (
     Option<u32>,
 );
 use serde_json::{Value, from_value, json};
-use sp_core::hashing::blake2_256;
+use sp_io::hashing::blake2_256;
 #[path = "support/database.rs"]
 mod database;
 use database::Database;

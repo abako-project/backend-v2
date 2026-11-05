@@ -24,7 +24,7 @@ impl Configuration {
         Mode::Contracts {
             root: self.root,
             gas: self.gas_limit,
-            configuration: H256::from(sp_core::hashing::blake2_256(
+            configuration: H256::from(sp_io::hashing::blake2_256(
                 &(
                     b"contract-provider",
                     self.root,
@@ -44,7 +44,7 @@ impl Configuration {
         let mut catalog = (Vec::new(), Vec::new(), Vec::new());
         for seed in catalog_seed_v1() {
             let content = CatalogReferenceV1::Seed(PayloadHash::from_bytes(
-                sp_core::hashing::sha2_256(&seed.record(generation).hash_input()),
+                sp_io::hashing::sha2_256(&seed.record(generation).hash_input()),
             ));
             let entry = CatalogEntryCore {
                 id: seed.id,

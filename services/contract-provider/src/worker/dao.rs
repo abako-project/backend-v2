@@ -32,7 +32,7 @@ fn account(value: AccountId32) -> Account {
     Account::new(value.into_bytes())
 }
 pub(super) fn input(name: &str, args: impl Encode) -> Vec<u8> {
-    let mut bytes = sp_core::hashing::blake2_256(name.as_bytes())[..4].to_vec();
+    let mut bytes = sp_io::hashing::blake2_256(name.as_bytes())[..4].to_vec();
     bytes.extend(args.encode());
     bytes
 }
@@ -171,11 +171,7 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     let state = decode(stored, mode)?;
     let mut ext = stored.checkpoint.clone().restore()?;
     let code = ext.execute_with(|| Contracts::code_hash(&state.dao));
-    if code
-        != Some(H256::from(sp_core::hashing::blake2_256(
-            bundles.code("dao")?,
-        )))
-    {
+    if code != Some(H256::from(sp_io::hashing::blake2_256(bundles.code("dao")?))) {
         return Err(Error::InvalidState);
     }
     let enabled: bool = read(
@@ -192,7 +188,7 @@ pub(super) fn validate(stored: &Stored, bundles: &Bundles, mode: Mode) -> Result
     if let Mode::Contracts { root, .. } = mode {
         let addresses: Vec<(EntityId, Account)> =
             read(&mut ext, bundles, &state.dao, root, "projects", ())?;
-        let expected = H256::from(sp_core::hashing::blake2_256(bundles.code("project")?));
+        let expected = H256::from(sp_io::hashing::blake2_256(bundles.code("project")?));
         for (_, address) in addresses {
             if ext.execute_with(|| Contracts::code_hash(&address)) != Some(expected) {
                 return Err(Error::InvalidState);

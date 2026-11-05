@@ -1,7 +1,7 @@
 //! Immutable, offline artifact cohort. No caller-supplied WASM enters the worker.
 use crate::ProofError;
 use parity_scale_codec::{Decode, DecodeWithMemTracking, Encode};
-use sp_core::hashing::{blake2_256, sha2_256};
+use sp_io::hashing::{blake2_256, sha2_256};
 use std::collections::BTreeMap;
 
 const MANIFEST: &[u8] = include_bytes!("../fixtures/manifest.json");

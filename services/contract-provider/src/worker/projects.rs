@@ -5,7 +5,7 @@ use parity_scale_codec::DecodeAll;
 use protocol::EvidenceRecordReferenceV1 as Reference;
 use protocol::ProviderCommand;
 fn input(name: &str, args: impl Encode) -> Vec<u8> {
-    let mut data = sp_core::hashing::blake2_256(name.as_bytes())[..4].to_vec();
+    let mut data = sp_io::hashing::blake2_256(name.as_bytes())[..4].to_vec();
     data.extend(args.encode());
     data
 }

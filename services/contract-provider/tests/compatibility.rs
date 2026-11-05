@@ -3,7 +3,7 @@ use contract_provider::{Account, Contracts, GAS, new_externalities};
 use frame_support::weights::Weight;
 use pallet_contracts::{Code, CollectEvents, DebugInfo, Determinism, ExecReturnValue};
 use parity_scale_codec::{Decode, DecodeAll, Encode};
-use sp_core::hashing::{blake2_256, sha2_256};
+use sp_io::hashing::{blake2_256, sha2_256};
 use std::{fs, path::Path};
 
 fn account(n: u8) -> Account {

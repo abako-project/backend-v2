@@ -3,9 +3,9 @@ use crate::{ProofError, bundle::Identity};
 use parity_scale_codec::{Decode, DecodeWithMemLimit, DecodeWithMemTracking, Encode};
 use sp_core::{
     H256,
-    hashing::{blake2_256, sha2_256},
     storage::{ChildInfo, well_known_keys::DEFAULT_CHILD_STORAGE_KEY_PREFIX},
 };
+use sp_io::hashing::{blake2_256, sha2_256};
 use sp_runtime::{
     StateVersion,
     traits::{BlakeTwo256, Hash},

@@ -26,8 +26,8 @@ version = "=0.1.2"
 allow = ["CC0-1.0"]
 
 [[licenses.exceptions]]
-name = "parity-bip39"
-version = "=2.0.1"
+name = "bip39"
+version = "=2.2.2"
 allow = ["CC0-1.0"]
 
 [[licenses.exceptions]]
@@ -47,27 +47,27 @@ allow = ["CC0-1.0"]
 
 [[licenses.exceptions]]
 name = "polkadot-core-primitives"
-version = "=20.0.0"
+version = "=25.0.0"
 allow = ["GPL-3.0-only"]
 
 [[licenses.exceptions]]
 name = "polkadot-parachain-primitives"
-version = "=19.0.0"
+version = "=24.0.0"
 allow = ["GPL-3.0-only"]
 
 [[licenses.exceptions]]
 name = "staging-xcm"
-version = "=19.0.0"
+version = "=25.0.0"
 allow = ["GPL-3.0-only"]
 
 [[licenses.exceptions]]
 name = "staging-xcm-builder"
-version = "=23.0.0"
+version = "=31.0.0"
 allow = ["GPL-3.0-only"]
 
 [[licenses.exceptions]]
 name = "staging-xcm-executor"
-version = "=22.0.0"
+version = "=29.0.1"
 allow = ["GPL-3.0-only"]
 
 [[licenses.exceptions]]

@@ -22,20 +22,20 @@ getrandom = "=0.4.3"
 schnorrkel = { version = "=0.11.5", default-features = false, features = ["std"] }
 protocol = { version = "=0.1.0", path = "../../crates/protocol" }
 serde = { version = "1.0.229", features = ["derive"] }
-frame-support = "=43.0.0"
-frame-system = "=43.0.0"
-pallet-balances = "=44.0.0"
-pallet-assets = "=46.1.0"
-pallet-contracts = "=43.0.0"
-pallet-timestamp = "=42.0.0"
-sp-core = "=38.1.0"
-sp-io = "=43.0.0"
-sp-runtime = "=44.0.0"
+frame-support = "=49.0.1"
+frame-system = "=49.0.0"
+pallet-balances = "=51.0.2"
+pallet-assets = "=54.0.1"
+pallet-contracts = "=51.0.0"
+pallet-timestamp = "=49.0.0"
+sp-core = "=43.0.0"
+sp-io = "=49.0.0"
+sp-runtime = "=49.0.0"
 parity-scale-codec = { version = "=3.7.5", features = ["derive"] }
 scale-info = { version = "=2.11.6", features = ["derive"] }
 serde_json = "1.0"
 rand = { version = "=0.10.2", default-features = false, features = ["std_rng"] }
-sp-state-machine = "=0.48.0"
+sp-state-machine = "=0.54.0"
 tokio = { version = "=1.53.3", features = ["rt", "rt-multi-thread", "sync", "time", "net", "signal", "macros"] }
 sqlx = { version = "=0.9.0", default-features = false, features = ["runtime-tokio", "sqlite-bundled"] }
 
