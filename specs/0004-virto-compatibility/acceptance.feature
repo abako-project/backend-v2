@@ -22,18 +22,18 @@ Feature: Mock auxiliary interfaces
 
   @VIR-RAMP-01
   Scenario: An operator confirms one simulated deposit
-    Given an owner requested a KVN deposit with fixed amount and destination
+    Given an owner requested a payment units deposit with fixed amount and destination
     When the system operator confirms it twice using different operations
     Then the owner's free balance increases exactly once by the requested amount
 
   @VIR-RAMP-02
   Scenario: A withdrawal cannot spend project escrow
-    Given a client has free KVN and reserved project escrow
+    Given a client has free payment units and reserved project escrow
     When the client requests a withdrawal above the free balance
     Then the withdrawal is rejected without changing either balance
 
   @VIR-RAMP-03
   Scenario: A pending withdrawal is cancelled
-    Given a pending withdrawal holds KVN from free balance
+    Given a pending withdrawal holds payment units from free balance
     When its owner cancels it
-    Then the held KVN returns once to free balance
+    Then the held payment units returns once to free balance

@@ -3,32 +3,6 @@
 version = 4
 
 [[package]]
-name = "adapter-api"
-version = "0.1.0"
-dependencies = [
- "argon2",
- "axum",
- "domain-primitives",
- "generated-contracts",
- "getrandom 0.4.3",
- "parity-scale-codec",
- "reqwest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sqlx",
- "thiserror 2.0.20",
- "tokio",
- "tokio-stream",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "webauthn-authenticator-rs",
- "webauthn-rs",
- "zeroize",
-]
-
-[[package]]
 name = "aead"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -79,6 +53,30 @@ name = "anyhow"
 version = "1.0.104"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
+
+[[package]]
+name = "api"
+version = "0.1.0"
+dependencies = [
+ "argon2",
+ "axum",
+ "getrandom 0.4.3",
+ "parity-scale-codec",
+ "protocol",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "sqlx",
+ "thiserror 2.0.20",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-subscriber",
+ "webauthn-authenticator-rs",
+ "webauthn-rs",
+ "zeroize",
+]
 
 [[package]]
 name = "argon2"
@@ -919,17 +917,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "domain-primitives"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "parity-scale-codec",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
-]
-
-[[package]]
 name = "dotenvy"
 version = "0.15.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1016,6 +1003,20 @@ checksum = "8be9f3dfaaffdae2972880079a491a1a8bb7cbed0b8dd7a347f668b4150a3b93"
 dependencies = [
  "event-listener",
  "pin-project-lite",
+]
+
+[[package]]
+name = "example-web"
+version = "0.1.0"
+dependencies = [
+ "gloo-net 0.7.0",
+ "js-sys",
+ "leptos",
+ "protocol",
+ "serde",
+ "serde_json",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]
@@ -1180,18 +1181,6 @@ dependencies = [
  "memchr",
  "pin-project-lite",
  "slab",
-]
-
-[[package]]
-name = "generated-contracts"
-version = "0.1.0"
-dependencies = [
- "domain-primitives",
- "parity-scale-codec",
- "serde",
- "serde_json",
- "thiserror 2.0.20",
- "url",
 ]
 
 [[package]]
@@ -1861,21 +1850,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "leptos-web"
-version = "0.1.0"
-dependencies = [
- "domain-primitives",
- "generated-contracts",
- "gloo-net 0.7.0",
- "js-sys",
- "leptos",
- "serde",
- "serde_json",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
 name = "leptos_config"
 version = "0.8.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2087,29 +2061,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "mock-provider"
-version = "0.1.0"
-dependencies = [
- "axum",
- "chrono",
- "domain-primitives",
- "generated-contracts",
- "getrandom 0.4.3",
- "parity-scale-codec",
- "rand 0.10.2",
- "reqwest",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "sqlx",
- "subxt-signer",
- "thiserror 2.0.20",
- "tokio",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -2505,6 +2456,18 @@ dependencies = [
  "syn 2.0.119",
  "version_check",
  "yansi",
+]
+
+[[package]]
+name = "protocol"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "parity-scale-codec",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.20",
+ "url",
 ]
 
 [[package]]
@@ -3798,9 +3761,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.53.1"
+version = "1.53.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "202caea871b69668250d242070849eb495be178ed697a3e98aebce5bc81a0bed"
+checksum = "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
 dependencies = [
  "bytes",
  "libc",
@@ -3927,12 +3890,10 @@ dependencies = [
  "futures-util",
  "http",
  "http-body",
- "http-body-util",
  "pin-project-lite",
  "tower",
  "tower-layer",
  "tower-service",
- "tracing",
  "url",
 ]
 
@@ -4158,8 +4119,8 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "chacha20poly1305",
- "generated-contracts",
  "getrandom 0.4.3",
+ "protocol",
  "reqwest",
  "serde_json",
  "sha2 0.10.9",

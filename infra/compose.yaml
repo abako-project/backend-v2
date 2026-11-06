@@ -53,23 +53,22 @@ services:
       start_period: 15s
       retries: 12
 
-  mock-provider:
+  contract-provider:
     <<: *backend
-    image: digesta-mock-provider:local
+    image: digesta-contract-provider:local
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
-      target: mock-provider
+      target: contract-provider
     environment:
       BIND_ADDR: 0.0.0.0:8082
-      MOCK_STORAGE: sqlite
-      MOCK_DATABASE_URL: sqlite:///data/mock.sqlite?mode=rwc
+      CONTRACT_DATABASE_PATH: /data/contracts.sqlite
       MOCK_ROOT_ACCOUNT_FILE: /run/secrets/root-account.hex
       INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
     secrets: [root-account.hex, service-token]
     volumes:
       - type: bind
-        source: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/data/mock
+        source: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/data/contracts
         target: /data
         bind: {create_host_path: false}
     networks: [backend]
@@ -80,19 +79,19 @@ services:
       start_period: 15s
       retries: 12
 
-  adapter-api:
+  api:
     <<: *backend
-    image: digesta-adapter-api:local
+    image: digesta-api:local
     build:
       context: ..
       dockerfile: infra/backend.Dockerfile
-      target: adapter-api
+      target: api
     environment:
       BIND_ADDR: 0.0.0.0:8080
       ADAPTER_DATABASE_URL: ${ADAPTER_DATABASE_URL:-postgres://digesta:digesta-local-only@postgres:5432/digesta_adapter}
       OPENAPI_PATH: /app/contracts/openapi.json
       CUSTODY_URL: http://wallet:8081
-      MOCK_PROVIDER_URL: http://mock-provider:8082
+      MOCK_PROVIDER_URL: http://contract-provider:8082
       INTERNAL_SERVICE_TOKEN_FILE: /run/secrets/service-token
       BOOTSTRAP_ADMIN_USERNAME: admin
       BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/bootstrap-admin-password
@@ -106,7 +105,7 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       wallet: {condition: service_healthy}
-      mock-provider: {condition: service_healthy}
+      contract-provider: {condition: service_healthy}
     healthcheck:
       test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8080/health]
       interval: 5s
@@ -115,7 +114,7 @@ services:
       retries: 12
 
   frontend:
-    image: digesta-leptos-web:local
+    image: digesta-example-web:local
     build:
       context: ..
       dockerfile: infra/frontend.Dockerfile
@@ -150,7 +149,7 @@ services:
         bind: {create_host_path: false}
     networks: [edge]
     depends_on:
-      adapter-api: {condition: service_healthy}
+      api: {condition: service_healthy}
       frontend: {condition: service_healthy}
     healthcheck:
       test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/]

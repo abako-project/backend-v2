@@ -5,11 +5,11 @@ import argparse
 import os
 from pathlib import Path
 import pwd
+import re
 import secrets
 import subprocess
 
 
-WALLET = "ghcr.io/abako-project/digesta-wallet@sha256:88a41ae8c369b1e96e26f2daf3c8aa769bf1795efa493c17bdc8a1dd6f0aa5ef"
 POSTGRES = "postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24"
 EXPECTED = ["master-key.hex", "root-seed.hex", "root-account.hex", "service-token", "bootstrap-admin-password"]
 
@@ -24,7 +24,10 @@ def private_write(path, value, uid=0, gid=0):
     os.chown(path, uid, gid)
 
 
-def provision(host):
+def provision(host, api_image, wallet_image, provider_image):
+    for image in (api_image, wallet_image, provider_image):
+        if not re.fullmatch(r"[A-Za-z0-9._/:-]+@sha256:[0-9a-f]{64}", image):
+            raise ValueError("backend images must be reviewed immutable digests")
     if os.geteuid() != 0 or host != "dev.abako.xyz":
         raise ValueError("run as root on the approved host for the selected preview origin")
     root = Path("/opt/digesta/preview")
@@ -40,12 +43,13 @@ def provision(host):
     uid, gid = account.pw_uid, account.pw_gid
     if uid == 0 or gid == 0:
         raise ValueError("application service identity must be non-root")
-    for directory in [state, state / "secrets", state / "data", state / "data/custody", state / "data/mock"]:
+    for directory in [state, state / "secrets", state / "data", state / "data/custody", state / "data/contracts"]:
         directory.mkdir(parents=True, exist_ok=True, mode=0o700)
         os.chmod(directory, 0o700)
         os.chown(directory, uid, gid)
     settings = (f"DIGESTA_PROJECT_NAME=digesta-preview\nDIGESTA_UID={uid}\nDIGESTA_GID={gid}\n"
                 f"DIGESTA_STATE_DIR={state}\nPREVIEW_HOST={host}\n"
+                f"API_IMAGE={api_image}\nWALLET_IMAGE={wallet_image}\nCONTRACT_PROVIDER_IMAGE={provider_image}\n"
                 f"ALLOWED_ORIGINS=https://{host},https://web.dev.abako.xyz\nADAPTER_HOST_PORT=4080\n")
     env_file = root / "deployment.env"
     if env_file.exists():
@@ -64,10 +68,10 @@ def provision(host):
                                 capture_output=True, timeout=30)
         if volume.returncode == 0:
             raise ValueError("existing PostgreSQL volume has no matching secrets")
-        run("docker", "pull", WALLET)
+        run("docker", "pull", wallet_image)
         run("docker", "run", "--rm", "--network", "none", "--user", f"{uid}:{gid}",
             "--read-only", "--cap-drop", "ALL", "--security-opt", "no-new-privileges:true",
-            "--mount", f"type=bind,src={secret_dir},dst=/secrets", WALLET,
+            "--mount", f"type=bind,src={secret_dir},dst=/secrets", wallet_image,
             "init-dev-secrets", "/secrets")
     for name in EXPECTED:
         stat = (secret_dir / name).stat()
@@ -95,5 +99,8 @@ def provision(host):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", required=True)
+    parser.add_argument("--api-image", required=True)
+    parser.add_argument("--wallet-image", required=True)
+    parser.add_argument("--provider-image", required=True)
     arguments = parser.parse_args()
-    provision(arguments.host)
+    provision(arguments.host, arguments.api_image, arguments.wallet_image, arguments.provider_image)

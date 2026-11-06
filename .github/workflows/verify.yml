@@ -43,5 +43,9 @@ jobs:
               echo "$pg_bindir" >> "$GITHUB_PATH"
             fi
           done
-      - name: Verify application and both mock backends
+      - name: Verify application with contract execution
         run: bash scripts/verify.sh app
+      - name: Install the reviewed dependency-policy checker
+        run: cargo install cargo-deny --version 0.20.2 --locked
+      - name: Enforce contract runtime dependency policy before release
+        run: bash scripts/verify.sh contract-provider-dependencies

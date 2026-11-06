@@ -1,0 +1,572 @@
+use super::*;
+
+fn sample_call() -> Result<UnsignedContractCallV1, ContractError> {
+    UnsignedContractCallV1::new(
+        ProviderInstanceId::from_bytes([1; 16]),
+        OperationId::from_bytes([2; 16]),
+        AccountId32::from_bytes([3; 32]),
+        0,
+        UnixSeconds::new(1000),
+        ProviderCommand::CreateProject(CreateProjectRequest {
+            title: "Build it".into(),
+            description: String::new(),
+        }),
+    )
+}
+
+#[test]
+fn scale_is_exact_bounded_versioned_and_instance_bound() -> Result<(), Box<dyn std::error::Error>> {
+    let call = sample_call()?;
+    let bytes = call.signable_bytes()?;
+    assert_eq!(UnsignedContractCallV1::decode_signable(&bytes)?, call);
+    assert_eq!(&bytes[..16], MOCK_SIGNING_DOMAIN);
+    let mut trailing = bytes.clone();
+    trailing.push(0);
+    assert!(UnsignedContractCallV1::decode_signable(&trailing).is_err());
+    let mut altered = call.clone();
+    altered.provider_instance_id = ProviderInstanceId::from_bytes([4; 16]);
+    assert_ne!(bytes, altered.signable_bytes()?);
+    altered.payload_version = PAYLOAD_VERSION + 1;
+    assert!(altered.signable_bytes().is_err());
+    altered.payload_version = PAYLOAD_VERSION;
+    altered.signing_domain = [0; 16];
+    assert!(UnsignedContractCallV1::decode_signable(&altered.encode()).is_err());
+    let mut oversized = call;
+    oversized.command = ProviderCommand::CreateProject(CreateProjectRequest {
+        title: "x".repeat(MAX_SIGNABLE_BYTES),
+        description: String::new(),
+    });
+    assert!(oversized.signable_bytes().is_err());
+    Ok(())
+}
+
+#[test]
+fn payload_fixture_and_json_commands_are_stable() -> Result<(), Box<dyn std::error::Error>> {
+    let command = ProviderCommand::AcceptPlanningDelivery {
+        project_id: EntityId::from_bytes([5; 16]),
+        expected_revision: 7,
+    };
+    let value = serde_json::to_value(&command)?;
+    assert_eq!(value["type"], "AcceptPlanningDelivery");
+    assert_eq!(
+        value["data"]["projectId"],
+        EntityId::from_bytes([5; 16]).to_string()
+    );
+    assert!(value["data"].get("project_id").is_none());
+    assert_eq!(value["data"]["expectedRevision"], 7);
+    let call = sample_call()?;
+    // SCALE: fixed domain16 + instance16 + version2 + operation16 + account32
+    // + nonce8 + expiration8 + CreateProject index1 + title SCALElen1+8 + emptylen1.
+    assert_eq!(call.signable_bytes()?.len(), 109);
+    assert_eq!(call.signable_bytes()?[98], 9);
+    assert!(
+        serde_json::from_str::<RegisterRequest>(
+            r#"{"username":"u","password":"p","displayName":"n","isAdmin":true}"#
+        )
+        .is_err()
+    );
+    assert!(
+        serde_json::from_str::<ProviderCommand>(r#"{"type":"ArbitraryExtrinsic","data":[]}"#)
+            .is_err()
+    );
+    Ok(())
+}
+
+#[test]
+fn acceptance_requires_and_signs_the_observed_revision() -> Result<(), Box<dyn std::error::Error>> {
+    let project_id = EntityId::from_bytes([5; 16]);
+    let proposal_id = EntityId::from_bytes([6; 16]);
+    let commands = [
+        ProviderCommand::AcceptPlanningQuote {
+            project_id,
+            expected_revision: 7,
+        },
+        ProviderCommand::AcceptPlanningDelivery {
+            project_id,
+            expected_revision: 7,
+        },
+        ProviderCommand::ApproveExecution {
+            project_id,
+            proposal_id,
+            expected_revision: 7,
+        },
+    ];
+    for command in commands {
+        let mut call = sample_call()?;
+        call.command = command.clone();
+        let before = call.signable_bytes()?;
+        assert_eq!(UnsignedContractCallV1::decode_signable(&before)?, call);
+        let mut json = serde_json::to_value(&command)?;
+        json["data"]["expectedRevision"] = serde_json::json!(8);
+        call.command = serde_json::from_value(json.clone())?;
+        assert_ne!(before, call.signable_bytes()?);
+        json["data"]
+            .as_object_mut()
+            .ok_or("command data missing")?
+            .remove("expectedRevision");
+        assert!(serde_json::from_value::<ProviderCommand>(json).is_err());
+    }
+    let request: RevisionRequest = serde_json::from_str(r#"{"expectedRevision":7}"#)?;
+    assert_eq!(request.expected_revision, 7);
+    assert!(serde_json::from_str::<RevisionRequest>("{}").is_err());
+    Ok(())
+}
+
+#[test]
+fn score_policy_does_not_round_or_accept_bad_weights() -> Result<(), Box<dyn std::error::Error>> {
+    let policy = ScorePolicy::new(Percentage::new(50)?, Percentage::new(50)?)?;
+    assert_eq!(policy.blend(Score::new(5)?, Score::new(4)?), 450);
+    assert_eq!(policy.coordinator_client_vote_weight(), 1);
+    assert_eq!(policy.coordinator_worker_vote_weight(), 1);
+    let weighted = policy.with_coordinator_vote_weights(2, 1)?;
+    assert_eq!(ScorePolicy::decode(&mut &weighted.encode()[..])?, weighted);
+    assert_eq!(
+        serde_json::from_value::<ScorePolicy>(serde_json::to_value(weighted)?)?,
+        weighted
+    );
+    assert!(policy.with_coordinator_vote_weights(0, 0).is_err());
+    assert!(policy.with_coordinator_vote_weights(101, 1).is_err());
+    assert!(serde_json::from_str::<ScorePolicy>(r#"{"coordinatorPercent":50,"clientPercent":50,"coordinatorClientVoteWeight":0,"coordinatorWorkerVoteWeight":0}"#).is_err());
+
+    assert!(ScorePolicy::new(Percentage::new(40)?, Percentage::new(40)?).is_err());
+    assert!(ScorePolicy::decode(&mut &[40_u8, 40][..]).is_err());
+    assert!(
+        serde_json::from_str::<ScorePolicy>(r#"{"coordinatorPercent":80,"clientPercent":80}"#)
+            .is_err()
+    );
+    assert!(serde_json::from_str::<WorkerRating>(r#"{"worker":"0x0303030303030303030303030303030303030303030303030303030303030303","score":11}"#).is_err());
+    let view = ReputationView {
+        weighted_score_sum: u128::MAX,
+        rated_minutes: 7,
+    };
+    assert_eq!(
+        serde_json::to_value(&view)?["weightedScoreSum"],
+        u128::MAX.to_string()
+    );
+    Ok(())
+}
+
+#[test]
+fn structural_validation_rejects_duplicate_slots_and_overflow()
+-> Result<(), Box<dyn std::error::Error>> {
+    let week = Week::new(2026, 40)?;
+    let requirement = RequirementDefinition {
+        key: 1,
+        role_id: 2,
+        skill_ids: vec![1, 2],
+        minutes: Minutes::new(60),
+        budget: Money::new(10),
+    };
+    let milestone = MilestoneDefinition {
+        key: 1,
+        title: "Ship".into(),
+        window: WeekWindow::new(week, week)?,
+        coordinator_fee: Money::new(2),
+        coordinator_minutes: Minutes::new(5),
+        requirements: vec![requirement.clone()],
+    };
+    let mut proposal = ProposalDefinition {
+        title: "Plan".into(),
+        description: String::new(),
+        milestones: vec![milestone],
+    };
+    proposal.validate()?;
+    assert_eq!(proposal.total()?, Money::new(12));
+    proposal.milestones[0].requirements.push(requirement);
+    assert!(proposal.validate().is_err());
+    proposal.milestones[0].requirements.pop();
+    proposal.milestones[0].coordinator_fee = Money::new(u64::MAX);
+    assert!(proposal.validate().is_err());
+    let calendar = CalendarDefinition {
+        default_weekly_minutes: Minutes::new(60),
+        overrides: vec![
+            WeekOverride {
+                week,
+                capacity: Minutes::ZERO,
+            },
+            WeekOverride {
+                week,
+                capacity: Minutes::new(30),
+            },
+        ],
+    };
+    assert!(calendar.validate().is_err());
+    Ok(())
+}
+
+#[test]
+fn prepared_call_keeps_exact_bytes_until_signed() -> Result<(), Box<dyn std::error::Error>> {
+    let call = sample_call()?;
+    let prepared = PreparedCall::new(call.clone())?;
+    assert_eq!(prepared.bytes(), call.signable_bytes()?);
+    let signed = prepared.with_signature(Sr25519Signature::from_bytes([6; 64]));
+    assert_eq!(signed.call, call);
+    assert_eq!(signed.signature.as_bytes(), &[6; 64]);
+    Ok(())
+}
+
+#[test]
+fn debug_output_never_formats_credentials_or_session_tokens() {
+    let login = LoginRequest {
+        username: "private-login".into(),
+        password: "secret-marker-password".into(),
+    };
+    let debug = format!("{login:?}");
+    assert!(!debug.contains(&login.password));
+    assert!(!debug.contains(&login.username));
+    let session = SessionView {
+        principal_id: PrincipalId::from_bytes([1; 16]),
+        account_id: AccountId32::from_bytes([2; 32]),
+        display_name: "person".into(),
+        csrf_token: "secret-marker-csrf".into(),
+        is_admin: false,
+    };
+    assert!(!format!("{session:?}").contains(&session.csrf_token));
+}
+
+#[test]
+fn optional_deliveries_preserve_existing_command_bytes() -> Result<(), Box<dyn std::error::Error>> {
+    let project_id = EntityId::from_bytes([5; 16]);
+    let milestone_id = EntityId::from_bytes([6; 16]);
+    let request = RequestMilestoneCompletionRequest {
+        worker_ratings: vec![],
+        deliverable: EvidenceReference::new("https://example.test/old".into())?,
+    };
+    let old = ProviderCommand::RequestMilestoneCompletion {
+        project_id,
+        milestone_id,
+        request: request.clone(),
+    };
+    let expected = (27_u8, project_id, milestone_id, request).encode();
+    assert_eq!(old.encode(), expected);
+    assert_eq!(ProviderCommand::decode(&mut expected.as_slice())?, old);
+    let new = ProviderCommand::RequestMilestoneCompletionWithoutDeliverable {
+        project_id,
+        milestone_id,
+        worker_ratings: vec![],
+    };
+    new.validate()?;
+    assert_eq!(new.encode()[0], 35);
+    assert_eq!(ProviderCommand::decode(&mut new.encode().as_slice())?, new);
+    let body: SubmitMilestoneCompletionRequest = serde_json::from_str(r#"{"deliverable":null}"#)?;
+    assert!(body.deliverable.is_none());
+    assert!(
+        serde_json::from_str::<SubmitMilestoneCompletionRequest>(r#"{"deliverable":{"url":""}}"#)
+            .is_err()
+    );
+    let doc: serde_json::Value =
+        serde_json::from_str(include_str!("../../../contracts/openapi.json"))?;
+    let legacy: CompletionSubmission = serde_json::from_value(
+        doc["components"]["schemas"]["CompletionSubmission"]["examples"][0].clone(),
+    )?;
+    assert!(legacy.deliverable.is_some());
+    let mut absent = legacy;
+    absent.deliverable = None;
+    assert_eq!(
+        serde_json::from_str::<CompletionSubmission>(&serde_json::to_string(&absent)?)?,
+        absent
+    );
+    Ok(())
+}
+
+#[test]
+fn proposal_dates_validate_real_calendar_dates() {
+    for value in ["2026-02-29", "2026-2-09", "0000-01-01", ""] {
+        assert!(
+            DeliveryPreference::SpecificDate { date: value.into() }
+                .validate()
+                .is_err()
+        );
+    }
+    assert!(
+        DeliveryPreference::SpecificDate {
+            date: "2028-02-29".into()
+        }
+        .validate()
+        .is_ok()
+    );
+}
+
+#[test]
+fn compensation_uses_provider_percentage_and_worker_minutes()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut milestone = MilestoneDefinition {
+        key: 0,
+        title: "Budget".into(),
+        window: WeekWindow::new(Week::new(2026, 42)?, Week::new(2026, 42)?)?,
+        coordinator_fee: Money::new(570),
+        coordinator_minutes: Minutes::new(999),
+        requirements: vec![
+            RequirementDefinition {
+                key: 0,
+                role_id: 2,
+                skill_ids: vec![1],
+                minutes: Minutes::new(120),
+                budget: Money::ZERO,
+            },
+            RequirementDefinition {
+                key: 1,
+                role_id: 2,
+                skill_ids: vec![1],
+                minutes: Minutes::new(3000),
+                budget: Money::ZERO,
+            },
+        ],
+    };
+    let policy = CompensationPolicy::default();
+    milestone.allocate_budget(&policy)?;
+    assert_eq!(milestone.coordinator_fee, Money::new(57));
+    assert_eq!(milestone.requirements[0].budget, Money::new(20));
+    assert_eq!(milestone.requirements[1].budget, Money::new(493));
+    for percent in [0, 10, 25, 100] {
+        for budget in (0..150).chain([u64::MAX]) {
+            milestone.coordinator_fee = Money::new(budget);
+            for r in &mut milestone.requirements {
+                r.budget = Money::ZERO;
+            }
+            milestone.allocate_budget(&CompensationPolicy {
+                coordinator_percent: Percentage::new(percent)?,
+            })?;
+            assert_eq!(milestone.total()?, Money::new(budget));
+            let amounts = [
+                milestone.coordinator_fee,
+                milestone.requirements[0].budget,
+                milestone.requirements[1].budget,
+            ];
+            let weights = [
+                u128::from(percent) * 3120,
+                u128::from(100 - percent) * 120,
+                u128::from(100 - percent) * 3000,
+            ];
+            for (amount, weight) in amounts.into_iter().zip(weights) {
+                let numerator = u128::from(budget) * weight;
+                let denominator = 312_000;
+                assert!(u128::from(amount.units()) >= numerator / denominator);
+                assert!(u128::from(amount.units()) <= numerator.div_ceil(denominator));
+            }
+        }
+    }
+    milestone.requirements.clear();
+    milestone.coordinator_fee = Money::new(1);
+    assert!(milestone.allocate_budget(&policy).is_err());
+    milestone.coordinator_fee = Money::ZERO;
+    milestone.allocate_budget(&policy)?;
+    assert!(serde_json::from_str::<CompensationPolicy>(r#"{"coordinatorPercent":101}"#).is_err());
+    assert!(serde_json::from_str::<CompensationPolicy>(r#"{"coordinatorPercent":1.5}"#).is_err());
+    Ok(())
+}
+
+#[test]
+fn compact_creation_bridge_is_append_only_and_binds_the_existing_operation()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::{MetadataCommitmentV1, RegisterWorkerCoreRequest};
+    let mut call = sample_call()?;
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([4; 32]),
+    };
+    assert_eq!(call.command.encode()[0], 9, "legacy Project-creation index");
+    let commands = [
+        ProviderCommand::RegisterWorkerCore(RegisterWorkerCoreRequest {
+            content: content.clone(),
+            qualifications: Qualifications {
+                role_ids: vec![],
+                skill_ids: vec![],
+            },
+            calendar: CalendarDefinition {
+                default_weekly_minutes: Minutes::new(600),
+                overrides: vec![],
+            },
+        }),
+        ProviderCommand::CreateProjectCore(content),
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 49 + index);
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+    }
+    assert_eq!(
+        call.command.encoded_size(),
+        49,
+        "Project creation carries no title/description"
+    );
+    call.operation_id = OperationId::from_bytes([9; 16]);
+    assert!(
+        call.signable_bytes().is_err(),
+        "metadata must not reuse another operation's scope"
+    );
+    Ok(())
+}
+
+#[test]
+fn proposal_bridge_preserves_indexes_numeric_validation_and_operation_binding()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::{MetadataCommitmentV1, MilestoneTerms, ProposalTerms};
+    let mut call = sample_call()?;
+    let week = Week::new(2026, 40)?;
+    let terms = ProposalTerms {
+        milestones: vec![MilestoneTerms {
+            key: 1,
+            window: WeekWindow::new(week, week)?,
+            coordinator_fee: Money::ZERO,
+            coordinator_minutes: Minutes::new(0),
+            requirements: vec![],
+        }],
+    };
+    let project_id = EntityId::from_bytes([1; 16]);
+    let proposal_id = EntityId::from_bytes([2; 16]);
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([3; 32]),
+    };
+    let commands = [
+        ProviderCommand::CreateProposalCore {
+            project_id,
+            proposal: terms.clone(),
+            content: content.clone(),
+        },
+        ProviderCommand::UpdateProposalCore {
+            project_id,
+            proposal_id,
+            proposal: terms.clone(),
+            content: content.clone(),
+        },
+        ProviderCommand::RequestProposalChangesCore {
+            project_id,
+            proposal_id,
+            content,
+        },
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 51 + index);
+        assert_eq!(command.project_id(), Some(project_id));
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+        let mut other = call.clone();
+        other.operation_id = OperationId::from_bytes([99; 16]);
+        assert!(other.signable_bytes().is_err());
+    }
+    let mut duplicate = terms;
+    duplicate.milestones.push(duplicate.milestones[0].clone());
+    assert!(duplicate.validate().is_err());
+    assert!(ProposalTerms { milestones: vec![] }.validate().is_err());
+    Ok(())
+}
+
+#[test]
+fn catalog_reason_bridge_preserves_indexes_validation_and_operation_binding()
+-> Result<(), Box<dyn std::error::Error>> {
+    use crate::provider_core::MetadataCommitmentV1;
+    let mut call = sample_call()?;
+    let project_id = EntityId::from_bytes([1; 16]);
+    let content = MetadataCommitmentV1 {
+        operation_id: call.operation_id,
+        hash: PayloadHash::from_bytes([3; 32]),
+    };
+    let commands = [
+        ProviderCommand::UpsertCatalogEntryCore {
+            kind: CatalogKind::Skill,
+            id: 99,
+            content: content.clone(),
+        },
+        ProviderCommand::CreateSkillRequestCore {
+            role_ids: vec![1],
+            content: content.clone(),
+        },
+        ProviderCommand::CancelProjectCore {
+            project_id,
+            content: content.clone(),
+        },
+        ProviderCommand::DisputePlanningCore {
+            project_id,
+            content: content.clone(),
+        },
+    ];
+    for (index, command) in commands.into_iter().enumerate() {
+        assert_eq!(usize::from(command.encode()[0]), 54 + index);
+        assert_eq!(
+            command.project_id(),
+            if index >= 2 { Some(project_id) } else { None }
+        );
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+        let mut other = call.clone();
+        other.operation_id = OperationId::from_bytes([99; 16]);
+        assert!(other.signable_bytes().is_err());
+    }
+    assert!(
+        ProviderCommand::UpsertCatalogEntryCore {
+            kind: CatalogKind::Skill,
+            id: 0,
+            content: content.clone()
+        }
+        .validate()
+        .is_err()
+    );
+    for role_ids in [vec![], vec![0], vec![1, 1]] {
+        assert!(
+            ProviderCommand::CreateSkillRequestCore {
+                role_ids,
+                content: content.clone()
+            }
+            .validate()
+            .is_err()
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn task_identity_commands_preserve_signed_indexes_and_membership_validation()
+-> Result<(), Box<dyn std::error::Error>> {
+    let mut call = sample_call()?;
+    let project_id = EntityId::from_bytes([1; 16]);
+    let task_storage_id = EntityId::from_bytes([2; 16]);
+    for (index, command) in [
+        ProviderCommand::CreateTaskCore {
+            project_id,
+            task_storage_id,
+            assignees: vec![call.origin],
+        },
+        ProviderCommand::SetTaskAssigneesCore {
+            project_id,
+            task_storage_id,
+            task_id: 7,
+            assignees: vec![],
+        },
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        assert_eq!(usize::from(command.encode()[0]), 58 + index);
+        assert_eq!(command.project_id(), Some(project_id));
+        call.command = command;
+        assert_eq!(
+            UnsignedContractCallV1::decode_signable(&call.signable_bytes()?)?,
+            call
+        );
+    }
+    call.command = ProviderCommand::CreateTaskCore {
+        project_id,
+        task_storage_id,
+        assignees: vec![call.origin, call.origin],
+    };
+    assert!(call.signable_bytes().is_err());
+    call.command = ProviderCommand::SetTaskAssigneesCore {
+        project_id,
+        task_storage_id,
+        task_id: 7,
+        assignees: vec![call.origin, call.origin],
+    };
+    assert!(call.signable_bytes().is_err());
+    Ok(())
+}

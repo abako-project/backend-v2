@@ -47,10 +47,10 @@ jobs:
       # Moving tags (X.Y, X, latest) let `podman auto-update` follow a release
       # line. The autoupdate label is inherited by containers created from the
       # image, so a Quadlet unit needs no AutoUpdate= line to opt in.
-      - id: meta-adapter-api
+      - id: meta-api
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.IMAGE_PREFIX }}adapter-api
+          images: ${{ env.IMAGE_PREFIX }}api
           # Prereleases get only their exact version. A 0.x major is not a
           # compatible release line, so the bare major tag starts at v1.
           tags: &semver-tags |
@@ -63,11 +63,11 @@ jobs:
         with:
           context: .
           file: infra/backend.Dockerfile
-          target: adapter-api
+          target: api
           push: true
-          tags: ${{ steps.meta-adapter-api.outputs.tags }}
-          labels: ${{ steps.meta-adapter-api.outputs.labels }}
-          annotations: ${{ steps.meta-adapter-api.outputs.annotations }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          annotations: ${{ steps.meta-api.outputs.annotations }}
 
       - id: meta-wallet
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
@@ -85,18 +85,18 @@ jobs:
           labels: ${{ steps.meta-wallet.outputs.labels }}
           annotations: ${{ steps.meta-wallet.outputs.annotations }}
 
-      - id: meta-mock-provider
+      - id: meta-contract-provider
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.IMAGE_PREFIX }}mock-provider
+          images: ${{ env.IMAGE_PREFIX }}contract-provider
           tags: *semver-tags
           labels: *labels
       - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: infra/backend.Dockerfile
-          target: mock-provider
+          target: contract-provider
           push: true
-          tags: ${{ steps.meta-mock-provider.outputs.tags }}
-          labels: ${{ steps.meta-mock-provider.outputs.labels }}
-          annotations: ${{ steps.meta-mock-provider.outputs.annotations }}
+          tags: ${{ steps.meta-contract-provider.outputs.tags }}
+          labels: ${{ steps.meta-contract-provider.outputs.labels }}
+          annotations: ${{ steps.meta-contract-provider.outputs.annotations }}

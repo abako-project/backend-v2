@@ -6,8 +6,8 @@ implements [SPEC-0009](../../specs/0009-digesta-rename/spec.md).
 
 ## Published images
 
-The next successful version-tag release publishes `digesta-adapter-api`,
-`digesta-wallet` and `digesta-mock-provider` under
+The next successful version-tag release publishes `digesta-api`,
+`digesta-wallet` and `digesta-contract-provider` under
 `ghcr.io/<repository-owner>/`. The workflow lowercases the actual GitHub owner;
 it does not create or rename an organization. The current Git remote belongs
 to `abako-project`, so the current destination is
@@ -39,31 +39,19 @@ environment:
    `digesta_session`; previous cookies are not consumed. Cookie security
    attributes, CSRF enforcement and authorization rules are unchanged.
 
-KVN remains the simulated token unit. No money or pricing rule changes.
+Development uses simulated payment units. No money or pricing rule changes.
 
-## Inventory and retained occurrences
+## Stable identifiers
 
-The original tracked inventory contained 152 occurrences across 51 files. The
-repository was searched case-insensitively, including hidden tracked files.
-The working checkout was also searched for ignored text outside build outputs
-and secret directories. No tracked filenames contain the previous names.
+The signed prefix `KUNVENO-MOCK-V1!` and custody authentication context
+`kunveno:custody:sr25519:format=1:key=1:` intentionally retain their bytes.
+Changing display/component names must not invalidate accepted signatures or
+prevent wallet secrets from decrypting. Historical rename inventory remains in Git.
 
-| Location | Decision |
-|---|---|
-| Frontend titles, descriptions and header; README and current product prose | Rename to Digesta. |
-| OpenAPI and adapter session cookie; contract test and auth test helper | Use `digesta_session` consistently. |
-| Browser runtime config, Nginx alias and frontend image copy path | Use `DIGESTA_API_BASE` and `/etc/digesta/config.js`. |
-| Compose project, images, development database defaults and secret/data variable | Use Digesta defaults for new environments. |
-| Release workflow, release guide and Quadlet examples | Use `digesta-*` packages under the runtime repository owner. |
-| Cargo repository placeholder and temporary test paths | Rename to Digesta; no Cargo package identifiers contained either previous name. |
-| `.gitignore` | Add `/digesta-web/`; retain `/abako-web/` to keep an existing independent checkout ignored. |
-| `crates/generated-contracts/src/lib.rs` | Preserve `KUNVENO-MOCK-V1!`: changing signed protocol bytes invalidates existing calls and receipts. |
-| `services/wallet/src/crypto.rs` | Preserve `kunveno:custody:sr25519:format=1:key=1:`: changing authenticated data prevents existing wallet seeds from decrypting. |
-| `progress/handoffs/` | Preserve literal worktree/log paths, graph names, deployed images and configuration reported by past verification. |
-| SPEC-0001 design and proposal-review deployment evidence | Preserve the actual indexed graph and Compose project names. |
-| Ignored `notes/bloque-ramp-research.md` in the original checkout | Local research references an independent `../abako-web` checkout. It is outside the tracked repository and is not shipped. |
-| Git remote, checkout directory and external resources | Remain at their actual locations; this task does not transfer GitHub ownership or move external checkouts. |
-
-This inventory intentionally names the old identifiers so future searches can
-distinguish compatibility requirements and historical evidence from missed
-product branding.
+Current content/evidence commitment hash prefixes also retain their original
+bytes. The owner confirmed on 2026-10-27 that this branding cleanup preserves
+working repository/registry URLs, deployed hostnames and protocol identifiers.
+Those technical references are not product display names.
+Pinned contract bundles retain their recorded contributor metadata and complete
+verified bytes: editing those labels changes the bundle identity used by saved
+checkpoints. Current contract manifests use Digesta for future builds.

@@ -1,0 +1,328 @@
+# Marketplace happy path
+
+This guide describes the implemented mock-backed flow. Both the external frontend
+and Leptos call the same REST/JSON API. The adapter authenticates users, queues
+operations and asks custody to sign; the mock provider executes the signed
+business command and owns contractual state. The adapter stores descriptive data
+and task text/progress. No browser calls custody or the
+provider directly. The [OpenAPI contract](../contracts/openapi.json) is the
+field-level source of truth and is also served at `GET /api/openapi.json`.
+
+## Conceptual flow
+
+1. A client, potential coordinators and workers register. Workers publish their
+   qualifications and weekly capacity. An administrator promotes eligible
+   coordinators. In a normal mock deployment the client requests a Bramp deposit
+   and an operator confirms it; the fixture-only admin funding route is disabled.
+2. The client requests a project. The provider assigns a coordinator in
+   Coordinator mode. The coordinator prepares a proposal immediately, with no
+   separately priced planning quote or planning escrow.
+3. The proposal defines milestones, each with required skills, committed minutes
+   and a budget for every worker slot. Creating its draft also creates one task
+   storage per milestone. Storages may remain empty when submitting the proposal,
+   accepting planning delivery or approving execution. Task edits do not change the contractual budget
+   or assignment requirements.
+4. The coordinator submits the proposal and delivers the plan. The client accepts
+   that delivery without payment, then approves execution. Approval
+   reserves the full execution budget and worker/coordinator calendar minutes
+   atomically. Every required skill must match; role IDs are recorded but are
+   not an assignment filter. A worker in Coordinator mode cannot fill a worker
+   slot, and vice versa. Eligible workers from earlier milestones are preferred;
+   relevant score ranks candidates within that group. Only the first milestone
+   enters `InProgress`; the others remain `NotStarted`.
+5. Workers report task progress. For each milestone, the coordinator submits a
+   versioned delivery, with optional Documentation and Other Links and no scores.
+   The client accepts that exact submission without scores. Acceptance releases
+   that milestone's escrow and starts the next milestone, or marks the project
+   `Completed` after the last one.
+6. After completion, the client evaluates only the coordinator,
+   the coordinator evaluates the client and workers, and workers evaluate the
+   coordinator. Each participant submits once with integer 1–5 stars through
+   `POST /api/projects/{projectId}/evaluations`. These votes update minute-weighted
+   reputation without any further payment. Worker reputation uses only the coordinator
+   vote. The client and each worker contribute equally to coordinator reputation by
+   default; the admin score policy exposes relative weights for future votes.
+7. The client and coordinator can read balances, project state and notifications.
+   Authenticated SSE streams notifications; replay does not mark them read.
+
+The real-service E2E also repeats steps 3–5 with four milestones and teams of
+5/3/4/2 workers. Each milestone has a distinct task storage. This is the
+approved redesign, not full wire or behavioral parity with the legacy API.
+
+If the client rejects a delivery, the milestone becomes `ChangesRequested`;
+rejection alone does not create a dispute. A written rejection is stored with
+`POST /api/completion-submissions/{submissionId}/comments` (kind Rejection), then
+bound to the provider decision with `POST .../rejection` and its commentId.
+Client and coordinator can save/read private comments for that delivery version;
+old versions remain readable, but new comments require the current version. The client or assigned coordinator
+may then open a public dispute against the *current* rejected submission.
+Opening freezes the entire project, including all task storages and unpaid
+escrow. The parties may append public arguments and use the authorized private case
+conversation described below. The case remains Open: formal resolution, fund
+disposition and timeout are not implemented. This
+alternative path is tested separately from the successful settlement path.
+
+## Technical flow
+
+Use the same API origin for either frontend, for example
+`http://localhost:8088` in the local Compose setup. The adapter uses PostgreSQL
+for credentials, sessions, descriptive profiles, transport operations and
+notifications and task content; the mock owns contractual state, task IDs and
+assignees in SQLite or memory.
+JSON names are camelCase,
+enum values PascalCase, money exact decimal strings, and times Unix seconds.
+Calendar windows use `{"isoYear":2026,"week":40}`; choose a future valid ISO
+week rather than copying that example. IDs are returned by the provider; do not
+invent milestone, storage, submission or dispute IDs.
+
+### Session and operation rules
+
+- `POST /api/auth/register` takes `username`, `password` and `displayName`;
+  `POST /api/auth/login` takes `username` and `password`. Both return a
+  `SessionView` and set an HttpOnly session cookie. Use
+  `GET /api/auth/session` to recover `csrfToken` after a reload.
+- Every authenticated mutation sends the cookie, `X-CSRF-Token`, JSON when
+  there is a body. Queued business and task commands also send an `Idempotency-Key`
+  (a 16-byte `0x` hex operation ID). Retry the *same action* with the same key;
+  never reuse it for a different body.
+- After successful project creation, save its descriptive brief using
+  `PUT /api/projects/{projectId}/brief` with `{expectedRevision:0, brief}`.
+  This adapter-owned write returns 201/200 directly and needs cookie/CSRF,
+  not an operation poll. Recover it through GET (200 null before the first save).
+  If saving fails, retain the project ID and retry only the brief write; never
+  create the project again. Updates use the brief revision, independent of
+  planning/proposal revisions. An exact immediate retry returns the saved result;
+  stale/different content returns 409 `brief_revision_conflict`. See OpenAPI for
+  legacy project types, USD budget preferences and delivery choices.
+- Business mutations return HTTP 202 with `operationId`. Poll
+  `GET /api/operations/{operationId}` until `status` is `Finalized`.
+  Require exactly one `receipt` or `taskResult` and check its `outcome.type`
+  is `"Success"`; 202 or Finalized alone does not mean business success.
+  API-only task edits return `taskResult`; core operations return a receipt.
+  A created entity's ID is
+  `receipt.createdEntityId`. A failed receipt exposes a domain error code.
+  `OutcomeUnknown` needs reconciliation with the same ID, not a new command.
+- Read the current project before each acceptance or approval and send its
+  `planning.revision` or `proposal.revision` as `expectedRevision`.
+  A stale revision fails without paying or reserving anything.
+
+For example, after login:
+
+```javascript
+const api = "http://localhost:8088";
+const session = await fetch(`${api}/api/auth/session`, {
+  credentials: "include",
+}).then(r => r.json());
+
+async function command(method, path, body, expectedTaskStorageId) {
+  const key = `0x${crypto.randomUUID().replaceAll("-", "")}`;
+  const response = await fetch(api + path, {
+    method,
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": session.csrfToken,
+      "Idempotency-Key": key,
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  if (!response.ok) throw await response.json();
+  const reference = await response.json(); // HTTP 202
+  if (reference.operationId !== key) throw new Error("Operation ID mismatch");
+  for (;;) {
+    const status = await fetch(`${api}/api/operations/${reference.operationId}`, {
+      credentials: "include",
+    }).then(r => r.json());
+    if (status.operationId !== reference.operationId) throw new Error("Operation ID mismatch");
+    if (status.status === "Finalized") {
+      const receipt = status.receipt;
+      const task = status.taskResult;
+      if (Boolean(receipt) === Boolean(task)) throw new Error("Unresolved result; retain operation ID");
+      if (receipt && receipt.operationId !== key) throw new Error("Receipt ID mismatch");
+      if (task && task.taskStorageId !== expectedTaskStorageId) throw new Error("Task storage mismatch");
+      const result = receipt ?? task;
+      if (result.outcome.type !== "Success") throw result.outcome;
+      return result;
+    }
+    if (status.status === "Rejected" || status.status === "Expired") throw status;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+}
+```
+
+This small example omits a client-side deadline and network-error handling;
+production clients must bound polling and retain the key across retries. Pass the
+known storage ID as `expectedTaskStorageId` for task writes. Keep cached IDs scoped
+to the provider generation and clear them when that generation changes.
+The credentialed CORS origin must be in `ALLOWED_ORIGINS`. Session cookies are
+`SameSite=Lax`; unrelated cross-site hosting needs a separately approved
+cookie/TLS policy.
+
+### Requests in order
+
+The table shows one milestone. Replace brace-delimited route parameters with IDs
+from receipts or the latest project read. The administrator is the local seeded
+admin, not an ordinary user. All listed business writes use `command` above;
+profile updates return their profile directly. The E2E fixture enables
+`ENABLE_MOCK_FUNDING=true` to use its admin funding row. Without that flag,
+use the three Bramp rows instead.
+
+| Actor | Request | Body / result to use next |
+|---|---|---|
+| Each person | `POST /api/auth/register` | `{"username":"alice","password":"<12+ bytes>","displayName":"Alice"}`; retain the cookie and `accountId`. |
+| Client or worker | `PUT /api/profiles/me` | `{"section":"client","profile":{"name":"Alice","company":null,"department":null,"website":null,"description":null,"location":null,"languages":[]}}` or `section: "worker"` with its worker-profile fields. `GET /api/profiles/me` returns the owner's full profile; `GET /api/profiles/{principalId}` returns only public fields. This adapter-owned edit is not a signed provider operation. |
+| Worker and coordinator candidate | `POST /api/workers` | `{"displayName":"Alice","qualifications":{"roleIds":[3],"skillIds":[1,5,13]},"calendar":{"defaultWeeklyMinutes":600,"overrides":[]}}`. The seeded catalog is at `GET /api/catalog`. |
+| Administrator | `POST /api/admin/coordinators` | `{"account":"<coordinator accountId>"}`. |
+| Promoted coordinator | `PUT /api/workers/me/mode` | `{"mode":"Coordinator"}`. |
+| Client | `POST /api/bramp/deposits` | `{"amount":"10000"}`; receipt yields `depositId` in `createdEntityId`. This creates no spendable balance. |
+| Client or administrator | `GET /api/bramp/deposits/{depositId}` | Read the pending or confirmed request; unrelated accounts cannot read it. |
+| Administrator | `POST /api/admin/bramp/deposits/{depositId}/confirm` | No body. This credits the fixed amount once. No bank or currency conversion is involved. |
+| Administrator, fixture only | `POST /api/admin/fund` | `{"account":"<client accountId>","amount":"10000"}`. Requires `ENABLE_MOCK_FUNDING=true`; disabled in normal Compose. |
+| Client | `POST /api/projects` | `{"title":"Signed Project","description":"Integration flow"}`; receipt yields `projectId`. `GET /api/projects/{projectId}` reveals its assigned `coordinator`. |
+| Coordinator | `POST /api/projects/{projectId}/proposals` | `{"title":"Implementation","description":"One milestone","milestones":[{"key":1,"title":"Ship","window":<future week window>,"coordinatorFee":"100","coordinatorMinutes":60,"requirements":[{"key":1,"roleId":2,"skillIds":[1,5,13],"minutes":120,"budget":"900"}]}]}`. Read the project to obtain `proposalId`, `milestoneId` and `taskStorage.taskStorageId`. |
+| Coordinator | `POST /api/task-storages/{storageId}/tasks` | `{"title":"Implement","description":"Tracked separately","taskType":"Task","priority":"Medium","status":"ToDo","assignees":[],"estimatedMinutes":120,"loggedMinutes":0,"dueAt":null}`. Optional tracking: task creation is not required before submission. |
+| Coordinator | `POST /api/projects/{projectId}/proposals/{proposalId}/submit` | No JSON body. |
+| Client | `POST /api/projects/{projectId}/planning/accept-delivery` | `{"expectedRevision":<current planning.revision>}`; plan acceptance transfers no funds. |
+| Client | `POST /api/projects/{projectId}/proposals/{proposalId}/approve` | `{"expectedRevision":<current proposal.revision>}`; inspect assignments and execution escrow in a fresh project read. |
+| Coordinator | `PUT /api/task-storages/{storageId}/tasks/{taskId}` | Full `TaskDefinition` with an assigned worker in `assignees`. |
+| Assigned worker | `PATCH /api/task-storages/{storageId}/tasks/{taskId}` | `{"status":"Done","loggedMinutes":120}`. Logged time does not alter the reserved contractual minutes. |
+| Coordinator | `POST /api/projects/{projectId}/milestones/{milestoneId}/completion-submissions` | `{"deliverable":{"url":"https://example.test/delivery"}}`. Receipt yields `submissionId`. The older `request-completion` path is an alias. `deliverable:null` allows submission without a supporting URL. No hash is required; the API does not fetch or verify the URL. After finality, the coordinator saves optional `documentation` and `links` via `PUT /api/completion-submissions/{submissionId}/presentation` with `expectedRevision:0`. That write is immutable and safely retryable; it must never resubmit completion. |
+| Client | `POST /api/projects/{projectId}/milestones/{milestoneId}/accept-completion` | `{"submissionId":"<current submissionId>"}`. This settles that milestone only, without recording votes. Evaluations belong to the separate project-completion flow. |
+
+`GET /api/task-storages/{storageId}` and
+`GET /api/task-storages/{storageId}/tasks/{taskId}` combine core task IDs and
+assignees with API-owned text and progress. The older project-nested task write paths remain aliases during frontend
+transition; neither path creates a second storage.
+
+Optional auxiliary flows use the same session and signing pipeline. A worker
+may `POST /api/catalog/skill-requests` with
+`{"name":"New skill","roleIds":[3]}` and read its own requests at
+`GET /api/catalog/skill-requests/me`. The operator reviews
+`GET /api/admin/catalog/skill-requests` and posts `"Approve"` or `"Reject"`
+to `/api/admin/catalog/skill-requests/{requestId}/decision`. Approval adds the
+skill to the global catalog; the worker must separately update qualifications.
+A funded user may `POST /api/bramp/withdrawals` with `{"amount":"100"}`;
+the pending request holds only free payment units and may be cancelled at
+`POST /api/bramp/withdrawals/{withdrawalId}/cancel`. No bank transfer occurs.
+Passkey registration starts at `POST /api/auth/passkeys/register/options`
+with the current password and completes at `/register/verify` with the
+WebAuthn credential. Password login remains available. To sign in with a
+passkey, send `POST /api/auth/passkeys/login/options` with
+`{"username":"alice"}`. Pass the returned `options` to the browser WebAuthn
+API and send its JSON credential with the returned `ceremonyId` to
+`POST /api/auth/passkeys/login/verify`:
+`{"ceremonyId":"…","credential":{…}}`. The response sets the same HttpOnly
+session cookie and returns the same `SessionView` and CSRF token as password
+login. No verified email is needed. Challenges expire after five minutes and
+are single-use; an unknown username and an account without passkeys receive
+the same `401 invalid_credentials` error.
+
+After every business write, poll its operation before issuing a dependent write.
+The client may use `GET /api/projects/{projectId}`; each participant can read
+`GET /api/balance` and `GET /api/workers` for public score summaries.
+For the four-milestone case, put four entries in `milestones` with stable keys
+1–4 and 5/3/4/2 requirements; create tasks under each returned storage ID.
+After approval, expect status sequence `InProgress, NotStarted, NotStarted,
+NotStarted`. Submit and accept each milestone using *its own* milestone and
+submission IDs; check that the next one starts and the final acceptance sets
+`project.completed` to `true`. The executable fixture is
+[`scripts/poc-e2e.py`](../scripts/poc-e2e.py).
+
+### Notifications and rejection branch
+
+`GET /api/notifications?after=0` returns a page. `GET /api/events`
+streams authenticated SSE `notification` events; reconnect using the last
+`notificationId` as `Last-Event-ID` or `after`. Delivery and replay do
+not mark a notification read. Use
+`POST /api/notifications/{notificationId}/read` for that.
+
+Instead of acceptance, the client may call
+`POST /api/completion-submissions/{submissionId}/rejection` with
+`{"evidence":{"url":"https://example.test/reason"}}`.
+Only while that rejection remains current, the client or coordinator may call
+`POST /api/disputes` with `projectId`, `milestoneId`,
+`rejectedSubmissionId` and the same shape of `evidence`. The created
+`disputeId` is in the receipt. Anyone can then call
+`GET /api/disputes/{disputeId}` without login. The other party may call
+`POST /api/disputes/{disputeId}/response` once with an evidence reference.
+No API exists to resolve or unlock the case. See [SPEC-0005](../specs/0005-dispute-opening/spec.md).
+
+## Run the executable flow
+
+```sh
+cargo build -p api -p wallet --all-features --locked
+cargo build --manifest-path services/contract-provider/Cargo.toml --locked
+python3 scripts/poc-e2e.py
+```
+
+The script requires PostgreSQL's `initdb`, `pg_ctl` and `psql` commands. It
+starts a disposable PostgreSQL instance and local services, then runs the single-milestone
+happy path, the four-milestone 5/3/4/2 path, the dispute branch and auxiliary
+profile/Bramp/catalog checks against the contract provider. It also
+scans bounded service logs for generated secret markers. It is a signed backend E2E, not a browser E2E or a
+real-chain test.
+
+### Project creation date
+
+Project reads expose `createdAt` in UTC Unix seconds. The provider records it when
+creation commits; later planning, proposal and milestone changes leave it intact.
+Existing snapshots recover it from durable `ProjectCreated` events. A missing
+historical event yields `null`, never a fabricated date. Clients may sort dated
+projects newest first and leave undated records last.
+
+## Explicit pending decisions — 2026-10-10
+
+- Per-milestone “Specific date” has no independent date/calendar in legacy. Keep the
+  global proposal calendar; the mock stores it independently of operative milestone
+  ISO-week windows. A future per-milestone date needs its own model, persistence and
+  agreed scheduling effect. It must not silently inherit the global date.
+- The client and each worker vote independently about the coordinator, with equal
+  relative weights (1/1) by default. The admin score policy can change weights for
+  future votes. Treating the team's average as one vote is deferred, including its
+  missing-vote and rounding rules. Client-to-worker voting is forbidden.
+
+Documentation and Other Links in the adapter submission presentation are optional free text, limited to 2048 UTF-8 bytes per field, with no protocol restriction. They do not need to be provider evidence URLs. The API does not fetch or execute these references.
+
+## Written dispute arguments and conversation (F1–F3)
+
+POST /api/disputes accepts projectId, milestoneId, rejectedSubmissionId and
+written reason, with a stable Idempotency-Key. Poll the operation before opening
+the created case. GET its presentation/history for names, opening and confirmed
+delivery/rejection history. /arguments supports multiple RESPONSE/ADDITIONAL
+entries; /messages is private: client and coordinator both read/write by default.
+DISPUTE_CHANNEL_ALLOW_PARTICIPANTS=true permits the client, coordinator and assigned
+project workers to read/write that channel; public arguments remain party-only.
+GET messages returns canWrite for the authenticated session. Each POST has an
+entryId; identical retries return the immutable row, changed content conflicts.
+Neither channel supports edit/delete. Formal arguments are public; conversation
+and emails are not. Ordinary text and references such as IPFS/SFTP are accepted.
+The provider freeze and the per-milestone happy-path payments remain unchanged.
+Formal resolution authority and dispute settlement are pending approval.
+
+## Coordinator compensation — 2026-10-14
+
+`GET /api/catalog` exposes `compensationPolicy.coordinatorPercent`, initially 10.
+An administrator may submit `PUT /api/admin/compensation-policy` with
+`{"coordinatorPercent":10}`, a CSRF token and an idempotency key, then await the
+operation result. Provider root authorization is checked independently.
+
+New projects start in Accepted planning with no quote and zero planning escrow.
+The coordinator prepares and submits a proposal directly. Planning delivery acceptance
+moves no money. Execution approval reserves the full execution budget. Each milestone
+settlement pays its stored coordinator share plus workers' shares. The percentage is
+included in that budget: 100 payment units allocates 10 to coordination and 90 to workers.
+Workers split the remainder by planned approved requirement minutes. Largest fractional
+shares receive integer leftovers without losing units. Coordination minutes still control
+capacity and reputation, not the monetary share. A positive budget needs worker hours.
+Global policy edits apply on subsequent draft create/update; submitted/approved prices
+and already completed payments remain unchanged.
+
+## Estimated project delivery date
+
+The proposal retains one global delivery preference/date, separately from its
+ISO-week milestone windows. Submission validates an exact target against the
+Monday of the first milestone's start week plus seven days times the sum of all
+inclusive milestone week counts. Drafts may retain an earlier date while editing;
+relative preferences retain their descriptive behavior. The accepted proposal's
+date is the project target. It does not trigger penalties, state changes or
+payments. Independent milestone dates and extension requests remain future work.

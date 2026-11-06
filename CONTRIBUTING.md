@@ -1,6 +1,6 @@
 # Contributing
 
-Start with the [README](README.md), [current status](docs/project/project-context.md)
+Start with the [README](README.md), [current status](docs/status.md)
 and [verification guide](ci/README.md). Development needs no agent tools.
 
 ## Propose and implement a change
@@ -31,7 +31,7 @@ changes belong in the stated scope of the change.
 
 The adapter, signing wallet and mock provider have separate ownership. Frontends
 consume the public API without depending on backend implementation crates. Read
-[data ownership](docs/architecture/data-ownership.md) and the
+[data ownership](docs/architecture.md) and the
 [accepted architecture decision](docs/architecture/adr/0001-rest-and-independent-frontends.md)
 before changing these boundaries.
 
@@ -50,8 +50,8 @@ an actual requirement.
 
 Explain the change, why it is needed, its compatibility impact and observed
 verification. Link a feature note when one applies. Put commands and results in
-the PR; report checks that failed or could not run. A separate handoff is useful
-when ownership changes or a blocker needs to survive the current task.
+the PR; report checks that failed or could not run. Keep current operational instructions in the relevant guide; record development
+evidence and persistent blockers in the PR instead of adding milestone documents.
 
 Owner approval remains required for destructive data changes, public breaking
 changes, authentication/authorization policy changes, new unsafe/native/crypto
@@ -69,11 +69,3 @@ Write for the person using or reviewing the change. Prefer familiar words, remov
 repetition, state ownership and assumptions precisely, and explain non-obvious
 reasons. Comments should explain invariants and trade-offs. A command listing is
 an instruction, not evidence that the command passed.
-
-## Agent tools
-
-Tools may read [AGENTS.md](AGENTS.md) and this guide. Model selection, reusable
-skills and multi-agent setup belong in personal configuration or external tooling.
-The repository does not generate or synchronize tool adapters. Required GitHub
-Action updates are reviewed directly in the workflows and remain pinned to full
-commit SHAs.
