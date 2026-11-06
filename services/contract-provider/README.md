@@ -84,7 +84,7 @@ To check the bundled artifacts, install cargo-contract v5 and point the rebuild
 command at a contracts checkout. Use a disk-backed `TMPDIR` outside this workspace:
 
 ```sh
-cargo +1.86.0 install --git https://github.com/use-ink/cargo-contract --branch v5.x.x --locked
+cargo +stable install --git https://github.com/use-ink/cargo-contract --branch v5.x.x --locked
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline
 python3 services/contract-provider/rebuild.py /path/to/contracts --offline --test-fixtures
 ```
