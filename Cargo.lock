@@ -463,7 +463,7 @@ dependencies = [
 name = "bloque"
 version = "0.1.0"
 dependencies = [
- "rand 0.10.2",
+ "rand 0.10.3",
  "reqwest",
  "serde",
  "serde_json",
@@ -812,9 +812,9 @@ dependencies = [
 
 [[package]]
 name = "ctutils"
-version = "0.4.2"
+version = "0.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e"
+checksum = "261af4dc7a06ea8a527a8717d8cbba3417530d6ea14e1edb3de6b67806be474f"
 dependencies = [
  "cmov",
 ]
@@ -1946,10 +1946,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
-name = "libsqlite3-sys"
-version = "0.37.0"
+name = "libredox"
+version = "0.1.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1f111c8c41e7c61a49cd34e44c7619462967221a6443b0ec299e0ac30cfb9b1"
+checksum = "61ff90caf6077a803a240f62fdbe88645a890bbca49ef8174c3cb0404362171d"
+dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "libsqlite3-sys"
+version = "0.39.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "14a5f01b87b92705d07b433c06f96cbc764637d81a0bffb5734ce17cf0f9a2b3"
 dependencies = [
  "cc",
  "pkg-config",
@@ -2122,6 +2131,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "objc2-core-foundation"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2a180dd8642fa45cdb7dd721cd4c11b1cadd4929ce112ebd8b9f5803cc79d536"
+dependencies = [
+ "bitflags 2.13.2",
+]
+
+[[package]]
+name = "objc2-system-configuration"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7216bd11cbda54ccabcab84d523dc93b858ec75ecfb3a7d89513fa22464da396"
+dependencies = [
+ "objc2-core-foundation",
 ]
 
 [[package]]
@@ -2500,7 +2527,7 @@ dependencies = [
  "bytes",
  "getrandom 0.4.3",
  "lru-slab",
- "rand 0.10.2",
+ "rand 0.10.3",
  "rand_pcg",
  "ring",
  "rustc-hash",
@@ -2599,9 +2626,9 @@ dependencies = [
 
 [[package]]
 name = "rand"
-version = "0.10.2"
+version = "0.10.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7f5fa3a058cd35567ef9bfa5e75732bee0f9e4c55fa90477bef2dfcdbc4be80"
+checksum = "65c9fb96cbc91e3478eaae79a69fcd3f1ae4ad052e471fe6732fff548984b4af"
 dependencies = [
  "chacha20",
  "getrandom 0.4.3",
@@ -2846,9 +2873,9 @@ dependencies = [
 
 [[package]]
 name = "rustls"
-version = "0.23.45"
+version = "0.23.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d41d731c7d2f962d1ccc364cec258de3c0e93b38c2fb3ba97ac74513048d634"
+checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
 dependencies = [
  "aws-lc-rs",
  "once_cell",
@@ -2909,9 +2936,9 @@ checksum = "f87165f0995f63a9fbeea62b64d10b4d9d8e78ec6d7d51fb2125fda7bb36788f"
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.15"
+version = "0.103.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+checksum = "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
 dependencies = [
  "aws-lc-rs",
  "ring",
@@ -3114,9 +3141,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.151"
+version = "1.0.154"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
+checksum = "e7e9cc8b1b85264074fbcc02a88680c4096b1e47df8f739dceb03bf482f04bd6"
 dependencies = [
  "itoa",
  "memchr",
@@ -3359,8 +3386,7 @@ dependencies = [
 [[package]]
 name = "sqlx"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "378620ccc25c62c89d8be1c819e76a88d59bdcc3304733330788948e619bfd71"
+source = "git+https://github.com/transact-rs/sqlx?rev=10462fa4414c6c7f1ed1d39bb31678e3b726878c#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -3371,8 +3397,7 @@ dependencies = [
 [[package]]
 name = "sqlx-core"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05b44e85bf579a8eeb4ceaa77a3a523baf2bf0e9bac7e40f405d537b5d2d5ccb"
+source = "git+https://github.com/transact-rs/sqlx?rev=10462fa4414c6c7f1ed1d39bb31678e3b726878c#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -3393,7 +3418,7 @@ dependencies = [
  "percent-encoding",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.0",
  "smallvec",
  "thiserror 2.0.20",
  "tokio",
@@ -3405,8 +3430,7 @@ dependencies = [
 [[package]]
 name = "sqlx-macros"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bd2b84f2bc39a5705ef27ec785a11c934a41bbd4a24941e257927cddc26b60bf"
+source = "git+https://github.com/transact-rs/sqlx?rev=10462fa4414c6c7f1ed1d39bb31678e3b726878c#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3418,8 +3442,7 @@ dependencies = [
 [[package]]
 name = "sqlx-macros-core"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb8d96de5fdc85a5c4ec813432b523ec637e80ba98f046555f75f7908ddac7c3"
+source = "git+https://github.com/transact-rs/sqlx?rev=10462fa4414c6c7f1ed1d39bb31678e3b726878c#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
 dependencies = [
  "cfg-if",
  "dotenvy",
@@ -3430,7 +3453,7 @@ dependencies = [
  "quote",
  "serde",
  "serde_json",
- "sha2 0.10.9",
+ "sha2 0.11.0",
  "sqlx-core",
  "sqlx-postgres",
  "sqlx-sqlite",
@@ -3442,8 +3465,7 @@ dependencies = [
 [[package]]
 name = "sqlx-postgres"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87a2bdd6e83f6b3ea525ca9fee568030508b58355a43d0b2c1674d5f79dcd65e"
+source = "git+https://github.com/transact-rs/sqlx?rev=10462fa4414c6c7f1ed1d39bb31678e3b726878c#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
 dependencies = [
  "atoi",
  "base64 0.22.1",
@@ -3462,7 +3484,7 @@ dependencies = [
  "log",
  "md-5",
  "memchr",
- "rand 0.10.2",
+ "rand 0.10.3",
  "serde",
  "serde_json",
  "sha2 0.11.0",
@@ -3477,8 +3499,7 @@ dependencies = [
 [[package]]
 name = "sqlx-sqlite"
 version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "488e99c397a62007e4229aec669a179816339afc6d2620ca6fa420dbee2e982c"
+source = "git+https://github.com/transact-rs/sqlx?rev=10462fa4414c6c7f1ed1d39bb31678e3b726878c#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
 dependencies = [
  "atoi",
  "flume",
@@ -3529,9 +3550,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "subxt-signer"
-version = "0.50.3"
+version = "0.51.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "674031b5bed3c7157a64f44133c38b45fb6bf2cd5cc6b2d6cfd839ea13a82ee2"
+checksum = "67c7007c17150d134b8ad5eacb0f780c237ed407a2162f1fa73cd6d2e802df94"
 dependencies = [
  "base64 0.22.1",
  "bip39",
@@ -3761,9 +3782,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tokio"
-version = "1.53.3"
+version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "bytes",
  "libc",
@@ -4368,9 +4389,9 @@ dependencies = [
 
 [[package]]
 name = "webpki-root-certs"
-version = "1.0.6"
+version = "1.0.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "804f18a4ac2676ffb4e8b5b5fa9ae38af06df08162314f96a68d2a363e21a8ca"
+checksum = "293198dcebfb821155b5092ab94b5a82ff180eddd7241df3bd6e66a4ffd1a585"
 dependencies = [
  "rustls-pki-types",
 ]
@@ -4380,6 +4401,12 @@ name = "whoami"
 version = "2.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "998767ef88740d1f5b0682a9c53c24431453923962269c2db68ee43788c5a40d"
+dependencies = [
+ "libc",
+ "libredox",
+ "objc2-system-configuration",
+ "web-sys",
+]
 
 [[package]]
 name = "winapi-util"
