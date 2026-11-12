@@ -18,10 +18,10 @@ repository = "https://github.com/abako-project/backend-v2"
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 protocol = { version = "0.1.0", path = "crates/protocol" }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
-tokio = { version = "1.53.3", features = ["macros", "rt-multi-thread", "net", "sync", "time", "signal"] }
-sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio"] }
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "sync", "time", "signal"] }
+sqlx = { version = "=0.9.0", git = "https://github.com/transact-rs/sqlx", rev = "10462fa4414c6c7f1ed1d39bb31678e3b726878c", default-features = false, features = ["runtime-tokio"] }
 serde = { version = "1.0.229", features = ["derive"] }
-serde_json = "1.0.151"
+serde_json = "1.0.154"
 url = "2.5.8"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", default-features = false, features = ["fmt"] }
@@ -30,8 +30,8 @@ reqwest = { version = "0.13.4", default-features = false, features = ["json", "q
 tokio-stream = { version = "0.1.18", features = ["sync", "time"] }
 uuid = { version = "1.24.1", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4.3"
-rand = "0.10.2"
-subxt-signer = { version = "0.50.1", default-features = false, features = ["sr25519", "std"] }
+rand = "0.10.3"
+subxt-signer = { version = "0.51.1", default-features = false, features = ["sr25519", "std"] }
 parity-scale-codec = { version = "3.7.5", features = ["derive"] }
 chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc", "zeroize"] }
 zeroize = { version = "1.9.0", features = ["derive"] }

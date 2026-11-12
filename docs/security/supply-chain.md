@@ -9,27 +9,26 @@ cargo audit
 
 ## Current dependency findings
 
-On 2026-10-21, `cargo deny check` against the unchanged lockfile failed advisories
-and license policy; bans and sources passed. The current result supersedes older
-reports limited to license exclusions and two maintenance warnings.
+The November 12, 2026 refresh updates the affected TLS/certificate packages,
+`ctutils` and bundled SQLite. The application graph no longer reports the eight
+vulnerability advisories found before the update. No advisory ignore was added.
 
-| Locked package | Vulnerability advisories reported |
-|---|---|
-| `rustls 0.23.45` | [RUSTSEC-2026-0346](https://rustsec.org/advisories/RUSTSEC-2026-0346.html), [0347](https://rustsec.org/advisories/RUSTSEC-2026-0347.html), [0348](https://rustsec.org/advisories/RUSTSEC-2026-0348.html), [0349](https://rustsec.org/advisories/RUSTSEC-2026-0349.html) |
-| `rustls-webpki 0.103.15` | [RUSTSEC-2026-0382](https://rustsec.org/advisories/RUSTSEC-2026-0382.html) |
-| `webpki-root-certs 1.0.6` | [RUSTSEC-2026-0383](https://rustsec.org/advisories/RUSTSEC-2026-0383.html) |
+SQLx is pinned to upstream revision `10462fa` until a release supports patched
+`libsqlite3-sys 0.39.1`. Both workspaces use the same revision. This includes other
+unreleased SQLx fixes, so verification covers PostgreSQL transactions as well as
+wallet/provider SQLite persistence. The Git source allowance is limited to SQLx
+and requires a revision; the provider policy also pins its entire lockfile.
 
-These are dependency-graph findings, not proof that every affected feature or
-exploit path is active in this application. Applicability and upgrades need a
-separate security change. The cleanup does not alter dependencies or suppress
-findings. The earlier deferral of named maintenance warnings does not accept
-these vulnerability advisories.
+The root policy still rejects the existing CC0-1.0 and Boost BSL-1.0 licenses in
+`base16`, `bip39`, `bitcoin_hashes`, `hex-conservative` and `xxhash-rust`. It also
+rejects the unmaintained `paste` and `proc-macro-error2` packages. These were not
+silenced by the update. The separate provider policy retains its previously
+approved exceptions and December 1 expiry; see its [scope](../../services/contract-provider/policy/README.md).
 
-The check also reports unmaintained `paste` and `proc-macro-error2` and rejected
-CC0-1.0/Boost BSL-1.0 license expressions under the checked-in policy. `cargo audit`
-was unavailable in this environment, so no fresh passing audit result is claimed.
-Application checks and dependency-policy checks are separate; see
-[verification](../../ci/README.md).
+Dependabot watches both Cargo workspaces. Provider updates need review of the
+exact-lock policy before they can pass CI. Application checks and dependency-policy
+checks remain separate; see [verification](../../ci/README.md). A passing
+`cargo-deny` advisory check is not a claim that every dependency is safe.
 
 Docker frontend builds use wasm-bindgen-cli directly; the earlier Trunk build-tool graph was removed. Application-lock auditing does not by itself audit separately installed build tools or container packages.
 

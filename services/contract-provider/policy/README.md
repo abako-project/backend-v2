@@ -5,9 +5,14 @@ The owner approved the four maintenance advisories and thirteen exact package
 license exceptions below. The scoped crypto-bigint exception below was additionally approved on 2026-10-28.
 The owner refreshed six package entries and the lock identity for SDK stable2609 on
 2026-11-05. Advisory exceptions, development-only scope and expiry are unchanged.
+On 2026-11-12 the owner requested the security and Dependabot updates. The refreshed
+lock uses patched SQLite through a pinned upstream SQLx revision, plus compatible
+Tokio/Rand updates. The SQLx source allowance requires a revision; no advisory or
+license exception was added. The December 1 expiry remains unchanged.
 Approval does not cover further exceptions, authority
-promotion, release publication or deployment. The application root policy is
-unchanged; SDK policy has its own explicit verification command.
+promotion, release publication or deployment. The application root advisory and
+license policy is unchanged; both source policies allow the pinned SQLx revision.
+SDK policy has its own explicit verification command.
 
 The SDK configuration keeps the root allowlist, source restrictions,
 yanked-package check and bans. It adds only the entries below. It is limited to
@@ -81,6 +86,16 @@ The scanner found no additional advisory exceptions. The cryptographic exposure
 review below was repeated against the new versions. `check.py` pins the reviewed
 lock; the 2026-12-01 expiry and development-only restrictions remain unchanged.
 Runtime checkpoints include this lock identity and require fresh development state.
+
+The November 12 refresh replaces vulnerable `libsqlite3-sys 0.37.0` with `0.39.1`
+(SQLite 3.54.1), addressing RUSTSEC-2026-0459 without an exception. Published SQLx
+0.9.0 excludes that version, so both workspaces pin upstream
+`10462fa4414c6c7f1ed1d39bb31678e3b726878c`, which includes the merged bound fix and
+other unreleased database fixes. Return to a registry release once it supports
+patched SQLite. The SDK also gains SQLx's SHA-2 0.11 dependency family; licenses
+remain within policy and the existing contract cryptography is unchanged.
+SQLite's native C implementation and upstream SQLx database handling remain part
+of the reviewed trust boundary. No arbitrary database/WAL import is introduced.
 
 The graph includes the existing SDK's unsafe/native/cryptographic transitives,
 SQLite and the shared execution/HTTP components. It accepts only pinned artifacts;
