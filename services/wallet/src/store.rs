@@ -1,5 +1,5 @@
 use crate::crypto::{self, EncryptedSeed, Secret};
-use generated_contracts::{
+use protocol::{
     AccountId32, CreateSigningJobRequest, OperationId, PAYLOAD_VERSION, PayloadHash, PrincipalId,
     SigningJobStatus, SigningJobView, Sr25519Signature, UnsignedContractCallV1, WalletId,
     WalletLifecycle, WalletView,
@@ -640,7 +640,7 @@ fn read_request(row: &SqliteRow) -> Result<CreateSigningJobRequest, Error> {
                 .try_into()
                 .map_err(|_| Error::Configuration)?,
         ),
-        expires_at: generated_contracts::UnixSeconds::new(
+        expires_at: protocol::UnixSeconds::new(
             u64::try_from(row.try_get::<i64, _>("expires_at")?)
                 .map_err(|_| Error::Configuration)?,
         ),

@@ -46,7 +46,7 @@ implemented without an approved recovery design.
 
 ## Internal HTTP
 
-The four custody routes in `crates/generated-contracts/API.md` require bearer
+The four custody routes in `crates/protocol/API.md` require bearer
 authentication. Job creation returns `202`, including exact idempotent retries.
 Different bytes or metadata with the same operation ID return `409`. Invalid or
 expired new payloads return `400`; queue admission failure returns `429`.

@@ -120,7 +120,7 @@ The replacement request is `{expectedRevision, brief}`. The brief contains:
   permitted; no new business requirement is imposed on legacy drafts.
 - `indicativeBudget`: `{currency:"USD", range}`, where range is Below10000,
   From10000To50000, From50000To100000 or Above100000. These preserve the legacy
-  dollar ranges. This is a descriptive preference, never converted to operational KVN.
+  dollar ranges. This is a descriptive preference, never converted to operational payment units.
 - `delivery`: `{preference}` with WithinOneMonth, OneToThreeMonths or
   ThreeToSixMonths, or `{preference:"SpecificDate", date:"YYYY-MM-DD"}`. The
   date must be a real Gregorian date, year 0001–9999. It is not a contracted window.

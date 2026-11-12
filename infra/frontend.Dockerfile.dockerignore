@@ -6,8 +6,8 @@
 !services/
 !services/**
 !apps/
-!apps/leptos-web/
-!apps/leptos-web/**
+!apps/example-web/
+!apps/example-web/**
 !infra/
 !infra/nginx/
 !infra/nginx/frontend.conf

@@ -19,8 +19,8 @@ bash scripts/verify.sh app
   directory is needed.
 
 Application verification runs formatting, workspace check, strict Clippy,
-workspace tests, doctests, the mock's isolated memory/SQLite feature combinations,
-workspace build, frontend WASM check and the real-service E2E in both mock modes.
+workspace tests, doctests, workspace build, frontend WASM check, the contract
+provider functional gate and real-service E2E against SQLite persistence.
 It uses Cargo's built-in test runner; Nextest is not a prerequisite.
 
 `scripts/test_postgres.py` starts disposable PostgreSQL for workspace tests and
@@ -33,12 +33,30 @@ is respected when selecting the E2E binaries.
 To run only backend E2E after building:
 
 ```sh
-cargo build -p adapter-api -p wallet -p mock-provider --all-features --locked
-python3 scripts/poc-e2e.py
+cargo build -p api -p wallet --all-features --locked
+cargo build --manifest-path services/contract-provider/Cargo.toml --locked
+python3 scripts/poc-e2e.py --provider-binary services/contract-provider/target/debug/contract-provider
 ```
 
 These are API checks. Browser behavior and the external frontend require a
 separate walkthrough.
+
+## Embedded contract provider
+
+The SDK is a separate workspace. Its functional gate and dependency-policy gate
+are explicit:
+
+```sh
+bash scripts/verify.sh contract-provider
+bash scripts/verify.sh contract-provider-dependencies
+```
+
+The first checks formatting, all targets/features, strict Clippy, tests, doctests
+and build. The second enforces the exact-lock/expiring policy, including the
+owner-approved development exception recorded in the policy guide. See the [runtime guide](../services/contract-provider/README.md)
+for artifact reproduction and real-service tests. Performance acceptance needs
+a controlled idle host; functional tests do not establish latency acceptance. Keep build output and temporary databases on disk if
+`/tmp` is RAM-backed. Record current results in the PR.
 
 ## Container and gateway checks
 
@@ -86,10 +104,25 @@ credentials are not persisted, and verification has read-only repository access.
 
 Version tags still require the tagged commit to belong to `master`. Only after
 shared verification succeeds does Release publish the three backend images.
-Image names and tag conventions are unchanged; see [release policy](../docs/operations/release.md).
+The provider image is now `digesta-contract-provider`; see [release policy](../docs/operations/release.md).
 The container/gateway and dependency-policy commands are explicit separate checks,
 not silently included in the PR application gate.
 
 Record the tested commit, commands, results and limitations when reporting
 verification. Signed images, SBOMs and production promotion are not established
 by these workflows.
+
+SDK integration has a separate owner-approved, exact-lock dependency check:
+
+```sh
+bash scripts/verify.sh contract-provider-dependencies
+```
+
+The SDK policy expires on 2026-12-01 and accepts only its recorded package/version
+licenses and advisory IDs. A changed SDK lock requires a new review. The root
+application policy and its existing findings remain unchanged.
+
+The application workflow checks both workspaces and the exact-lock SDK policy.
+It installs the reviewed cargo-deny 0.20.2 with locked tool dependencies. The same
+workflow gates image publication; a changed lock, expired review or unaccepted
+finding blocks release.

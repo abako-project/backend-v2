@@ -20,13 +20,6 @@ at `https://web.dev.abako.xyz/api`. Keep the existing applications and data
 running. This is a development preview; real assets and production custody are
 outside this task.
 
-The root agent is the sole integrator/writer on
-`agent/integrator/DEPLOY-001-backend-preview`, worktree
-`/tmp/digesta-backend-deploy`, based on `28c9afa`. Allowed repository paths:
-this specification directory, `infra/preview/`, `docs/operations/cloud.md`,
-`docs/operations/digesta-backend-preview.md`, and
-`progress/handoffs/DEPLOY-001.md`. Existing application files are read-only.
-
 Allowed server changes: a dedicated non-login Digesta service account; new
 configuration under `/opt/digesta/preview`; isolated state/secrets/backups under
 `/srv/digesta/preview`; this Compose project's containers, networks and volume;

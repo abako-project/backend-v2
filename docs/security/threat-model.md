@@ -1,6 +1,6 @@
 # System Threat Model
 
-The authoritative custody threat register is [SPEC-0001's threat model](../../specs/0001-custodial-wallet-signing/threat-model.md). This page summarizes the current system boundary.
+The authoritative custody threat register is [SPEC-0001's threat model](https://github.com/abako-project/backend-v2/blob/1964a56d88bc31f652af7151841023c6aa53e896/specs/0001-custodial-wallet-signing/threat-model.md). This page summarizes the current system boundary.
 
 Assets are wallet signing authority, encrypted seeds and master keys, login/session credentials, business state, simulated escrow, operation receipts and notification privacy.
 

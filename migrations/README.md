@@ -1,10 +1,11 @@
-# Database migrations
+# Database schemas
 
-Current SQLite migrations belong to `services/adapter-api/migrations` and
-`services/wallet/migrations` and run at startup. The mock owns its SQLite aggregate
-schema in `services/mock-provider`; it also supports memory.
+The API owns PostgreSQL tables initialized by `services/api/schema.sql`.
+The wallet owns SQLite migrations in `services/wallet/migrations`.
+The contract provider owns its SQLite checkpoint schema; runtime state and the
+operation shell commit together. There are no cross-service foreign keys.
 
-There is no shared PostgreSQL schema or cross-service foreign key. Compose keeps
-three separate database mounts under `DIGESTA_LOCAL_DIR/data`.
-Reset the disposable adapter, custody and mock environment coherently. Production
-backfills, live migrations and disaster recovery are not implemented.
+Fresh development installations initialize matching API, wallet and provider
+state. Existing incompatible stores fail startup; no historical converter or
+silent reset is provided. Backups must preserve all three stores and their secrets;
+see [recovery](../docs/operations/disaster-recovery.md).

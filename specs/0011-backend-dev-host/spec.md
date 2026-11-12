@@ -19,13 +19,6 @@ route from `web.dev.abako.xyz`; preserve its frontend and existing exact RPC
 location, including the cookie-exclusion protection. Preserve unrelated routes
 and legacy containers. Reuse the existing certificate; no DNS change is needed.
 
-Root agent is sole integrator/writer. Branch:
-`agent/integrator/DEPLOY-002-dev-host`; worktree `/tmp/digesta-dev-host`;
-base `9198f7e`. Allowed repository paths: this specification directory,
-`infra/preview/`, `docs/operations/cloud.md`,
-`docs/operations/digesta-backend-preview.md`, and
-`progress/handoffs/DEPLOY-002.md`. No application, contract or dependency changes.
-
 Allowed server changes: deployment scripts/settings under `/opt/digesta/preview`,
 private configuration backups under `/srv/digesta/preview/backups`, the two
 selected Nginx sites and a recreation of only the adapter container. No data,

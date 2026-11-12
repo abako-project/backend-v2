@@ -6,7 +6,7 @@ Feature: Public platform profile
     When an anonymous visitor requests GET /api/platform
     Then the response is 200 application/json
     And its object has the agreed platform profile shape
-    And its name is Abako
+    And its name is Digesta
     And no signing or provider execution is performed
 
   Scenario: Configure another domain

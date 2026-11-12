@@ -4,11 +4,11 @@ Use the [Compose startup guide](../../infra/README.md#start) from the repository
 root. It covers prerequisites, generated secrets, administrator login, data
 persistence and the independent frontend. No agent setup is required.
 
-The stack includes Nginx, a frontend, adapter-api, PostgreSQL, wallet and
-mock-provider. The gateway listens on localhost:8088. The adapter stores its data
-in PostgreSQL; custody and the default mock use separate SQLite stores. Migrations
-run at startup, and the mock initializes missing catalog entries. Keep the same
-secret/data set when restarting. See [data ownership](../architecture/data-ownership.md).
+The stack includes Nginx, a frontend, api, PostgreSQL, wallet and
+contract-provider. The gateway listens on localhost:8088. The adapter stores its data
+in PostgreSQL; wallet and contract provider use separate SQLite stores. Fresh provider state
+initializes the contracts and minimal catalog through their constructors. Keep the same
+secret/data set when restarting. See [data ownership](../architecture.md).
 
 ```sh
 docker compose -f infra/compose.yaml ps
@@ -32,7 +32,7 @@ PostgreSQL and real services; it does not run a browser.
 
 
 These disposable accounts are for the local mock backend only. Each starts with
-1000 simulated KVN. Workers have 40 hours/week, all seeded skills and all
+1000 simulated payment units. Workers have 40 hours/week, all seeded skills and all
 non-coordinator roles so the complete development flow can be exercised.
 Coordinators additionally have server-granted eligibility and Coordinator mode.
 
@@ -63,7 +63,7 @@ python3 scripts/seed-dev-users.py --base-url http://localhost:8088 \
 ```
 
 The script reuses existing actors, verifies their profiles and coordinator modes,
-and tops up balances below 1000 KVN through simulated Bramp deposits. It never
+and tops up balances below 1000 payment units through simulated Bramp deposits. It never
 resets the databases. Development passwords above are not production credentials.
 
 The API seed also saves private contact email for clients/workers and descriptive experience for each worker role in adapter/PostgreSQL. Experience does not change provider matching. Keep `DIGESTA_LOCAL_DIR` in persistent storage outside `/tmp`. Existing environments must retain their actual secrets directory and database settings; see [rename migration notes](../project/digesta-rename.md).

@@ -2,7 +2,7 @@ use chacha20poly1305::{
     XChaCha20Poly1305, XNonce,
     aead::{Aead, KeyInit, Payload},
 };
-use generated_contracts::{AccountId32, PrincipalId, Sr25519Signature, WalletId};
+use protocol::{AccountId32, PrincipalId, Sr25519Signature, WalletId};
 use std::{
     fmt::Write as _,
     fs::{self, OpenOptions},

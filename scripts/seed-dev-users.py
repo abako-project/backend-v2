@@ -2,7 +2,7 @@
 """Create the disposable development actors through the current public API.
 
 Run after starting the backend. Existing actors are checked and reused; balances
-below 1000 KVN are topped up through simulated Bramp/operator confirmation.
+below 1000 payment units are topped up through simulated Bramp/operator confirmation.
 """
 import argparse
 import importlib.util
@@ -68,7 +68,7 @@ def seed(base, admin_password):
     poc.require(len(set(accounts)) == 16 and len(fixtures) == 13, "wrong fixture actor count")
     poc.require(sum(worker["mode"] == "Coordinator" and worker["coordinatorEligible"] for worker in fixtures) == 3,
                 "wrong coordinator count")
-    print("Verified: 10 workers, 3 coordinators, 3 clients; at least 1000 mock KVN each.")
+    print("Verified: 10 workers, 3 coordinators, 3 clients; at least 1000 mock payment units each.")
 
 
 if __name__ == "__main__":

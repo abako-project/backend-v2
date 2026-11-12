@@ -3,7 +3,7 @@ use crate::{
     store::{self, Error, Store},
     web,
 };
-use generated_contracts::*;
+use protocol::*;
 use sha2::{Digest, Sha256};
 use sqlx::Row;
 use std::{fs, future::IntoFuture, os::unix::fs::PermissionsExt, path::PathBuf, sync::Arc};
