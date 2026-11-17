@@ -1442,9 +1442,9 @@ dependencies = [
 
 [[package]]
 name = "frame-support"
-version = "49.0.1"
+version = "49.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "065f3ecd5539f09024dff351d7d5b0c4fcfb9f82ad037a27cd4a2a67d8e6d45a"
+checksum = "b426aab7482c8348c90ae58c9e354d4c0c91a25e0f2e020478528fcb36f4bb88"
 dependencies = [
  "aquamarine",
  "array-bytes",
@@ -2745,9 +2745,9 @@ dependencies = [
 
 [[package]]
 name = "pallet-assets"
-version = "54.0.1"
+version = "54.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "398d7fd9aaf0d3f11a1f2c6d754d3bd9d95f5bee32f17db8c1c114a972c9ca8f"
+checksum = "bb14d236c44f68f4747a02388fce42f39bc73889d26bff8df1db93bc03699e2f"
 dependencies = [
  "frame-benchmarking",
  "frame-support",
@@ -4281,7 +4281,7 @@ dependencies = [
 [[package]]
 name = "sqlx"
 version = "0.9.0"
-source = "git+https://github.com/transact-rs/sqlx?branch=main#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
+source = "git+https://github.com/transact-rs/sqlx?branch=main#488c4113282265d8195bc75db72260f0e32a868c"
 dependencies = [
  "sqlx-core",
  "sqlx-macros",
@@ -4291,7 +4291,7 @@ dependencies = [
 [[package]]
 name = "sqlx-core"
 version = "0.9.0"
-source = "git+https://github.com/transact-rs/sqlx?branch=main#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
+source = "git+https://github.com/transact-rs/sqlx?branch=main#488c4113282265d8195bc75db72260f0e32a868c"
 dependencies = [
  "base64 0.22.1",
  "bytes",
@@ -4323,7 +4323,7 @@ dependencies = [
 [[package]]
 name = "sqlx-macros"
 version = "0.9.0"
-source = "git+https://github.com/transact-rs/sqlx?branch=main#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
+source = "git+https://github.com/transact-rs/sqlx?branch=main#488c4113282265d8195bc75db72260f0e32a868c"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4335,7 +4335,7 @@ dependencies = [
 [[package]]
 name = "sqlx-macros-core"
 version = "0.9.0"
-source = "git+https://github.com/transact-rs/sqlx?branch=main#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
+source = "git+https://github.com/transact-rs/sqlx?branch=main#488c4113282265d8195bc75db72260f0e32a868c"
 dependencies = [
  "cfg-if",
  "dotenvy",
@@ -4357,7 +4357,7 @@ dependencies = [
 [[package]]
 name = "sqlx-sqlite"
 version = "0.9.0"
-source = "git+https://github.com/transact-rs/sqlx?branch=main#10462fa4414c6c7f1ed1d39bb31678e3b726878c"
+source = "git+https://github.com/transact-rs/sqlx?branch=main#488c4113282265d8195bc75db72260f0e32a868c"
 dependencies = [
  "atoi",
  "flume",
