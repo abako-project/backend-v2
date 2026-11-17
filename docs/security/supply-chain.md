@@ -13,11 +13,11 @@ The November 12, 2026 refresh updates the affected TLS/certificate packages,
 `ctutils` and bundled SQLite. The application graph no longer reports the eight
 vulnerability advisories found before the update. No advisory ignore was added.
 
-SQLx is pinned to upstream revision `10462fa` until a release supports patched
-`libsqlite3-sys 0.39.1`. Both workspaces use the same revision. This includes other
+SQLx tracks upstream `main` until a release supports patched
+`libsqlite3-sys 0.39.1`. Both lockfiles retain the tested commit. This includes other
 unreleased SQLx fixes, so verification covers PostgreSQL transactions as well as
 wallet/provider SQLite persistence. The Git source allowance is limited to SQLx
-and requires a revision; the provider policy also pins its entire lockfile.
+and requires an explicit branch or stronger pin; the provider policy also pins its entire lockfile.
 
 The root policy still rejects the existing CC0-1.0 and Boost BSL-1.0 licenses in
 `base16`, `bip39`, `bitcoin_hashes`, `hex-conservative` and `xxhash-rust`. It also

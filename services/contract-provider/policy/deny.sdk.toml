@@ -88,4 +88,4 @@ wildcards = "deny"
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-git = ["https://github.com/transact-rs/sqlx"]
-required-git-spec = "rev"
+required-git-spec = "branch"
