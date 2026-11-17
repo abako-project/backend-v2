@@ -2,10 +2,10 @@
 //! Constructors and both JSON and SCALE decoding preserve quantity invariants.
 #![allow(clippy::missing_errors_doc)]
 
-use chrono::{Datelike, NaiveDate, Weekday};
 use parity_scale_codec::{Decode, Encode, Input};
 use serde::{Deserialize, Serialize};
 use std::{fmt, str::FromStr};
+use time::{Date, Duration, Weekday, format_description::well_known::Iso8601};
 
 /// Invalid wire value or checked arithmetic failure.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
@@ -29,7 +29,7 @@ pub enum ValidationError {
 
 /// Validate a canonical Gregorian date without a timezone or time of day.
 pub fn validate_calendar_date(value: &str) -> Result<(), ValidationError> {
-    let date = NaiveDate::parse_from_str(value, "%Y-%m-%d")
+    let date = Date::parse(value, &Iso8601::DEFAULT)
         .map_err(|_| ValidationError::OutOfRange("calendar date"))?;
     if value.len() != 10 || !(1..=9999).contains(&date.year()) || date.to_string() != value {
         return Err(ValidationError::OutOfRange("calendar date"));
@@ -365,9 +365,18 @@ struct WeekWire {
 impl Week {
     /// Validate the ISO calendar week, including week 53.
     pub fn new(iso_year: i32, week: u8) -> Result<Self, ValidationError> {
-        NaiveDate::from_isoywd_opt(iso_year, u32::from(week), Weekday::Mon)
-            .ok_or(ValidationError::OutOfRange("ISO week"))?;
+        Self::monday(iso_year, week)?;
         Ok(Self { iso_year, week })
+    }
+
+    fn monday(iso_year: i32, week: u8) -> Result<Date, ValidationError> {
+        let day = Date::from_iso_week_date(iso_year, week, Weekday::Monday)
+            .map_err(|_| ValidationError::OutOfRange("ISO week"))?;
+        // Preserve the wire range previously enforced by chrono's NaiveDate.
+        if !(-262_143..=262_142).contains(&day.year()) {
+            return Err(ValidationError::OutOfRange("ISO week"));
+        }
+        Ok(day)
     }
     /// ISO week-year, which may differ from a date's calendar year.
     #[must_use]
@@ -381,14 +390,11 @@ impl Week {
     }
     /// The next ISO week, including year boundaries.
     pub fn next(self) -> Result<Self, ValidationError> {
-        let day = NaiveDate::from_isoywd_opt(self.iso_year, u32::from(self.week), Weekday::Mon)
-            .and_then(|d| d.checked_add_signed(chrono::Duration::weeks(1)))
+        let day = Self::monday(self.iso_year, self.week)?
+            .checked_add(Duration::weeks(1))
             .ok_or(ValidationError::OutOfRange("ISO week"))?;
-        let iso = day.iso_week();
-        Self::new(
-            iso.year(),
-            u8::try_from(iso.week()).map_err(|_| ValidationError::Arithmetic)?,
-        )
+        let (year, week, _) = day.to_iso_week_date();
+        Self::new(year, week)
     }
 }
 impl TryFrom<WeekWire> for Week {

@@ -12,6 +12,8 @@ cargo audit
 The November 12, 2026 refresh updates the affected TLS/certificate packages,
 `ctutils` and bundled SQLite. The application graph no longer reports the eight
 vulnerability advisories found before the update. No advisory ignore was added.
+The November 17 follow-up replaces protocol's unmaintained `chrono` dependency
+with the existing `time` dependency, preserving date and ISO-week validation.
 
 SQLx tracks upstream `main` until a release supports patched
 `libsqlite3-sys 0.39.1`. Both lockfiles retain the tested commit. This includes other

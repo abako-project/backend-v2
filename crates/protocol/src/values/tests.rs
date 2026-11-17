@@ -47,5 +47,34 @@ fn iso_weeks_and_windows_cannot_be_forged() -> Result<(), Box<dyn std::error::Er
     let end = Week::new(2026, 19)?;
     assert!(WeekWindow::new(start, end).is_err());
     assert!(WeekWindow::decode(&mut &(start, end).encode()[..]).is_err());
+    assert!(Week::new(-262_143, 1).is_err());
+    assert!(Week::new(-262_143, 2).is_ok());
+    let last = Week::new(262_143, 1)?;
+    assert_eq!(Week::new(262_142, 52)?.next()?, last);
+    assert!(last.next().is_err());
+    assert_eq!(Week::decode(&mut &last.encode()[..])?, last);
     Ok(())
+}
+
+#[test]
+fn calendar_dates_keep_the_canonical_wire_format() {
+    for valid in ["0001-01-01", "2000-02-29", "2028-02-29", "9999-12-31"] {
+        assert!(validate_calendar_date(valid).is_ok(), "{valid}");
+    }
+    for invalid in [
+        "0000-01-01",
+        "1900-02-29",
+        "2026-04-31",
+        "2026-1-01",
+        "20260101",
+        "2026-W01-1",
+        "2026-001",
+        "2026-01-01T00:00:00Z",
+        " 2026-01-01",
+        "2026-01-01 ",
+        "+2026-01-01",
+        "２０２６-01-01",
+    ] {
+        assert!(validate_calendar_date(invalid).is_err(), "{invalid}");
+    }
 }

@@ -9,6 +9,9 @@ On 2026-11-12 the owner requested the security and Dependabot updates. The refre
 lock uses patched SQLite through upstream SQLx, plus compatible Tokio/Rand updates.
 On November 17 the owner approved tracking SQLx's `main` branch, retaining the
 tested commit in both lockfiles. No advisory or license exception was added.
+The follow-up removes `chrono` from the active graph by reusing `time` for protocol
+date validation. Its parsing and large-date features preserve existing wire ranges;
+no additional package, native library or cryptographic dependency is introduced.
 The December 1 expiry remains unchanged.
 Approval does not cover further exceptions, authority
 promotion, release publication or deployment. The application root advisory and
