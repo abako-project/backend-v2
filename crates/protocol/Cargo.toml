@@ -7,7 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-chrono.workspace = true
+time.workspace = true
 serde.workspace = true
 url.workspace = true
 thiserror.workspace = true

@@ -5,6 +5,17 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    groups:
+      application:
+        patterns: ["*"]
+  - package-ecosystem: cargo
+    directory: /services/contract-provider
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      provider:
+        patterns: ["*"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
