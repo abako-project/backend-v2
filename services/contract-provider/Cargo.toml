@@ -22,10 +22,10 @@ getrandom = "=0.4.3"
 schnorrkel = { version = "=0.11.5", default-features = false, features = ["std"] }
 protocol = { version = "=0.1.0", path = "../../crates/protocol" }
 serde = { version = "1.0.229", features = ["derive"] }
-frame-support = "=49.0.1"
+frame-support = "=49.1.0"
 frame-system = "=49.0.0"
 pallet-balances = "=51.0.2"
-pallet-assets = "=54.0.1"
+pallet-assets = "=54.1.0"
 pallet-contracts = "=51.0.0"
 pallet-timestamp = "=49.0.0"
 sp-core = "=43.0.0"
