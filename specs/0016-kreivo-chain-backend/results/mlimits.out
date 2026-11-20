@@ -1,0 +1,47 @@
+live block #41144847 digest: [
+    "PreRuntime(CMLS, 0x01000204) = CumulusDigestItem::CoreInfo",
+    "PreRuntime(CMLS, 0x020201) = CumulusDigestItem::BlockBundleInfo",
+    "PreRuntime(aura, 0x9641d51100000000)",
+    "Consensus(RPSR, 0x8340c7bc64a4d9c97ea8ab5b729965a7fbe06ff8da76f650dbfefc89a4800224e6aa9f08)",
+    "Seal(aura, 0x500684935e52f8d00bcea6e852b293361b0dd3d3dfbb4a61c0c2a16abdd0ec33d17f27b038c8eb64)",
+]
+parachainSystem/blockWeightMode at the fork block: BlockWeightMode::FractionOfCore(context:41144847;first_transaction_index:Option::None)
+parachainSystem/previousCoreCount at the fork block: 1
+system/blockWeight at the fork block: (normal:(ref_time:0;proof_size:0);operational:(ref_time:0;proof_size:0);mandatory:(ref_time:8524925359;proof_size:135409))
+ParachainSystem storage: Some(["BlockWeightMode", "PreviousCoreCount", "UnincludedSegment", "AggregatedUnincludedSegment", "PendingValidationCode", "NewValidationCode", "ValidationData", "DidSetValidationCode", "LastRelayChainBlockNumber", "UpgradeRestrictionSignal", "UpgradeGoAhead", "RelayStateProof", "RelevantMessagingState", "HostConfiguration", "LastDmqMqcHead", "LastHrmpMqcHeads", "ProcessedDownwardMessages", "LastProcessedDownwardMessage", "HrmpWatermark", "LastProcessedHrmpMessage", "HrmpOutboundMessages", "UpwardMessages", "PendingUpwardMessages", "PendingUpwardSignals", "PendingApprovedPeer", "UpwardDeliveryFeeFactor", "AnnouncedHrmpMessagesPerCandidate", "ReservedXcmpWeightOverride", "ReservedDmpWeightOverride", "CustomValidationHeadData", "PoVMessagesTracker"])
+largest valid gas_limit.proof_size: 7299927 (declared extrinsic weight Some(TransactionWeight { ref_time: 2475220000, proof_size: 7339875 })); 7299928 is refused
+  refusal: Some(Invalid("Invalid::ExhaustsResources (0x0006)"))
+largest valid gas_limit.ref_time: 1398416622935 ±1000 (declared extrinsic weight Some(TransactionWeight { ref_time: 1399891842935, proof_size: 139948 }))
+gas_limit 466558509666/2446677: valid=true, declared Some(TransactionWeight { ref_time: 468033729666, proof_size: 2486625 }), fee Some(3456774829)
+gas_limit 400000000000/2400000: valid=true, declared Some(TransactionWeight { ref_time: 401475220000, proof_size: 2439948 }), fee Some(3401898238)
+gas_limit 400000000000/2446000: valid=true, declared Some(TransactionWeight { ref_time: 401475220000, proof_size: 2485948 }), fee Some(3455978903)
+small (100 kB): included, Failed("Contracts::ContractNotFound")
+  Event::TransactionFeePaid(who:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;actual_fee:558577262;tip:0)
+  block #41144848 digest: ["PreRuntime(aura, 0x9741d51100000000)", "Consensus(RPSR, 0x20b0691410f3bfe3d668984f46b0a0ff307124e43a677fc23c11b82f2a65d871eaaa9f08)"]
+  parachainSystem/blockWeightMode: BlockWeightMode::FractionOfCore(context:41144848;first_transaction_index:Option::Some(2))
+  system/blockWeight: (normal:(ref_time:1583377000;proof_size:40105);operational:(ref_time:0;proof_size:0);mandatory:(ref_time:8906687033;proof_size:288710))
+above target (3 MB): included, Failed("Contracts::ContractNotFound")
+  Event::TransactionFeePaid(who:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;actual_fee:558577262;tip:0)
+  block #41144849 digest: ["PreRuntime(aura, 0x9841d51100000000)", "Consensus(RPSR, 0x20f42601e23399edc3a6994c6a18584b1d1bfda6f76396b03e3768f08a9d8ed8eeaa9f08)"]
+  parachainSystem/blockWeightMode: BlockWeightMode::FractionOfCore(context:41144849;first_transaction_index:Option::Some(2))
+  system/blockWeight: (normal:(ref_time:1583377000;proof_size:40105);operational:(ref_time:0;proof_size:0);mandatory:(ref_time:8906687033;proof_size:288530))
+small again: included, Failed("Contracts::ContractNotFound")
+  Event::TransactionFeePaid(who:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;actual_fee:558577262;tip:0)
+  block #41144850 digest: ["PreRuntime(aura, 0x9941d51100000000)", "Consensus(RPSR, 0x79f1029f728defb85113ba8ba3d2f2994615ff339d77a770aefbdb5669d97f89f2aa9f08)"]
+  parachainSystem/blockWeightMode: BlockWeightMode::FractionOfCore(context:41144850;first_transaction_index:Option::Some(2))
+  system/blockWeight: (normal:(ref_time:1583377000;proof_size:40105);operational:(ref_time:0;proof_size:0);mandatory:(ref_time:8906687033;proof_size:288530))
+A big 3 MB: included
+B big 3 MB: included
+C big 3 MB: included
+D small 100 kB: included
+E small 100 kB: included
+  block #41144851 digest: ["PreRuntime(aura, 0x9a41d51100000000)", "Consensus(RPSR, 0xa29f662b6f51afd7d4528a848d4ad51abcb82c813b72396a092b9dccdf2fa46ef6aa9f08)"]
+bundle index 0: Core_initialize_block -> 0x00
+  small 100 kB: apply_extrinsic -> 0x0001035006000000 (included, dispatch error (the contract does not exist))
+  big 3 MB: apply_extrinsic -> 0x0001035006000000 (included, dispatch error (the contract does not exist))
+bundle index 1: Core_initialize_block -> 0x00
+  small 100 kB: apply_extrinsic -> 0x0001035006000000 (included, dispatch error (the contract does not exist))
+  big 3 MB: apply_extrinsic -> 0x010006 (REFUSED: Invalid::ExhaustsResources)
+bundle index 2: Core_initialize_block -> 0x00
+  small 100 kB: apply_extrinsic -> 0x0001035006000000 (included, dispatch error (the contract does not exist))
+  big 3 MB: apply_extrinsic -> 0x010006 (REFUSED: Invalid::ExhaustsResources)

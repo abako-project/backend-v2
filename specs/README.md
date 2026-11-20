@@ -20,6 +20,7 @@ and [verification](../ci/README.md) distinguish implementation from release read
 | [0013: ink! v5 sandbox](0013-contract-runtime/spec.md) | APPROVED | Staged canonical contract execution with compatibility, persistence and migration gates |
 | [0014: evidence commitments](0014-evidence-commitments/spec.md) | APPROVED | Adapter-owned immutable evidence and fixed-size onchain commitments for existing signed evidence operations |
 | [0015: adapter/core ownership](0015-adapter-core-boundary/spec.md) | APPROVED | API content/task progress, contract facts/membership and ordinary ink storage |
+| [0016: Kreivo backend through sube](0016-kreivo-chain-backend/spec.md) | DRAFT, not approved | One API on a forked or live Kreivo, pallet-pass identity, no wallet or provider service |
 
 For a substantial feature, write one note with approval, scope, requirements,
 invariants, compatibility, acceptance checks and unresolved decisions. Routine
