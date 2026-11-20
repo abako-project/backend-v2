@@ -3,6 +3,7 @@ resolver = "3"
 members = [
   "crates/bloque-rs",
   "crates/protocol",
+  "crates/kreivo",
   "services/wallet",
   "services/api",
   "apps/example-web",
@@ -17,6 +18,13 @@ repository = "https://github.com/abako-project/backend-v2"
 [workspace.dependencies]
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 protocol = { version = "0.1.0", path = "crates/protocol" }
+kreivo = { version = "0.1.0", path = "crates/kreivo" }
+# GPL-3.0-or-later, see SPEC-0016. The revision is the head of the virto-sdk
+# branch feat/fork-dev-ops: move it to the commit on main once that merges.
+sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", rev = "8c2c1ca4f9b631023294a8e2e0c98a6a994bed14", default-features = false, features = ["std"] }
+pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "8c2c1ca4f9b631023294a8e2e0c98a6a994bed14", default-features = false, features = ["std"] }
+smol = "2.0.2"
+blake2 = { version = "0.10.6", default-features = false }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "sync", "time", "signal"] }
 sqlx = { version = "=0.9.0", git = "https://github.com/transact-rs/sqlx", branch = "main", default-features = false, features = ["runtime-tokio"] }
