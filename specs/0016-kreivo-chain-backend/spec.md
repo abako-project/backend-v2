@@ -298,10 +298,10 @@ Decided by the owner on 2026-11-20:
 
 1. **sube-fork is extended.** `Fork::call_mut` keeps the storage changes of a
    runtime API call and `Fork::snapshot` saves a fork so it persists with
-   PostgreSQL. Both are in
-   [virto-sdk#235](https://github.com/virto-network/virto-sdk/pull/235),
-   awaiting review, with a fix for sube reading a stale finalized head; the
-   backend pins that revision. The mock asset needs nothing more (finding 7).
+   PostgreSQL. Both were merged in
+   [virto-sdk#235](https://github.com/virto-network/virto-sdk/pull/235), with a
+   fix for sube reading a stale finalized head; the backend pins that revision
+   of `main`. The mock asset needs nothing more (finding 7).
 2. **The source stays Apache-2.0 and takes the GPL crates.** `deny.toml` gets
    exceptions for the named virto-sdk crates and their git source. A built API
    binary or image links them and is distributed under GPL-3.0-or-later.
@@ -311,10 +311,10 @@ Decided by the owner on 2026-11-20:
    login become two-step device ceremonies, and `accountId` is the pass account;
    both frontends change. A browser-held key remains the live target.
 4. **Wallet login is in the first cut.** Kreivo's substrate-keys authenticator
-   learns the `<Bytes>` wrapping. The change is in
-   [pass-authenticators#36](https://github.com/virto-network/pass-authenticators/pull/36),
-   a draft awaiting review. On a fork running
-   a spec-136 runtime built with it, wrapped signatures register a device and
+   learns the `<Bytes>` wrapping. The change was merged in
+   [pass-authenticators#36](https://github.com/virto-network/pass-authenticators/pull/36).
+   On a fork running a spec-136 runtime built with it, wrapped signatures
+   register a device and
    authenticate extrinsics, bare ones still do, and other wrappings are refused.
    Going live needs a Kreivo runtime upgrade, with two things settled first:
    - A wrapped or invalid signature now costs two verifications where the
@@ -329,8 +329,8 @@ Decided by the owner on 2026-11-20, after the measurements:
 5. **The contracts change first.** The scenario must fit ordinary blocks
    before the fork replaces the provider, which stays until then. The mock does
    not commit what Kreivo refuses. See [contract changes](#contract-changes).
-6. **The wallet patch proceeds**, with its phishing surface reduced by design.
-   Options, strongest first:
+6. **The wallet patch proceeds.** It was merged as it is; ways to reduce its
+   phishing surface are explored later. Options, strongest first:
    - *Sign a transaction, not bytes.* Let a registered key device authorize the
      pass account by signing an ordinary extrinsic, as a session key already
      does. A wallet then shows the decoded call through `signPayload` and no

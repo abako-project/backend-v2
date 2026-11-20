@@ -19,10 +19,9 @@ repository = "https://github.com/abako-project/backend-v2"
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 protocol = { version = "0.1.0", path = "crates/protocol" }
 kreivo = { version = "0.1.0", path = "crates/kreivo" }
-# GPL-3.0-or-later, see SPEC-0016. The revision is the head of the virto-sdk
-# branch feat/fork-dev-ops: move it to the commit on main once that merges.
-sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", rev = "8c2c1ca4f9b631023294a8e2e0c98a6a994bed14", default-features = false, features = ["std"] }
-pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "8c2c1ca4f9b631023294a8e2e0c98a6a994bed14", default-features = false, features = ["std"] }
+# GPL-3.0-or-later, see SPEC-0016. The revision is on virto-sdk's main.
+sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", rev = "58df5839c5e54a5d30ed1f43efd29fbaf30b10c5", default-features = false, features = ["std"] }
+pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "58df5839c5e54a5d30ed1f43efd29fbaf30b10c5", default-features = false, features = ["std"] }
 smol = "2.0.2"
 blake2 = { version = "0.10.6", default-features = false }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }

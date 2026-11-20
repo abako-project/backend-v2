@@ -77,5 +77,4 @@ They deploy the pinned Dao and Project artifacts from
 sube, pass and scale-serialization, and with `fork` sube-fork and smoldot, are
 GPL-3.0-or-later. This crate's source is Apache-2.0; a binary that links it is
 distributed under the GPL. `deny.toml` carries the exceptions. The workspace
-pins the head of the virto-sdk branch `feat/fork-dev-ops`, which adds what the
-mock needs; the pin moves to the commit on `main` once that branch merges.
+pins a revision of virto-sdk's `main`.
