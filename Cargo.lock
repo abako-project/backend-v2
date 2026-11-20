@@ -2994,7 +2994,7 @@ dependencies = [
 [[package]]
 name = "pass"
 version = "0.1.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=8c2c1ca4f9b631023294a8e2e0c98a6a994bed14#8c2c1ca4f9b631023294a8e2e0c98a6a994bed14"
+source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
 dependencies = [
  "blake2 0.11.0",
  "hex",
@@ -3776,7 +3776,7 @@ dependencies = [
 [[package]]
 name = "scale-serialization"
 version = "1.2.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=8c2c1ca4f9b631023294a8e2e0c98a6a994bed14#8c2c1ca4f9b631023294a8e2e0c98a6a994bed14"
+source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
 dependencies = [
  "bytes",
  "scale-info",
@@ -4490,7 +4490,7 @@ dependencies = [
 [[package]]
 name = "sube"
 version = "1.0.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=8c2c1ca4f9b631023294a8e2e0c98a6a994bed14#8c2c1ca4f9b631023294a8e2e0c98a6a994bed14"
+source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
 dependencies = [
  "async-tungstenite",
  "blake2 0.11.0",
@@ -4509,7 +4509,7 @@ dependencies = [
 [[package]]
 name = "sube-fork"
 version = "0.1.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=8c2c1ca4f9b631023294a8e2e0c98a6a994bed14#8c2c1ca4f9b631023294a8e2e0c98a6a994bed14"
+source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
 dependencies = [
  "blake2 0.11.0",
  "hex",
