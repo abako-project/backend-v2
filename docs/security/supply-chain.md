@@ -27,6 +27,15 @@ rejects the unmaintained `paste` and `proc-macro-error2` packages. These were no
 silenced by the update. The separate provider policy retains its previously
 approved exceptions and December 1 expiry; see its [scope](../../services/contract-provider/policy/README.md).
 
+The `kreivo` crate ([SPEC-0016](../../specs/0016-kreivo-chain-backend/spec.md),
+a draft) adds `sube` and `pass` from the virto-sdk Git repository at a pinned
+revision. They and `scale-serialization` are GPL-3.0-or-later, and the root
+policy allows that license for those crates by name, with `sube-fork` and
+`smoldot` under the crate's development-only `fork` feature. A binary that links
+them is distributed under the GPL; no service links the crate yet. With `fork`
+the policy also rejects `constant_time_eq` 0.1.5 (CC0-1.0) and reports
+`libsecp256k1` unmaintained, both through smoldot. Neither is silenced.
+
 Dependabot watches both Cargo workspaces. Provider updates need review of the
 exact-lock policy before they can pass CI. Application checks and dependency-policy
 checks remain separate; see [verification](../../ci/README.md). A passing
