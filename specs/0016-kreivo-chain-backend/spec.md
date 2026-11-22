@@ -197,8 +197,9 @@ which keeps every public message:
     - Every Project message loads the whole project, 10.3 kB per task.
     - The sorted indexes of projects, proposals, deposits and disputes shift
       the same way. That is read from the code; 14 projects do not show it.
-    - Storage deposits rose 8.6% (6.84 to 7.43 KSM for the run), since the ID
-      registry stores one item per ID and Kreivo's deposit is per item.
+    - The storage deposits the run's transactions take rose 8.6% (6.84 to
+      7.43 KSM), since the ID registry stores one item per ID and Kreivo's
+      deposit is per item.
 
 Not yet measured: WebAuthn devices, deployment through a community, real proof
 sizes (the fork meters them by weight), and anything against a live node.
@@ -330,11 +331,15 @@ reads for the four-milestone project before any work starts.
 - One cell per proposal for its terms: milestones, requirements and skills.
   The four-milestone, 14-requirement proposal is about 1 kB.
 - Per milestone, one cell for execution (status, assignments, ratings) and
-  task cells of up to 64 tasks with their assignees.
+  task cells holding several tasks with their assignees. A task is 8 bytes
+  and 32 more per assignee, and a task cell starts a new one when it is full.
 - One cell per submission with its ratings, and one per evaluation with its
   ratings.
 - Every write checks the encoded size against a stated bound well under the
-  16 KiB cell limit and fails with a domain error above it.
+  16 KiB cell limit and fails with a domain error above it. For the terms and
+  execution cells that error is a new limit on the size of a proposal and of a
+  team, far above the scenario's, and like the calendar's cap it is a new
+  rule.
 
 The project then loads about 10 cells where it loads 60, and tasks stop adding
 an access each. The loading code keeps its shape: one tree in memory, saved by
@@ -494,8 +499,9 @@ Open:
    five other crates pending the owner's decision, and `libsecp256k1`, reported
    unmaintained. Neither is silenced. Both come only with the `fork` feature.
 8. **The packed storage** proposed under [contract changes](#packed-storage-proposed):
-   whether to do it, the cap on reservations per worker and week, and how the
-   provider follows the new cells.
+   whether to do it, the new limits it brings (reservations per worker and
+   week, the size of a proposal and of a team), and how the provider follows
+   the new cells.
 9. **Whether stage 2 may start before the last two approvals fit an ordinary
    block.** With contracts#23 nothing is refused, but decision 5 asks for
    ordinary blocks, and a whole-core transaction holds up the two blocks after
