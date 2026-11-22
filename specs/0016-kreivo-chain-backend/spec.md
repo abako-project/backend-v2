@@ -4,7 +4,9 @@ Status: DRAFT. Requested by the owner on 2026-11-20, who decided
 [six questions](#decisions) the same day. Stage 1 proceeds on those answers.
 Stage 2 waits for the [contract changes](#contract-changes) that finding 10
 calls for, and with stage 3 for the owner's approval of this note: they change
-authentication and the public API and remove services. Nothing here authorizes
+authentication and the public API and remove services. The first contract
+changes are in [contracts#23](https://github.com/abako-dev/contracts/pull/23)
+(findings 15 to 17). Nothing here authorizes
 publishing or deploying.
 
 When approved this supersedes SPEC-0001 (custodial signing) and the passkey
@@ -147,6 +149,57 @@ through a dispute.
     dry-run names any origin without a signature. A reverted call is included
     and pays its fee, and its domain error code exists only in a dry-run.
 
+#### After the first contract changes
+
+Findings 10 to 13 describe the pinned contracts and stay as the baseline. The
+same run was repeated on 2026-11-22 with
+[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `37d75bf`,
+which keeps every public message:
+
+| Of 193 transactions | Pinned | contracts#23 |
+|---|---|---|
+| Fit an ordinary block with the 10% gas margin the client adds | 150 | 191 |
+| Fit an ordinary block without the margin | 161 | 192 |
+| Need a whole core | 30 | 1 |
+| Refused | 2 | 0 |
+
+| Heaviest case of | Pinned | contracts#23 |
+|---|---|---|
+| `approve_execution` | 10,768,309 | 2,622,003 |
+| `create_proposal` | 5,060,490 | 1,596,155 |
+| `accept_milestone` | 3,601,806 | 1,912,986 |
+| `evaluate_project` | 2,738,434 | 1,584,934 |
+| `create_project` | 2,278,545 | 805,106 |
+
+15. **Nothing is refused, and two approvals are still over an ordinary
+    block.** Four milestones with 14 requirements need 2,622,003 bytes, 107% of
+    the limit, so a whole core. Three milestones with 12 need 2,221,461, which
+    fits only without the gas margin. Teams, IDs, reservations and balances
+    are the same as with the pinned contracts.
+16. **The proof is charged by the access, not by the data.** Kreivo's weights
+    charge 10,263 bytes plus the value's length for every storage read, write
+    or existence check: the cost pallet-contracts benchmarks for a storage tree
+    20 levels deep, applied to every access. Each call to a contract is charged
+    its whole code, 165 kB for Project and 133 kB for Dao. The gas limit a
+    transaction declares must cover that charge. The data is small: the
+    largest extrinsic of the run is 872 bytes, the 193 together store a net
+    29 kB in 1,095 cells, and the four-milestone approval stores 1,500 bytes in
+    68 cells. Each existing task adds 10,271 bytes to the next `create_task`:
+    one access and its 8-byte record.
+17. **Growth with the platform remains** (finding 11), except that
+    `create_project`, `create_deposit` and `create_proposal` no longer grow
+    with the directory:
+    - An approval reads every worker who holds a required skill, about 31 kB
+      each. With 92 workers the smallest approval needs 3.5 MB and a
+      five-requirement one 8.2 MB.
+    - `register_worker` shifts a sorted index, about 17 kB per registered
+      worker: 2.07 MB with 92.
+    - Every Project message loads the whole project, 10.3 kB per task.
+    - The sorted indexes of projects, proposals, deposits and disputes shift
+      the same way. That is read from the code; 14 projects do not show it.
+    - Storage deposits rose 8.6% (6.84 to 7.43 KSM for the run), since the ID
+      registry stores one item per ID and Kreivo's deposit is per item.
+
 Not yet measured: WebAuthn devices, deployment through a community, real proof
 sizes (the fork meters them by weight), and anything against a live node.
 
@@ -161,8 +214,9 @@ Where a fork differs from Kreivo, found on the way:
   as a trapped contract. The client always sets one.
 
 The logs are in [`results/`](results/): `market-final.out` has every operation
-of the marketplace run, `mlimits.out` the limits and `wallet-test.log` the
-wallet signatures. The spike sources sit in `spike/` beside this note,
+of the marketplace run with the pinned contracts,
+`market-contracts-37d75bf.out` the same run with contracts#23, `mlimits.out`
+the limits and `wallet-test.log` the wallet signatures. The spike sources sit in `spike/` beside this note,
 untracked, with the snapshot: they link GPL crates and are evidence, not backend
 code. `main.rs` is the first run, `bin/market.rs` the marketplace,
 `bin/mlimits.rs` the limits and `bin/wallet.rs` the wallet signatures.
@@ -223,31 +277,30 @@ code. `main.rs` is the first run, `bin/market.rs` the marketplace,
 ## Contract changes
 
 What makes the calls heavy, read in the pinned source
-(`abako-dev/contracts` at `a0532843`) and measured in findings 10 and 11. The
-proof charged follows the number of storage items a message touches, and the
-code of every contract it calls.
+(`abako-dev/contracts` at `a0532843`) and measured in findings 10, 11 and 16.
+The proof charged follows the number of storage items a message touches, and
+the code of every contract it calls.
 
-1. **Check ID uniqueness by key, not by walking everything.**
-   `Dao::validate_public_ids` loads every worker, every project's layout and
-   submissions, every deposit and every dispute to look for a duplicate. It runs
-   in `register_worker`, `create_project`, the deposit and withdrawal requests
-   and the three calls a Project makes back into the Dao. One set keyed by ID
-   answers the same question with one read. With the next item, this is why
-   costs grow with the platform.
-2. **Select without loading the directory.** `coordinator_selection` loads
-   every worker; `assign_team` loads every holder of a requirement's first
-   skill, once per requirement. Keep the eligible accounts and their capacity
-   per week in keyed entries, or let the caller name the candidates and have
-   the contract verify them.
-3. **Split the approval.** `approve_execution` assigns every milestone's team,
-   reserves every calendar and takes the whole escrow in one transaction: 1.65
-   MB for one requirement, about 0.8 MB more for each further one. Approve the
-   proposal and escrow once, then assign and reserve one milestone per
+1. **Check ID uniqueness by key, not by walking everything.** Done in
+   contracts#23: one registry entry per public ID replaces
+   `Dao::validate_public_ids`, which loaded every worker, every project's
+   layout and submissions, every deposit and every dispute.
+2. **Select without loading the directory.** Partly done in contracts#23: a
+   message reads each worker, calendar and skill cell once, and coordinators
+   have their own index. An approval still reads every holder of a required
+   skill (finding 17). What is left is to keep the eligible accounts and their
+   capacity per week in fewer entries (item 9), or to let the caller name the
+   candidates and have the contract verify them, which changes who picks the
+   team and is the owner's to decide.
+3. **Split the approval.** Deferred. `approve_execution` assigns every
+   milestone's team, reserves every calendar and takes the whole escrow in one
+   transaction. The chain no longer refuses the largest one, but two are still
+   over an ordinary block (finding 15). Decide once item 9 is measured: approve
+   the proposal and escrow once, then assign and reserve one milestone per
    transaction.
-4. **Load only what a message changes.** A Project keeps its parts in separate
-   keyed entries but reads and writes all of them on every message, so every
-   task adds 20 kB to each later call. Read and write the entries the message
-   needs.
+4. **Load only what a message changes.** Partly done in contracts#23: a
+   Project writes only the entries that changed. It still reads all of them on
+   every message, so every task adds 10.3 kB to each later call.
 5. **Page the lists.** `catalog`, `workers`, `projects` and `Project.view`
    return everything. Give them a start and a count.
 6. **Seed the catalog after deployment**, in transactions, not in the
@@ -257,9 +310,95 @@ code of every contract it calls.
 8. **Stop trusting the caller for what the shell supplied**: derive selection
    seeds and IDs in the contract, and do not rely on the caller's identity to
    keep a read private.
+9. **Pack the storage.** Proposed below, not approved.
 
 The acceptance line for these is the first bullet under [acceptance](#acceptance),
 measured again with `spike/src/bin/market.rs`.
+
+### Packed storage (proposed)
+
+The contracts keep one cell per small record: the average cell of the run
+holds 27 bytes and costs 10,263 to touch. This proposal keeps every rule and
+public message and changes where the data lives. Nothing in it is measured.
+The estimates count accesses saved at 10.3 kB each, and the replay is the test.
+
+**Project.** A project keeps separate cells for each proposal, milestone,
+requirement, required skill, assignment, rating, task, task assignee,
+submission and evaluation, and loads all of them on every message: about 60
+reads for the four-milestone project before any work starts.
+
+- One cell per proposal for its terms: milestones, requirements and skills.
+  The four-milestone, 14-requirement proposal is about 1 kB.
+- Per milestone, one cell for execution (status, assignments, ratings) and
+  task cells of up to 64 tasks with their assignees.
+- One cell per submission with its ratings, and one per evaluation with its
+  ratings.
+- Every write checks the encoded size against a stated bound well under the
+  16 KiB cell limit and fails with a domain error above it.
+
+The project then loads about 10 cells where it loads 60, and tasks stop adding
+an access each. The loading code keeps its shape: one tree in memory, saved by
+comparison. Loading only the cells a message needs would save more and is a
+larger change; it can follow if the measurement asks for it.
+
+**Calendar.** A reservation writes three cells: the reservation, the week's
+total and the week's key. Selection reads up to two cells per candidate and
+week.
+
+- One cell per worker and week: override capacity, total reserved and that
+  week's reservations. The worker's header lists the weeks that have a cell.
+- A week's cell needs a cap on reservations, since they are never released:
+  128 per worker and week is 6 kB. That cap is a new rule. Without it, the
+  reservations stay one cell each and only the total and the key merge.
+
+For the four-milestone approval the two changes save about 100 accesses of
+the 225 it makes, which would put it near 1.6 MB. If the measurement confirms
+that, item 3 is not needed at this size.
+
+**Dao indexes.** Workers, projects, proposals, deposits, withdrawals and
+disputes each keep a sorted list with one cell per entry, and an insert shifts
+the entries after it.
+
+- Keep the order, since `workers()` and `projects()` return it and selection
+  depends on it, and store each list as sorted pages of up to 256 entries per
+  cell. An insert rewrites one page, or two when a page splits.
+- Keep a worker's roles and skills in the worker's record, and each skill's
+  holders in pages. A candidate then costs about two accesses where it costs
+  three. This lowers the growth of an approval with the directory; it does not
+  remove it. Only naming the candidates (item 2) does.
+
+**Dao's copies of Project data.** Dao stores each project's proposal,
+milestone and submission IDs to work out which IDs a change adds or drops, and
+each proposal's roles and skills to refuse deleting a catalog entry in use.
+
+- Project sends the IDs it adds and drops, which it knows from the tree it
+  loaded. The registry entry records the owning project, so a Project frees
+  only its own IDs. The copies go.
+- A proposal's roles and skills move to one cell per proposal.
+
+**What reads the cells.** The provider decodes Dao and Project cells directly
+(`facts.rs`, `project_storage.rs`, about 700 lines) and checks that the index
+cells are sorted. Two ways to follow a new layout:
+
+- *Read through the contracts' messages* (recommended). `workers`, `catalog`,
+  `skill_requests`, `projects`, `disputes`, `calendar`, `financial_projection`,
+  `Project.view` and `Project.reasons` already return most of what the
+  provider reads. Missing: the next task ID, the origin of each skill and Dao's
+  reason records. This is what the API must do on the chain anyway
+  ([reads](#reads-and-notifications)), so the work carries over. The provider
+  reads every fact on each request, so the time a read takes has to be
+  measured first.
+- *Rewrite the two codecs* for the new cells. No contract additions, and the
+  code goes away with the provider in stage 3.
+
+**Compatibility.** Public messages and the order of the lists they return do
+not change. Stored data does, so it needs fresh data, as contracts#23 already
+does. The hooks between Project and Dao change, and with them the ABI metadata
+and the pinned artifacts.
+
+**Order of work.** Project and calendar first, measured with the replay, then
+the indexes and the copies. Each step keeps the comparison the first changes
+used: the same teams, IDs, reservations and balances as the pinned contracts.
 
 ## Stages
 
@@ -284,7 +423,8 @@ Each stage ends with the independent review SPEC-0013 requires.
 - Every operation of the marketplace scenario fits a normal Kreivo extrinsic
   (0.467 s, 2,446,677 bytes of proof) on the fork, or is listed with its
   measured weight as a contracts blocker. The list is in finding 10 and
-  [`results/market-final.out`](results/market-final.out).
+  [`results/market-final.out`](results/market-final.out) for the pinned
+  contracts, and in finding 15 for contracts#23.
 - The public gateway flow passes in fork mode from registration to settlement
   with a passkey device.
 - Invalid credential, expired session, call outside the session filter, replay,
@@ -353,6 +493,14 @@ Open:
    `constant_time_eq` 0.1.5 under CC0-1.0, which the policy already rejects for
    five other crates pending the owner's decision, and `libsecp256k1`, reported
    unmaintained. Neither is silenced. Both come only with the `fork` feature.
+8. **The packed storage** proposed under [contract changes](#packed-storage-proposed):
+   whether to do it, the cap on reservations per worker and week, and how the
+   provider follows the new cells.
+9. **Whether stage 2 may start before the last two approvals fit an ordinary
+   block.** With contracts#23 nothing is refused, but decision 5 asks for
+   ordinary blocks, and a whole-core transaction holds up the two blocks after
+   it (see [risks](#risks)). The limits of finding 17 also apply: about a
+   hundred workers.
 
 Defaults, unless the owner says otherwise:
 
