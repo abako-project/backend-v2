@@ -154,7 +154,8 @@ through a dispute.
 Findings 10 to 13 describe the pinned contracts and stay as the baseline. The
 same run was repeated on 2026-11-23 with
 [contracts#23](https://github.com/abako-dev/contracts/pull/23) at `015d219`,
-which keeps every public message:
+which keeps every public message and replaces five of the hooks Project
+calls on Dao:
 
 | Of 193 transactions | Pinned | contracts#23 |
 |---|---|---|
