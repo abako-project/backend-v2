@@ -152,8 +152,8 @@ through a dispute.
 #### After the first contract changes
 
 Findings 10 to 13 describe the pinned contracts and stay as the baseline. The
-same run was repeated on 2026-11-22 with
-[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `37d75bf`,
+same run was repeated on 2026-11-23 with
+[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `015d219`,
 which keeps every public message:
 
 | Of 193 transactions | Pinned | contracts#23 |
@@ -165,22 +165,22 @@ which keeps every public message:
 
 | Heaviest case of | Pinned | contracts#23 |
 |---|---|---|
-| `approve_execution` | 10,768,309 | 2,622,003 |
-| `create_proposal` | 5,060,490 | 1,596,155 |
-| `accept_milestone` | 3,601,806 | 1,912,986 |
-| `evaluate_project` | 2,738,434 | 1,584,934 |
-| `create_project` | 2,278,545 | 805,106 |
+| `approve_execution` | 10,768,309 | 2,593,393 |
+| `create_proposal` | 5,060,490 | 1,266,217 |
+| `accept_milestone` | 3,601,806 | 1,905,041 |
+| `evaluate_project` | 2,738,434 | 1,576,989 |
+| `create_project` | 2,278,545 | 776,635 |
 
 15. **Nothing is refused, and two approvals are still over an ordinary
-    block.** Four milestones with 14 requirements need 2,622,003 bytes, 107% of
-    the limit, so a whole core. Three milestones with 12 need 2,221,461, which
+    block.** Four milestones with 14 requirements need 2,593,393 bytes, 106% of
+    the limit, so a whole core. Three milestones with 12 need 2,192,851, which
     fits only without the gas margin. Teams, IDs, reservations and balances
     are the same as with the pinned contracts.
 16. **The proof is charged by the access, not by the data.** Kreivo's weights
     charge 10,263 bytes plus the value's length for every storage read, write
     or existence check: the cost pallet-contracts benchmarks for a storage tree
     20 levels deep, applied to every access. Each call to a contract is charged
-    its whole code, 165 kB for Project and 133 kB for Dao. The gas limit a
+    its whole code, 162 kB for Project and 128 kB for Dao. The gas limit a
     transaction declares must cover that charge. The data is small: the
     largest extrinsic of the run is 872 bytes, the 193 together store a net
     29 kB in 1,095 cells, and the four-milestone approval stores 1,500 bytes in
@@ -192,8 +192,8 @@ which keeps every public message:
     - An approval reads every worker who holds a required skill, about 31 kB
       each. With 92 workers the smallest approval needs 3.5 MB and a
       five-requirement one 8.2 MB.
-    - `register_worker` shifts a sorted index, about 17 kB per registered
-      worker: 2.07 MB with 92.
+    - `register_worker` shifts a sorted index, about 18 kB per registered
+      worker: 2.05 MB with 92.
     - Every Project message loads the whole project, 10.3 kB per task.
     - The sorted indexes of projects, proposals, deposits and disputes shift
       the same way. That is read from the code; 14 projects do not show it.
@@ -216,7 +216,7 @@ Where a fork differs from Kreivo, found on the way:
 
 The logs are in [`results/`](results/): `market-final.out` has every operation
 of the marketplace run with the pinned contracts,
-`market-contracts-37d75bf.out` the same run with contracts#23, `mlimits.out`
+`market-contracts-015d219.out` the same run with contracts#23, `mlimits.out`
 the limits and `wallet-test.log` the wallet signatures. The spike sources sit in `spike/` beside this note,
 untracked, with the snapshot: they link GPL crates and are evidence, not backend
 code. `main.rs` is the first run, `bin/market.rs` the marketplace,
@@ -377,7 +377,7 @@ milestone and submission IDs to work out which IDs a change adds or drops, and
 each proposal's roles and skills to refuse deleting a catalog entry in use.
 
 - Project sends the IDs it adds and drops, which it knows from the tree it
-  loaded. The registry entry records the owning project, so a Project frees
+  loaded. contracts#23 already does this for submissions, which only append. The registry entry records the owning project, so a Project frees
   only its own IDs. The copies go.
 - A proposal's roles and skills move to one cell per proposal.
 
