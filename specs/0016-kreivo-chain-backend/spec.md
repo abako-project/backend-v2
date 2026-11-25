@@ -8,9 +8,12 @@ note: they change authentication and the public API and remove services. Stage
 calls for. The first of them,
 [contracts#23](https://github.com/abako-dev/contracts/pull/23), are merged and
 the backend pins them (findings 15 to 17). One approval still needs a whole
-core; stage 2 no longer waits for that (decision 9), and the packing of Project
-and the calendar is the next contract change (decision 8). Nothing here
-authorizes publishing or deploying.
+core; stage 2 no longer waits for that (decision 9). The packing of Project and
+the calendar (decision 8) is proposed in
+[contracts#24](https://github.com/abako-dev/contracts/pull/24), with which
+every transaction of the scenario fits an ordinary block (findings 18 to 20);
+its weekly cap awaits the owner's confirmation. Nothing here authorizes
+publishing or deploying.
 
 When approved this supersedes SPEC-0001 (custodial signing) and the passkey
 section of SPEC-0004, and replaces the execution, authority and persistence
@@ -208,6 +211,53 @@ keeps every public message and replaces five of the hooks Project calls on Dao:
       7.43 KSM), since the ID registry stores one item per ID and Kreivo's
       deposit is per item.
 
+#### With packed storage
+
+The same run on 2026-11-25 with
+[contracts#24](https://github.com/abako-dev/contracts/pull/24) at `e218b0c`,
+which packs Project and the calendar ([packed storage](#packed-storage)) and
+keeps every public message:
+
+| Of 193 transactions | contracts#23 | Project packed | contracts#24 |
+|---|---|---|---|
+| Fit an ordinary block with the 10% gas margin | 191 | 193 | 193 |
+| Need a whole core | 1 | 0 | 0 |
+
+| Heaviest case of | contracts#23 | contracts#24 | Share of the limit |
+|---|---|---|---|
+| `approve_execution` | 2,593,252 | 1,359,066 | 56% |
+| `accept_milestone` | 1,904,900 | 1,121,040 | 46% |
+| `create_proposal` | 1,266,076 | 922,689 | 38% |
+| `create_project` | 776,494 | 761,413 | 31% |
+| `register_worker` | 678,375 | 679,872 | 28% |
+| `evaluate_project` | 1,576,848 | 617,831 | 25% |
+
+18. **Every transaction fits an ordinary block with the margin.** Packing
+    Project alone already does it: its heaviest approval is 1,827,665 bytes,
+    75% of the limit. Teams, IDs, reservations, balances and statuses are the
+    same as with contracts#23. The run's storage deposits fall from 7.43 to
+    4.44 KSM. Project's code is 155,975 bytes and Dao's 129,326.
+19. **A contract's memory bounds what a message can load.** A contract has
+    1 MiB, in Kreivo's runtime and in the provider, and ink's allocator never
+    frees. A message loads every reservation of each week it reads. With a cap
+    of 128 reservations per worker and week, one reservation over a 50-week
+    window trapped once each week held 79. With the cap at 32 and two changes
+    that cut the memory a reservation takes by a third, windows of 50, 150 and 170
+    weeks fill to the cap and the next reservation is refused with
+    `insufficient_capacity`; a 200-week window traps at 31 per week, in a
+    message that needs 4.8 MB of proof. The cause was not observed directly:
+    the traps moved by about the factor the two changes predict.
+20. **`calendar` returns a bounded history.** With contracts#24 it returned
+    5,440 reservations of one worker and trapped at 6,200; with contracts#23
+    it returns 6,250, near what its return buffer holds. Reservations are
+    never released, and once the provider reads calendars through that message
+    ([#44](https://github.com/abako-project/backend-v2/pull/44)) a worker past
+    that history fails every read. A paged read removes the ceiling.
+
+Not measured with contracts#24: the 12 KiB bounds and the task pages on the
+built contracts (unit tests cover them), and weeks near the cap in the
+scenario, where each read of such a week costs about 1.5 kB more.
+
 Not yet measured: WebAuthn devices, deployment through a community, real proof
 sizes (the fork meters them by weight), and anything against a live node.
 
@@ -223,7 +273,8 @@ Where a fork differs from Kreivo, found on the way:
 
 The logs are in [`results/`](results/): `market-final.out` has every operation
 of the marketplace run with the earlier contracts,
-`market-contracts-2a74d50.out` the same run with contracts#23, `mlimits.out`
+`market-contracts-2a74d50.out` the same run with contracts#23,
+`market-contracts-e218b0c.out` with contracts#24, `mlimits.out`
 the limits and `wallet-test.log` the wallet signatures. The spike sources sit in `spike/` beside this note,
 untracked, with the snapshot: they link GPL crates and are evidence, not backend
 code. `main.rs` is the first run, `bin/market.rs` the marketplace,
@@ -319,7 +370,8 @@ the code of every contract it calls.
    seeds and IDs in the contract, and do not rely on the caller's identity to
    keep a read private.
 9. **Pack the storage.** Described below. Project and the calendar are
-   approved (decision 8); the Dao indexes and Dao's copies are proposed.
+   approved (decision 8) and proposed in contracts#24; the Dao indexes and
+   Dao's copies are proposed.
 
 The acceptance line for these is the first bullet under [acceptance](#acceptance),
 measured again with `spike/src/bin/market.rs`.
@@ -329,50 +381,51 @@ measured again with `spike/src/bin/market.rs`.
 The contracts keep one storage entry per small record: the average entry of the
 run holds 27 bytes and costs 10,263 to touch. This proposal keeps every rule
 and public message and changes where the data lives. The owner approved the
-Project and calendar parts on 2026-11-25 (decision 8); the Dao indexes and
-Dao's copies of Project data stay proposed. Nothing in it is measured.
-The estimates count accesses saved at 10.3 kB each, and the replay is the test.
+Project and calendar parts on 2026-11-25 (decision 8). They are built in
+contracts#24 and measured in findings 18 to 20; the text below describes them
+as built. The Dao indexes and Dao's copies of Project data stay proposed and
+unmeasured: their estimates count accesses saved at 10.3 kB each.
 
 **Project.** A project keeps a separate storage entry for each proposal,
 milestone, requirement, required skill, assignment, rating, task, task
 assignee, submission and evaluation, and loads all of them on every message:
 about 60 reads for the four-milestone project before any work starts.
 
-- One storage entry per proposal for its terms: milestones, requirements and
-  skills.
-  The four-milestone, 14-requirement proposal is about 1 kB.
-- Per milestone, one storage entry for execution (status, assignments,
-  ratings) and task pages, each a storage entry holding several tasks with
-  their assignees. A task is 8 bytes and 32 more per assignee, and a full
-  page starts a new one.
+- One storage entry per proposal: its terms and, for each milestone, its
+  status, team and ratings. The scenario's largest, four milestones and 14
+  requirements, is 1.8 kB.
+- Per milestone, task pages: sixteen tasks with their assignees to a storage
+  entry, and a full page starts a new one.
 - One storage entry per submission with its ratings, and one per evaluation
   with its ratings.
-- Every write checks the encoded size against a stated bound well under the 16
-  KiB limit on a storage entry and fails with a domain error above it. For the
-  terms and execution entries that error is a new limit on the size of a
-  proposal and of a team, far above the scenario's, and like the calendar's cap
-  it is a new rule.
+- Every write checks the encoded size against 12 KiB, under the 16 KiB limit
+  on a storage entry. A proposal above it fails with `proposal_too_large`:
+  about 110 team slots over ten milestones. Any other entry fails with
+  `storage_entry_too_large`: about 23 assignees per task in a full page, or
+  370 ratings.
 
-The project then loads about 10 storage entries where it loads 60, and tasks
-stop adding an access each. The loading code keeps its shape: one tree in
-memory, saved by comparison. Loading only the storage entries a message needs
-would save more and is a larger change; it can follow if the measurement asks
-for it.
+Tasks stop adding an access each. The loading code keeps its shape: one tree
+in memory, saved by comparison. Loading only the storage entries a message
+needs would save more and is a larger change.
 
 **Calendar.** A reservation writes three storage entries: the reservation,
 the week's total and the week's key. Selection reads up to two per candidate
 and week.
 
-- One storage entry per worker and week: override capacity, total reserved
-  and that week's reservations. The worker's header lists the weeks that have
-  one.
-- That entry needs a cap on reservations, since they are never released:
-  128 per worker and week is 6 kB. That cap is a new rule. Without it, the
-  reservations stay one storage entry each and only the total and the key merge.
+- One storage entry per worker and week: the total reserved and that week's
+  reservations. The worker's header holds the capacity, the overrides and the
+  weeks that have reservations; above 12 KiB, about 2,400 reserved weeks, it
+  fails with `calendar_too_large`.
+- A week holds a capped number of reservations, since they are never released
+  and a message loads all of a week's (finding 19). A week at the cap counts
+  as full: `calendar_available` returns 0 for it with minutes left, and a
+  reservation whose window has no other week fails with
+  `insufficient_capacity`. A reservation takes the earliest weeks of its
+  window, so a busy coordinator's collect in single weeks. contracts#24
+  carries a cap of 32.
 
-For the four-milestone approval the two changes save about 100 accesses of
-the 225 it makes, which would put it near 1.6 MB. If the measurement confirms
-that, item 3 is not needed at this size.
+The four-milestone approval now needs 1.36 MB, so item 3 is not needed at
+this size.
 
 **Dao indexes.** Workers, projects, proposals, deposits, withdrawals and
 disputes each keep a sorted list with one storage entry per element, and an
@@ -404,9 +457,11 @@ checks that the indexes are sorted. Two ways to follow a new layout:
   `Project.view` and `Project.reasons` already return most of what the
   provider reads. Missing: the next task ID, the origin of each skill and Dao's
   reason records. This is what the API must do on the chain anyway
-  ([reads](#reads-and-notifications)), so the work carries over. The provider
-  reads every fact on each request, so the time a read takes has to be
-  measured first.
+  ([reads](#reads-and-notifications)), so the work carries over.
+  [#44](https://github.com/abako-project/backend-v2/pull/44) does it for
+  calendars and Project trees, which is what contracts#24 moves. The provider
+  reads every fact on each request: a read then takes about 1.1 ms more per
+  worker and 2 ms per project in a release build.
 - *Rewrite the two codecs* for the new layout. No contract additions, and the
   code goes away with the provider in stage 3.
 
@@ -445,7 +500,8 @@ Each stage ends with the independent review SPEC-0013 requires.
   (0.467 s, 2,446,677 bytes of proof) on the fork, or is listed with its
   measured weight as a contracts blocker. The list is in finding 10 and
   [`results/market-final.out`](results/market-final.out) for the earlier
-  contracts, and in finding 15 for contracts#23.
+  contracts, and in finding 15 for contracts#23. With contracts#24 the list
+  is empty (finding 18).
 - The public gateway flow passes in fork mode from registration to settlement
   with a passkey device.
 - Invalid credential, expired session, call outside the session filter, replay,
@@ -516,7 +572,10 @@ Decided by the owner on 2026-11-25:
    Project data are not part of this. The values of the two limits it brings
    (reservations per worker and week, the size of a proposal and of a team)
    are confirmed by the owner before the contract change is proposed for
-   merging.
+   merging. The owner confirmed the 12 KiB bounds, sixteen tasks per page and
+   128 reservations per week the same day. The built contracts cannot reach
+   128 (finding 19), so contracts#24 is a draft with 32 until the owner
+   confirms a value.
 9. **Stage 2 may start before the last two approvals fit an ordinary block.**
    Stage 3 keeps decision 5's condition: the provider stays until the scenario
    fits ordinary blocks. Until then the whole-core approval is listed as a
