@@ -28,7 +28,7 @@ struct ContractEffect {
     recipients: Vec<AccountId32>,
     allocated_task_id: Option<u32>,
 }
-fn account(value: AccountId32) -> Account {
+pub(super) fn account(value: AccountId32) -> Account {
     Account::new(value.into_bytes())
 }
 pub(super) fn input(name: &str, args: impl Encode) -> Vec<u8> {
