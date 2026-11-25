@@ -246,7 +246,8 @@ keeps every public message:
     weeks fill to the cap and the next reservation is refused with
     `insufficient_capacity`; a 200-week window traps at 31 per week, in a
     message that needs 4.8 MB of proof. The cause was not observed directly:
-    the traps moved by about the factor the two changes predict.
+    the traps moved by about the factor the two changes predict. The log is
+    [`results/calendar-limits.out`](results/calendar-limits.out).
 20. **`calendar` returns a bounded history.** With contracts#24 it returned
     5,440 reservations of one worker and trapped at 6,200; with contracts#23
     it returns 6,250, near what its return buffer holds. Reservations are
@@ -254,9 +255,18 @@ keeps every public message:
     ([#44](https://github.com/abako-project/backend-v2/pull/44)) a worker past
     that history fails every read. A paged read removes the ceiling.
 
-Not measured with contracts#24: the 12 KiB bounds and the task pages on the
-built contracts (unit tests cover them), and weeks near the cap in the
-scenario, where each read of such a week costs about 1.5 kB more.
+Not measured with contracts#24, on the built contracts:
+
+- The 12 KiB bounds and the task pages. Unit tests cover them, and unit tests
+  did not show finding 19.
+- How large a Project can grow. Every Project message loads the whole tree,
+  and packing removed the 10.3 kB per task that bounded it by proof, so memory
+  may now bind first. A Project that traps on load can run no message.
+- An approval whose candidates' weeks are at the cap: finding 19 called
+  `reserve_calendar` alone.
+- How much `Project.view` can return.
+- Weeks near the cap in the scenario, where each read of such a week costs
+  about 1.5 kB more.
 
 Not yet measured: WebAuthn devices, deployment through a community, real proof
 sizes (the fork meters them by weight), and anything against a live node.
@@ -421,8 +431,9 @@ and week.
   as full: `calendar_available` returns 0 for it with minutes left, and a
   reservation whose window has no other week fails with
   `insufficient_capacity`. A reservation takes the earliest weeks of its
-  window, so a busy coordinator's collect in single weeks. contracts#24
-  carries a cap of 32.
+  window, so a busy coordinator's collect in single weeks. A coordinator
+  whose current week is at the cap is not selected, and `create_project`
+  fails when all are. contracts#24 carries a cap of 32.
 
 The four-milestone approval now needs 1.36 MB, so item 3 is not needed at
 this size.
@@ -573,9 +584,9 @@ Decided by the owner on 2026-11-25:
    (reservations per worker and week, the size of a proposal and of a team)
    are confirmed by the owner before the contract change is proposed for
    merging. The owner confirmed the 12 KiB bounds, sixteen tasks per page and
-   128 reservations per week the same day. The built contracts cannot reach
-   128 (finding 19), so contracts#24 is a draft with 32 until the owner
-   confirms a value.
+   128 reservations per week the same day. On the built contracts a 50-week
+   reservation traps before its weeks hold 128 (finding 19), so contracts#24
+   is a draft with 32 until the owner confirms a value.
 9. **Stage 2 may start before the last two approvals fit an ordinary block.**
    Stage 3 keeps decision 5's condition: the provider stays until the scenario
    fits ordinary blocks. Until then the whole-core approval is listed as a

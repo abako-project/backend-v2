@@ -1,0 +1,91 @@
+Calendar limits on the built contracts, run in the embedded provider's runtime (pallet-contracts 51, 1 MiB of contract memory).
+Each PROBE line is printed by a temporary provider test: it deploys Dao, registers one worker and calls
+reserve_calendar and calendar. 'dense' and 'window' rounds raise the weekly capacity by one and reserve one minute
+in every week of the window, so each round adds one reservation to each week.
+
+== contracts aa25bad (pinned on master) ==
+PROBE dense view at 3650 reservations: ok reverted=false bytes=171607 gas Weight { ref_time: 290766512899, proof_size: 37421428 } debug ""
+PROBE dense view at 4500 reservations: ok reverted=false bytes=211557 gas Weight { ref_time: 358261420357, proof_size: 46099078 } debug ""
+PROBE dense view at 5500 reservations: ok reverted=false bytes=258557 gas Weight { ref_time: 437668483053, proof_size: 56308078 } debug ""
+PROBE dense view at 6250 reservations: ok reverted=false bytes=293807 gas Weight { ref_time: 497224102379, proof_size: 63964828 } debug ""
+PROBE dense: 400 reservations: view Success bytes 18857 gas Weight { ref_time: 32692574599, proof_size: 4242178 }
+PROBE dense: 800 reservations: view Success bytes 37657 gas Weight { ref_time: 64456190833, proof_size: 8325778 }
+PROBE dense: 1200 reservations: view Success bytes 56457 gas Weight { ref_time: 96219789441, proof_size: 12409378 }
+PROBE dense: 1600 reservations: view Success bytes 75257 gas Weight { ref_time: 127982098833, proof_size: 16492978 }
+PROBE dense: 2000 reservations: view Dispatch(Module(ModuleError { index: 4, error: [2, 0, 0, 0], message: Some("OutOfGas") })) bytes 0 gas Weight { ref_time: 128555597493, proof_size: 16758412 }
+PROBE dense final view: ok reverted=false bytes=94057 gas Weight { ref_time: 159744408225, proof_size: 20576578 } debug ""
+PROBE weeks 1800: ok reverted=false bytes=84657 gas Weight { ref_time: 143863606049, proof_size: 18534778 } debug ""
+PROBE weeks 2000: ok reverted=false bytes=94057 gas Weight { ref_time: 159744795997, proof_size: 20576578 } debug ""
+PROBE weeks 2400: ok reverted=false bytes=112857 gas Weight { ref_time: 191508482735, proof_size: 24660178 } debug ""
+PROBE weeks 2450: ok reverted=false bytes=115207 gas Weight { ref_time: 195478789035, proof_size: 25170628 } debug ""
+PROBE single reservation over 20 years: ok reverted=false bytes=2 gas Weight { ref_time: 544873603215, proof_size: 30668044 } debug ""
+PROBE single reservation over 25 years: ok reverted=false bytes=2 gas Weight { ref_time: 682128697937, proof_size: 38290294 } debug ""
+PROBE single reservation over 30 years: ok reverted=false bytes=2 gas Weight { ref_time: 818091757758, proof_size: 45912544 } debug ""
+PROBE single reservation over 40 years: ok reverted=false bytes=2 gas Weight { ref_time: 1090020068060, proof_size: 61157044 } debug ""
+
+== contracts b0ecac3 (packed, cap 128, before the memory changes) ==
+PROBE dense: 400 reservations: view Success bytes 18857 gas Weight { ref_time: 6093373889, proof_size: 687059 }
+PROBE dense: 800 reservations: view Success bytes 37657 gas Weight { ref_time: 7383657173, proof_size: 705459 }
+PROBE dense: 1200 reservations: view Success bytes 56457 gas Weight { ref_time: 8672598363, proof_size: 723859 }
+PROBE dense: 1600 reservations: view Success bytes 75257 gas Weight { ref_time: 9961574805, proof_size: 742259 }
+PROBE dense: 2000 reservations: view Success bytes 94057 gas Weight { ref_time: 11250551247, proof_size: 760659 }
+PROBE dense: 2400 reservations: view Success bytes 112857 gas Weight { ref_time: 12539492437, proof_size: 779059 }
+PROBE dense: 2800 reservations: view Success bytes 131657 gas Weight { ref_time: 13828468879, proof_size: 797459 }
+PROBE dense: 3200 reservations: view Success bytes 150457 gas Weight { ref_time: 15121009702, proof_size: 815909 }
+PROBE dense: 3500 reservations: view Success bytes 164557 gas Weight { ref_time: 16086761902, proof_size: 829709 }
+PROBE dense: 3550 reservations: view Success bytes 166907 gas Weight { ref_time: 16248992192, proof_size: 832009 }
+PROBE dense: 3600 reservations: view Success bytes 169257 gas Weight { ref_time: 16409950892, proof_size: 834309 }
+PROBE dense: 3650 reservations: view Dispatch(Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") })) bytes 0 gas Weight { ref_time: 8787818530, proof_size: 836609 }
+PROBE dense final view: ERR Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") }) gas Weight { ref_time: 8787818530, proof_size: 836609 } debug ""
+PROBE dense: 400 reservations: view Success bytes 18857 gas Weight { ref_time: 6093373889, proof_size: 687059 }
+PROBE dense: 800 reservations: view Success bytes 37657 gas Weight { ref_time: 7383657173, proof_size: 705459 }
+PROBE dense: 1200 reservations: view Success bytes 56457 gas Weight { ref_time: 8672598363, proof_size: 723859 }
+PROBE dense: 1600 reservations: view Success bytes 75257 gas Weight { ref_time: 9961574805, proof_size: 742259 }
+PROBE dense: 2000 reservations: view Success bytes 94057 gas Weight { ref_time: 11250551247, proof_size: 760659 }
+PROBE dense: 2400 reservations: view Success bytes 112857 gas Weight { ref_time: 12539492437, proof_size: 779059 }
+PROBE dense: 2800 reservations: view Success bytes 131657 gas Weight { ref_time: 13828468879, proof_size: 797459 }
+PROBE dense: 3200 reservations: view Success bytes 150457 gas Weight { ref_time: 15121009702, proof_size: 815909 }
+PROBE dense: 3600 reservations: view Success bytes 169257 gas Weight { ref_time: 16409950892, proof_size: 834309 }
+PROBE weeks 1800: ok reverted=false bytes=84657 gas Weight { ref_time: 165060489736, proof_size: 18552460 } debug ""
+PROBE weeks 2000: ok reverted=false bytes=94057 gas Weight { ref_time: 185812542126, proof_size: 20596060 } debug ""
+PROBE weeks 2400: ok reverted=false bytes=112857 gas Weight { ref_time: 229054479858, proof_size: 24683260 } debug ""
+PROBE weeks 2450: ok reverted=false bytes=115207 gas Weight { ref_time: 234573969400, proof_size: 25194160 } debug ""
+PROBE single reservation over 20 years: ok reverted=false bytes=2 gas Weight { ref_time: 202833151767, proof_size: 10343519 } debug ""
+PROBE single reservation over 25 years: ok reverted=false bytes=2 gas Weight { ref_time: 255426939311, proof_size: 12884269 } debug ""
+PROBE single reservation over 30 years: ERR Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") }) gas Weight { ref_time: 33795119270, proof_size: 160059 } debug ""
+PROBE single reservation over 40 years: ERR Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") }) gas Weight { ref_time: 39548331282, proof_size: 160059 } debug ""
+PROBE dense: reserve round 80 failed: Dispatch(Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") })) data [] gas Weight { ref_time: 12365506569, proof_size: 850409 }
+PROBE dense view at 3950 reservations: ERR Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") }) gas Weight { ref_time: 9114661630, proof_size: 850409 } debug ""
+PROBE dense view at 3650 reservations: ERR Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") }) gas Weight { ref_time: 8787818530, proof_size: 836609 } debug ""
+
+== contracts e218b0c (packed, cap 32) ==
+PROBE 150 weeks: round 1: reserve proof 1704979; calendar Success with 150 reservations, 7107 bytes, proof 1692770
+PROBE 150 weeks: round 30: reserve proof 3632481; calendar Success with 4500 reservations, 211557 bytes, proof 1892870
+PROBE 150 weeks: round 31: reserve proof 3646281; calendar Success with 4650 reservations, 218607 bytes, proof 1899770
+PROBE 150 weeks: round 32: reserve proof 3660081; calendar Success with 4800 reservations, 225657 bytes, proof 1906670
+PROBE 150 weeks: reserve round 33 (32 per week held): Reverted Err("insufficient_capacity") gas Weight { ref_time: 18782631145, proof_size: 1906670 }
+PROBE 150 weeks: calendar after 32 rounds (4800 reservations): ok reverted=false bytes=225657 gas Weight { ref_time: 22338924564, proof_size: 1906670 }
+PROBE 170 weeks: round 1: reserve proof 1908239; calendar Success with 170 reservations, 8047 bytes, proof 1897130
+PROBE 170 weeks: round 27: reserve proof 4045821; calendar Success with 4590 reservations, 215787 bytes, proof 2100450
+PROBE 170 weeks: round 28: reserve proof 4061461; calendar Success with 4760 reservations, 223777 bytes, proof 2108270
+PROBE 170 weeks: round 29: reserve proof 4077101; calendar Success with 4930 reservations, 231767 bytes, proof 2116090
+PROBE 170 weeks: round 30: reserve proof 4092741; calendar Success with 5100 reservations, 239757 bytes, proof 2123910
+PROBE 170 weeks: round 31: reserve proof 4108381; calendar Success with 5270 reservations, 247747 bytes, proof 2131730
+PROBE 170 weeks: round 32: reserve proof 4124021; calendar Success with 5440 reservations, 255737 bytes, proof 2139550
+PROBE 170 weeks: reserve round 33 (32 per week held): Reverted Err("insufficient_capacity") gas Weight { ref_time: 21176564950, proof_size: 2139550 }
+PROBE 170 weeks: calendar after 32 rounds (5440 reservations): ok reverted=false bytes=255737 gas Weight { ref_time: 25210917126, proof_size: 2139550 }
+PROBE 50 weeks: round 1: reserve proof 688679; calendar Success with 50 reservations, 2406 bytes, proof 670969
+PROBE 50 weeks: round 32: reserve proof 1340379; calendar Success with 1600 reservations, 75257 bytes, proof 742269
+PROBE 50 weeks: reserve round 33 (32 per week held): Reverted Err("insufficient_capacity") gas Weight { ref_time: 6805179684, proof_size: 742269 }
+PROBE 50 weeks: calendar after 32 rounds (1600 reservations): ok reverted=false bytes=75257 gas Weight { ref_time: 8051993269, proof_size: 742269 }
+PROBE 200 weeks: round 1: reserve proof 2213129; calendar Success with 200 reservations, 9457 bytes, proof 2203670
+PROBE 200 weeks: round 24: reserve proof 4672731; calendar Success with 4800 reservations, 225657 bytes, proof 2415270
+PROBE 200 weeks: round 25: reserve proof 4691131; calendar Success with 5000 reservations, 235057 bytes, proof 2424470
+PROBE 200 weeks: round 26: reserve proof 4709531; calendar Success with 5200 reservations, 244457 bytes, proof 2433670
+PROBE 200 weeks: round 27: reserve proof 4727931; calendar Success with 5400 reservations, 253857 bytes, proof 2442870
+PROBE 200 weeks: round 28: provider query error Limit
+PROBE 200 weeks: round 29: provider query error Limit
+PROBE 200 weeks: round 30: provider query error Limit
+PROBE 200 weeks: round 31: reserve proof 4801531; calendar Dispatch(Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") })) with 0 reservations, 0 bytes, proof 2305775
+PROBE 200 weeks: reserve round 32 (31 per week held): Dispatch(Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") })) gas Weight { ref_time: 30667816310, proof_size: 2479670 }
+PROBE 200 weeks: calendar after 31 rounds (6200 reservations): ERR Module(ModuleError { index: 4, error: [12, 0, 0, 0], message: Some("ContractTrapped") }) gas Weight { ref_time: 21740118061, proof_size: 2305775 }
