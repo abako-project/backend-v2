@@ -5,9 +5,10 @@ Status: DRAFT. Requested by the owner on 2026-11-20, who decided
 Stage 2 waits for the [contract changes](#contract-changes) that finding 10
 calls for, and with stage 3 for the owner's approval of this note: they change
 authentication and the public API and remove services. The first contract
-changes are in [contracts#23](https://github.com/abako-dev/contracts/pull/23)
-(findings 15 to 17). Nothing here authorizes
-publishing or deploying.
+changes, [contracts#23](https://github.com/abako-dev/contracts/pull/23), are
+merged and the backend pins them (findings 15 to 17). One approval still needs
+a whole core, so stage 2 keeps waiting (open decision 9). Nothing here
+authorizes publishing or deploying.
 
 When approved this supersedes SPEC-0001 (custodial signing) and the passkey
 section of SPEC-0004, and replaces the execution, authority and persistence
@@ -39,7 +40,9 @@ custodial seeds go away.
 ## What the spike established
 
 The spike boots a fork of Kreivo #41144847 (spec 136), registers pass accounts,
-deploys the pinned Dao and Project artifacts and drives them through sube.
+deploys the Dao and Project artifacts the backend pinned at the time
+(`abako-dev/contracts` at `a0532843`, "the earlier contracts" below) and drives
+them through sube.
 Measured on a developer laptop, release build, snapshot
 `sha256:80653b01472ac975a29c91245b620af39555e368ff4e28aebf85a4f14b3bc45d`:
 
@@ -151,20 +154,21 @@ through a dispute.
 
 #### After the first contract changes
 
-Findings 10 to 13 describe the pinned contracts and stay as the baseline. The
+Findings 10 to 13 describe the earlier contracts and stay as the baseline. The
 same run was repeated on 2026-11-25 with
-[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `2a74d50`,
-which keeps every public message and replaces five of the hooks Project
-calls on Dao:
+[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `2a74d50`.
+It was merged as `aa25bad` with the same code, and the backend pins those
+artifacts since [#41](https://github.com/abako-project/backend-v2/pull/41). It
+keeps every public message and replaces five of the hooks Project calls on Dao:
 
-| Of 193 transactions | Pinned | contracts#23 |
+| Of 193 transactions | Before | contracts#23 |
 |---|---|---|
 | Fit an ordinary block with the 10% gas margin the client adds | 150 | 191 |
 | Fit an ordinary block without the margin | 161 | 192 |
 | Need a whole core | 30 | 1 |
 | Refused | 2 | 0 |
 
-| Heaviest case of | Pinned | contracts#23 |
+| Heaviest case of | Before | contracts#23 |
 |---|---|---|
 | `approve_execution` | 10,768,309 | 2,593,252 |
 | `create_proposal` | 5,060,490 | 1,266,076 |
@@ -176,7 +180,7 @@ calls on Dao:
     block.** Four milestones with 14 requirements need 2,593,252 bytes, 106% of
     the limit, so a whole core. Three milestones with 12 need 2,192,710, which
     fits only without the gas margin. Teams, IDs, reservations and balances
-    are the same as with the pinned contracts.
+    are the same as with the earlier contracts.
 16. **The proof is charged by the access, not by the data.** Kreivo's weights
     charge 10,263 bytes plus the value's length for every storage read, write
     or existence check: the cost pallet-contracts benchmarks for a storage tree
@@ -216,7 +220,7 @@ Where a fork differs from Kreivo, found on the way:
   as a trapped contract. The client always sets one.
 
 The logs are in [`results/`](results/): `market-final.out` has every operation
-of the marketplace run with the pinned contracts,
+of the marketplace run with the earlier contracts,
 `market-contracts-2a74d50.out` the same run with contracts#23, `mlimits.out`
 the limits and `wallet-test.log` the wallet signatures. The spike sources sit in `spike/` beside this note,
 untracked, with the snapshot: they link GPL crates and are evidence, not backend
@@ -278,7 +282,7 @@ code. `main.rs` is the first run, `bin/market.rs` the marketplace,
 
 ## Contract changes
 
-What makes the calls heavy, read in the pinned source
+What makes the calls heavy, read in the source of the earlier contracts
 (`abako-dev/contracts` at `a0532843`) and measured in findings 10, 11 and 16.
 The proof charged follows the number of storage items a message touches, and
 the code of every contract it calls.
@@ -408,7 +412,7 @@ and the pinned artifacts.
 
 **Order of work.** Project and calendar first, measured with the replay, then
 the indexes and the copies. Each step keeps the comparison the first changes
-used: the same teams, IDs, reservations and balances as the pinned contracts.
+used: the same teams, IDs, reservations and balances as the earlier contracts.
 
 ## Stages
 
@@ -433,7 +437,7 @@ Each stage ends with the independent review SPEC-0013 requires.
 - Every operation of the marketplace scenario fits a normal Kreivo extrinsic
   (0.467 s, 2,446,677 bytes of proof) on the fork, or is listed with its
   measured weight as a contracts blocker. The list is in finding 10 and
-  [`results/market-final.out`](results/market-final.out) for the pinned
+  [`results/market-final.out`](results/market-final.out) for the earlier
   contracts, and in finding 15 for contracts#23.
 - The public gateway flow passes in fork mode from registration to settlement
   with a passkey device.
