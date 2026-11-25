@@ -152,8 +152,8 @@ through a dispute.
 #### After the first contract changes
 
 Findings 10 to 13 describe the pinned contracts and stay as the baseline. The
-same run was repeated on 2026-11-23 with
-[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `015d219`,
+same run was repeated on 2026-11-25 with
+[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `a08321c`,
 which keeps every public message and replaces five of the hooks Project
 calls on Dao:
 
@@ -166,15 +166,15 @@ calls on Dao:
 
 | Heaviest case of | Pinned | contracts#23 |
 |---|---|---|
-| `approve_execution` | 10,768,309 | 2,593,393 |
-| `create_proposal` | 5,060,490 | 1,266,217 |
-| `accept_milestone` | 3,601,806 | 1,905,041 |
-| `evaluate_project` | 2,738,434 | 1,576,989 |
-| `create_project` | 2,278,545 | 776,635 |
+| `approve_execution` | 10,768,309 | 2,593,252 |
+| `create_proposal` | 5,060,490 | 1,266,076 |
+| `accept_milestone` | 3,601,806 | 1,904,900 |
+| `evaluate_project` | 2,738,434 | 1,576,848 |
+| `create_project` | 2,278,545 | 776,494 |
 
 15. **Nothing is refused, and two approvals are still over an ordinary
-    block.** Four milestones with 14 requirements need 2,593,393 bytes, 106% of
-    the limit, so a whole core. Three milestones with 12 need 2,192,851, which
+    block.** Four milestones with 14 requirements need 2,593,252 bytes, 106% of
+    the limit, so a whole core. Three milestones with 12 need 2,192,710, which
     fits only without the gas margin. Teams, IDs, reservations and balances
     are the same as with the pinned contracts.
 16. **The proof is charged by the access, not by the data.** Kreivo's weights
@@ -217,7 +217,7 @@ Where a fork differs from Kreivo, found on the way:
 
 The logs are in [`results/`](results/): `market-final.out` has every operation
 of the marketplace run with the pinned contracts,
-`market-contracts-015d219.out` the same run with contracts#23, `mlimits.out`
+`market-contracts-a08321c.out` the same run with contracts#23, `mlimits.out`
 the limits and `wallet-test.log` the wallet signatures. The spike sources sit in `spike/` beside this note,
 untracked, with the snapshot: they link GPL crates and are evidence, not backend
 code. `main.rs` is the first run, `bin/market.rs` the marketplace,

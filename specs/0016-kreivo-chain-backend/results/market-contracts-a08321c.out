@@ -1,0 +1,663 @@
+0. fork of Kreivo at #41144847 (spec 136), chain time 1795131780 s = ISO week 2026-W47; normal max_extrinsic ref_time=466558509666 proof_size=2446677; max_block ref_time=666666666666 proof_size=3495253; full-core ceiling ref_time=1399891843000 proof_size=7340032
+   Dao at 0x22fecf65dd03e2a123d65d68ed94e4f40e6849b3146f721a5c961c8ff95def44 (dev: ContractsApi_instantiate + call_mut) | gas ref_time=96229948737 proof_size=8788437 | deposit 1910574954258
+   Project code 0x3bd8fa143b27c601e571827bddf6fabf58c71250852b36193db016e1e7483c07 (dev: ContractsApi_upload_code + call_mut), deposit 67464612522
+  [setup] operator → Dao.configure_project_code: ref_time 747124596 (0.16%) proof_size 164864 (6.74%) deposit 10666656 | regular | Success | fee 839952585 held 10666656 spent 850619241 | 
+1. payment asset and accounting (is_sufficient = true):
+   before: assets/asset/FungibleAssetLocation::Here(1) = <none>
+   write Assets.Asset[FungibleAssetLocation::Here(1)]: key 0x682a59d51ab9e48a8c8cc418ff9708d2d34371a193a751eea5883e9553457b2e61303d77febbbbbb2af5347630a052650001000000 value 0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35d6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35d6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35d6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c350000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000100000000000000000000000000 (190 bytes)
+   Assets.mint(36893488147419103230) to the Dao, signed by the operator: Success
+     Assets.Issued Event::Issued(asset_id:FungibleAssetLocation::Here(1);owner:0x22fecf65dd03e2a123d65d68ed94e4f40e6849b3146f721a5c961c8ff95def44;amount:36893488147419103230)
+     TransactionPayment.TransactionFeePaid Event::TransactionFeePaid(who:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;actual_fee:558148143;tip:0)
+   after: assets/asset/FungibleAssetLocation::Here(1) = (owner:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;issuer:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;admin:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;freezer:0xd6d9e961af2fa50892c05878e416fee5d571e8ca13d53763e0958294079f5c35;supply:36893488147419103230;deposit:0;min_balance:1;is_sufficient:true;accounts:1;sufficients:1;approvals:0;status:AssetStatus::Live)
+   after: assets/account/FungibleAssetLocation::Here(1)/Dao = (balance:36893488147419103230;status:AccountStatus::Liquid;reason:ExistenceReason::Sufficient;extra:())
+  [setup] operator → Dao.configure_accounting (mock funding on): ref_time 829346981 (0.18%) proof_size 175159 (7.16%) deposit 0 | regular | Success | fee 748760464 held 0 spent 748760464 | 
+   accounting_enabled() = true
+2. 13 pallet-pass accounts registered and funded by the operator: 1592736748 planck per account besides the 1000 UNIT endowment
+A. four-milestone project:
+  [A] coord1 → Dao.register_worker: ref_time 7282897254 (1.56%) proof_size 678375 (27.73%) deposit 200147999652 | regular | Success | fee 2016896965 held 200147999652 spent 202164896617 | 
+  [A] coord2 → Dao.register_worker: ref_time 7222497813 (1.55%) proof_size 668200 (27.31%) deposit 153471999708 | regular | Success | fee 2004935700 held 153471999708 spent 155476935408 | 
+  [A] w1 → Dao.register_worker: ref_time 4314194445 (0.92%) proof_size 452574 (18.50%) deposit 73418666508 | regular | Success | fee 1698098388 held 73418666508 spent 75116764896 | 
+  [A] w2 → Dao.register_worker: ref_time 4079681773 (0.87%) proof_size 431983 (17.66%) deposit 73418666508 | regular | Success | fee 1673888834 held 73418666508 spent 75092555342 | 
+  [A] w3 → Dao.register_worker: ref_time 4314194445 (0.92%) proof_size 452574 (18.50%) deposit 73418666508 | regular | Success | fee 1698096985 held 73418666508 spent 75116763493 | 
+  [A] w4 → Dao.register_worker: ref_time 4783219789 (1.03%) proof_size 493756 (20.18%) deposit 73418666508 | regular | Success | fee 1746513288 held 73418666508 spent 75165179796 | 
+  [A] w5 → Dao.register_worker: ref_time 4850210057 (1.04%) proof_size 504051 (20.60%) deposit 73418666508 | regular | Success | fee 1758616776 held 73418666508 spent 75177283284 | 
+  [A] u1 → Dao.register_worker: ref_time 5084722729 (1.09%) proof_size 524642 (21.44%) deposit 73418666508 | regular | Success | fee 1782824928 held 73418666508 spent 75201491436 | 
+  [A] u2 → Dao.register_worker: ref_time 4615697385 (0.99%) proof_size 483460 (19.76%) deposit 73418666508 | regular | Success | fee 1734408625 held 73418666508 spent 75153075133 | 
+  [A] u3 → Dao.register_worker: ref_time 5553748073 (1.19%) proof_size 565824 (23.13%) deposit 73418666508 | regular | Success | fee 1831241231 held 73418666508 spent 75249907739 | 
+  [A] u4 → Dao.register_worker: ref_time 5855259053 (1.25%) proof_size 596710 (24.39%) deposit 73418666508 | regular | Success | fee 1867552870 held 73418666508 spent 75286219378 | 
+  [A] u5 → Dao.register_worker: ref_time 4146672041 (0.89%) proof_size 442278 (18.08%) deposit 73418666508 | regular | Success | fee 1685992322 held 73418666508 spent 75104658830 | 
+  [A] operator → Dao.promote_coordinator: ref_time 1013872606 (0.22%) proof_size 185669 (7.59%) deposit 0 | regular | Success | fee 867783281 held 0 spent 867783281 | 
+  [A] coord1 → Dao.set_worker_mode: ref_time 1718889855 (0.37%) proof_size 247282 (10.11%) deposit 13345333308 | regular | Success | fee 1176742312 held 13345333308 spent 14522075620 | 
+  [A] operator → Dao.promote_coordinator: ref_time 1013872606 (0.22%) proof_size 185669 (7.59%) deposit 0 | regular | Success | fee 867783281 held 0 spent 867783281 | 
+  [A] coord2 → Dao.set_worker_mode: ref_time 1658280006 (0.36%) proof_size 237059 (9.69%) deposit 6677333316 | regular | Success | fee 1164723472 held 6677333316 spent 7842056788 | 
+  [A] operator → Dao.fund_account (client, 20000): ref_time 1951766344 (0.42%) proof_size 267563 (10.94%) deposit 26681666625 | regular | Success | fee 990729963 held 26681666625 spent 27672396588 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 1); Assets.Transferred(0x22fecf65…→0x67f1ab54… 20000); 
+   client asset balance 20001 (ledger 20000 + 1 technical unit)
+   create_project dry-runs with 8 caller-chosen seeds select: ["coord2", "coord2", "coord2", "coord1", "coord1", "coord2", "coord2", "coord1"]
+  [A] client → Dao.create_project: ref_time 4061594448 (0.87%) proof_size 540043 (22.07%) deposit 60174666465 | regular | Success | fee 1790931380 held 60141333132 spent 61965597845 | Assets.Transferred(0x22fecf65…→0xa6e377cf… 1); 
+   project 0xca3fc7949c176feec78edd8630db6876 at 0xa6e377cff26924bba6b79fff3ba661fcc89ff7bd48265d237aaf28d7fcf50604 (the dry-run predicted Some(0xca3fc7949c176feec78edd8630db6876))
+   coordinator: coord1
+  [A] coord1 → Project.create_proposal (4 milestone(s), 14 requirements): ref_time 15768930317 (3.38%) proof_size 1265882 (51.74%) deposit 480355665831 | regular | Success | fee 4360814047 held 480355665831 spent 484716479878 | 
+  [A] coord1 → Project.update_proposal (4 milestone(s), 14 requirements): ref_time 9483632118 (2.03%) proof_size 1194924 (48.84%) deposit 0 | regular | Success | fee 4330750295 held 0 spent 4330750295 | 
+  [A] coord1 → Project.create_task: ref_time 5711777949 (1.22%) proof_size 876280 (35.82%) deposit 6669333324 | regular | Success | fee 1972809957 held 6669333324 spent 8642143281 | 
+  [A] coord1 → Project.create_task: ref_time 5779764631 (1.24%) proof_size 886551 (36.23%) deposit 6669333324 | regular | Success | fee 1984893139 held 6669333324 spent 8654226463 | 
+  [A] coord1 → Project.create_task: ref_time 5846953343 (1.25%) proof_size 896822 (36.65%) deposit 6669333324 | regular | Success | fee 1996976807 held 6669333324 spent 8666310131 | 
+  [A] coord1 → Project.create_task: ref_time 5914142055 (1.27%) proof_size 907093 (37.07%) deposit 6669333324 | regular | Success | fee 2009060970 held 6669333324 spent 8678394294 | 
+  [A] coord1 → Project.create_task: ref_time 5981330767 (1.28%) proof_size 917364 (37.49%) deposit 6669333324 | regular | Success | fee 2021145641 held 6669333324 spent 8690478965 | 
+  [A] coord1 → Project.create_task: ref_time 6047388854 (1.30%) proof_size 927635 (37.91%) deposit 6669333324 | regular | Success | fee 2033230829 held 6669333324 spent 8702564153 | 
+  [A] coord1 → Project.create_task: ref_time 6114650931 (1.31%) proof_size 937906 (38.33%) deposit 6669333324 | regular | Success | fee 2045316546 held 6669333324 spent 8714649870 | 
+  [A] coord1 → Project.create_task: ref_time 6181839643 (1.32%) proof_size 948177 (38.75%) deposit 6669333324 | regular | Success | fee 2057402802 held 6669333324 spent 8726736126 | 
+  [A] coord1 → Project.create_task: ref_time 6249251465 (1.34%) proof_size 958448 (39.17%) deposit 6669333324 | regular | Success | fee 2069489607 held 6669333324 spent 8738822931 | 
+  [A] coord1 → Project.create_task: ref_time 6316513542 (1.35%) proof_size 968719 (39.59%) deposit 6669333324 | regular | Success | fee 2081576972 held 6669333324 spent 8750910296 | 
+  [A] coord1 → Project.create_task: ref_time 6383702254 (1.37%) proof_size 978990 (40.01%) deposit 6669333324 | regular | Success | fee 2093664908 held 6669333324 spent 8762998232 | 
+  [A] coord1 → Project.create_task: ref_time 6450890966 (1.38%) proof_size 989261 (40.43%) deposit 6669333324 | regular | Success | fee 2105753425 held 6669333324 spent 8775086749 | 
+  [A] coord1 → Project.create_task: ref_time 6517163118 (1.40%) proof_size 999532 (40.85%) deposit 6669333324 | regular | Success | fee 2117842535 held 6669333324 spent 8787175859 | 
+  [A] coord1 → Project.create_task: ref_time 6584425195 (1.41%) proof_size 1009803 (41.27%) deposit 6669333324 | regular | Success | fee 2129932248 held 6669333324 spent 8799265572 | 
+  [A] coord1 → Project.submit_proposal: ref_time 5533334095 (1.19%) proof_size 857538 (35.05%) deposit 0 | regular | Success | fee 1947570451 held 0 spent 1947570451 | 
+  [A] client → Project.accept_planning_delivery: ref_time 8659679351 (1.86%) proof_size 1264972 (51.70%) deposit 20013666633 | regular | Success | fee 2399997019 held 20013666633 spent 22413663652 | Assets.Transferred(0x22fecf65…→0x1af02a3e… 1); Assets.Transferred(0xa6e377cf…→0x1af02a3e… 0); 
+  [A] client → Project.approve_execution (4 milestone(s), teams 5/3/4/2): ref_time 25758605120 (5.52%) proof_size 2593252 (105.99%) deposit 453833332380 | full core (block took the full core) | Success | fee 4121927759 held 453833332380 spent 457955260139 | Assets.Transferred(0x67f1ab54…→0xa6e377cf… 13000); 
+   after approval: escrow Money(13000), assignments [5, 3, 4, 2], statuses [Some(InProgress), Some(NotStarted), Some(NotStarted), Some(NotStarted)]; asset client 20001→7001, project 1→13001
+   calendar minutes reserved for this project (ISO week:minutes): coord1 [W49:30 W50:60 W51:90 W52:120]; w1 [W49:60 W50:120 W51:180 W52:240]; w4 [W49:60 W51:180]; w5 [W49:60 W51:180]; w3 [W49:60 W50:120 W52:240]; w2 [W49:60 W50:120 W51:180]
+  [A] coord1 → Project.set_task_assignees: ref_time 7443245170 (1.60%) proof_size 1153879 (47.16%) deposit 6677333316 | regular | Success | fee 2419400283 held 6677333316 spent 9096733599 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 7511997203 (1.61%) proof_size 1164174 (47.58%) deposit 6677333316 | regular | Success | fee 2431526894 held 6677333316 spent 9108860210 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 7580724111 (1.62%) proof_size 1174469 (48.00%) deposit 6677333316 | regular | Success | fee 2443654281 held 6677333316 spent 9120987597 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 7649375644 (1.64%) proof_size 1184764 (48.42%) deposit 6677333316 | regular | Success | fee 2455782454 held 6677333316 spent 9133115770 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 7718077427 (1.65%) proof_size 1195059 (48.84%) deposit 6677333316 | regular | Success | fee 2467911424 held 6677333316 spent 9145244740 | 
+  [A] coord1 → Project.submit_milestone (milestone 1 of 4, team of 5): ref_time 8575152984 (1.84%) proof_size 1256795 (51.37%) deposit 26713333260 | regular | Success | fee 2697201473 held 26713333260 spent 29410534733 | 
+  [A] client → Project.accept_milestone (milestone 1 of 4, team of 5): ref_time 16058778220 (3.44%) proof_size 1904900 (77.86%) deposit 100081666485 | regular | Success | fee 3236069621 held 100081666485 spent 103317736106 | Assets.Transferred(0x22fecf65…→0x32147421… 1); Assets.Transferred(0x22fecf65…→0xedbfd4dc… 1); Assets.Transferred(0x22fecf65…→0xc3ace22e… 1); Assets.Transferred(0x22fecf65…→0x34e782b7… 1); Assets.Transferred(0x22fecf65…→0x95cecc37… 1); Assets.Transferred(0xa6e377cf…→0x1af02a3e… 460); Assets.Transferred(0xa6e377cf…→0x32147421… 828); Assets.Transferred(0xa6e377cf…→0xedbfd4dc… 828); Assets.Transferred(0xa6e377cf…→0xc3ace22e… 828); Assets.Transferred(0xa6e377cf…→0x34e782b7… 828); Assets.Transferred(0xa6e377cf…→0x95cecc37… 828); 
+   milestone 1: Some(Completed), escrow Money(8400), project asset balance 13001→8401, completed false
+  [A] coord1 → Project.set_task_assignees: ref_time 7876335706 (1.69%) proof_size 1215776 (49.69%) deposit 6677333316 | regular | Success | fee 2492376063 held 6677333316 spent 9169709379 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 7945087739 (1.70%) proof_size 1226071 (50.11%) deposit 6677333316 | regular | Success | fee 2504507957 held 6677333316 spent 9181841273 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 8013814647 (1.72%) proof_size 1236366 (50.53%) deposit 6677333316 | regular | Success | fee 2516640691 held 6677333316 spent 9193974007 | 
+  [A] coord1 → Project.submit_milestone (milestone 2 of 4, team of 3): ref_time 8869604702 (1.90%) proof_size 1298110 (53.06%) deposit 20045333268 | regular | Success | fee 2745950354 held 20045333268 spent 22791283622 | 
+  [A] client → Project.accept_milestone (milestone 2 of 4, team of 3): ref_time 9919342903 (2.13%) proof_size 1411569 (57.69%) deposit 13333320 | regular | Success | fee 2656089356 held 13333320 spent 2669422676 | Assets.Transferred(0xa6e377cf…→0x1af02a3e… 280); Assets.Transferred(0xa6e377cf…→0x32147421… 840); Assets.Transferred(0xa6e377cf…→0xedbfd4dc… 840); Assets.Transferred(0xa6e377cf…→0xc3ace22e… 840); 
+   milestone 2: Some(Completed), escrow Money(5600), project asset balance 8401→5601, completed false
+  [A] coord1 → Project.set_task_assignees: ref_time 8169113201 (1.75%) proof_size 1257083 (51.38%) deposit 6677333316 | regular | Success | fee 2541093762 held 6677333316 spent 9218427078 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 8237865234 (1.77%) proof_size 1267378 (51.80%) deposit 6677333316 | regular | Success | fee 2553229379 held 6677333316 spent 9230562695 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 8306516767 (1.78%) proof_size 1277673 (52.22%) deposit 6677333316 | regular | Success | fee 2565365879 held 6677333316 spent 9242699195 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 8375218550 (1.80%) proof_size 1287968 (52.64%) deposit 6677333316 | regular | Success | fee 2577503273 held 6677333316 spent 9254836589 | 
+  [A] coord1 → Project.submit_milestone (milestone 3 of 4, team of 4): ref_time 9230088025 (1.98%) proof_size 1349712 (55.17%) deposit 20045333268 | regular | Success | fee 2806824622 held 20045333268 spent 22852157890 | 
+  [A] client → Project.accept_milestone (milestone 3 of 4, team of 4): ref_time 10584619728 (2.27%) proof_size 1493978 (61.06%) deposit 13333320 | regular | Success | fee 2753220005 held 13333320 spent 2766553325 | Assets.Transferred(0xa6e377cf…→0x1af02a3e… 370); Assets.Transferred(0xa6e377cf…→0x32147421… 833); Assets.Transferred(0xa6e377cf…→0xedbfd4dc… 833); Assets.Transferred(0xa6e377cf…→0x34e782b7… 832); Assets.Transferred(0xa6e377cf…→0x95cecc37… 832); 
+   milestone 3: Some(Completed), escrow Money(1900), project asset balance 5601→1901, completed false
+  [A] coord1 → Project.set_task_assignees: ref_time 8527335274 (1.83%) proof_size 1308685 (53.49%) deposit 6677333316 | regular | Success | fee 2601970962 held 6677333316 spent 9279304278 | 
+  [A] coord1 → Project.set_task_assignees: ref_time 8596062182 (1.84%) proof_size 1318980 (53.91%) deposit 6677333316 | regular | Success | fee 2614111429 held 6677333316 spent 9291444745 | 
+  [A] coord1 → Project.submit_milestone (milestone 4 of 4, team of 2): ref_time 9452769802 (2.03%) proof_size 1380724 (56.43%) deposit 20045333268 | regular | Success | fee 2843441003 held 20045333268 spent 22888774271 | 
+  [A] client → Project.accept_milestone (milestone 4 of 4, team of 2): ref_time 10028580650 (2.15%) proof_size 1453031 (59.39%) deposit 13333320 | regular | Success | fee 2705202830 held 13333320 spent 2718536150 | Assets.Transferred(0xa6e377cf…→0x1af02a3e… 190); Assets.Transferred(0xa6e377cf…→0x32147421… 855); Assets.Transferred(0xa6e377cf…→0xc3ace22e… 855); 
+   milestone 4: Some(Completed), escrow Money(0), project asset balance 1901→1, completed true
+  [A] client → Project.evaluate_project (client → coordinator): ref_time 9626241555 (2.06%) proof_size 1401750 (57.29%) deposit 20036333277 | regular | Success | fee 2648250091 held 20036333277 spent 22684583368 | 
+  [A] coord1 → Project.evaluate_project (coordinator → client + 5 worker(s)): ref_time 11614297444 (2.49%) proof_size 1556765 (63.63%) deposit 53424666522 | regular | Success | fee 3383982727 held 53424666522 spent 56808649249 | 
+  [A] w1 → Project.evaluate_project (worker → coordinator): ref_time 10236809841 (2.19%) proof_size 1494436 (61.08%) deposit 20036333277 | regular | Success | fee 2757371860 held 20036333277 spent 22793705137 | 
+  [A] w4 → Project.evaluate_project (worker → coordinator): ref_time 10372859549 (2.22%) proof_size 1515039 (61.92%) deposit 20036333277 | regular | Success | fee 2781654863 held 20036333277 spent 22817988140 | 
+  [A] w5 → Project.evaluate_project (worker → coordinator): ref_time 10509680092 (2.25%) proof_size 1535642 (62.76%) deposit 20036333277 | regular | Success | fee 2805940142 held 20036333277 spent 22842273419 | 
+  [A] w3 → Project.evaluate_project (worker → coordinator): ref_time 10645911705 (2.28%) proof_size 1556245 (63.61%) deposit 20036333277 | regular | Success | fee 2830227740 held 20036333277 spent 22866561017 | 
+  [A] w2 → Project.evaluate_project (worker → coordinator): ref_time 10782436778 (2.31%) proof_size 1576848 (64.45%) deposit 20036333277 | regular | Success | fee 2854517700 held 20036333277 spent 22890850977 | 
+   completed true, evaluations 7
+   payment asset after A (pallet-assets balance / Dao ledger), minted 20000:
+     client  7001 / 7000
+     coord1  1301 / 1300
+     coord2  0 / 0
+     w1      3357 / 3356
+     w2      2502 / 2501
+     w3      2524 / 2523
+     w4      1661 / 1660
+     w5      1661 / 1660
+     project 1 / escrow Money(0)
+   financial_projection as a worker: refused by the contract
+A2. two-milestone project (teams 5/3):
+  [A2] operator → Dao.fund_account (client, 20000 more): ref_time 1072609102 (0.23%) proof_size 195703 (8.00%) deposit 0 | regular | Success | fee 906440596 held 0 spent 906440596 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 20000); 
+  [A2] client → Dao.create_project: ref_time 4301082750 (0.92%) proof_size 560626 (22.91%) deposit 53506666473 | regular | Success | fee 1815660988 held 53473333140 spent 55322327461 | Assets.Transferred(0x22fecf65…→0xbb307e31… 1); 
+   project 0x1718030dc89535520c79370e8abab74e at 0xbb307e31d6b37c13b03d8fe7a38a9172e64fefc60d4a81365760b50e0a892f65 (the dry-run predicted Some(0x1718030dc89535520c79370e8abab74e))
+   coordinator: coord1
+  [A2] coord1 → Project.create_proposal (2 milestone(s), 8 requirements): ref_time 11315336835 (2.43%) proof_size 988779 (40.41%) deposit 300214332819 | regular | Success | fee 3275958327 held 300214332819 spent 303490291146 | 
+  [A2] coord1 → Project.update_proposal (2 milestone(s), 8 requirements): ref_time 7968571763 (1.71%) proof_size 968722 (39.59%) deposit 0 | regular | Success | fee 3305704681 held 0 spent 3305704681 | 
+  [A2] coord1 → Project.create_task: ref_time 4361768341 (0.93%) proof_size 670668 (27.41%) deposit 6669333324 | regular | Success | fee 1731689803 held 6669333324 spent 8401023127 | 
+  [A2] coord1 → Project.create_task: ref_time 4429755023 (0.95%) proof_size 680939 (27.83%) deposit 6669333324 | regular | Success | fee 1743775768 held 6669333324 spent 8413109092 | 
+  [A2] coord1 → Project.create_task: ref_time 4496943735 (0.96%) proof_size 691210 (28.25%) deposit 6669333324 | regular | Success | fee 1755862006 held 6669333324 spent 8425195330 | 
+  [A2] coord1 → Project.create_task: ref_time 4564132447 (0.98%) proof_size 701481 (28.67%) deposit 6669333324 | regular | Success | fee 1767948527 held 6669333324 spent 8437281851 | 
+  [A2] coord1 → Project.create_task: ref_time 4631321159 (0.99%) proof_size 711752 (29.09%) deposit 6669333324 | regular | Success | fee 1780035343 held 6669333324 spent 8449368667 | 
+  [A2] coord1 → Project.create_task: ref_time 4697379246 (1.01%) proof_size 722023 (29.51%) deposit 6669333324 | regular | Success | fee 1792122462 held 6669333324 spent 8461455786 | 
+  [A2] coord1 → Project.create_task: ref_time 4764641323 (1.02%) proof_size 732294 (29.93%) deposit 6669333324 | regular | Success | fee 1804209898 held 6669333324 spent 8473543222 | 
+  [A2] coord1 → Project.create_task: ref_time 4831830035 (1.04%) proof_size 742565 (30.35%) deposit 6669333324 | regular | Success | fee 1816297659 held 6669333324 spent 8485630983 | 
+  [A2] coord1 → Project.submit_proposal: ref_time 3782129855 (0.81%) proof_size 590300 (24.13%) deposit 0 | regular | Success | fee 1630473821 held 0 spent 1630473821 | 
+  [A2] client → Project.accept_planning_delivery: ref_time 5851957846 (1.25%) proof_size 915506 (37.42%) deposit 0 | regular | Success | fee 1989787528 held 0 spent 1989787528 | Assets.Transferred(0xbb307e31…→0x1af02a3e… 0); 
+  [A2] client → Project.approve_execution (2 milestone(s), teams 5/3): ref_time 18235106697 (3.91%) proof_size 1976880 (80.80%) deposit 253613999466 | regular | Success | fee 3398653232 held 253613999466 spent 257012652698 | Assets.Transferred(0x67f1ab54…→0xbb307e31… 7400); 
+   after approval: escrow Money(7400), assignments [5, 3], statuses [Some(InProgress), Some(NotStarted)]; asset client 27001→19601, project 1→7401
+   calendar minutes reserved for this project (ISO week:minutes): coord1 [W8:30 W9:60]; w1 [W8:60 W9:120]; w4 [W8:60]; w5 [W8:60]; w3 [W8:60 W9:120]; w2 [W8:60 W9:120]
+  [A2] coord1 → Project.set_task_assignees: ref_time 5286462473 (1.13%) proof_size 824845 (33.71%) deposit 6677333316 | regular | Success | fee 2033158882 held 6677333316 spent 8710492198 | 
+  [A2] coord1 → Project.set_task_assignees: ref_time 5355214506 (1.15%) proof_size 835140 (34.13%) deposit 6677333316 | regular | Success | fee 2045278479 held 6677333316 spent 8722611795 | 
+  [A2] coord1 → Project.set_task_assignees: ref_time 5423941414 (1.16%) proof_size 845435 (34.55%) deposit 6677333316 | regular | Success | fee 2057398510 held 6677333316 spent 8734731826 | 
+  [A2] coord1 → Project.set_task_assignees: ref_time 5492592947 (1.18%) proof_size 855730 (34.98%) deposit 6677333316 | regular | Success | fee 2069518985 held 6677333316 spent 8746852301 | 
+  [A2] coord1 → Project.set_task_assignees: ref_time 5561294730 (1.19%) proof_size 866025 (35.40%) deposit 6677333316 | regular | Success | fee 2081639914 held 6677333316 spent 8758973230 | 
+  [A2] coord1 → Project.submit_milestone (milestone 1 of 2, team of 5): ref_time 6418350187 (1.38%) proof_size 927761 (37.92%) deposit 26713333260 | regular | Success | fee 2310959657 held 26713333260 spent 29024292917 | 
+  [A2] client → Project.accept_milestone (milestone 1 of 2, team of 5): ref_time 8079686290 (1.73%) proof_size 1102842 (45.08%) deposit 13333320 | regular | Success | fee 2293659724 held 13333320 spent 2306993044 | Assets.Transferred(0xbb307e31…→0x1af02a3e… 460); Assets.Transferred(0xbb307e31…→0x32147421… 828); Assets.Transferred(0xbb307e31…→0xedbfd4dc… 828); Assets.Transferred(0xbb307e31…→0xc3ace22e… 828); Assets.Transferred(0xbb307e31…→0x34e782b7… 828); Assets.Transferred(0xbb307e31…→0x95cecc37… 828); 
+   milestone 1: Some(Completed), escrow Money(2800), project asset balance 7401→2801, completed false
+  [A2] coord1 → Project.set_task_assignees: ref_time 5719553009 (1.23%) proof_size 886742 (36.24%) deposit 6677333316 | regular | Success | fee 2106048557 held 6677333316 spent 8783381873 | 
+  [A2] coord1 → Project.set_task_assignees: ref_time 5788305042 (1.24%) proof_size 897037 (36.66%) deposit 6677333316 | regular | Success | fee 2118171104 held 6677333316 spent 8795504420 | 
+  [A2] coord1 → Project.set_task_assignees: ref_time 5857031950 (1.26%) proof_size 907332 (37.08%) deposit 6677333316 | regular | Success | fee 2130294149 held 6677333316 spent 8807627465 | 
+  [A2] coord1 → Project.submit_milestone (milestone 2 of 2, team of 3): ref_time 6712801905 (1.44%) proof_size 969076 (39.61%) deposit 20045333268 | regular | Success | fee 2359628197 held 20045333268 spent 22404961465 | 
+  [A2] client → Project.accept_milestone (milestone 2 of 2, team of 3): ref_time 7592064580 (1.63%) proof_size 1072190 (43.82%) deposit 13333320 | regular | Success | fee 2257649681 held 13333320 spent 2270983001 | Assets.Transferred(0xbb307e31…→0x1af02a3e… 280); Assets.Transferred(0xbb307e31…→0x32147421… 840); Assets.Transferred(0xbb307e31…→0xedbfd4dc… 840); Assets.Transferred(0xbb307e31…→0xc3ace22e… 840); 
+   milestone 2: Some(Completed), escrow Money(0), project asset balance 2801→1, completed true
+  [A2] client → Project.evaluate_project (client → coordinator): ref_time 6891327803 (1.48%) proof_size 990102 (40.47%) deposit 20036333277 | regular | Success | fee 2164397810 held 20036333277 spent 22200731087 | 
+  [A2] coord1 → Project.evaluate_project (coordinator → client + 5 worker(s)): ref_time 8879383692 (1.90%) proof_size 1145117 (46.80%) deposit 53424666522 | regular | Success | fee 2900166815 held 53424666522 spent 56324833337 | 
+  [A2] w1 → Project.evaluate_project (worker → coordinator): ref_time 7501896089 (1.61%) proof_size 1082788 (44.26%) deposit 20036333277 | regular | Success | fee 2273503384 held 20036333277 spent 22309836661 | 
+  [A2] w4 → Project.evaluate_project (worker → coordinator): ref_time 7637945797 (1.64%) proof_size 1103391 (45.10%) deposit 20036333277 | regular | Success | fee 2297766742 held 20036333277 spent 22334100019 | 
+  [A2] w5 → Project.evaluate_project (worker → coordinator): ref_time 7774766340 (1.67%) proof_size 1123994 (45.94%) deposit 20036333277 | regular | Success | fee 2322031519 held 20036333277 spent 22358364796 | 
+  [A2] w3 → Project.evaluate_project (worker → coordinator): ref_time 7910997953 (1.70%) proof_size 1144597 (46.78%) deposit 20036333277 | regular | Success | fee 2346297758 held 20036333277 spent 22382631035 | 
+  [A2] w2 → Project.evaluate_project (worker → coordinator): ref_time 8047523026 (1.72%) proof_size 1165200 (47.62%) deposit 20036333277 | regular | Success | fee 2370565502 held 20036333277 spent 22406898779 | 
+   completed true, evaluations 7
+   project A2: every message a successful real extrinsic: true
+B. single milestone, rejection and dispute:
+  [B] w1 → Dao.create_skill_request: ref_time 2137273737 (0.46%) proof_size 288234 (11.78%) deposit 26708999931 | regular | Success | fee 1455265124 held 26708999931 spent 28164265055 | 
+  [B] operator → Dao.decide_skill_request (approve): ref_time 3059925589 (0.66%) proof_size 370448 (15.14%) deposit 33372999927 | regular | Success | fee 1035493933 held 33372999927 spent 34408493860 | 
+  [B] operator → Dao.fund_account (client, 1000 more): ref_time 1072609102 (0.23%) proof_size 195703 (8.00%) deposit 0 | regular | Success | fee 906500521 held 0 spent 906500521 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 1000); 
+  [B] client → Dao.create_project: ref_time 4367630119 (0.94%) proof_size 570905 (23.33%) deposit 53506666473 | regular | Success | fee 1827924697 held 53473333140 spent 55334591170 | Assets.Transferred(0x22fecf65…→0x284fc9c5… 1); 
+  [B] coord1 → Project.create_proposal (1 milestone, 1 requirement): ref_time 6065588678 (1.30%) proof_size 649928 (26.56%) deposit 93426999813 | regular | Success | fee 2097463470 held 93426999813 spent 95524463283 | 
+  [B] coord1 → Project.create_task (one assignee): ref_time 3074443383 (0.66%) proof_size 454961 (18.60%) deposit 13346666640 | regular | Success | fee 1581344829 held 13346666640 spent 14928011469 | 
+  [B] coord1 → Project.set_proposal_delivery: ref_time 1686394868 (0.36%) proof_size 281893 (11.52%) deposit 333333 | regular | Success | fee 1297662936 held 333333 spent 1297996269 | 
+  [B] coord1 → Project.submit_proposal: ref_time 1855973176 (0.40%) proof_size 292343 (11.95%) deposit 0 | regular | Success | fee 1279957727 held 0 spent 1279957727 | 
+  [B] client → Project.accept_planning_delivery: ref_time 3925831944 (0.84%) proof_size 617548 (25.24%) deposit 0 | regular | Success | fee 1639338785 held 0 spent 1639338785 | Assets.Transferred(0x284fc9c5…→0x1af02a3e… 0); 
+  [B] client → Project.approve_execution (1 milestone, 1 requirement): ref_time 8147878806 (1.75%) proof_size 1011324 (41.33%) deposit 46714999905 | regular | Success | fee 2262753920 held 46714999905 spent 48977753825 | Assets.Transferred(0x67f1ab54…→0x284fc9c5… 100); 
+  [B] coord1 → Project.submit_milestone: ref_time 3658685720 (0.78%) proof_size 506234 (20.69%) deposit 26713333260 | regular | Success | fee 1815011651 held 26713333260 spent 28528344911 | 
+  [B] client → Project.reject_milestone: ref_time 2035486910 (0.44%) proof_size 312958 (12.79%) deposit 29666637 | regular | Success | fee 1527550893 held 29666637 spent 1557217530 | 
+  [B] coord1 → Project.open_dispute: ref_time 4445669640 (0.95%) proof_size 578486 (23.64%) deposit 33419333214 | regular | Success | fee 1980033579 held 33419333214 spent 35399366793 | 
+   dispute Some(0x565d3bfa09bf1bb2dec9f62395b9595e), milestone Some(Disputed) frozen true, escrow Money(100), project asset balance 101
+  [B] client → Project.accept_milestone (on the disputed project): ref_time 1452735436 (0.31%) proof_size 292334 (11.95%) deposit 0 | regular | ExtrinsicFailed(Contracts::ContractReverted) | fee 1336793841 held 0 spent 1336793841 | contract reverts with "project_disputed"; 
+  [B] client → Project.respond_to_dispute: ref_time 2840734360 (0.61%) proof_size 465574 (19.03%) deposit 29666637 | regular | Success | fee 1650480529 held 29666637 spent 1680147166 | 
+C. deposits and withdrawals:
+  [C] client → Dao.create_deposit: ref_time 1962327132 (0.42%) proof_size 267547 (10.94%) deposit 26706333267 | regular | Success | fee 1330894250 held 26706333267 spent 28037227517 | 
+  [C] operator → Dao.confirm_deposit: ref_time 1347739933 (0.29%) proof_size 216426 (8.85%) deposit 2666664 | regular | Success | fee 850871756 held 2666664 spent 853538420 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 500); 
+  [C] client → Dao.create_withdrawal: ref_time 2275191899 (0.49%) proof_size 298354 (12.19%) deposit 26695666611 | regular | Success | fee 1367140707 held 26695666611 spent 28062807318 | Assets.Transferred(0x67f1ab54…→0x22fecf65… 300); 
+   client asset balance 21001→20701 (300 moved to the Dao by the caller)
+  [C] client → Dao.cancel_withdrawal: ref_time 1342529022 (0.29%) proof_size 216362 (8.84%) deposit 2666664 | regular | Success | fee 1190649706 held 2666664 spent 1193316370 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 300); 
+D. complete single-requirement project and the remaining messages:
+  [D] client → Dao.create_project: ref_time 4133742269 (0.89%) proof_size 550346 (22.49%) deposit 53506666473 | regular | Success | fee 1803671692 held 53473333140 spent 55310338165 | Assets.Transferred(0x22fecf65…→0x04683a76… 1); 
+  [D] coord1 → Project.create_proposal (1 milestone, 1 requirement): ref_time 5831703843 (1.25%) proof_size 629369 (25.72%) deposit 93426999813 | regular | Success | fee 2076535343 held 93426999813 spent 95503535156 | 
+  [D] coord1 → Project.create_task: ref_time 2817275039 (0.60%) proof_size 434311 (17.75%) deposit 6669333324 | regular | Success | fee 1453662746 held 6669333324 spent 8122996070 | 
+  [D] coord1 → Project.delete_task: ref_time 1774421962 (0.38%) proof_size 281867 (11.52%) deposit -6669333322 | regular | Success | fee 1310934923 held 0 spent -5358398399 | deposit released: 6669333322 to 0x1af02a3e; 
+  [D] coord1 → Project.update_proposal (1 milestone, 1 requirement): ref_time 4396033984 (0.94%) proof_size 578189 (23.63%) deposit 0 | regular | Success | fee 2069630433 held 0 spent 2069630433 | 
+  [D] coord1 → Project.set_proposal_delivery (specific date): ref_time 1636992177 (0.35%) proof_size 261327 (10.68%) deposit 3666663 | regular | Success | fee 1313427031 held 3666663 spent 1317093694 | 
+  [D] coord1 → Project.submit_proposal (validates the date): ref_time 1820830174 (0.39%) proof_size 271797 (11.11%) deposit 0 | regular | Success | fee 1259077544 held 0 spent 1259077544 | 
+  [D] coord1 → Project.withdraw_proposal: ref_time 1811157132 (0.39%) proof_size 271797 (11.11%) deposit 0 | regular | Success | fee 1285740755 held 0 spent 1285740755 | 
+  [D] coord1 → Project.submit_proposal (again): ref_time 1820830174 (0.39%) proof_size 271797 (11.11%) deposit 0 | regular | Success | fee 1259070686 held 0 spent 1259070686 | 
+  [D] client → Project.request_proposal_changes: ref_time 1813842582 (0.39%) proof_size 271797 (11.11%) deposit 16333317 | regular | Success | fee 1419067097 held 16333317 spent 1435400414 | 
+  [D] coord1 → Project.submit_proposal (after changes): ref_time 1824851302 (0.39%) proof_size 271895 (11.11%) deposit 0 | regular | Success | fee 1259179145 held 0 spent 1259179145 | 
+  [D] client → Project.accept_planning_delivery: ref_time 3864838263 (0.83%) proof_size 597041 (24.40%) deposit 0 | regular | Success | fee 1611769887 held 0 spent 1611769887 | Assets.Transferred(0x04683a76…→0x1af02a3e… 0); 
+  [D] client → Project.approve_execution (1 milestone, 1 requirement): ref_time 8099268927 (1.74%) proof_size 990876 (40.50%) deposit 46714999905 | regular | Success | fee 2238521383 held 46714999905 spent 48953521288 | Assets.Transferred(0x67f1ab54…→0x04683a76… 100); 
+  [D] coord1 → Project.submit_milestone (with worker ratings): ref_time 3981168095 (0.85%) proof_size 506255 (20.69%) deposit 40052333241 | regular | Success | fee 1768282293 held 40052333241 spent 41820615534 | 
+  [D] client → Project.accept_milestone (rated settlement, team of 1): ref_time 4548090253 (0.97%) proof_size 589275 (24.08%) deposit 13333320 | regular | Success | fee 1699302549 held 13333320 spent 1712635869 | Assets.Transferred(0x04683a76…→0x1af02a3e… 10); Assets.Transferred(0x04683a76…→0xc3ace22e… 90); 
+  [D] client → Project.evaluate_project (client → coordinator): ref_time 3926042713 (0.84%) proof_size 527304 (21.55%) deposit 20036333277 | regular | Success | fee 1619714444 held 20036333277 spent 21656047721 | 
+  [D] coord1 → Project.evaluate_project (coordinator → client + 1 worker(s)): ref_time 4236498037 (0.91%) proof_size 558171 (22.81%) deposit 26713999926 | regular | Success | fee 1772699926 held 26713999926 spent 28486699852 | 
+  [D] w3 → Project.evaluate_project (worker → coordinator): ref_time 4264619451 (0.91%) proof_size 578806 (23.66%) deposit 20036333277 | regular | Success | fee 1680312893 held 20036333277 spent 21716646170 | 
+   completed true, evaluations 3
+   project D: every message a successful real extrinsic: true; native balance spent (planck):
+     client  130679713344
+     coord1  177025240470
+     w3      21716646170
+  [E] client → Dao.create_project: ref_time 4367630119 (0.94%) proof_size 570905 (23.33%) deposit 53506666473 | regular | Success | fee 1827808522 held 53473333140 spent 55334474995 | Assets.Transferred(0x22fecf65…→0x2ea23531… 1); 
+  [E] coord1 → Project.create_proposal (1 milestone, 1 requirement): ref_time 5831842533 (1.25%) proof_size 629369 (25.72%) deposit 93426999813 | regular | Success | fee 2076473569 held 93426999813 spent 95503473382 | 
+  [E] coord1 → Project.delete_proposal: ref_time 5644073047 (1.21%) proof_size 650324 (26.58%) deposit -86758999817 | regular | Success | fee 1707797983 held 0 spent -85051201834 | deposit released: 60028999909 to 0x1af02a3e; deposit released: 26729999908 to 0x1af02a3e; 
+  [E] client → Project.dispute_planning: ref_time 2671748559 (0.57%) proof_size 403437 (16.49%) deposit 13404666582 | regular | Success | fee 1517291085 held 13404666582 spent 14921957667 | 
+  [E] client → Project.cancel_project: ref_time 2748560137 (0.59%) proof_size 413807 (16.91%) deposit 13404666582 | regular | Success | fee 1529490028 held 13404666582 spent 14934156610 | 
+  [E] w1 → Dao.update_qualifications: ref_time 3344042404 (0.72%) proof_size 380972 (15.57%) deposit 26681333292 | regular | Success | fee 1390978277 held 26681333292 spent 28072311569 | 
+  [E] w1 → Dao.set_calendar: ref_time 1912186324 (0.41%) proof_size 319051 (13.04%) deposit 0 | regular | Success | fee 1274781857 held 0 spent 1274781857 | 
+  [E] operator → Dao.set_score_policy (unchanged policy): ref_time 753759158 (0.16%) proof_size 164896 (6.74%) deposit 0 | regular | Success | fee 746867048 held 0 spent 746867048 | 
+  [E] operator → Dao.set_compensation_policy: ref_time 753633125 (0.16%) proof_size 164896 (6.74%) deposit 0 | regular | Success | fee 736864297 held 0 spent 736864297 | 
+  [E] operator → Dao.upsert_catalog_entry (new skill): ref_time 2476133436 (0.53%) proof_size 318879 (13.03%) deposit 26703666603 | regular | Success | fee 1094706911 held 26703666603 spent 27798373514 | 
+  [E] operator → Dao.delete_catalog_entry: ref_time 9638233829 (2.07%) proof_size 1420872 (58.07%) deposit -26703666603 | regular | Success | fee 2234648105 held 0 spent -24469018498 | deposit released: 26703666603 to 0xd6d9e961; 
+P. approvals by shape:
+  [P] operator → Dao.fund_account (client, 500000 more): ref_time 1072609102 (0.23%) proof_size 195703 (8.00%) deposit 0 | regular | Success | fee 906446066 held 0 spent 906446066 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 500000); 
+  [P] client → Dao.create_project [1×2]: ref_time 5135841038 (1.10%) proof_size 642861 (26.27%) deposit 53506666473 | regular | Success | fee 1912435335 held 53473333140 spent 55419101808 | Assets.Transferred(0x22fecf65…→0xd4f41cd2… 1); 
+  [P] coord1 → Project.create_proposal [1×2]: ref_time 6403542514 (1.37%) proof_size 670456 (27.40%) deposit 106769666457 | regular | Success | fee 2208110420 held 106769666457 spent 108977776877 | 
+  [P] coord1 → Project.submit_proposal [1×2]: ref_time 1835972859 (0.39%) proof_size 292329 (11.95%) deposit 0 | regular | Success | fee 1283200288 held 0 spent 1283200288 | 
+  [P] client → Project.accept_planning_delivery [1×2]: ref_time 3905971700 (0.84%) proof_size 617535 (25.24%) deposit 0 | regular | Success | fee 1639170200 held 0 spent 1639170200 | Assets.Transferred(0xd4f41cd2…→0x1af02a3e… 0); 
+  [P] client → Project.approve_execution [1×2]: ref_time 9024558615 (1.93%) proof_size 1062646 (43.43%) deposit 73412333181 | regular | Success | fee 2322890843 held 73412333181 spent 75735224024 | Assets.Transferred(0x67f1ab54…→0xd4f41cd2… 200); 
+  [P] client → Dao.create_project [1×3]: ref_time 5135841038 (1.10%) proof_size 642861 (26.27%) deposit 53506666473 | regular | Success | fee 1912438482 held 53473333140 spent 55419104955 | Assets.Transferred(0x22fecf65…→0x51382db9… 1); 
+  [P] coord1 → Project.create_proposal [1×3]: ref_time 6507214540 (1.39%) proof_size 670425 (27.40%) deposit 120112333101 | regular | Success | fee 2291410473 held 120112333101 spent 122403743574 | 
+  [P] coord1 → Project.submit_proposal [1×3]: ref_time 1969607861 (0.42%) proof_size 312883 (12.79%) deposit 0 | regular | Success | fee 1307386089 held 0 spent 1307386089 | 
+  [P] client → Project.accept_planning_delivery [1×3]: ref_time 4039606702 (0.87%) proof_size 638089 (26.08%) deposit 0 | regular | Success | fee 1663357777 held 0 spent 1663357777 | Assets.Transferred(0x51382db9…→0x1af02a3e… 0); 
+  [P] client → Project.approve_execution [1×3]: ref_time 9558066093 (2.05%) proof_size 1103768 (45.11%) deposit 60100666506 | regular | Success | fee 2371282207 held 60100666506 spent 62471948713 | Assets.Transferred(0x67f1ab54…→0x51382db9… 300); 
+  [P] client → Dao.create_project [2×1]: ref_time 4200289638 (0.90%) proof_size 560625 (22.91%) deposit 53506666473 | regular | Success | fee 1815682109 held 53473333140 spent 55322348582 | Assets.Transferred(0x22fecf65…→0x5920c94c… 1); 
+  [P] coord1 → Project.create_proposal [2×1]: ref_time 8085017996 (1.73%) proof_size 804027 (32.86%) deposit 133474333059 | regular | Success | fee 2455280213 held 133474333059 spent 135929613272 | 
+  [P] coord1 → Project.submit_proposal [2×1]: ref_time 1909882639 (0.41%) proof_size 302672 (12.37%) deposit 0 | regular | Success | fee 1295374516 held 0 spent 1295374516 | 
+  [P] client → Project.accept_planning_delivery [2×1]: ref_time 3979710630 (0.85%) proof_size 627878 (25.66%) deposit 0 | regular | Success | fee 1651349114 held 0 spent 1651349114 | Assets.Transferred(0x5920c94c…→0x1af02a3e… 0); 
+  [P] client → Project.approve_execution [2×1]: ref_time 9728720615 (2.09%) proof_size 1144919 (46.79%) deposit 66757333176 | regular | Success | fee 2419711011 held 66757333176 spent 69177044187 | Assets.Transferred(0x67f1ab54…→0x5920c94c… 200); 
+  [P] client → Dao.create_project [2×2]: ref_time 5904051957 (1.27%) proof_size 714817 (29.22%) deposit 53506666473 | regular | Success | fee 1997116302 held 53473333140 spent 55503782775 | Assets.Transferred(0x22fecf65…→0x4179bc30… 1); 
+  [P] coord1 → Project.create_proposal [2×2]: ref_time 7590337703 (1.63%) proof_size 742288 (30.34%) deposit 160159666347 | regular | Success | fee 2549314373 held 160159666347 spent 162708980720 | 
+  [P] coord1 → Project.submit_proposal [2×2]: ref_time 2177152643 (0.47%) proof_size 343780 (14.05%) deposit 0 | regular | Success | fee 1343748248 held 0 spent 1343748248 | 
+  [P] client → Project.accept_planning_delivery [2×2]: ref_time 4246980634 (0.91%) proof_size 668986 (27.34%) deposit 0 | regular | Success | fee 1699727599 held 0 spent 1699727599 | Assets.Transferred(0x4179bc30…→0x1af02a3e… 0); 
+  [P] client → Project.approve_execution [2×2]: ref_time 11470144379 (2.46%) proof_size 1268167 (51.83%) deposit 106815666411 | regular | Success | fee 2564747722 held 106815666411 spent 109380414133 | Assets.Transferred(0x67f1ab54…→0x4179bc30… 400); 
+  [P] client → Dao.create_project [e2e 5]: ref_time 6137939807 (1.32%) proof_size 735376 (30.06%) deposit 53506666473 | regular | Success | fee 2021321836 held 53473333140 spent 55527988309 | Assets.Transferred(0x22fecf65…→0xbacef1e0… 1); 
+  [P] coord1 → Project.create_proposal [e2e 5]: ref_time 10189888431 (2.18%) proof_size 958141 (39.16%) deposit 213477666309 | regular | Success | fee 2863316313 held 213477666309 spent 216340982622 | 
+  [P] coord1 → Project.submit_proposal [e2e 5]: ref_time 2570527895 (0.55%) proof_size 405326 (16.57%) deposit 0 | regular | Success | fee 1416177859 held 0 spent 1416177859 | 
+  [P] client → Project.accept_planning_delivery [e2e 5]: ref_time 4640526736 (0.99%) proof_size 730532 (29.86%) deposit 0 | regular | Success | fee 1772167260 held 0 spent 1772167260 | Assets.Transferred(0xbacef1e0…→0x1af02a3e… 0); 
+  [P] client → Project.approve_execution [e2e 5]: ref_time 13105666963 (2.81%) proof_size 1535270 (62.75%) deposit 86822666424 | regular | Success | fee 2879081112 held 86822666424 spent 89701747536 | Assets.Transferred(0x67f1ab54…→0xbacef1e0… 4600); 
+  [P] client → Dao.create_project [e2e 5/3/4]: ref_time 4200289638 (0.90%) proof_size 560625 (22.91%) deposit 53506666473 | regular | Success | fee 1815722951 held 53473333140 spent 55322389424 | Assets.Transferred(0x22fecf65…→0xe27e06fa… 1); 
+  [P] coord1 → Project.create_proposal [e2e 5/3/4]: ref_time 15151974987 (3.25%) proof_size 1266076 (51.75%) deposit 406961665965 | regular | Success | fee 4082363079 held 406961665965 spent 411044029044 | 
+  [P] coord1 → Project.submit_proposal [e2e 5/3/4]: ref_time 4120902511 (0.88%) proof_size 641759 (26.23%) deposit 0 | regular | Success | fee 1697745779 held 0 spent 1697745779 | 
+  [P] client → Project.accept_planning_delivery [e2e 5/3/4]: ref_time 6190559652 (1.33%) proof_size 966965 (39.52%) deposit 0 | regular | Success | fee 2050422708 held 0 spent 2050422708 | Assets.Transferred(0xe27e06fa…→0x1af02a3e… 0); 
+  [P] client → Project.approve_execution [e2e 5/3/4]: ref_time 20918976503 (4.48%) proof_size 2192710 (89.62%) deposit 260393999346 | regular | Success | fee 3652807108 held 260393999346 spent 264046806454 | Assets.Transferred(0x67f1ab54…→0xe27e06fa… 11100); 
+S. scaling with the directory:
+  [S] client → Dao.create_project [1×1]: ref_time 6137939807 (1.32%) proof_size 735376 (30.06%) deposit 53506666473 | regular | Success | fee 2021415295 held 53473333140 spent 55528081768 | Assets.Transferred(0x22fecf65…→0x43219836… 1); 
+  [S] coord1 → Project.create_proposal [1×1]: ref_time 5898393922 (1.26%) proof_size 639648 (26.14%) deposit 93426999813 | regular | Success | fee 2088639127 held 93426999813 spent 95515638940 | 
+  [S] coord1 → Project.submit_proposal [1×1]: ref_time 1702337857 (0.36%) proof_size 271775 (11.11%) deposit 0 | regular | Success | fee 1259064329 held 0 spent 1259064329 | 
+  [S] client → Project.accept_planning_delivery [1×1]: ref_time 3772336698 (0.81%) proof_size 596981 (24.40%) deposit 0 | regular | Success | fee 1611755750 held 0 spent 1611755750 | Assets.Transferred(0x43219836…→0x1af02a3e… 0); 
+  [S] client → Dao.create_project [e2e 5]: ref_time 6605715507 (1.42%) proof_size 776494 (31.74%) deposit 53506666473 | regular | Success | fee 2069795119 held 53473333140 spent 55576461592 | Assets.Transferred(0x22fecf65…→0xd46d3ce3… 1); 
+  [S] coord1 → Project.create_proposal [e2e 5]: ref_time 11659671445 (2.50%) proof_size 1091774 (44.62%) deposit 213477666309 | regular | Success | fee 3020686749 held 213477666309 spent 216498353058 | 
+  [S] coord1 → Project.submit_proposal [e2e 5]: ref_time 2570527895 (0.55%) proof_size 405326 (16.57%) deposit 0 | regular | Success | fee 1416228766 held 0 spent 1416228766 | 
+  [S] client → Project.accept_planning_delivery [e2e 5]: ref_time 4640526736 (0.99%) proof_size 730532 (29.86%) deposit 0 | regular | Success | fee 1772257692 held 0 spent 1772257692 | Assets.Transferred(0xd46d3ce3…→0x1af02a3e… 0); 
+  [S] client → Dao.create_project [e2e 5/3]: ref_time 4968508597 (1.06%) proof_size 632581 (25.85%) deposit 53506666473 | regular | Success | fee 1900452468 held 53473333140 spent 55407118941 | Assets.Transferred(0x22fecf65…→0xf0dd840c… 1); 
+  [S] coord1 → Project.create_proposal [e2e 5/3]: ref_time 11449194368 (2.45%) proof_size 1009337 (41.25%) deposit 300214332819 | regular | Success | fee 3303688013 held 300214332819 spent 303518020832 | 
+  [S] coord1 → Project.submit_proposal [e2e 5/3]: ref_time 3245532699 (0.70%) proof_size 508132 (20.77%) deposit 0 | regular | Success | fee 1537215093 held 0 spent 1537215093 | 
+  [S] client → Project.accept_planning_delivery [e2e 5/3]: ref_time 5315360690 (1.14%) proof_size 833338 (34.06%) deposit 0 | regular | Success | fee 1893249060 held 0 spent 1893249060 | Assets.Transferred(0xf0dd840c…→0x1af02a3e… 0); 
+
+=== OPERATIONS (every row; weights are the dry-run gas_required) ===
+| # | sc | caller | message | ref_time | % | proof_size | % | deposit (dry-run) | declared ext weight | fits | outcome | fee | deposits held | caller spent | note |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | setup | operator | Dao.configure_project_code | 747124596 | 0.16 | 164864 | 6.74 | 10666656 | 2297057055/221298 | regular | Success | 839952585 | 10666656 | 850619241 |  |
+| 2 | setup | operator | Dao.configure_accounting (mock funding on) | 829346981 | 0.18 | 175159 | 7.16 | 0 | 2387501679/232622 | regular | Success | 748760464 | 0 | 748760464 |  |
+| 3 | A | coord1 | Dao.register_worker | 7282897254 | 1.56 | 678375 | 27.73 | 200147999652 | 11344822979/788873 | regular | Success | 2016896965 | 200147999652 | 202164896617 |  |
+| 4 | A | coord2 | Dao.register_worker | 7222497813 | 1.55 | 668200 | 27.31 | 153471999708 | 11278383594/777681 | regular | Success | 2004935700 | 153471999708 | 155476935408 |  |
+| 5 | A | w1 | Dao.register_worker | 4314194445 | 0.92 | 452574 | 18.50 | 73418666508 | 8079249889/540492 | regular | Success | 1698098388 | 73418666508 | 75116764896 |  |
+| 6 | A | w2 | Dao.register_worker | 4079681773 | 0.87 | 431983 | 17.66 | 73418666508 | 7821285950/517842 | regular | Success | 1673888834 | 73418666508 | 75092555342 |  |
+| 7 | A | w3 | Dao.register_worker | 4314194445 | 0.92 | 452574 | 18.50 | 73418666508 | 8079249889/540492 | regular | Success | 1698096985 | 73418666508 | 75116763493 |  |
+| 8 | A | w4 | Dao.register_worker | 4783219789 | 1.03 | 493756 | 20.18 | 73418666508 | 8595177767/585792 | regular | Success | 1746513288 | 73418666508 | 75165179796 |  |
+| 9 | A | w5 | Dao.register_worker | 4850210057 | 1.04 | 504051 | 20.60 | 73418666508 | 8668867062/597117 | regular | Success | 1758616776 | 73418666508 | 75177283284 |  |
+| 10 | A | u1 | Dao.register_worker | 5084722729 | 1.09 | 524642 | 21.44 | 73418666508 | 8926831001/619767 | regular | Success | 1782824928 | 73418666508 | 75201491436 |  |
+| 11 | A | u2 | Dao.register_worker | 4615697385 | 0.99 | 483460 | 19.76 | 73418666508 | 8410903123/574467 | regular | Success | 1734408625 | 73418666508 | 75153075133 |  |
+| 12 | A | u3 | Dao.register_worker | 5553748073 | 1.19 | 565824 | 23.13 | 73418666508 | 9442758880/665067 | regular | Success | 1831241231 | 73418666508 | 75249907739 |  |
+| 13 | A | u4 | Dao.register_worker | 5855259053 | 1.25 | 596710 | 24.39 | 73418666508 | 9774420958/699042 | regular | Success | 1867552870 | 73418666508 | 75286219378 |  |
+| 14 | A | u5 | Dao.register_worker | 4146672041 | 0.89 | 442278 | 18.08 | 73418666508 | 7894975245/529166 | regular | Success | 1685992322 | 73418666508 | 75104658830 |  |
+| 15 | A | operator | Dao.promote_coordinator | 1013872606 | 0.22 | 185669 | 7.59 | 0 | 2590479866/244183 | regular | Success | 867783281 | 0 | 867783281 |  |
+| 16 | A | coord1 | Dao.set_worker_mode | 1718889855 | 0.37 | 247282 | 10.11 | 13345333308 | 5224414840/314671 | regular | Success | 1176742312 | 13345333308 | 14522075620 |  |
+| 17 | A | operator | Dao.promote_coordinator | 1013872606 | 0.22 | 185669 | 7.59 | 0 | 2590479866/244183 | regular | Success | 867783281 | 0 | 867783281 |  |
+| 18 | A | coord2 | Dao.set_worker_mode | 1658280006 | 0.36 | 237059 | 9.69 | 6677333316 | 5157744006/303425 | regular | Success | 1164723472 | 6677333316 | 7842056788 |  |
+| 19 | A | operator | Dao.fund_account (client, 20000) | 1951766344 | 0.42 | 267563 | 10.94 | 26681666625 | 3622162978/334267 | regular | Success | 990729963 | 26681666625 | 27672396588 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 1); Assets.Transferred(0x22fecf65…→0x67f1ab54… 20000);  |
+| 20 | A | client | Dao.create_project | 4061594448 | 0.87 | 540043 | 22.07 | 60174666465 | 7801389892/636708 | regular | Success | 1790931380 | 60141333132 | 61965597845 | Assets.Transferred(0x22fecf65…→0xa6e377cf… 1);  |
+| 21 | A | coord1 | Project.create_proposal (4 milestone(s), 14 requirements) | 15768930317 | 3.38 | 1265882 | 51.74 | 480355665831 | 20679459348/1435131 | regular | Success | 4360814047 | 480355665831 | 484716479878 |  |
+| 22 | A | coord1 | Project.update_proposal (4 milestone(s), 14 requirements) | 9483632118 | 2.03 | 1194924 | 48.84 | 0 | 13765631329/1357077 | regular | Success | 4330750295 | 0 | 4330750295 |  |
+| 23 | A | coord1 | Project.create_task | 5711777949 | 1.22 | 876280 | 35.82 | 6669333324 | 9616591743/1006569 | regular | Success | 1972809957 | 6669333324 | 8642143281 |  |
+| 24 | A | coord1 | Project.create_task | 5779764631 | 1.24 | 886551 | 36.23 | 6669333324 | 9691377094/1017867 | regular | Success | 1984893139 | 6669333324 | 8654226463 |  |
+| 25 | A | coord1 | Project.create_task | 5846953343 | 1.25 | 896822 | 36.65 | 6669333324 | 9765284677/1029165 | regular | Success | 1996976807 | 6669333324 | 8666310131 |  |
+| 26 | A | coord1 | Project.create_task | 5914142055 | 1.27 | 907093 | 37.07 | 6669333324 | 9839192260/1040463 | regular | Success | 2009060970 | 6669333324 | 8678394294 |  |
+| 27 | A | coord1 | Project.create_task | 5981330767 | 1.28 | 917364 | 37.49 | 6669333324 | 9913099843/1051761 | regular | Success | 2021145641 | 6669333324 | 8690478965 |  |
+| 28 | A | coord1 | Project.create_task | 6047388854 | 1.30 | 927635 | 37.91 | 6669333324 | 9985763739/1063059 | regular | Success | 2033230829 | 6669333324 | 8702564153 |  |
+| 29 | A | coord1 | Project.create_task | 6114650931 | 1.31 | 937906 | 38.33 | 6669333324 | 10059752024/1074357 | regular | Success | 2045316546 | 6669333324 | 8714649870 |  |
+| 30 | A | coord1 | Project.create_task | 6181839643 | 1.32 | 948177 | 38.75 | 6669333324 | 10133659607/1085655 | regular | Success | 2057402802 | 6669333324 | 8726736126 |  |
+| 31 | A | coord1 | Project.create_task | 6249251465 | 1.34 | 958448 | 39.17 | 6669333324 | 10207812611/1096953 | regular | Success | 2069489607 | 6669333324 | 8738822931 |  |
+| 32 | A | coord1 | Project.create_task | 6316513542 | 1.35 | 968719 | 39.59 | 6669333324 | 10281800896/1108251 | regular | Success | 2081576972 | 6669333324 | 8750910296 |  |
+| 33 | A | coord1 | Project.create_task | 6383702254 | 1.37 | 978990 | 40.01 | 6669333324 | 10355708479/1119550 | regular | Success | 2093664908 | 6669333324 | 8762998232 |  |
+| 34 | A | coord1 | Project.create_task | 6450890966 | 1.38 | 989261 | 40.43 | 6669333324 | 10429616062/1130848 | regular | Success | 2105753425 | 6669333324 | 8775086749 |  |
+| 35 | A | coord1 | Project.create_task | 6517163118 | 1.40 | 999532 | 40.85 | 6669333324 | 10502515429/1142146 | regular | Success | 2117842535 | 6669333324 | 8787175859 |  |
+| 36 | A | coord1 | Project.create_task | 6584425195 | 1.41 | 1009803 | 41.27 | 6669333324 | 10576503714/1153444 | regular | Success | 2129932248 | 6669333324 | 8799265572 |  |
+| 37 | A | coord1 | Project.submit_proposal | 5533334095 | 1.19 | 857538 | 35.05 | 0 | 9420303504/985952 | regular | Success | 1947570451 | 0 | 1947570451 |  |
+| 38 | A | client | Project.accept_planning_delivery | 8659679351 | 1.86 | 1264972 | 51.70 | 20013666633 | 12859283286/1434130 | regular | Success | 2399997019 | 20013666633 | 22413663652 | Assets.Transferred(0x22fecf65…→0x1af02a3e… 1); Assets.Transferred(0xa6e377cf…→0x1af02a3e… 0);  |
+| 39 | A | client | Project.approve_execution (4 milestone(s), teams 5/3/4/2) | 25758605120 | 5.52 | 2593252 | 105.99 | 453833332380 | 31668101632/2895238 | full core (UseFullCore) | Success | 4121927759 | 453833332380 | 457955260139 | Assets.Transferred(0x67f1ab54…→0xa6e377cf… 13000);  |
+| 40 | A | coord1 | Project.set_task_assignees | 7443245170 | 1.60 | 1153879 | 47.16 | 6677333316 | 11521205687/1311927 | regular | Success | 2419400283 | 6677333316 | 9096733599 |  |
+| 41 | A | coord1 | Project.set_task_assignees | 7511997203 | 1.61 | 1164174 | 47.58 | 6677333316 | 11596832923/1323252 | regular | Success | 2431526894 | 6677333316 | 9108860210 |  |
+| 42 | A | coord1 | Project.set_task_assignees | 7580724111 | 1.62 | 1174469 | 48.00 | 6677333316 | 11672432522/1334576 | regular | Success | 2443654281 | 6677333316 | 9120987597 |  |
+| 43 | A | coord1 | Project.set_task_assignees | 7649375644 | 1.64 | 1184764 | 48.42 | 6677333316 | 11747949208/1345901 | regular | Success | 2455782454 | 6677333316 | 9133115770 |  |
+| 44 | A | coord1 | Project.set_task_assignees | 7718077427 | 1.65 | 1195059 | 48.84 | 6677333316 | 11823521169/1357225 | regular | Success | 2467911424 | 6677333316 | 9145244740 |  |
+| 45 | A | coord1 | Project.submit_milestone (milestone 1 of 4, team of 5) | 8575152984 | 1.84 | 1256795 | 51.37 | 26713333260 | 12766304282/1425135 | regular | Success | 2697201473 | 26713333260 | 29410534733 |  |
+| 46 | A | client | Project.accept_milestone (milestone 1 of 4, team of 5) | 16058778220 | 3.44 | 1904900 | 77.86 | 100081666485 | 20998292042/2138051 | regular | Success | 3236069621 | 100081666485 | 103317736106 | Assets.Transferred(0x22fecf65…→0x32147421… 1); Assets.Transferred(0x22fecf65…→0xedbfd4dc… 1); Assets.Transferred(0x22fecf65…→0xc3ace22e… 1); Assets.Transferred(0x22fecf65…→0x34e782b7… 1); Assets.Transferred(0x22fecf65…→0x95cecc37… 1); Assets.Transferred(0xa6e377cf…→0x1af02a3e… 460); Assets.Transferred(0xa6e377cf…→0x32147421… 828); Assets.Transferred(0xa6e377cf…→0xedbfd4dc… 828); Assets.Transferred(0xa6e377cf…→0xc3ace22e… 828); Assets.Transferred(0xa6e377cf…→0x34e782b7… 828); Assets.Transferred(0xa6e377cf…→0x95cecc37… 828);  |
+| 47 | A | coord1 | Project.set_task_assignees | 7876335706 | 1.69 | 1215776 | 49.69 | 6677333316 | 11997605276/1380014 | regular | Success | 2492376063 | 6677333316 | 9169709379 |  |
+| 48 | A | coord1 | Project.set_task_assignees | 7945087739 | 1.70 | 1226071 | 50.11 | 6677333316 | 12073232512/1391339 | regular | Success | 2504507957 | 6677333316 | 9181841273 |  |
+| 49 | A | coord1 | Project.set_task_assignees | 8013814647 | 1.72 | 1236366 | 50.53 | 6677333316 | 12148832111/1402663 | regular | Success | 2516640691 | 6677333316 | 9193974007 |  |
+| 50 | A | coord1 | Project.submit_milestone (milestone 2 of 4, team of 3) | 8869604702 | 1.90 | 1298110 | 53.06 | 20045333268 | 13090201172/1470582 | regular | Success | 2745950354 | 20045333268 | 22791283622 |  |
+| 51 | A | client | Project.accept_milestone (milestone 2 of 4, team of 3) | 9919342903 | 2.13 | 1411569 | 57.69 | 13333320 | 14244913193/1595386 | regular | Success | 2656089356 | 13333320 | 2669422676 | Assets.Transferred(0xa6e377cf…→0x1af02a3e… 280); Assets.Transferred(0xa6e377cf…→0x32147421… 840); Assets.Transferred(0xa6e377cf…→0xedbfd4dc… 840); Assets.Transferred(0xa6e377cf…→0xc3ace22e… 840);  |
+| 52 | A | coord1 | Project.set_task_assignees | 8169113201 | 1.75 | 1257083 | 51.38 | 6677333316 | 12319660521/1425452 | regular | Success | 2541093762 | 6677333316 | 9218427078 |  |
+| 53 | A | coord1 | Project.set_task_assignees | 8237865234 | 1.77 | 1267378 | 51.80 | 6677333316 | 12395287757/1436776 | regular | Success | 2553229379 | 6677333316 | 9230562695 |  |
+| 54 | A | coord1 | Project.set_task_assignees | 8306516767 | 1.78 | 1277673 | 52.22 | 6677333316 | 12470804443/1448101 | regular | Success | 2565365879 | 6677333316 | 9242699195 |  |
+| 55 | A | coord1 | Project.set_task_assignees | 8375218550 | 1.80 | 1287968 | 52.64 | 6677333316 | 12546376405/1459425 | regular | Success | 2577503273 | 6677333316 | 9254836589 |  |
+| 56 | A | coord1 | Project.submit_milestone (milestone 3 of 4, team of 4) | 9230088025 | 1.98 | 1349712 | 55.17 | 20045333268 | 13486732827/1527344 | regular | Success | 2806824622 | 20045333268 | 22852157890 |  |
+| 57 | A | client | Project.accept_milestone (milestone 3 of 4, team of 4) | 10584619728 | 2.27 | 1493978 | 61.06 | 13333320 | 14976717700/1686036 | regular | Success | 2753220005 | 13333320 | 2766553325 | Assets.Transferred(0xa6e377cf…→0x1af02a3e… 370); Assets.Transferred(0xa6e377cf…→0x32147421… 833); Assets.Transferred(0xa6e377cf…→0xedbfd4dc… 833); Assets.Transferred(0xa6e377cf…→0x34e782b7… 832); Assets.Transferred(0xa6e377cf…→0x95cecc37… 832);  |
+| 58 | A | coord1 | Project.set_task_assignees | 8527335274 | 1.83 | 1308685 | 53.49 | 6677333316 | 12713704801/1482214 | regular | Success | 2601970962 | 6677333316 | 9279304278 |  |
+| 59 | A | coord1 | Project.set_task_assignees | 8596062182 | 1.84 | 1318980 | 53.91 | 6677333316 | 12789304400/1493539 | regular | Success | 2614111429 | 6677333316 | 9291444745 |  |
+| 60 | A | coord1 | Project.submit_milestone (milestone 4 of 4, team of 2) | 9452769802 | 2.03 | 1380724 | 56.43 | 20045333268 | 13731682782/1561457 | regular | Success | 2843441003 | 20045333268 | 22888774271 |  |
+| 61 | A | client | Project.accept_milestone (milestone 4 of 4, team of 2) | 10028580650 | 2.15 | 1453031 | 59.39 | 13333320 | 14365074715/1640995 | regular | Success | 2705202830 | 13333320 | 2718536150 | Assets.Transferred(0xa6e377cf…→0x1af02a3e… 190); Assets.Transferred(0xa6e377cf…→0x32147421… 855); Assets.Transferred(0xa6e377cf…→0xc3ace22e… 855);  |
+| 62 | A | client | Project.evaluate_project (client → coordinator) | 9626241555 | 2.06 | 1401750 | 57.29 | 20036333277 | 13922501710/1584586 | regular | Success | 2648250091 | 20036333277 | 22684583368 |  |
+| 63 | A | coord1 | Project.evaluate_project (coordinator → client + 5 worker(s)) | 11614297444 | 2.49 | 1556765 | 63.63 | 53424666522 | 16109363188/1755102 | regular | Success | 3383982727 | 53424666522 | 56808649249 |  |
+| 64 | A | w1 | Project.evaluate_project (worker → coordinator) | 10236809841 | 2.19 | 1494436 | 61.08 | 20036333277 | 14594126825/1686540 | regular | Success | 2757371860 | 20036333277 | 22793705137 |  |
+| 65 | A | w4 | Project.evaluate_project (worker → coordinator) | 10372859549 | 2.22 | 1515039 | 61.92 | 20036333277 | 14743781503/1709203 | regular | Success | 2781654863 | 20036333277 | 22817988140 |  |
+| 66 | A | w5 | Project.evaluate_project (worker → coordinator) | 10509680092 | 2.25 | 1535642 | 62.76 | 20036333277 | 14894284101/1731867 | regular | Success | 2805940142 | 20036333277 | 22842273419 |  |
+| 67 | A | w3 | Project.evaluate_project (worker → coordinator) | 10645911705 | 2.28 | 1556245 | 63.61 | 20036333277 | 15044138875/1754530 | regular | Success | 2830227740 | 20036333277 | 22866561017 |  |
+| 68 | A | w2 | Project.evaluate_project (worker → coordinator) | 10782436778 | 2.31 | 1576848 | 64.45 | 20036333277 | 15194316455/1777193 | regular | Success | 2854517700 | 20036333277 | 22890850977 |  |
+| 69 | A2 | operator | Dao.fund_account (client, 20000 more) | 1072609102 | 0.23 | 195703 | 8.00 | 0 | 2655090012/255221 | regular | Success | 906440596 | 0 | 906440596 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 20000);  |
+| 70 | A2 | client | Dao.create_project | 4301082750 | 0.92 | 560626 | 22.91 | 53506666473 | 8064827025/659349 | regular | Success | 1815660988 | 53473333140 | 55322327461 | Assets.Transferred(0x22fecf65…→0xbb307e31… 1);  |
+| 71 | A2 | coord1 | Project.create_proposal (2 milestone(s), 8 requirements) | 11315336835 | 2.43 | 988779 | 40.41 | 300214332819 | 15780506518/1130317 | regular | Success | 3275958327 | 300214332819 | 303490291146 |  |
+| 72 | A2 | coord1 | Project.update_proposal (2 milestone(s), 8 requirements) | 7968571763 | 1.71 | 968722 | 39.59 | 0 | 12099064939/1108255 | regular | Success | 3305704681 | 0 | 3305704681 |  |
+| 73 | A2 | coord1 | Project.create_task | 4361768341 | 0.93 | 670668 | 27.41 | 6669333324 | 8131581175/780395 | regular | Success | 1731689803 | 6669333324 | 8401023127 |  |
+| 74 | A2 | coord1 | Project.create_task | 4429755023 | 0.95 | 680939 | 27.83 | 6669333324 | 8206366525/791693 | regular | Success | 1743775768 | 6669333324 | 8413109092 |  |
+| 75 | A2 | coord1 | Project.create_task | 4496943735 | 0.96 | 691210 | 28.25 | 6669333324 | 8280274108/802992 | regular | Success | 1755862006 | 6669333324 | 8425195330 |  |
+| 76 | A2 | coord1 | Project.create_task | 4564132447 | 0.98 | 701481 | 28.67 | 6669333324 | 8354181691/814290 | regular | Success | 1767948527 | 6669333324 | 8437281851 |  |
+| 77 | A2 | coord1 | Project.create_task | 4631321159 | 0.99 | 711752 | 29.09 | 6669333324 | 8428089274/825588 | regular | Success | 1780035343 | 6669333324 | 8449368667 |  |
+| 78 | A2 | coord1 | Project.create_task | 4697379246 | 1.01 | 722023 | 29.51 | 6669333324 | 8500753170/836886 | regular | Success | 1792122462 | 6669333324 | 8461455786 |  |
+| 79 | A2 | coord1 | Project.create_task | 4764641323 | 1.02 | 732294 | 29.93 | 6669333324 | 8574741455/848184 | regular | Success | 1804209898 | 6669333324 | 8473543222 |  |
+| 80 | A2 | coord1 | Project.create_task | 4831830035 | 1.04 | 742565 | 30.35 | 6669333324 | 8648649038/859482 | regular | Success | 1816297659 | 6669333324 | 8485630983 |  |
+| 81 | A2 | coord1 | Project.submit_proposal | 3782129855 | 0.81 | 590300 | 24.13 | 0 | 7493978840/691991 | regular | Success | 1630473821 | 0 | 1630473821 |  |
+| 82 | A2 | client | Project.accept_planning_delivery | 5851957846 | 1.25 | 915506 | 37.42 | 0 | 9770789630/1049717 | regular | Success | 1989787528 | 0 | 1989787528 | Assets.Transferred(0xbb307e31…→0x1af02a3e… 0);  |
+| 83 | A2 | client | Project.approve_execution (2 milestone(s), teams 5/3) | 18235106697 | 3.91 | 1976880 | 80.80 | 253613999466 | 23392253366/2217229 | regular | Success | 3398653232 | 253613999466 | 257012652698 | Assets.Transferred(0x67f1ab54…→0xbb307e31… 7400);  |
+| 84 | A2 | coord1 | Project.set_task_assignees | 5286462473 | 1.13 | 824845 | 33.71 | 6677333316 | 9148744720/949990 | regular | Success | 2033158882 | 6677333316 | 8710492198 |  |
+| 85 | A2 | coord1 | Project.set_task_assignees | 5355214506 | 1.15 | 835140 | 34.13 | 6677333316 | 9224371956/961315 | regular | Success | 2045278479 | 6677333316 | 8722611795 |  |
+| 86 | A2 | coord1 | Project.set_task_assignees | 5423941414 | 1.16 | 845435 | 34.55 | 6677333316 | 9299971555/972639 | regular | Success | 2057398510 | 6677333316 | 8734731826 |  |
+| 87 | A2 | coord1 | Project.set_task_assignees | 5492592947 | 1.18 | 855730 | 34.98 | 6677333316 | 9375488241/983964 | regular | Success | 2069518985 | 6677333316 | 8746852301 |  |
+| 88 | A2 | coord1 | Project.set_task_assignees | 5561294730 | 1.19 | 866025 | 35.40 | 6677333316 | 9451060203/995288 | regular | Success | 2081639914 | 6677333316 | 8758973230 |  |
+| 89 | A2 | coord1 | Project.submit_milestone (milestone 1 of 2, team of 5) | 6418350187 | 1.38 | 927761 | 37.92 | 26713333260 | 10393821205/1063198 | regular | Success | 2310959657 | 26713333260 | 29024292917 |  |
+| 90 | A2 | client | Project.accept_milestone (milestone 1 of 2, team of 5) | 8079686290 | 1.73 | 1102842 | 45.08 | 13333320 | 12221290919/1255787 | regular | Success | 2293659724 | 13333320 | 2306993044 | Assets.Transferred(0xbb307e31…→0x1af02a3e… 460); Assets.Transferred(0xbb307e31…→0x32147421… 828); Assets.Transferred(0xbb307e31…→0xedbfd4dc… 828); Assets.Transferred(0xbb307e31…→0xc3ace22e… 828); Assets.Transferred(0xbb307e31…→0x34e782b7… 828); Assets.Transferred(0xbb307e31…→0x95cecc37… 828);  |
+| 91 | A2 | coord1 | Project.set_task_assignees | 5719553009 | 1.23 | 886742 | 36.24 | 6677333316 | 9625144309/1018077 | regular | Success | 2106048557 | 6677333316 | 8783381873 |  |
+| 92 | A2 | coord1 | Project.set_task_assignees | 5788305042 | 1.24 | 897037 | 36.66 | 6677333316 | 9700771546/1029401 | regular | Success | 2118171104 | 6677333316 | 8795504420 |  |
+| 93 | A2 | coord1 | Project.set_task_assignees | 5857031950 | 1.26 | 907332 | 37.08 | 6677333316 | 9776371145/1040726 | regular | Success | 2130294149 | 6677333316 | 8807627465 |  |
+| 94 | A2 | coord1 | Project.submit_milestone (milestone 2 of 2, team of 3) | 6712801905 | 1.44 | 969076 | 39.61 | 20045333268 | 10717718095/1108644 | regular | Success | 2359628197 | 20045333268 | 22404961465 |  |
+| 95 | A2 | client | Project.accept_milestone (milestone 2 of 2, team of 3) | 7592064580 | 1.63 | 1072190 | 43.82 | 13333320 | 11684907038/1222070 | regular | Success | 2257649681 | 13333320 | 2270983001 | Assets.Transferred(0xbb307e31…→0x1af02a3e… 280); Assets.Transferred(0xbb307e31…→0x32147421… 840); Assets.Transferred(0xbb307e31…→0xedbfd4dc… 840); Assets.Transferred(0xbb307e31…→0xc3ace22e… 840);  |
+| 96 | A2 | client | Project.evaluate_project (client → coordinator) | 6891327803 | 1.48 | 990102 | 40.47 | 20036333277 | 10914096583/1131773 | regular | Success | 2164397810 | 20036333277 | 22200731087 |  |
+| 97 | A2 | coord1 | Project.evaluate_project (coordinator → client + 5 worker(s)) | 8879383692 | 1.90 | 1145117 | 46.80 | 53424666522 | 13100958061/1302289 | regular | Success | 2900166815 | 53424666522 | 56324833337 |  |
+| 98 | A2 | w1 | Project.evaluate_project (worker → coordinator) | 7501896089 | 1.61 | 1082788 | 44.26 | 20036333277 | 11585721697/1233727 | regular | Success | 2273503384 | 20036333277 | 22309836661 |  |
+| 99 | A2 | w4 | Project.evaluate_project (worker → coordinator) | 7637945797 | 1.64 | 1103391 | 45.10 | 20036333277 | 11735376376/1256391 | regular | Success | 2297766742 | 20036333277 | 22334100019 |  |
+| 100 | A2 | w5 | Project.evaluate_project (worker → coordinator) | 7774766340 | 1.67 | 1123994 | 45.94 | 20036333277 | 11885878974/1279054 | regular | Success | 2322031519 | 20036333277 | 22358364796 |  |
+| 101 | A2 | w3 | Project.evaluate_project (worker → coordinator) | 7910997953 | 1.70 | 1144597 | 46.78 | 20036333277 | 12035733748/1301717 | regular | Success | 2346297758 | 20036333277 | 22382631035 |  |
+| 102 | A2 | w2 | Project.evaluate_project (worker → coordinator) | 8047523026 | 1.72 | 1165200 | 47.62 | 20036333277 | 12185911328/1324381 | regular | Success | 2370565502 | 20036333277 | 22406898779 |  |
+| 103 | B | w1 | Dao.create_skill_request | 2137273737 | 0.46 | 288234 | 11.78 | 26708999931 | 5684637110/359718 | regular | Success | 1455265124 | 26708999931 | 28164265055 |  |
+| 104 | B | operator | Dao.decide_skill_request (approve) | 3059925589 | 0.66 | 370448 | 15.14 | 33372999927 | 4841138147/447440 | regular | Success | 1035493933 | 33372999927 | 34408493860 |  |
+| 105 | B | operator | Dao.fund_account (client, 1000 more) | 1072609102 | 0.23 | 195703 | 8.00 | 0 | 2655090012/255221 | regular | Success | 906500521 | 0 | 906500521 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 1000);  |
+| 106 | B | client | Dao.create_project | 4367630119 | 0.94 | 570905 | 23.33 | 53506666473 | 8138029130/670656 | regular | Success | 1827924697 | 53473333140 | 55334591170 | Assets.Transferred(0x22fecf65…→0x284fc9c5… 1);  |
+| 107 | B | coord1 | Project.create_proposal (1 milestone, 1 requirement) | 6065588678 | 1.30 | 649928 | 26.56 | 93426999813 | 10005783545/757581 | regular | Success | 2097463470 | 93426999813 | 95524463283 |  |
+| 108 | B | coord1 | Project.create_task (one assignee) | 3074443383 | 0.66 | 454961 | 18.60 | 13346666640 | 6715523721/543118 | regular | Success | 1581344829 | 13346666640 | 14928011469 |  |
+| 109 | B | coord1 | Project.set_proposal_delivery | 1686394868 | 0.36 | 281893 | 11.52 | 333333 | 5188670354/352743 | regular | Success | 1297662936 | 333333 | 1297996269 |  |
+| 110 | B | coord1 | Project.submit_proposal | 1855973176 | 0.40 | 292343 | 11.95 | 0 | 5375206493/364238 | regular | Success | 1279957727 | 0 | 1279957727 |  |
+| 111 | B | client | Project.accept_planning_delivery | 3925831944 | 0.84 | 617548 | 25.24 | 0 | 7652051138/721963 | regular | Success | 1639338785 | 0 | 1639338785 | Assets.Transferred(0x284fc9c5…→0x1af02a3e… 0);  |
+| 112 | B | client | Project.approve_execution (1 milestone, 1 requirement) | 8147878806 | 1.75 | 1011324 | 41.33 | 46714999905 | 12296302686/1155117 | regular | Success | 2262753920 | 46714999905 | 48977753825 | Assets.Transferred(0x67f1ab54…→0x284fc9c5… 100);  |
+| 113 | B | coord1 | Project.submit_milestone | 3658685720 | 0.78 | 506234 | 20.69 | 26713333260 | 7358190292/599518 | regular | Success | 1815011651 | 26713333260 | 28528344911 |  |
+| 114 | B | client | Project.reject_milestone | 2035486910 | 0.44 | 312958 | 12.79 | 29666637 | 5572671601/386914 | regular | Success | 1527550893 | 29666637 | 1557217530 |  |
+| 115 | B | coord1 | Project.open_dispute | 4445669640 | 0.95 | 578486 | 23.64 | 33419333214 | 8223872604/678995 | regular | Success | 1980033579 | 33419333214 | 35399366793 |  |
+| 116 | B | client | Project.accept_milestone (on the disputed project) | 1452735436 | 0.31 | 292334 | 11.95 | 0 | 4931644979/364228 | regular | ExtrinsicFailed(Contracts::ContractReverted) | 1336793841 | 0 | 1336793841 | contract reverts with "project_disputed";  |
+| 117 | B | client | Project.respond_to_dispute | 2840734360 | 0.61 | 465574 | 19.03 | 29666637 | 6458443796/554792 | regular | Success | 1650480529 | 29666637 | 1680147166 |  |
+| 118 | C | client | Dao.create_deposit | 1962327132 | 0.42 | 267547 | 10.94 | 26706333267 | 5492195845/336962 | regular | Success | 1330894250 | 26706333267 | 28037227517 |  |
+| 119 | C | operator | Dao.confirm_deposit | 1347739933 | 0.29 | 216426 | 8.85 | 2666664 | 2957733926/278016 | regular | Success | 850871756 | 2666664 | 853538420 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 500);  |
+| 120 | C | client | Dao.create_withdrawal | 2275191899 | 0.49 | 298354 | 12.19 | 26695666611 | 5836347088/370850 | regular | Success | 1367140707 | 26695666611 | 28062807318 | Assets.Transferred(0x67f1ab54…→0x22fecf65… 300);  |
+| 121 | C | client | Dao.cancel_withdrawal | 1342529022 | 0.29 | 216362 | 8.84 | 2666664 | 4810417924/280659 | regular | Success | 1190649706 | 2666664 | 1193316370 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 300);  |
+| 122 | D | client | Dao.create_project | 4133742269 | 0.89 | 550346 | 22.49 | 53506666473 | 7880752495/648041 | regular | Success | 1803671692 | 53473333140 | 55310338165 | Assets.Transferred(0x22fecf65…→0x04683a76… 1);  |
+| 123 | D | coord1 | Project.create_proposal (1 milestone, 1 requirement) | 5831703843 | 1.25 | 629369 | 25.72 | 93426999813 | 9748510227/734966 | regular | Success | 2076535343 | 93426999813 | 95503535156 |  |
+| 124 | D | coord1 | Project.create_task | 2817275039 | 0.60 | 434311 | 17.75 | 6669333324 | 6432638542/520403 | regular | Success | 1453662746 | 6669333324 | 8122996070 |  |
+| 125 | D | coord1 | Project.delete_task | 1774421962 | 0.38 | 281867 | 11.52 | -6669333322 | 5285500158/352714 | regular | Success | 1310934923 | 0 | -5358398399 | deposit released: 6669333322 to 0x1af02a3e;  |
+| 126 | D | coord1 | Project.update_proposal (1 milestone, 1 requirement) | 4396033984 | 0.94 | 578189 | 23.63 | 0 | 8169273382/678668 | regular | Success | 2069630433 | 0 | 2069630433 |  |
+| 127 | D | coord1 | Project.set_proposal_delivery (specific date) | 1636992177 | 0.35 | 261327 | 10.68 | 3666663 | 5134327394/330120 | regular | Success | 1313427031 | 3666663 | 1317093694 |  |
+| 128 | D | coord1 | Project.submit_proposal (validates the date) | 1820830174 | 0.39 | 271797 | 11.11 | 0 | 5336549191/341637 | regular | Success | 1259077544 | 0 | 1259077544 |  |
+| 129 | D | coord1 | Project.withdraw_proposal | 1811157132 | 0.39 | 271797 | 11.11 | 0 | 5325908845/341637 | regular | Success | 1285740755 | 0 | 1285740755 |  |
+| 130 | D | coord1 | Project.submit_proposal (again) | 1820830174 | 0.39 | 271797 | 11.11 | 0 | 5336549191/341637 | regular | Success | 1259070686 | 0 | 1259070686 |  |
+| 131 | D | client | Project.request_proposal_changes | 1813842582 | 0.39 | 271797 | 11.11 | 16333317 | 5328862840/341637 | regular | Success | 1419067097 | 16333317 | 1435400414 |  |
+| 132 | D | coord1 | Project.submit_proposal (after changes) | 1824851302 | 0.39 | 271895 | 11.11 | 0 | 5340972432/341745 | regular | Success | 1259179145 | 0 | 1259179145 |  |
+| 133 | D | client | Project.accept_planning_delivery | 3864838263 | 0.83 | 597041 | 24.40 | 0 | 7584958089/699406 | regular | Success | 1611769887 | 0 | 1611769887 | Assets.Transferred(0x04683a76…→0x1af02a3e… 0);  |
+| 134 | D | client | Project.approve_execution (1 milestone, 1 requirement) | 8099268927 | 1.74 | 990876 | 40.50 | 46714999905 | 12242831819/1132624 | regular | Success | 2238521383 | 46714999905 | 48953521288 | Assets.Transferred(0x67f1ab54…→0x04683a76… 100);  |
+| 135 | D | coord1 | Project.submit_milestone (with worker ratings) | 3981168095 | 0.85 | 506255 | 20.69 | 40052333241 | 7712920904/599541 | regular | Success | 1768282293 | 40052333241 | 41820615534 |  |
+| 136 | D | client | Project.accept_milestone (rated settlement, team of 1) | 4548090253 | 0.97 | 589275 | 24.08 | 13333320 | 8336535278/690863 | regular | Success | 1699302549 | 13333320 | 1712635869 | Assets.Transferred(0x04683a76…→0x1af02a3e… 10); Assets.Transferred(0x04683a76…→0xc3ace22e… 90);  |
+| 137 | D | client | Project.evaluate_project (client → coordinator) | 3926042713 | 0.84 | 527304 | 21.55 | 20036333277 | 7652282984/622695 | regular | Success | 1619714444 | 20036333277 | 21656047721 |  |
+| 138 | D | coord1 | Project.evaluate_project (coordinator → client + 1 worker(s)) | 4236498037 | 0.91 | 558171 | 22.81 | 26713999926 | 7993783840/656649 | regular | Success | 1772699926 | 26713999926 | 28486699852 |  |
+| 139 | D | w3 | Project.evaluate_project (worker → coordinator) | 4264619451 | 0.91 | 578806 | 23.66 | 20036333277 | 8024717396/679347 | regular | Success | 1680312893 | 20036333277 | 21716646170 |  |
+| 140 | E | client | Dao.create_project | 4367630119 | 0.94 | 570905 | 23.33 | 53506666473 | 8138029130/670656 | regular | Success | 1827808522 | 53473333140 | 55334474995 | Assets.Transferred(0x22fecf65…→0x2ea23531… 1);  |
+| 141 | E | coord1 | Project.create_proposal (1 milestone, 1 requirement) | 5831842533 | 1.25 | 629369 | 25.72 | 93426999813 | 9748662786/734966 | regular | Success | 2076473569 | 93426999813 | 95503473382 |  |
+| 142 | E | coord1 | Project.delete_proposal | 5644073047 | 1.21 | 650324 | 26.58 | -86758999817 | 9542116351/758017 | regular | Success | 1707797983 | 0 | -85051201834 | deposit released: 60028999909 to 0x1af02a3e; deposit released: 26729999908 to 0x1af02a3e;  |
+| 143 | E | client | Project.dispute_planning | 2671748559 | 0.57 | 403437 | 16.49 | 13404666582 | 6272559414/486441 | regular | Success | 1517291085 | 13404666582 | 14921957667 |  |
+| 144 | E | client | Project.cancel_project | 2748560137 | 0.59 | 413807 | 16.91 | 13404666582 | 6357052150/497848 | regular | Success | 1529490028 | 13404666582 | 14934156610 |  |
+| 145 | E | w1 | Dao.update_qualifications | 3344042404 | 0.72 | 380972 | 15.57 | 26681333292 | 7012082644/461730 | regular | Success | 1390978277 | 26681333292 | 28072311569 |  |
+| 146 | E | w1 | Dao.set_calendar | 1912186324 | 0.41 | 319051 | 13.04 | 0 | 5437040956/393617 | regular | Success | 1274781857 | 0 | 1274781857 |  |
+| 147 | E | operator | Dao.set_score_policy (unchanged policy) | 753759158 | 0.16 | 164896 | 6.74 | 0 | 2304355073/221333 | regular | Success | 746867048 | 0 | 746867048 |  |
+| 148 | E | operator | Dao.set_compensation_policy | 753633125 | 0.16 | 164896 | 6.74 | 0 | 2304216437/221333 | regular | Success | 736864297 | 0 | 736864297 |  |
+| 149 | E | operator | Dao.upsert_catalog_entry (new skill) | 2476133436 | 0.53 | 318879 | 13.03 | 26703666603 | 4198966779/390714 | regular | Success | 1094706911 | 26703666603 | 27798373514 |  |
+| 150 | E | operator | Dao.delete_catalog_entry | 9638233829 | 2.07 | 1420872 | 58.07 | -26703666603 | 12077277211/1602907 | regular | Success | 2234648105 | 0 | -24469018498 | deposit released: 26703666603 to 0xd6d9e961;  |
+| 151 | P | operator | Dao.fund_account (client, 500000 more) | 1072609102 | 0.23 | 195703 | 8.00 | 0 | 2655090012/255221 | regular | Success | 906446066 | 0 | 906446066 | Assets.Transferred(0x22fecf65…→0x67f1ab54… 500000);  |
+| 152 | P | client | Dao.create_project [1×2] | 5135841038 | 1.10 | 642861 | 26.27 | 53506666473 | 8983061141/749808 | regular | Success | 1912435335 | 53473333140 | 55419101808 | Assets.Transferred(0x22fecf65…→0xd4f41cd2… 1);  |
+| 153 | P | coord1 | Project.create_proposal [1×2] | 6403542514 | 1.37 | 670456 | 27.40 | 106769666457 | 10377532765/780162 | regular | Success | 2208110420 | 106769666457 | 108977776877 |  |
+| 154 | P | coord1 | Project.submit_proposal [1×2] | 1835972859 | 0.39 | 292329 | 11.95 | 0 | 5353206144/364222 | regular | Success | 1283200288 | 0 | 1283200288 |  |
+| 155 | P | client | Project.accept_planning_delivery [1×2] | 3905971700 | 0.84 | 617535 | 25.24 | 0 | 7630204870/721949 | regular | Success | 1639170200 | 0 | 1639170200 | Assets.Transferred(0xd4f41cd2…→0x1af02a3e… 0);  |
+| 156 | P | client | Project.approve_execution [1×2] | 9024558615 | 1.93 | 1062646 | 43.43 | 73412333181 | 13260650476/1211571 | regular | Success | 2322890843 | 73412333181 | 75735224024 | Assets.Transferred(0x67f1ab54…→0xd4f41cd2… 200);  |
+| 157 | P | client | Dao.create_project [1×3] | 5135841038 | 1.10 | 642861 | 26.27 | 53506666473 | 8983061141/749808 | regular | Success | 1912438482 | 53473333140 | 55419104955 | Assets.Transferred(0x22fecf65…→0x51382db9… 1);  |
+| 158 | P | coord1 | Project.create_proposal [1×3] | 6507214540 | 1.39 | 670425 | 27.40 | 120112333101 | 10491571994/780128 | regular | Success | 2291410473 | 120112333101 | 122403743574 |  |
+| 159 | P | coord1 | Project.submit_proposal [1×3] | 1969607861 | 0.42 | 312883 | 12.79 | 0 | 5500204647/386832 | regular | Success | 1307386089 | 0 | 1307386089 |  |
+| 160 | P | client | Project.accept_planning_delivery [1×3] | 4039606702 | 0.87 | 638089 | 26.08 | 0 | 7777203372/744558 | regular | Success | 1663357777 | 0 | 1663357777 | Assets.Transferred(0x51382db9…→0x1af02a3e… 0);  |
+| 161 | P | client | Project.approve_execution [1×3] | 9558066093 | 2.05 | 1103768 | 45.11 | 60100666506 | 13847508702/1256805 | regular | Success | 2371282207 | 60100666506 | 62471948713 | Assets.Transferred(0x67f1ab54…→0x51382db9… 300);  |
+| 162 | P | client | Dao.create_project [2×1] | 4200289638 | 0.90 | 560625 | 22.91 | 53506666473 | 7953954601/659348 | regular | Success | 1815682109 | 53473333140 | 55322348582 | Assets.Transferred(0x22fecf65…→0x5920c94c… 1);  |
+| 163 | P | coord1 | Project.create_proposal [2×1] | 8085017996 | 1.73 | 804027 | 32.86 | 133474333059 | 12227155795/927090 | regular | Success | 2455280213 | 133474333059 | 135929613272 |  |
+| 164 | P | coord1 | Project.submit_proposal [2×1] | 1909882639 | 0.41 | 302672 | 12.37 | 0 | 5434506902/375600 | regular | Success | 1295374516 | 0 | 1295374516 |  |
+| 165 | P | client | Project.accept_planning_delivery [2×1] | 3979710630 | 0.85 | 627878 | 25.66 | 0 | 7711317693/733326 | regular | Success | 1651349114 | 0 | 1651349114 | Assets.Transferred(0x5920c94c…→0x1af02a3e… 0);  |
+| 166 | P | client | Project.approve_execution [2×1] | 9728720615 | 2.09 | 1144919 | 46.79 | 66757333176 | 14035228676/1302071 | regular | Success | 2419711011 | 66757333176 | 69177044187 | Assets.Transferred(0x67f1ab54…→0x5920c94c… 200);  |
+| 167 | P | client | Dao.create_project [2×2] | 5904051957 | 1.27 | 714817 | 29.22 | 53506666473 | 9828093152/828959 | regular | Success | 1997116302 | 53473333140 | 55503782775 | Assets.Transferred(0x22fecf65…→0x4179bc30… 1);  |
+| 168 | P | coord1 | Project.create_proposal [2×2] | 7590337703 | 1.63 | 742288 | 30.34 | 160159666347 | 11683007473/859177 | regular | Success | 2549314373 | 160159666347 | 162708980720 |  |
+| 169 | P | coord1 | Project.submit_proposal [2×2] | 2177152643 | 0.47 | 343780 | 14.05 | 0 | 5728503907/420819 | regular | Success | 1343748248 | 0 | 1343748248 |  |
+| 170 | P | client | Project.accept_planning_delivery [2×2] | 4246980634 | 0.91 | 668986 | 27.34 | 0 | 8005314697/778545 | regular | Success | 1699727599 | 0 | 1699727599 | Assets.Transferred(0x4179bc30…→0x1af02a3e… 0);  |
+| 171 | P | client | Project.approve_execution [2×2] | 11470144379 | 2.46 | 1268167 | 51.83 | 106815666411 | 15950794816/1437644 | regular | Success | 2564747722 | 106815666411 | 109380414133 | Assets.Transferred(0x67f1ab54…→0x4179bc30… 400);  |
+| 172 | P | client | Dao.create_project [e2e 5] | 6137939807 | 1.32 | 735376 | 30.06 | 53506666473 | 10085369787/851574 | regular | Success | 2021321836 | 53473333140 | 55527988309 | Assets.Transferred(0x22fecf65…→0xbacef1e0… 1);  |
+| 173 | P | coord1 | Project.create_proposal [e2e 5] | 10189888431 | 2.18 | 958141 | 39.16 | 213477666309 | 14542513274/1096616 | regular | Success | 2863316313 | 213477666309 | 216340982622 |  |
+| 174 | P | coord1 | Project.submit_proposal [e2e 5] | 2570527895 | 0.55 | 405326 | 16.57 | 0 | 6161216684/488519 | regular | Success | 1416177859 | 0 | 1416177859 |  |
+| 175 | P | client | Project.accept_planning_delivery [e2e 5] | 4640526736 | 0.99 | 730532 | 29.86 | 0 | 8438215409/846246 | regular | Success | 1772167260 | 0 | 1772167260 | Assets.Transferred(0xbacef1e0…→0x1af02a3e… 0);  |
+| 176 | P | client | Project.approve_execution [e2e 5] | 13105666963 | 2.81 | 1535270 | 62.75 | 86822666424 | 17749869659/1731458 | regular | Success | 2879081112 | 86822666424 | 89701747536 | Assets.Transferred(0x67f1ab54…→0xbacef1e0… 4600);  |
+| 177 | P | client | Dao.create_project [e2e 5/3/4] | 4200289638 | 0.90 | 560625 | 22.91 | 53506666473 | 7953954601/659348 | regular | Success | 1815722951 | 53473333140 | 55322389424 | Assets.Transferred(0x22fecf65…→0xe27e06fa… 1);  |
+| 178 | P | coord1 | Project.create_proposal [e2e 5/3/4] | 15151974987 | 3.25 | 1266076 | 51.75 | 406961665965 | 20000808485/1435344 | regular | Success | 4082363079 | 406961665965 | 411044029044 |  |
+| 179 | P | coord1 | Project.submit_proposal [e2e 5/3/4] | 4120902511 | 0.88 | 641759 | 26.23 | 0 | 7866628762/748595 | regular | Success | 1697745779 | 0 | 1697745779 |  |
+| 180 | P | client | Project.accept_planning_delivery [e2e 5/3/4] | 6190559652 | 1.33 | 966965 | 39.52 | 0 | 10143251617/1106322 | regular | Success | 2050422708 | 0 | 2050422708 | Assets.Transferred(0xe27e06fa…→0x1af02a3e… 0);  |
+| 181 | P | client | Project.approve_execution [e2e 5/3/4] | 20918976503 | 4.48 | 2192710 | 89.62 | 260393999346 | 26344510153/2454642 | regular (not with +10%) | Success | 3652807108 | 260393999346 | 264046806454 | Assets.Transferred(0x67f1ab54…→0xe27e06fa… 11100);  |
+| 182 | S | client | Dao.create_project [1×1] | 6137939807 | 1.32 | 735376 | 30.06 | 53506666473 | 10085369787/851574 | regular | Success | 2021415295 | 53473333140 | 55528081768 | Assets.Transferred(0x22fecf65…→0x43219836… 1);  |
+| 183 | S | coord1 | Project.create_proposal [1×1] | 5898393922 | 1.26 | 639648 | 26.14 | 93426999813 | 9821869314/746273 | regular | Success | 2088639127 | 93426999813 | 95515638940 |  |
+| 184 | S | coord1 | Project.submit_proposal [1×1] | 1702337857 | 0.36 | 271775 | 11.11 | 0 | 5206207642/341613 | regular | Success | 1259064329 | 0 | 1259064329 |  |
+| 185 | S | client | Project.accept_planning_delivery [1×1] | 3772336698 | 0.81 | 596981 | 24.40 | 0 | 7483206367/699340 | regular | Success | 1611755750 | 0 | 1611755750 | Assets.Transferred(0x43219836…→0x1af02a3e… 0);  |
+| 186 | S | client | Dao.create_project [e2e 5] | 6605715507 | 1.42 | 776494 | 31.74 | 53506666473 | 10599923057/896804 | regular | Success | 2069795119 | 53473333140 | 55576461592 | Assets.Transferred(0x22fecf65…→0xd46d3ce3… 1);  |
+| 187 | S | coord1 | Project.create_proposal [e2e 5] | 11659671445 | 2.50 | 1091774 | 44.62 | 213477666309 | 16159274589/1243612 | regular | Success | 3020686749 | 213477666309 | 216498353058 |  |
+| 188 | S | coord1 | Project.submit_proposal [e2e 5] | 2570527895 | 0.55 | 405326 | 16.57 | 0 | 6161216684/488519 | regular | Success | 1416228766 | 0 | 1416228766 |  |
+| 189 | S | client | Project.accept_planning_delivery [e2e 5] | 4640526736 | 0.99 | 730532 | 29.86 | 0 | 8438215409/846246 | regular | Success | 1772257692 | 0 | 1772257692 | Assets.Transferred(0xd46d3ce3…→0x1af02a3e… 0);  |
+| 190 | S | client | Dao.create_project [e2e 5/3] | 4968508597 | 1.06 | 632581 | 25.85 | 53506666473 | 8798995456/738500 | regular | Success | 1900452468 | 53473333140 | 55407118941 | Assets.Transferred(0x22fecf65…→0xf0dd840c… 1);  |
+| 191 | S | coord1 | Project.create_proposal [e2e 5/3] | 11449194368 | 2.45 | 1009337 | 41.25 | 300214332819 | 15927749804/1152931 | regular | Success | 3303688013 | 300214332819 | 303518020832 |  |
+| 192 | S | coord1 | Project.submit_proposal [e2e 5/3] | 3245532699 | 0.70 | 508132 | 20.77 | 0 | 6903721968/601606 | regular | Success | 1537215093 | 0 | 1537215093 |  |
+| 193 | S | client | Project.accept_planning_delivery [e2e 5/3] | 5315360690 | 1.14 | 833338 | 34.06 | 0 | 9180532759/959332 | regular | Success | 1893249060 | 0 | 1893249060 | Assets.Transferred(0xf0dd840c…→0x1af02a3e… 0);  |
+
+=== OPERATIONS, grouped by message (min–max over its calls) ===
+| message | calls | ref_time | % of limit | proof_size | % of limit | deposit (dry-run) | fee | fits (calls) | outcomes |
+|---|---|---|---|---|---|---|---|---|---|
+| Dao.configure_project_code | 1 | 747124596 | 0.16 | 164864 | 6.74 | 10666656 | 839952585 | regular 1 | Success |
+| Dao.configure_accounting | 1 | 829346981 | 0.18 | 175159 | 7.16 | 0 | 748760464 | regular 1 | Success |
+| Dao.register_worker | 12 | 4079681773–7282897254 | 0.87–1.56 | 431983–678375 | 17.66–27.73 | 73418666508–200147999652 | 1673888834–2016896965 | regular 12 | Success |
+| Dao.promote_coordinator | 2 | 1013872606 | 0.22 | 185669 | 7.59 | 0 | 867783281 | regular 2 | Success |
+| Dao.set_worker_mode | 2 | 1658280006–1718889855 | 0.36–0.37 | 237059–247282 | 9.69–10.11 | 6677333316–13345333308 | 1164723472–1176742312 | regular 2 | Success |
+| Dao.fund_account | 4 | 1072609102–1951766344 | 0.23–0.42 | 195703–267563 | 8.00–10.94 | 0–26681666625 | 906440596–990729963 | regular 4 | Success |
+| Dao.create_project | 14 | 4061594448–6605715507 | 0.87–1.42 | 540043–776494 | 22.07–31.74 | 53506666473–60174666465 | 1790931380–2069795119 | regular 14 | Success |
+| Project.create_proposal | 14 | 5831703843–15768930317 | 1.25–3.38 | 629369–1266076 | 25.72–51.75 | 93426999813–480355665831 | 2076473569–4360814047 | regular 14 | Success |
+| Project.update_proposal | 3 | 4396033984–9483632118 | 0.94–2.03 | 578189–1194924 | 23.63–48.84 | 0 | 2069630433–4330750295 | regular 3 | Success |
+| Project.create_task | 24 | 2817275039–6584425195 | 0.60–1.41 | 434311–1009803 | 17.75–41.27 | 6669333324–13346666640 | 1453662746–2129932248 | regular 24 | Success |
+| Project.submit_proposal | 15 | 1702337857–5533334095 | 0.36–1.19 | 271775–857538 | 11.11–35.05 | 0 | 1259064329–1947570451 | regular 15 | Success |
+| Project.accept_planning_delivery | 13 | 3772336698–8659679351 | 0.81–1.86 | 596981–1264972 | 24.40–51.70 | 0–20013666633 | 1611755750–2399997019 | regular 13 | Success |
+| Project.approve_execution | 10 | 8099268927–25758605120 | 1.74–5.52 | 990876–2593252 | 40.50–105.99 | 46714999905–453833332380 | 2238521383–4121927759 | regular 9, full core 1 | Success |
+| Project.set_task_assignees | 22 | 5286462473–8596062182 | 1.13–1.84 | 824845–1318980 | 33.71–53.91 | 6677333316 | 2033158882–2614111429 | regular 22 | Success |
+| Project.submit_milestone | 8 | 3658685720–9452769802 | 0.78–2.03 | 506234–1380724 | 20.69–56.43 | 20045333268–40052333241 | 1768282293–2843441003 | regular 8 | Success |
+| Project.accept_milestone | 8 | 1452735436–16058778220 | 0.31–3.44 | 292334–1904900 | 11.95–77.86 | 0–100081666485 | 1336793841–3236069621 | regular 8 | Success, ExtrinsicFailed |
+| Project.evaluate_project | 17 | 3926042713–11614297444 | 0.84–2.49 | 527304–1576848 | 21.55–64.45 | 20036333277–53424666522 | 1619714444–3383982727 | regular 17 | Success |
+| Dao.create_skill_request | 1 | 2137273737 | 0.46 | 288234 | 11.78 | 26708999931 | 1455265124 | regular 1 | Success |
+| Dao.decide_skill_request | 1 | 3059925589 | 0.66 | 370448 | 15.14 | 33372999927 | 1035493933 | regular 1 | Success |
+| Project.set_proposal_delivery | 2 | 1636992177–1686394868 | 0.35–0.36 | 261327–281893 | 10.68–11.52 | 333333–3666663 | 1297662936–1313427031 | regular 2 | Success |
+| Project.reject_milestone | 1 | 2035486910 | 0.44 | 312958 | 12.79 | 29666637 | 1527550893 | regular 1 | Success |
+| Project.open_dispute | 1 | 4445669640 | 0.95 | 578486 | 23.64 | 33419333214 | 1980033579 | regular 1 | Success |
+| Project.respond_to_dispute | 1 | 2840734360 | 0.61 | 465574 | 19.03 | 29666637 | 1650480529 | regular 1 | Success |
+| Dao.create_deposit | 1 | 1962327132 | 0.42 | 267547 | 10.94 | 26706333267 | 1330894250 | regular 1 | Success |
+| Dao.confirm_deposit | 1 | 1347739933 | 0.29 | 216426 | 8.85 | 2666664 | 850871756 | regular 1 | Success |
+| Dao.create_withdrawal | 1 | 2275191899 | 0.49 | 298354 | 12.19 | 26695666611 | 1367140707 | regular 1 | Success |
+| Dao.cancel_withdrawal | 1 | 1342529022 | 0.29 | 216362 | 8.84 | 2666664 | 1190649706 | regular 1 | Success |
+| Project.delete_task | 1 | 1774421962 | 0.38 | 281867 | 11.52 | -6669333322 | 1310934923 | regular 1 | Success |
+| Project.withdraw_proposal | 1 | 1811157132 | 0.39 | 271797 | 11.11 | 0 | 1285740755 | regular 1 | Success |
+| Project.request_proposal_changes | 1 | 1813842582 | 0.39 | 271797 | 11.11 | 16333317 | 1419067097 | regular 1 | Success |
+| Project.delete_proposal | 1 | 5644073047 | 1.21 | 650324 | 26.58 | -86758999817 | 1707797983 | regular 1 | Success |
+| Project.dispute_planning | 1 | 2671748559 | 0.57 | 403437 | 16.49 | 13404666582 | 1517291085 | regular 1 | Success |
+| Project.cancel_project | 1 | 2748560137 | 0.59 | 413807 | 16.91 | 13404666582 | 1529490028 | regular 1 | Success |
+| Dao.update_qualifications | 1 | 3344042404 | 0.72 | 380972 | 15.57 | 26681333292 | 1390978277 | regular 1 | Success |
+| Dao.set_calendar | 1 | 1912186324 | 0.41 | 319051 | 13.04 | 0 | 1274781857 | regular 1 | Success |
+| Dao.set_score_policy | 1 | 753759158 | 0.16 | 164896 | 6.74 | 0 | 746867048 | regular 1 | Success |
+| Dao.set_compensation_policy | 1 | 753633125 | 0.16 | 164896 | 6.74 | 0 | 736864297 | regular 1 | Success |
+| Dao.upsert_catalog_entry | 1 | 2476133436 | 0.53 | 318879 | 13.03 | 26703666603 | 1094706911 | regular 1 | Success |
+| Dao.delete_catalog_entry | 1 | 9638233829 | 2.07 | 1420872 | 58.07 | -26703666603 | 2234648105 | regular 1 | Success |
+
+=== DOES NOT FIT A REGULAR BLOCK, OR FAILS ===
+192 of 193 rows fit a regular block, 1 need the full core (1 blocks carried the UseFullCore digest), 0 fit nothing
+rows that fit a regular block only without the 10% gas margin: 1
+receipts carrying a Contracts.ContractEmitted event: 0 of 193
+successful extrinsics whose block digest disagrees with the computed class: 0
+- [A] Project.approve_execution (4 milestone(s), teams 5/3/4/2) by client: full core (UseFullCore) | Success | ref_time 25758605120 (5.52%) proof_size 2593252 (105.99%) | Assets.Transferred(0x67f1ab54…→0xa6e377cf… 13000); 
+- [B] Project.accept_milestone (on the disputed project) by client: regular | ExtrinsicFailed(Contracts::ContractReverted) | ref_time 1452735436 (0.31%) proof_size 292334 (11.95%) | contract reverts with "project_disputed"; 
+
+=== READS (ContractsApi_call dry-runs; % is of max_block, the default dry-run gas limit) ===
+| state | message | return bytes | ref_time | % | proof_size | % | outcome |
+|---|---|---|---|---|---|---|---|
+| 2 workers | Dao.workers | 432 | 2211431666 | 0.33 | 391313 | 11.20 | ok |
+| new project | Project.view | 171 | 748668617 | 0.11 | 199291 | 5.70 | ok |
+| 4 milestones approved, 14 tasks | Project.view | 1558 | 5850212914 | 0.88 | 970662 | 27.77 | ok |
+| A complete: 12 workers, 1 project | Dao.workers | 3252 | 8472371976 | 1.27 | 1298347 | 37.15 | ok |
+| A complete: 12 workers, 1 project | Dao.worker | 389 | 1586591486 | 0.24 | 298733 | 8.55 | ok |
+| A complete: 12 workers, 1 project | Dao.catalog | 3350 | 21445263361 | 3.22 | 3329487 | 95.26 | ok |
+| A complete: 12 workers, 1 project | Dao.projects | 50 | 793020379 | 0.12 | 185441 | 5.31 | ok |
+| A complete: 12 workers, 1 project | Dao.resolve_project | 34 | 645619905 | 0.10 | 164895 | 4.72 | ok |
+| A complete: 12 workers, 1 project | Dao.project_address | 34 | 645619905 | 0.10 | 164895 | 4.72 | ok |
+| A complete: 12 workers, 1 project | Dao.skill_requests | 2 | 647152113 | 0.10 | 164895 | 4.72 | ok |
+| A complete: 12 workers, 1 project | Dao.score_policy | 5 | 568636615 | 0.09 | 154476 | 4.42 | ok |
+| A complete: 12 workers, 1 project | Dao.compensation_policy | 2 | 568636615 | 0.09 | 154476 | 4.42 | ok |
+| A complete: 12 workers, 1 project | Dao.accounting_enabled | 2 | 568636615 | 0.09 | 154476 | 4.42 | ok |
+| A complete: 12 workers, 1 project | Dao.financial_projection | 293 | 1730831119 | 0.26 | 329387 | 9.42 | ok |
+| A complete: 12 workers, 1 project | Dao.calendar | 228 | 1024963713 | 0.15 | 216478 | 6.19 | ok |
+| A complete: 12 workers, 1 project | Dao.calendar_available | 6 | 723454270 | 0.11 | 175174 | 5.01 | ok |
+| A complete: 12 workers, 1 project | Dao.validate_qualifications | 2 | 793204223 | 0.12 | 185497 | 5.31 | ok |
+| A complete: 12 workers, 1 project | Project.view | 3313 | 8432897201 | 1.26 | 1352156 | 38.69 | ok |
+| A complete: 12 workers, 1 project | Project.reasons | 2 | 8307202198 | 1.25 | 1352156 | 38.69 | ok |
+| A complete: financial_projection with origin = a worker | Dao.financial_projection | 0 | 575295726 | 0.09 | 154476 | 4.42 | reverted: system_origin_required |
+| B: disputed project | Dao.disputes | 34 | 789563179 | 0.12 | 185441 | 5.31 | ok |
+| B: disputed project | Dao.dispute_project | 18 | 642960675 | 0.10 | 164895 | 4.72 | ok |
+| B: disputed project | Project.dispute | 681 | 1451288562 | 0.22 | 292334 | 8.36 | ok |
+| B: disputed project | Project.view | 652 | 1450225162 | 0.22 | 292334 | 8.36 | ok |
+| C: after confirmation | Dao.deposit | 108 | 654459579 | 0.10 | 164895 | 4.72 | ok |
+| C: pending withdrawal | Dao.withdrawal | 68 | 650538634 | 0.10 | 164895 | 4.72 | ok |
+| D complete: 1 milestone, 1 requirement | Project.view | 882 | 1932846206 | 0.29 | 354114 | 10.13 | ok |
+| E: cancelled project | Project.reasons | 216 | 888278278 | 0.13 | 220108 | 6.30 | ok |
+| S: 12 workers, 14 projects | Dao.workers | 5644 | 12159810601 | 1.82 | 1844678 | 52.78 | ok |
+| S: 12 workers, 14 projects | Dao.projects | 674 | 2544390300 | 0.38 | 452903 | 12.96 | ok |
+| S: 22 workers, 14 projects | Dao.workers | 7794 | 19842540181 | 2.98 | 2976828 | 85.17 | ok |
+| S: 22 workers, 14 projects | Dao.projects | 674 | 2544390300 | 0.38 | 452903 | 12.96 | ok |
+| S: 32 workers, 14 projects | Dao.workers | 9944 | 27479863861 | 4.12 | 4108978 | 117.56 | ok only with an explicit gas limit (default: Contracts::OutOfGas) |
+| S: 32 workers, 14 projects | Dao.projects | 674 | 2544390300 | 0.38 | 452903 | 12.96 | ok |
+| S: 52 workers, 14 projects | Dao.workers | 14244 | 42846241591 | 6.43 | 6373278 | 182.34 | ok only with an explicit gas limit (default: Contracts::OutOfGas) |
+| S: 52 workers, 14 projects | Dao.projects | 674 | 2544390300 | 0.38 | 452903 | 12.96 | ok |
+| S: 92 workers, 14 projects | Dao.workers | 22845 | 73576818417 | 11.04 | 10901878 | 311.91 | ok only with an explicit gas limit (default: Contracts::OutOfGas) |
+| S: 92 workers, 14 projects | Dao.projects | 674 | 2544390300 | 0.38 | 452903 | 12.96 | ok |
+
+=== SCALING PROBES (dry-runs; % is of the normal max_extrinsic; the verdict assumes a pass-authenticated extrinsic) ===
+| group | message | ref_time | % | proof_size | % | deposit | verdict |
+|---|---|---|---|---|---|---|---|
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 1 requirement(s), one skill each | 5828074502 | 1.25 | 629329 | 25.72 | 100094999805 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 2 requirement(s), one skill each | 6166025323 | 1.32 | 649857 | 26.56 | 113437666449 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 3 requirement(s), one skill each | 6503255559 | 1.39 | 670385 | 27.40 | 126780333093 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 4 requirement(s), one skill each | 6841502855 | 1.47 | 690913 | 28.24 | 140122999737 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 5 requirement(s), one skill each | 7178594401 | 1.54 | 711441 | 29.08 | 153465666381 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 8 requirement(s), one skill each | 8192105164 | 1.76 | 773025 | 31.59 | 193493666313 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 12 requirement(s), one skill each | 9544585818 | 2.05 | 855137 | 34.95 | 246864332889 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 16 requirement(s), one skill each | 10896927782 | 2.34 | 937249 | 38.31 | 300234999465 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 20 requirement(s), one skill each | 12252510871 | 2.63 | 1019361 | 41.66 | 353605666041 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 1 milestone(s) × 28 requirement(s), one skill each | 14959431929 | 3.21 | 1183585 | 48.38 | 460346999193 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 2 milestone(s) × 1 requirement(s), one skill each | 6845163851 | 1.47 | 690913 | 28.24 | 140142333051 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 4 milestone(s) × 1 requirement(s), one skill each | 8878648094 | 1.90 | 814081 | 33.27 | 220236999543 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 8 milestone(s) × 1 requirement(s), one skill each | 12972700325 | 2.78 | 1060417 | 43.34 | 380426332527 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 2 milestone(s) × 2 requirement(s), one skill each | 7519636383 | 1.61 | 731969 | 29.92 | 166827666339 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 2 milestone(s) × 5 requirement(s), one skill each | 9545199654 | 2.05 | 855137 | 34.95 | 246883666203 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | 4 milestone(s) × 5 requirement(s), one skill each | 14279378980 | 3.06 | 1142529 | 46.70 | 433719665847 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | e2e teams, first 1 milestone(s) = 5 requirements, two skills each | 9183826661 | 1.97 | 865586 | 35.38 | 220145666301 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | e2e teams, first 2 milestone(s) = 8 requirements, two skills each | 11378397573 | 2.44 | 999018 | 40.83 | 306882332811 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | e2e teams, first 3 milestone(s) = 12 requirements, two skills each | 14079214093 | 3.02 | 1163242 | 47.54 | 413629665957 | regular |
+| create_proposal by shape (empty project, 12 workers, 1 project) | e2e teams, first 4 milestone(s) = 14 requirements, two skills each | 15769269002 | 3.38 | 1265882 | 51.74 | 480355665831 | regular |
+| directory of 12 workers (14 projects) | Dao.create_project | 4500724857 | 0.96 | 591463 | 24.17 | 53506666473 | regular |
+| directory of 12 workers (14 projects) | Dao.register_worker | 5990218984 | 1.28 | 617446 | 25.24 | 53405333208 | regular |
+| directory of 12 workers (14 projects) | Dao.create_deposit | 1901816079 | 0.41 | 257308 | 10.52 | 20038333275 | regular |
+| directory of 12 workers (14 projects) | Project.approve_execution [1×1] | 7986578352 | 1.71 | 990756 | 40.49 | 46714999905 | regular |
+| directory of 12 workers (14 projects) | Project.approve_execution [e2e 5] | 13943547138 | 2.99 | 1586550 | 64.85 | 153504333009 | regular |
+| directory of 12 workers (14 projects) | Project.approve_execution [e2e 5/3] | 17696240251 | 3.79 | 1894712 | 77.44 | 253613999466 | regular |
+| directory of 12 workers (14 projects) | Project.create_proposal [1×1, second proposal] | 7986404401 | 1.71 | 845389 | 34.55 | 86758999821 | regular |
+| directory of 22 workers (14 projects) | Dao.create_project | 7307379057 | 1.57 | 838171 | 34.26 | 53506666473 | regular |
+| directory of 22 workers (14 projects) | Dao.register_worker | 7933310628 | 1.70 | 792469 | 32.39 | 53405333208 | regular |
+| directory of 22 workers (14 projects) | Dao.create_deposit | 2135703929 | 0.46 | 277867 | 11.36 | 20038333275 | regular |
+| directory of 22 workers (14 projects) | Project.approve_execution [1×1] | 10227344412 | 2.19 | 1300356 | 53.15 | 46714999905 | regular |
+| directory of 22 workers (14 projects) | Project.approve_execution [e2e 5] | 19947753913 | 4.28 | 2410620 | 98.53 | 153504333009 | full core |
+| directory of 22 workers (14 projects) | Project.approve_execution [e2e 5/3] | 23996659721 | 5.14 | 2718782 | 111.12 | 253613999466 | full core |
+| directory of 22 workers (14 projects) | Project.create_proposal [1×1, second proposal] | 6649234730 | 1.43 | 732314 | 29.93 | 86758999821 | regular |
+| directory of 32 workers (14 projects) | Dao.create_project | 4734612707 | 1.01 | 612022 | 25.01 | 53506666473 | regular |
+| directory of 32 workers (14 projects) | Dao.register_worker | 10043924676 | 2.15 | 977788 | 39.96 | 53405333208 | regular |
+| directory of 32 workers (14 projects) | Dao.create_deposit | 2135703929 | 0.46 | 277867 | 11.36 | 20038333275 | regular |
+| directory of 32 workers (14 projects) | Project.approve_execution [1×1] | 12418624272 | 2.66 | 1609956 | 65.80 | 46714999905 | regular |
+| directory of 32 workers (14 projects) | Project.approve_execution [e2e 5] | 25938476603 | 5.56 | 3234690 | 132.21 | 153504333009 | full core |
+| directory of 32 workers (14 projects) | Project.approve_execution [e2e 5/3] | 30324230271 | 6.50 | 3542852 | 144.80 | 253613999466 | full core; default dry-run limit: Contracts::OutOfGas |
+| directory of 32 workers (14 projects) | Project.create_proposal [1×1, second proposal] | 7116958170 | 1.53 | 773432 | 31.61 | 86758999821 | regular |
+| directory of 52 workers (14 projects) | Dao.create_project | 7307379057 | 1.57 | 838171 | 34.26 | 53506666473 | regular |
+| directory of 52 workers (14 projects) | Dao.register_worker | 14566655712 | 3.12 | 1379312 | 56.37 | 53405333208 | regular |
+| directory of 52 workers (14 projects) | Dao.create_deposit | 1901816079 | 0.41 | 257308 | 10.52 | 20038333275 | regular |
+| directory of 52 workers (14 projects) | Project.approve_execution [1×1] | 16925178882 | 3.63 | 2229156 | 91.11 | 46714999905 | regular |
+| directory of 52 workers (14 projects) | Project.approve_execution [e2e 5] | 38138348683 | 8.17 | 4882830 | 199.57 | 153504333009 | full core; default dry-run limit: Contracts::ContractTrapped |
+| directory of 52 workers (14 projects) | Project.approve_execution [e2e 5/3] | 43389351071 | 9.30 | 5190992 | 212.16 | 253613999466 | full core; default dry-run limit: Contracts::ContractTrapped |
+| directory of 52 workers (14 projects) | Project.create_proposal [1×1, second proposal] | 7117276755 | 1.53 | 773432 | 31.61 | 86758999821 | regular |
+| directory of 92 workers (14 projects) | Dao.create_project | 7073491207 | 1.52 | 817612 | 33.42 | 53506666473 | regular |
+| directory of 92 workers (14 projects) | Dao.register_worker | 22138051484 | 4.74 | 2048519 | 83.73 | 53405333208 | regular |
+| directory of 92 workers (14 projects) | Dao.create_deposit | 1901816079 | 0.41 | 257308 | 10.52 | 20038333275 | regular |
+| directory of 92 workers (14 projects) | Project.approve_execution [1×1] | 25960733772 | 5.56 | 3467556 | 141.73 | 46714999905 | full core |
+| directory of 92 workers (14 projects) | Project.approve_execution [e2e 5] | 63023676683 | 13.51 | 8179110 | 334.29 | 153504333009 | never; default dry-run limit: Contracts::ContractTrapped |
+| directory of 92 workers (14 projects) | Project.approve_execution [e2e 5/3] | 70656727056 | 15.14 | 8487272 | 346.89 | 253613999466 | never; default dry-run limit: Contracts::ContractTrapped |
+| directory of 92 workers (14 projects) | Project.create_proposal [1×1, second proposal] | 7116914955 | 1.53 | 773432 | 31.61 | 86758999821 | regular |
+
+=== NATIVE BALANCE SPENT, by scenario and account, from each real extrinsic's balance change (planck; 1 KSM = 10^12) ===
+| scenario | account | extrinsics | fees | deposits held | net spent (fees + deposits − releases) |
+|---|---|---|---|---|---|
+| setup | operator | 2 | 1588713049 | 10666656 | 1599379705 |
+| A | coord1 | 38 | 92214345366 | 1020976331337 | 1113190676703 |
+| A | coord2 | 2 | 3169659172 | 160149333024 | 163318992196 |
+| A | w1 | 2 | 4455470248 | 93454999785 | 97910470033 |
+| A | w2 | 2 | 4528406534 | 93454999785 | 97983406319 |
+| A | w3 | 2 | 4528324725 | 93454999785 | 97983324510 |
+| A | w4 | 2 | 4528168151 | 93454999785 | 97983167936 |
+| A | w5 | 2 | 4564556918 | 93454999785 | 98019556703 |
+| A | u1 | 1 | 1782824928 | 73418666508 | 75201491436 |
+| A | u2 | 1 | 1734408625 | 73418666508 | 75153075133 |
+| A | u3 | 1 | 1831241231 | 73418666508 | 75249907739 |
+| A | u4 | 1 | 1867552870 | 73418666508 | 75286219378 |
+| A | u5 | 1 | 1685992322 | 73418666508 | 75104658830 |
+| A | operator | 3 | 2726296525 | 26681666625 | 29407963150 |
+| A | client | 8 | 22311688061 | 654146331867 | 676491353261 |
+| A2 | operator | 1 | 906440596 | 0 | 906440596 |
+| A2 | client | 6 | 13919808963 | 327150332523 | 341103474819 |
+| A2 | coord1 | 22 | 46616341544 | 507170998989 | 553787340533 |
+| A2 | w1 | 1 | 2273503384 | 20036333277 | 22309836661 |
+| A2 | w4 | 1 | 2297766742 | 20036333277 | 22334100019 |
+| A2 | w5 | 1 | 2322031519 | 20036333277 | 22358364796 |
+| A2 | w3 | 1 | 2346297758 | 20036333277 | 22382631035 |
+| A2 | w2 | 1 | 2370565502 | 20036333277 | 22406898779 |
+| B | w1 | 1 | 1455265124 | 26708999931 | 28164265055 |
+| B | operator | 2 | 1941994454 | 33372999927 | 35314994381 |
+| B | client | 6 | 10244842665 | 100247666319 | 110525842317 |
+| B | coord1 | 6 | 10051474192 | 166906666260 | 176958140452 |
+| C | client | 3 | 3888684663 | 53404666542 | 57293351205 |
+| C | operator | 1 | 850871756 | 2666664 | 853538420 |
+| D | client | 6 | 10392047052 | 120254332959 | 130679713344 |
+| D | coord1 | 11 | 16828240825 | 166866332967 | 177025240470 |
+| D | w3 | 1 | 1680312893 | 20036333277 | 21716646170 |
+| E | client | 3 | 4874589635 | 80282666304 | 85190589272 |
+| E | coord1 | 2 | 3784271552 | 93426999813 | 10452271548 |
+| E | w1 | 2 | 2665760134 | 26681333292 | 29347093426 |
+| E | operator | 4 | 4813086361 | 26703666603 | 4813086361 |
+| P | operator | 1 | 906446066 | 0 | 906446066 |
+| P | client | 18 | 38161431676 | 975142663884 | 1013504095558 |
+| P | coord1 | 12 | 24793427650 | 1140955331238 | 1165748758888 |
+| S | client | 6 | 11268925384 | 160419999420 | 171788924803 |
+| S | coord1 | 6 | 12625522077 | 607118998941 | 619744521018 |
+
+cross-check with balance snapshots (free + reserved), which also see dev-committed deposits:
+| account | spent in scenario A (snapshot) | spent from the start to the end of E (snapshot) |
+|---|---|---|
+| client | 676491353261 | 1401284324218 |
+| coord1 | 1113190676703 | 2031413669706 |
+| coord2 | 163318992196 | 163318992196 |
+| w1 | 97910470033 | 177731665175 |
+| w2 | 97983406319 | 120390305098 |
+| w3 | 97983324510 | 142082601715 |
+| w4 | 97983167936 | 120317267955 |
+| w5 | 98019556703 | 120377921499 |
+| u1 | 75201491436 | 75201491436 |
+| u2 | 75153075133 | 75153075133 |
+| u3 | 75249907739 | 75249907739 |
+| u4 | 75286219378 | 75286219378 |
+| u5 | 75104658830 | 75104658830 |
+
+head #41145075
