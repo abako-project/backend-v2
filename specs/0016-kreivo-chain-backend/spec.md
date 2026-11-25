@@ -153,7 +153,7 @@ through a dispute.
 
 Findings 10 to 13 describe the pinned contracts and stay as the baseline. The
 same run was repeated on 2026-11-25 with
-[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `a08321c`,
+[contracts#23](https://github.com/abako-dev/contracts/pull/23) at `2a74d50`,
 which keeps every public message and replaces five of the hooks Project
 calls on Dao:
 
@@ -182,11 +182,11 @@ calls on Dao:
     or existence check: the cost pallet-contracts benchmarks for a storage tree
     20 levels deep, applied to every access. Each call to a contract is charged
     its whole code, 162 kB for Project and 128 kB for Dao. The gas limit a
-    transaction declares must cover that charge. The data is small: the
-    largest extrinsic of the run is 872 bytes, the 193 together store a net
-    29 kB in 1,095 cells, and the four-milestone approval stores 1,500 bytes in
-    68 cells. Each existing task adds 10,271 bytes to the next `create_task`:
-    one access and its 8-byte record.
+    transaction declares must cover that charge. The data is small: the largest
+    extrinsic of the run is 872 bytes, the 193 together store a net 29 kB in
+    1,095 storage entries (an entry is one key and its value), and the
+    four-milestone approval stores 1,500 bytes in 68. Each existing task adds
+    10,271 bytes to the next `create_task`: one access and its 8-byte record.
 17. **Growth with the platform remains** (finding 11), except that
     `create_project`, `create_deposit` and `create_proposal` no longer grow
     with the directory:
@@ -217,7 +217,7 @@ Where a fork differs from Kreivo, found on the way:
 
 The logs are in [`results/`](results/): `market-final.out` has every operation
 of the marketplace run with the pinned contracts,
-`market-contracts-a08321c.out` the same run with contracts#23, `mlimits.out`
+`market-contracts-2a74d50.out` the same run with contracts#23, `mlimits.out`
 the limits and `wallet-test.log` the wallet signatures. The spike sources sit in `spike/` beside this note,
 untracked, with the snapshot: they link GPL crates and are evidence, not backend
 code. `main.rs` is the first run, `bin/market.rs` the marketplace,
@@ -288,20 +288,20 @@ the code of every contract it calls.
    `Dao::validate_public_ids`, which loaded every worker, every project's
    layout and submissions, every deposit and every dispute.
 2. **Select without loading the directory.** Partly done in contracts#23: a
-   message reads each worker, calendar and skill cell once, and coordinators
-   have their own index. An approval still reads every holder of a required
-   skill (finding 17). What is left is to keep the eligible accounts and their
-   capacity per week in fewer entries (item 9), or to let the caller name the
-   candidates and have the contract verify them, which changes who picks the
-   team and is the owner's to decide.
+   message reads each worker, calendar and skill storage entry once, and
+   coordinators have their own index. An approval still reads every holder of a
+   required skill (finding 17). What is left is to keep the eligible accounts
+   and their capacity per week in fewer storage entries (item 9), or to let the
+   caller name the candidates and have the contract verify them, which changes
+   who picks the team and is the owner's to decide.
 3. **Split the approval.** Deferred. `approve_execution` assigns every
    milestone's team, reserves every calendar and takes the whole escrow in one
    transaction. The chain no longer refuses the largest one, but two are still
    over an ordinary block (finding 15). Decide once item 9 is measured: approve
    the proposal and escrow once, then assign and reserve one milestone per
    transaction.
-4. **Load only what a message changes.** Partly done in contracts#23: a
-   Project writes only the entries that changed. It still reads all of them on
+4. **Load only what a message changes.** Partly done in contracts#23: a Project
+   writes only the storage entries that changed. It still reads all of them on
    every message, so every task adds 10.3 kB to each later call.
 5. **Page the lists.** `catalog`, `workers`, `projects` and `Project.view`
    return everything. Give them a start and a count.
@@ -319,55 +319,59 @@ measured again with `spike/src/bin/market.rs`.
 
 ### Packed storage (proposed)
 
-The contracts keep one cell per small record: the average cell of the run
-holds 27 bytes and costs 10,263 to touch. This proposal keeps every rule and
-public message and changes where the data lives. Nothing in it is measured.
+The contracts keep one storage entry per small record: the average entry of the
+run holds 27 bytes and costs 10,263 to touch. This proposal keeps every rule
+and public message and changes where the data lives. Nothing in it is measured.
 The estimates count accesses saved at 10.3 kB each, and the replay is the test.
 
-**Project.** A project keeps separate cells for each proposal, milestone,
-requirement, required skill, assignment, rating, task, task assignee,
-submission and evaluation, and loads all of them on every message: about 60
-reads for the four-milestone project before any work starts.
+**Project.** A project keeps a separate storage entry for each proposal,
+milestone, requirement, required skill, assignment, rating, task, task
+assignee, submission and evaluation, and loads all of them on every message:
+about 60 reads for the four-milestone project before any work starts.
 
-- One cell per proposal for its terms: milestones, requirements and skills.
+- One storage entry per proposal for its terms: milestones, requirements and
+  skills.
   The four-milestone, 14-requirement proposal is about 1 kB.
-- Per milestone, one cell for execution (status, assignments, ratings) and
-  task cells holding several tasks with their assignees. A task is 8 bytes
-  and 32 more per assignee, and a task cell starts a new one when it is full.
-- One cell per submission with its ratings, and one per evaluation with its
-  ratings.
-- Every write checks the encoded size against a stated bound well under the
-  16 KiB cell limit and fails with a domain error above it. For the terms and
-  execution cells that error is a new limit on the size of a proposal and of a
-  team, far above the scenario's, and like the calendar's cap it is a new
-  rule.
+- Per milestone, one storage entry for execution (status, assignments,
+  ratings) and task pages, each a storage entry holding several tasks with
+  their assignees. A task is 8 bytes and 32 more per assignee, and a full
+  page starts a new one.
+- One storage entry per submission with its ratings, and one per evaluation
+  with its ratings.
+- Every write checks the encoded size against a stated bound well under the 16
+  KiB limit on a storage entry and fails with a domain error above it. For the
+  terms and execution entries that error is a new limit on the size of a
+  proposal and of a team, far above the scenario's, and like the calendar's cap
+  it is a new rule.
 
-The project then loads about 10 cells where it loads 60, and tasks stop adding
-an access each. The loading code keeps its shape: one tree in memory, saved by
-comparison. Loading only the cells a message needs would save more and is a
-larger change; it can follow if the measurement asks for it.
+The project then loads about 10 storage entries where it loads 60, and tasks
+stop adding an access each. The loading code keeps its shape: one tree in
+memory, saved by comparison. Loading only the storage entries a message needs
+would save more and is a larger change; it can follow if the measurement asks
+for it.
 
-**Calendar.** A reservation writes three cells: the reservation, the week's
-total and the week's key. Selection reads up to two cells per candidate and
-week.
+**Calendar.** A reservation writes three storage entries: the reservation,
+the week's total and the week's key. Selection reads up to two per candidate
+and week.
 
-- One cell per worker and week: override capacity, total reserved and that
-  week's reservations. The worker's header lists the weeks that have a cell.
-- A week's cell needs a cap on reservations, since they are never released:
+- One storage entry per worker and week: override capacity, total reserved
+  and that week's reservations. The worker's header lists the weeks that have
+  one.
+- That entry needs a cap on reservations, since they are never released:
   128 per worker and week is 6 kB. That cap is a new rule. Without it, the
-  reservations stay one cell each and only the total and the key merge.
+  reservations stay one storage entry each and only the total and the key merge.
 
 For the four-milestone approval the two changes save about 100 accesses of
 the 225 it makes, which would put it near 1.6 MB. If the measurement confirms
 that, item 3 is not needed at this size.
 
 **Dao indexes.** Workers, projects, proposals, deposits, withdrawals and
-disputes each keep a sorted list with one cell per entry, and an insert shifts
-the entries after it.
+disputes each keep a sorted list with one storage entry per element, and an
+insert shifts the elements after it.
 
 - Keep the order, since `workers()` and `projects()` return it and selection
-  depends on it, and store each list as sorted pages of up to 256 entries per
-  cell. An insert rewrites one page, or two when a page splits.
+  depends on it, and store each list as sorted pages of up to 256 elements per
+  storage entry. An insert rewrites one page, or two when a page splits.
 - Keep a worker's roles and skills in the worker's record, and each skill's
   holders in pages. A candidate then costs about two accesses where it costs
   three. This lowers the growth of an approval with the directory; it does not
@@ -380,11 +384,11 @@ each proposal's roles and skills to refuse deleting a catalog entry in use.
 - Project sends the IDs it adds and drops, which it knows from the tree it
   loaded. contracts#23 already does this for submissions, which only append. The registry entry records the owning project, so a Project frees
   only its own IDs. The copies go.
-- A proposal's roles and skills move to one cell per proposal.
+- A proposal's roles and skills move to one storage entry per proposal.
 
-**What reads the cells.** The provider decodes Dao and Project cells directly
-(`facts.rs`, `project_storage.rs`, about 700 lines) and checks that the index
-cells are sorted. Two ways to follow a new layout:
+**What reads the storage.** The provider decodes Dao's and Project's storage
+entries directly (`facts.rs`, `project_storage.rs`, about 700 lines) and
+checks that the indexes are sorted. Two ways to follow a new layout:
 
 - *Read through the contracts' messages* (recommended). `workers`, `catalog`,
   `skill_requests`, `projects`, `disputes`, `calendar`, `financial_projection`,
@@ -394,7 +398,7 @@ cells are sorted. Two ways to follow a new layout:
   ([reads](#reads-and-notifications)), so the work carries over. The provider
   reads every fact on each request, so the time a read takes has to be
   measured first.
-- *Rewrite the two codecs* for the new cells. No contract additions, and the
+- *Rewrite the two codecs* for the new layout. No contract additions, and the
   code goes away with the provider in stage 3.
 
 **Compatibility.** Public messages and the order of the lists they return do
@@ -502,7 +506,7 @@ Open:
 8. **The packed storage** proposed under [contract changes](#packed-storage-proposed):
    whether to do it, the new limits it brings (reservations per worker and
    week, the size of a proposal and of a team), and how the provider follows
-   the new cells.
+   the new layout.
 9. **Whether stage 2 may start before the last two approvals fit an ordinary
    block.** With contracts#23 nothing is refused, but decision 5 asks for
    ordinary blocks, and a whole-core transaction holds up the two blocks after
