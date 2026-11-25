@@ -1,13 +1,15 @@
 # SPEC-0016: Kreivo as the only backend, through sube, with pallet-pass identity
 
 Status: DRAFT. Requested by the owner on 2026-11-20, who decided
-[six questions](#decisions) the same day. Stage 1 proceeds on those answers.
-Stage 2 waits for the [contract changes](#contract-changes) that finding 10
-calls for, and with stage 3 for the owner's approval of this note: they change
-authentication and the public API and remove services. The first contract
-changes, [contracts#23](https://github.com/abako-dev/contracts/pull/23), are
-merged and the backend pins them (findings 15 to 17). One approval still needs
-a whole core, so stage 2 keeps waiting (open decision 9). Nothing here
+[six questions](#decisions) the same day and two more on 2026-11-25. Stage 1
+proceeds on those answers. Stages 2 and 3 wait for the owner's approval of this
+note: they change authentication and the public API and remove services. Stage
+3 also waits for the [contract changes](#contract-changes) that finding 10
+calls for. The first of them,
+[contracts#23](https://github.com/abako-dev/contracts/pull/23), are merged and
+the backend pins them (findings 15 to 17). One approval still needs a whole
+core; stage 2 no longer waits for that (decision 9), and the packing of Project
+and the calendar is the next contract change (decision 8). Nothing here
 authorizes publishing or deploying.
 
 When approved this supersedes SPEC-0001 (custodial signing) and the passkey
@@ -316,16 +318,19 @@ the code of every contract it calls.
 8. **Stop trusting the caller for what the shell supplied**: derive selection
    seeds and IDs in the contract, and do not rely on the caller's identity to
    keep a read private.
-9. **Pack the storage.** Proposed below, not approved.
+9. **Pack the storage.** Described below. Project and the calendar are
+   approved (decision 8); the Dao indexes and Dao's copies are proposed.
 
 The acceptance line for these is the first bullet under [acceptance](#acceptance),
 measured again with `spike/src/bin/market.rs`.
 
-### Packed storage (proposed)
+### Packed storage
 
 The contracts keep one storage entry per small record: the average entry of the
 run holds 27 bytes and costs 10,263 to touch. This proposal keeps every rule
-and public message and changes where the data lives. Nothing in it is measured.
+and public message and changes where the data lives. The owner approved the
+Project and calendar parts on 2026-11-25 (decision 8); the Dao indexes and
+Dao's copies of Project data stay proposed. Nothing in it is measured.
 The estimates count accesses saved at 10.3 kB each, and the replay is the test.
 
 **Project.** A project keeps a separate storage entry for each proposal,
@@ -394,7 +399,7 @@ each proposal's roles and skills to refuse deleting a catalog entry in use.
 entries directly (`facts.rs`, `project_storage.rs`, about 700 lines) and
 checks that the indexes are sorted. Two ways to follow a new layout:
 
-- *Read through the contracts' messages* (recommended). `workers`, `catalog`,
+- *Read through the contracts' messages* (chosen in decision 8). `workers`, `catalog`,
   `skill_requests`, `projects`, `disputes`, `calendar`, `financial_projection`,
   `Project.view` and `Project.reasons` already return most of what the
   provider reads. Missing: the next task ID, the origin of each skill and Dao's
@@ -423,9 +428,11 @@ used: the same teams, IDs, reservations and balances as the earlier contracts.
    the provider, following finalized blocks, and WebAuthn devices.
 2. **API on the chain.** Reads, operations, pass registration and login, new
    auth routes, `poc-e2e.py` and seed scripts rewritten. Fresh data only, as
-   SPEC-0015 already allows. Waits for the contract changes (decision 5).
+   SPEC-0015 already allows. Does not wait for the contract changes
+   (decision 9); waits for the approval of this note.
 3. **Removal.** Delete `services/wallet` and `services/contract-provider`, their
    images, Compose services, secrets, policy files and documents.
+   Waits for the scenario to fit ordinary blocks (decisions 5 and 9).
 4. **Live readiness**, separately approved: contract events, split catalog
    seeding, community deployment, funding of fees and deposits, recovery against
    a real node, browser WebAuthn and wallet signing.
@@ -501,21 +508,29 @@ Decided by the owner on 2026-11-20, after the measurements:
    - *Shorten the challenge's life* to a few blocks, so a signature obtained
      ahead of time is useless.
 
+Decided by the owner on 2026-11-25:
+
+8. **Project and the calendar are packed**, as described under
+   [contract changes](#packed-storage), and the provider follows by reading
+   them through the contracts' messages. The Dao indexes and Dao's copies of
+   Project data are not part of this. The values of the two limits it brings
+   (reservations per worker and week, the size of a proposal and of a team)
+   are confirmed by the owner before the contract change is proposed for
+   merging.
+9. **Stage 2 may start before the last two approvals fit an ordinary block.**
+   Stage 3 keeps decision 5's condition: the provider stays until the scenario
+   fits ordinary blocks. Until then the whole-core approval is listed as a
+   contracts blocker (see [acceptance](#acceptance)), since a fork accepts it
+   in any block and Kreivo in one of three (see [risks](#risks)). The limits
+   of finding 17 still apply: about a hundred workers. Stage 2 still needs the
+   approval of this note.
+
 Open:
 
 7. **What the fork adds to the dependency findings.** Through smoldot:
    `constant_time_eq` 0.1.5 under CC0-1.0, which the policy already rejects for
    five other crates pending the owner's decision, and `libsecp256k1`, reported
    unmaintained. Neither is silenced. Both come only with the `fork` feature.
-8. **The packed storage** proposed under [contract changes](#packed-storage-proposed):
-   whether to do it, the new limits it brings (reservations per worker and
-   week, the size of a proposal and of a team), and how the provider follows
-   the new layout.
-9. **Whether stage 2 may start before the last two approvals fit an ordinary
-   block.** With contracts#23 nothing is refused, but decision 5 asks for
-   ordinary blocks, and a whole-core transaction holds up the two blocks after
-   it (see [risks](#risks)). The limits of finding 17 also apply: about a
-   hundred workers.
 
 Defaults, unless the owner says otherwise:
 
