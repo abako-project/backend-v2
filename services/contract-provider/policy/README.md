@@ -12,6 +12,8 @@ tested commit in both lockfiles. No advisory or license exception was added.
 The follow-up removes `chrono` from the active graph by reusing `time` for protocol
 date validation. Its parsing and large-date features preserve existing wire ranges;
 no additional package, native library or cryptographic dependency is introduced.
+On 2026-11-25 the owner requested the `url` update for RUSTSEC-2026-0592; the
+lock identity changes with it. No advisory or license exception was added.
 The December 1 expiry remains unchanged.
 Approval does not cover further exceptions, authority
 promotion, release publication or deployment. The application root advisory and
@@ -101,6 +103,16 @@ patched SQLite. The SDK also gains SQLx's SHA-2 0.11 dependency family; licenses
 remain within policy and the existing contract cryptography is unchanged.
 SQLite's native C implementation and upstream SQLx database handling remain part
 of the reviewed trust boundary. No arbitrary database/WAL import is introduced.
+
+The November 25 update replaces `url 2.5.8` with `2.5.9`, addressing
+[RUSTSEC-2026-0592](https://rustsec.org/advisories/RUSTSEC-2026-0592.html) (a
+stack overflow in `Url::origin()` on nested `blob:` URLs) without an exception.
+`url 2.5.9` requires `form_urlencoded 1.2.3`, which replaces `1.2.2`. No other
+package changes. Both keep MIT OR Apache-2.0, their minimum Rust version and
+their dependencies, and neither has a build script. `check.py` pins the new
+lock; the 2026-12-01 expiry and development-only restrictions remain unchanged.
+The lock is part of the runtime identity, so existing development checkpoints
+require fresh state.
 
 The graph includes the existing SDK's unsafe/native/cryptographic transitives,
 SQLite and the shared execution/HTTP components. It accepts only pinned artifacts;
