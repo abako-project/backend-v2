@@ -1130,3 +1130,91 @@ async fn rating_settlement(delegated: bool) {
     assert_eq!(worker.client().snapshot().await.unwrap(), settled);
     worker.shutdown().await.unwrap();
 }
+
+async fn refused(client: &Client, seed: u8, operation: u8, command: ProviderCommand) -> String {
+    let call = sign(client, seed, operation, command).await;
+    match ProviderApi::execute(client, call, NOW)
+        .await
+        .unwrap()
+        .outcome
+    {
+        ExecutionOutcome::Failed(code) => code,
+        outcome => panic!("expected a refusal, got {outcome:?}"),
+    }
+}
+#[tokio::test]
+async fn contract_size_limits_and_missing_capacity_are_refusals_not_provider_failures() {
+    use protocol::provider_core::{MilestoneTerms, ProposalTerms};
+    let database = Database::new("provider");
+    let worker = database.open().await;
+    let client = worker.client();
+    let (project_id, proposal_id, _) = ready(&client).await;
+    let before = client.snapshot().await.unwrap();
+    // One override more than a calendar holds.
+    let overrides = (2030..)
+        .flat_map(|year| (1..=52).map(move |week| Week::new(year, week).unwrap()))
+        .take(105)
+        .map(|week| WeekOverride {
+            week,
+            capacity: Minutes::new(50),
+        })
+        .collect();
+    let calendar = ProviderCommand::SetCalendar(CalendarDefinition {
+        default_weekly_minutes: Minutes::new(5000),
+        overrides,
+    });
+    assert_eq!(
+        refused(&client, 3, 120, calendar).await,
+        "calendar_too_large"
+    );
+    // A proposal whose team and ratings would not fit its storage entry.
+    let window = WeekWindow::new(Week::new(2026, 1).unwrap(), Week::new(2026, 2).unwrap()).unwrap();
+    let proposal = ProviderCommand::CreateProposalCore {
+        project_id,
+        content: content(121),
+        proposal: ProposalTerms {
+            milestones: (1..=10)
+                .map(|key| MilestoneTerms {
+                    key,
+                    window,
+                    coordinator_fee: Money::ZERO,
+                    coordinator_minutes: Minutes::new(1),
+                    requirements: (1..=13)
+                        .map(|key| RequirementDefinition {
+                            key,
+                            role_id: 3,
+                            skill_ids: vec![1],
+                            minutes: Minutes::new(1),
+                            budget: Money::new(1),
+                        })
+                        .collect(),
+                })
+                .collect(),
+        },
+    };
+    assert_eq!(
+        refused(&client, 2, 121, proposal).await,
+        "proposal_too_large"
+    );
+    assert_eq!(client.snapshot().await.unwrap(), before);
+    // A coordinator who no longer has the minutes of the milestone.
+    apply(
+        &client,
+        2,
+        122,
+        ProviderCommand::SetCalendar(CalendarDefinition {
+            default_weekly_minutes: Minutes::new(0),
+            overrides: vec![],
+        }),
+    )
+    .await;
+    let call = approval(&client, project_id, proposal_id).await;
+    assert_eq!(
+        ProviderApi::execute(&client, call, NOW)
+            .await
+            .unwrap()
+            .outcome,
+        ExecutionOutcome::Failed("insufficient_capacity".into())
+    );
+    worker.shutdown().await.unwrap();
+}
