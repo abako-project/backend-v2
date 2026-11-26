@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceRepository": "git@github.com:abako-dev/contracts.git",
-  "sourceCommit": "aa25bad9d704b66fe1e055698aad227d7098cf02",
+  "sourceCommit": "27e109e60324808a1d5808b2033ce37a12f77d5a",
   "contractToolchain": {
     "ink": "5.1.1",
     "rust": "1.88.0",
@@ -10,13 +10,13 @@
   },
   "contracts": {
     "project": {
-      "artifactSha256": "a427e954e5f4e4aa201f0ab842ecd46b53a308a408cfa83233fd9cd1afb1c7e9",
-      "wasmBlake2b256": "0x7c5f25c60031e57f437c185cbf01b7747f52c8a403fcc70dab82df21b4c5d31e",
+      "artifactSha256": "e702c503dafea65d31d70f55d9245d780678bc29d6fdb57012eccece77bce2f9",
+      "wasmBlake2b256": "0xc1448a36734de33476ee546e4be0cbfee63fe05515c1e278064a74bbebc090c5",
       "staticBufferBytes": 294912
     },
     "dao": {
-      "artifactSha256": "030d1c82bb8a50fc545cb50e8318f26240cfcca62c60784bba42f56a7b3f2aac",
-      "wasmBlake2b256": "0x89729382c458f5250ff48dc66ae110dd9effdd6f9453d9794f70a8b0facc4f3a",
+      "artifactSha256": "1bab0bec9a0eaf0dbbe157ace9143c8a77cde822158a5ee7dc2ee9dab36b63c9",
+      "wasmBlake2b256": "0x7d32aa1a042251c6c52020c300bd51129e1be9efc0c3dfc050374a31fd49f242",
       "staticBufferBytes": 294912
     }
   },
