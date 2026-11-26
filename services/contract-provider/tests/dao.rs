@@ -360,7 +360,7 @@ fn registration_gas_failure_discards_worker_and_calendar_records() {
         // Measure a successful registration, discard it, then
         // exhaust gas at its final boundary rather than relying on packed storage.
         let id=[8_u8;16];
-        let calendar_key=(0x4341_4c01u32,account(2)).encode();
+        let calendar_key=(0x4341_4c07u32,account(2)).encode();
         let data=input("register_worker",(request,id));
         let before=digest(&projection(&dao));
         sp_io::storage::start_transaction();
