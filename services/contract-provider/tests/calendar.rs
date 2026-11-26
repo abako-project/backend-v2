@@ -530,7 +530,7 @@ fn competing_reservations_observe_committed_capacity() {
 }
 
 #[test]
-fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
+fn reservation_growth_keeps_one_entry_per_week_and_reopens_after_failure() {
     run(async {
         let db = Database::new("calendar");
         let worker = db.start().await;
@@ -552,22 +552,21 @@ fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
             minutes: Minutes::ZERO,
         };
         let before_limit = client.diagnostics().unwrap().result().await.unwrap();
+        // A thousand weeks in one call need about 10 MiB of proof.
+        let mut oversized = call(
+            &address,
+            2,
+            "reserve_calendar",
+            (
+                account(3),
+                WeekWindow::new(week, Week::new(2046, 1).unwrap()).unwrap(),
+                Minutes::new(1000),
+                &record,
+            ),
+        );
+        oversized.gas = frame_support::weights::Weight::from_parts(GAS.ref_time(), 4 * 1024 * 1024);
         let oversized = client
-            .execute(
-                2,
-                call(
-                    &address,
-                    2,
-                    "reserve_calendar",
-                    (
-                        account(3),
-                        WeekWindow::new(week, Week::new(2046, 1).unwrap()).unwrap(),
-                        Minutes::new(1000),
-                        &record,
-                    ),
-                ),
-                shell(),
-            )
+            .execute(2, oversized, shell())
             .unwrap()
             .result()
             .await
@@ -645,21 +644,23 @@ fn ordinary_reservation_growth_keeps_fixed_cells_and_reopens_after_failure() {
             .restore()
             .unwrap();
         ext.execute_with(|| {
+            // The header lists the 1,000 reserved weeks, five bytes each.
             let header = contract_provider::Contracts::get_storage(
                 address.clone(),
-                (0x4341_4c01u32, account(3)).encode(),
+                (0x4341_4c07u32, account(3)).encode(),
             )
             .unwrap()
             .unwrap();
-            assert_eq!(header.len(), 16);
-            for index in [0u32, 999] {
+            assert_eq!(header.len(), 5011);
+            // Each week holds its total and its one reservation.
+            for week in [week, Week::new(2045, 50).unwrap()] {
                 let value = contract_provider::Contracts::get_storage(
                     address.clone(),
-                    (0x4341_4c04u32, (account(3), index)).encode(),
+                    (0x4341_4c08u32, (account(3), week)).encode(),
                 )
                 .unwrap()
                 .unwrap();
-                assert_eq!(value.len(), 47);
+                assert_eq!(value.len(), 51);
             }
             assert!(
                 contract_provider::Contracts::get_storage(

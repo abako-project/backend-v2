@@ -1,5 +1,7 @@
-//! Read-only codec for pinned ordinary ink storage. This owner codec copies facts;
-//! commands, permissions, prices and score updates still execute only in WASM.
+//! Reads the facts of the pinned contracts. Calendars and each Project's tree
+//! come from the contracts' own read messages; the rest is decoded from
+//! ordinary ink storage entries. Commands, permissions, prices and score
+//! updates still execute only in WASM.
 use super::{dao::State, *};
 use parity_scale_codec::DecodeAll;
 use protocol::provider_core::{
@@ -123,15 +125,6 @@ struct RequestRecord {
     status: SkillRequestStatus,
     skill_id: Option<u32>,
 }
-// Standard account-keyed ink Mapping cells in Dao. Each decoded
-// value is fixed-size; no root reconstruction or byte-page codec is involved.
-#[derive(Decode)]
-struct CalendarHeader {
-    default_minutes: u32,
-    overrides: u32,
-    reservations: u32,
-    reserved_weeks: u32,
-}
 pub(super) struct Storage<'a> {
     ext: &'a mut sp_io::TestExternalities,
     remaining: usize,
@@ -172,6 +165,46 @@ impl<'a> Storage<'a> {
         key: impl Encode,
     ) -> Result<T, Error> {
         self.optional_cell(address, key)?.ok_or(Error::InvalidState)
+    }
+    /// Call a read message of the contract at `address` as `origin` and decode
+    /// what it returns. The pinned contract reads its own storage, so this
+    /// does not depend on how the contract lays it out.
+    pub(super) fn message<T: Decode>(
+        &mut self,
+        address: &Account,
+        origin: &Account,
+        name: &str,
+        args: impl Encode,
+    ) -> Result<T, Error> {
+        let input = dao::input(name, args);
+        let value = self
+            .ext
+            .execute_with(|| {
+                Contracts::bare_call(
+                    origin.clone(),
+                    address.clone(),
+                    0,
+                    crate::EXECUTION_GAS,
+                    None,
+                    input,
+                    DebugInfo::Skip,
+                    CollectEvents::Skip,
+                    Determinism::Enforced,
+                )
+                .result
+            })
+            .map_err(|_| Error::InvalidState)?;
+        if value.did_revert() {
+            return Err(Error::InvalidState);
+        }
+        self.remaining = self
+            .remaining
+            .checked_sub(value.data.len())
+            .ok_or(Error::Limit)?;
+        // An ink message returns `Result<T, LangError>`.
+        Result::<T, u8>::decode_all(&mut &value.data[..])
+            .map_err(|_| Error::InvalidState)?
+            .map_err(|_| Error::InvalidState)
     }
     fn index<T: Decode + Ord>(&mut self, address: &Account, key: u32) -> Result<Vec<T>, Error> {
         let count: u32 = self.optional_cell(address, key)?.unwrap_or(0);
@@ -228,58 +261,28 @@ impl<'a> Storage<'a> {
     fn calendar(
         &mut self,
         address: &Account,
+        origin: &Account,
         owner: AccountId32,
         calendar_id: EntityId,
     ) -> Result<CalendarView, Error> {
-        let header: CalendarHeader = self.cell(address, (0x4341_4c01u32, owner))?;
-        if header.reserved_weeks > header.reservations {
+        let view = self
+            .message::<Result<CalendarView, String>>(address, origin, "calendar", owner)?
+            .map_err(|_| Error::InvalidState)?;
+        if view.calendar_id != calendar_id || view.owner != owner {
             return Err(Error::InvalidState);
         }
-        let records = u64::from(header.overrides) + u64::from(header.reservations);
-        if records > u64::try_from(self.remaining).map_err(|_| Error::Limit)? {
-            return Err(Error::Limit);
-        }
-        let mut overrides = Vec::new();
-        for index in 0..header.overrides {
-            let week: Week = self.cell(address, (0x4341_4c03u32, (owner, index)))?;
-            let capacity = self.cell(address, (0x4341_4c02u32, (owner, week)))?;
-            overrides.push(WeekOverride { week, capacity });
-        }
-        let mut reservations = Vec::new();
-        let mut totals = BTreeMap::<Week, u32>::new();
-        for index in 0..header.reservations {
-            let item: ReservationView = self.cell(address, (0x4341_4c04u32, (owner, index)))?;
-            let total = totals.entry(item.week).or_default();
-            *total = total
-                .checked_add(item.minutes.get())
-                .ok_or(Error::InvalidState)?;
-            reservations.push(item);
-        }
-        if totals.len() != usize::try_from(header.reserved_weeks).map_err(|_| Error::Limit)? {
-            return Err(Error::InvalidState);
-        }
-        for index in 0..header.reserved_weeks {
-            let week: Week = self.cell(address, (0x4341_4c06u32, (owner, index)))?;
-            let total: u32 = self.cell(address, (0x4341_4c05u32, (owner, week)))?;
-            if totals.remove(&week) != Some(total) {
-                return Err(Error::InvalidState);
-            }
-        }
-        Ok(CalendarView {
-            calendar_id,
-            owner,
-            definition: CalendarDefinition {
-                default_weekly_minutes: Minutes::new(header.default_minutes),
-                overrides,
-            },
-            reservations,
-        })
+        Ok(view)
     }
-    fn workers(&mut self, state: &State, dao: &Dao) -> Result<Vec<WorkerCore>, Error> {
+    fn workers(
+        &mut self,
+        state: &State,
+        origin: &Account,
+        dao: &Dao,
+    ) -> Result<Vec<WorkerCore>, Error> {
         let mut workers = Vec::new();
         for account in &dao.workers {
             let worker: WorkerRecord = self.value(&state.dao, 4, *account)?;
-            let calendar = self.calendar(&state.dao, *account, worker.calendar_id)?;
+            let calendar = self.calendar(&state.dao, origin, *account, worker.calendar_id)?;
             workers.push(WorkerCore {
                 account: *account,
                 content: worker.content,
@@ -299,6 +302,7 @@ impl<'a> Storage<'a> {
 }
 pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<Facts, Error> {
     let mut reader = Storage::new(ext);
+    let origin = dao::account(state.shell.info.root_account);
     let dao: Dao = reader.root(state)?;
     if dao.root != state.shell.info.root_account
         || !dao.bank.enabled
@@ -334,7 +338,7 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
         );
     }
     let workers = reader
-        .workers(state, &dao)?
+        .workers(state, &origin, &dao)?
         .into_iter()
         .map(|w| (w.account, w))
         .collect();
@@ -365,7 +369,7 @@ pub(super) fn read(ext: &mut sp_io::TestExternalities, state: &State) -> Result<
             project,
             reasons,
             cases,
-        } = super::project_storage::read(&mut reader, &address)?;
+        } = super::project_storage::read(&mut reader, &address, &origin)?;
         if parent != state.dao || project.project_id != *id || reasons.iter().any(|r| r.0 != *id) {
             return Err(Error::InvalidState);
         }
