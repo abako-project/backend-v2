@@ -2405,7 +2405,6 @@ dependencies = [
  "parity-scale-codec",
  "pass",
  "protocol",
- "schnorrkel",
  "serde_json",
  "smol",
  "sube",
@@ -2634,11 +2633,12 @@ dependencies = [
 [[package]]
 name = "libwallet"
 version = "0.4.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
+source = "git+https://github.com/virto-network/virto-sdk?rev=fd465f43bd9ebb605831fda63a53c28e8804206f#fd465f43bd9ebb605831fda63a53c28e8804206f"
 dependencies = [
  "arrayvec 0.7.8",
  "log",
  "rand_chacha 0.3.1",
+ "rand_core 0.6.4",
  "schnorrkel",
  "zeroize",
 ]
@@ -3007,7 +3007,7 @@ dependencies = [
 [[package]]
 name = "pass"
 version = "0.1.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
+source = "git+https://github.com/virto-network/virto-sdk?rev=fd465f43bd9ebb605831fda63a53c28e8804206f#fd465f43bd9ebb605831fda63a53c28e8804206f"
 dependencies = [
  "blake2 0.11.0",
  "hex",
@@ -3789,7 +3789,7 @@ dependencies = [
 [[package]]
 name = "scale-serialization"
 version = "1.2.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
+source = "git+https://github.com/virto-network/virto-sdk?rev=fd465f43bd9ebb605831fda63a53c28e8804206f#fd465f43bd9ebb605831fda63a53c28e8804206f"
 dependencies = [
  "bytes",
  "scale-info",
@@ -4503,7 +4503,7 @@ dependencies = [
 [[package]]
 name = "sube"
 version = "1.0.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
+source = "git+https://github.com/virto-network/virto-sdk?rev=fd465f43bd9ebb605831fda63a53c28e8804206f#fd465f43bd9ebb605831fda63a53c28e8804206f"
 dependencies = [
  "async-tungstenite",
  "blake2 0.11.0",
@@ -4522,7 +4522,7 @@ dependencies = [
 [[package]]
 name = "sube-fork"
 version = "0.1.0"
-source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
+source = "git+https://github.com/virto-network/virto-sdk?rev=fd465f43bd9ebb605831fda63a53c28e8804206f#fd465f43bd9ebb605831fda63a53c28e8804206f"
 dependencies = [
  "blake2 0.11.0",
  "hex",

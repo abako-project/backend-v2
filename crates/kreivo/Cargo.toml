@@ -21,10 +21,6 @@ pass.workspace = true
 smol.workspace = true
 blake2.workspace = true
 libwallet.workspace = true
-# Not used directly. libwallet signs with schnorrkel, which panics without the
-# system's randomness; the only libwallet feature that turns it on (`rand`)
-# does not build without `mnemonic` at the pinned revision.
-schnorrkel.workspace = true
 parity-scale-codec.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
