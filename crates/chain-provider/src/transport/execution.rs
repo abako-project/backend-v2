@@ -460,8 +460,8 @@ mod tests {
     use super::*;
     use protocol::{CalendarDefinition, Minutes};
     fn call(shell: &Shell, id: u8) -> Result<VerifiedCall> {
-        // Signature verification is independently covered with real Subxt/SP
-        // signatures by the Rust-provider and WASM integration suites.
+        // No signature: the chain verifies the session key's, which the
+        // fork tests cover.
         let call = UnsignedContractCallV1::new(
             shell.info.provider_instance_id,
             OperationId::from_bytes([id; 16]),
