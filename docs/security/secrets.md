@@ -2,6 +2,8 @@
 
 Custody stores wallet seeds encrypted with XChaCha20-Poly1305 in its own SQLite database. A separate runtime master-key file protects them; the system-origin seed is another private file. Service tokens and bootstrap credentials are also private runtime inputs. Browsers receive none of these values.
 
+On a fork of Kreivo the API has no custody service: it reads a password-derivation secret (see the [API](../../services/api/README.md)) and keeps the key that registers and funds accounts on the fork beside its data (see the [chain provider](../../crates/chain-provider/README.md)).
+
 Use the generator documented in [infra/README.md](../../infra/README.md). It creates private files without printing their contents and refuses existing targets. Keep them outside the repository/build context. Compose mounts only each service's required files.
 
 The backend signs with sr25519 in custody memory. HSM-backed signing, DEK/KEK envelope encryption and automatic or manual encryption-key rotation are not implemented. A reviewed recovery and rotation design is required before real value is held; this POC does not satisfy that production requirement.

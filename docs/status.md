@@ -42,7 +42,7 @@ It is a development mode: nothing is submitted to live Kreivo, accounts get
 their balance directly, and continuous integration does not run it, since no
 snapshot of Kreivo is pinned yet. The three services are still the default.
 
-The API, wallet and provider remain separate services. Both application
+By default the API, wallet and provider are separate services. Both application
 contracts use ordinary ink storage; no custom paging helper or onchain URL parser
 is used. Metadata and task ownership are described in [architecture](architecture.md).
 

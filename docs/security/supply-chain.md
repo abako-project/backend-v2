@@ -30,10 +30,11 @@ approved exceptions and December 1 expiry; see its [scope](../../services/contra
 The `kreivo` crate ([Kreivo backend](https://github.com/abako-project/backend-v2/issues/46)) adds `sube`, `pass` and `libwallet` from the virto-sdk Git repository at a pinned
 revision. They and `scale-serialization` are GPL-3.0-or-later, and the root
 policy allows that license for those crates by name, with `sube-fork` and
-`smoldot` under the crate's development-only `fork` feature. A binary that links
-them is distributed under the GPL; no service links the crate yet. With `fork`
-the policy also rejects `constant_time_eq` 0.1.5 (CC0-1.0) and reports
-`libsecp256k1` unmaintained, both through smoldot. Neither is silenced.
+`smoldot` under the crate's `fork` feature. The API links the crate with `fork`
+in every build, so an API binary is distributed under the GPL, and the policy
+also rejects `constant_time_eq` 0.1.5 (CC0-1.0) and reports `libsecp256k1`
+unmaintained for it, both through smoldot. Neither is silenced; whether every
+build should link the fork is open in the issue above.
 
 Dependabot watches both Cargo workspaces. Provider updates need review of the
 exact-lock policy before they can pass CI. Application checks and dependency-policy
