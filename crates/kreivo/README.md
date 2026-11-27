@@ -89,7 +89,10 @@ They deploy the pinned Dao and Project artifacts from
 
 ## Dependencies
 
-sube, pass and scale-serialization, and with `fork` sube-fork and smoldot, are
-GPL-3.0-or-later (smoldot with the Classpath exception). This crate's source is Apache-2.0; a binary that links it is
-distributed under the GPL. `deny.toml` carries the exceptions. The workspace
-pins a revision of virto-sdk's `main`.
+sube, pass, libwallet and scale-serialization, and with `fork` sube-fork and
+smoldot, are GPL-3.0-or-later (smoldot with the Classpath exception). This
+crate's source is Apache-2.0; a binary that links it is distributed under the
+GPL. `deny.toml` carries the exceptions. The workspace pins a revision of
+virto-sdk's `main`.
+
+Keys are libwallet's sr25519 pairs.

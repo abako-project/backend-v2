@@ -6,8 +6,8 @@ use core::pin::Pin;
 use pass::{Account, PassRuntimeConfig, SessionAuthorizer};
 use protocol::AccountId32;
 use sube::{
-    Backend, DispatchOutcome, DynValue, ExtrinsicAssembler, PreparedCall, SignerFn, Sube,
-    TransactionOptions, TransactionReceipt, WaitFor,
+    Backend, DispatchOutcome, DynValue, ExtrinsicAssembler, PreparedCall, Sube, TransactionOptions,
+    TransactionReceipt, WaitFor,
 };
 use tokio::sync::{mpsc, oneshot};
 
@@ -46,19 +46,29 @@ pub(crate) fn run(url: &str, mut queue: mpsc::Receiver<Job>, ready: oneshot::Sen
     tracing::debug!("chain thread stopped");
 }
 
-type KeySigner<'a> = SignerFn<
-    Box<dyn Fn(&[u8]) -> SignatureReady + 'a>,
-    core::future::Ready<sube::Result<[u8; 64]>>,
->;
-type SignatureReady = core::future::Ready<sube::Result<[u8; 64]>>;
+/// A key as a sube signer of V4 extrinsics.
+pub(crate) struct KeySigner<'a>(&'a Key);
+
+impl sube::Signer for KeySigner<'_> {
+    type Account = [u8; 32];
+    type Signature = [u8; 64];
+
+    async fn sign(&self, data: impl AsRef<[u8]>) -> sube::Result<[u8; 64]> {
+        self.0
+            .sign(data.as_ref())
+            .await
+            .map_err(|error| sube::Error::Signing(error.to_string()))
+    }
+
+    fn account(&self) -> [u8; 32] {
+        self.0.account().into_bytes()
+    }
+}
 
 impl Key {
     /// This key as a sube signer of V4 extrinsics.
-    pub(crate) fn signer(&self) -> KeySigner<'_> {
-        SignerFn::new(
-            self.account().into_bytes(),
-            Box::new(move |payload: &[u8]| core::future::ready(Ok(self.sign(payload)))),
-        )
+    pub(crate) const fn signer(&self) -> KeySigner<'_> {
+        KeySigner(self)
     }
 }
 

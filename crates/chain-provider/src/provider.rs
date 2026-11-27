@@ -577,7 +577,7 @@ impl Provider {
         let account = enrollment.account;
         let signed = DeviceKey {
             public: device.account(),
-            signature: device.sign(&enrollment.message),
+            signature: device.sign(&enrollment.message).await?,
         };
         let registered = chain
             .register_funded(self.0.onboarding.clone(), enrollment, signed, funds)
@@ -772,7 +772,7 @@ impl Provider {
             let enrollment = chain.enrollment(UserId::of(&username)).await?;
             let signed = DeviceKey {
                 public: new.account(),
-                signature: new.sign(&enrollment.message),
+                signature: new.sign(&enrollment.message).await?,
             };
             let request = chain
                 .replacement_request(old.account(), enrollment, signed)
@@ -863,7 +863,7 @@ impl Provider {
         admin: &Key,
         what: &'static str,
     ) -> Result<(), Error> {
-        let signature = admin.sign(&request.message);
+        let signature = admin.sign(&request.message).await?;
         let done = self
             .0
             .chain
@@ -938,7 +938,7 @@ impl Provider {
             .session_request(UserId::of(username), device.account(), key.account())
             .await?;
         let account = request.account;
-        let signature = device.sign(&request.message);
+        let signature = device.sign(&request.message).await?;
         let noted = self.note(account, &key).await?;
         let opened = chain
             .open_session(request, signature)

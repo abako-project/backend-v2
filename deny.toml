@@ -21,6 +21,7 @@ allow = [
 exceptions = [
   { allow = ["GPL-3.0-or-later"], crate = "sube" },
   { allow = ["GPL-3.0-or-later"], crate = "pass" },
+  { allow = ["GPL-3.0-or-later"], crate = "libwallet" },
   { allow = ["GPL-3.0-or-later"], crate = "scale-serialization" },
   { allow = ["GPL-3.0-or-later"], crate = "sube-fork" },
   { allow = ["GPL-3.0-or-later WITH Classpath-exception-2.0"], crate = "smoldot" },

@@ -21,7 +21,6 @@ use protocol::provider_core::{
 use protocol::{
     AccountId32, CalendarDefinition, Minutes, OperationId, PayloadHash, Qualifications,
 };
-use subxt_signer::sr25519::Keypair;
 use zeroize::Zeroizing;
 
 type Outcome<T = ()> = Result<T, Box<dyn Error>>;
@@ -199,19 +198,19 @@ async fn world() -> Outcome<World> {
 }
 
 /// A user's wallet key, which they register as their pass device.
-struct Device(Keypair);
+struct Device(Key);
 
 impl Device {
     fn new(seed: u8) -> Outcome<Self> {
-        Ok(Self(Keypair::from_secret_key([seed; 32])?))
+        Ok(Self(key(seed)?))
     }
 
     fn id(&self) -> AccountId32 {
-        AccountId32::from_bytes(self.0.public_key().0)
+        self.0.account()
     }
 
-    fn sign(&self, message: &[u8]) -> [u8; 64] {
-        self.0.sign(message).0
+    async fn sign(&self, message: &[u8]) -> Outcome<[u8; 64]> {
+        Ok(self.0.sign(message).await?)
     }
 }
 
@@ -221,7 +220,7 @@ async fn enroll(world: &World, name: &str, device: &Device) -> Outcome<AccountId
     let account = enrollment.account;
     let signed = DeviceKey {
         public: device.id(),
-        signature: device.sign(&enrollment.message),
+        signature: device.sign(&enrollment.message).await?,
     };
     succeeded(
         &world
@@ -245,7 +244,7 @@ async fn login(world: &World, name: &str, device: &Device, seed: u8) -> Outcome<
         .chain
         .session_request(UserId::of(name), device.id(), session.account())
         .await?;
-    let signature = device.sign(&request.message);
+    let signature = device.sign(&request.message).await?;
     let account = request.account;
     let opened = world.chain.open_session(request, signature).await?;
     succeeded(&opened)?;
@@ -319,7 +318,7 @@ async fn the_chain_verifies_devices() -> Outcome {
     let enrollment = world.chain.enrollment(UserId::of("alice")).await?;
     let wrong = DeviceKey {
         public: device.id(),
-        signature: device.sign(b"something else"),
+        signature: device.sign(b"something else").await?,
     };
     let refused = world
         .chain
@@ -339,7 +338,7 @@ async fn the_chain_verifies_devices() -> Outcome {
     assert_eq!(request.account, alice);
     let forged = world
         .chain
-        .open_session(request, device.sign(b"something else"))
+        .open_session(request, device.sign(b"something else").await?)
         .await;
     assert!(
         matches!(forged, Err(kreivo::Error::Rejected(_))),
@@ -408,7 +407,7 @@ async fn a_pass_account_registered_first_deploys_and_operates_the_dao() -> Outco
     chain.mock().endow(early.account, UNIT).await?;
     let signed = DeviceKey {
         public: device.id(),
-        signature: device.sign(&early.message),
+        signature: device.sign(&early.message).await?,
     };
     let refused = chain.register(registrar.clone(), early, signed).await?;
     assert_eq!(
@@ -421,7 +420,7 @@ async fn a_pass_account_registered_first_deploys_and_operates_the_dao() -> Outco
     let admin = enrollment.account;
     let signed = DeviceKey {
         public: device.id(),
-        signature: device.sign(&enrollment.message),
+        signature: device.sign(&enrollment.message).await?,
     };
     succeeded(
         &chain
@@ -526,14 +525,14 @@ async fn a_device_is_replaced_in_one_transaction() -> Outcome {
     let enrollment = world.chain.enrollment(UserId::of("alice")).await?;
     let signed = DeviceKey {
         public: new.id(),
-        signature: new.sign(&enrollment.message),
+        signature: new.sign(&enrollment.message).await?,
     };
     let request = world
         .chain
         .replacement_request(old.id(), enrollment, signed)
         .await?;
     assert_eq!(request.account, alice);
-    let signature = old.sign(&request.message);
+    let signature = old.sign(&request.message).await?;
     let replaced = world.chain.open_session(request, signature).await?;
     succeeded(&replaced)?;
     assert!(has(&replaced, "Pass", "DeviceRemoved", ""));
@@ -544,7 +543,7 @@ async fn a_device_is_replaced_in_one_transaction() -> Outcome {
         .chain
         .session_request(UserId::of("alice"), old.id(), key(10)?.account())
         .await?;
-    let signature = old.sign(&request.message);
+    let signature = old.sign(&request.message).await?;
     assert!(world.chain.open_session(request, signature).await.is_err());
     Ok(())
 }
@@ -713,7 +712,7 @@ async fn a_member_without_balance_pays_fees_from_its_community() -> Outcome {
     let alice = enrollment.account;
     let signed = DeviceKey {
         public: device.id(),
-        signature: device.sign(&enrollment.message),
+        signature: device.sign(&enrollment.message).await?,
     };
     succeeded(
         &world
@@ -728,7 +727,7 @@ async fn a_member_without_balance_pays_fees_from_its_community() -> Outcome {
         .chain
         .session_request(UserId::of("alice"), device.id(), key(9)?.account())
         .await?;
-    let signature = device.sign(&request.message);
+    let signature = device.sign(&request.message).await?;
     let unpaid = world.chain.open_session(request, signature).await;
     assert!(
         matches!(&unpaid, Err(kreivo::Error::Rejected(reason)) if reason.contains("Payment")),
@@ -757,7 +756,7 @@ async fn a_member_without_balance_pays_fees_from_its_community() -> Outcome {
         .chain
         .session_request(UserId::of("alice"), device.id(), session.account())
         .await?;
-    let signature = device.sign(&request.message);
+    let signature = device.sign(&request.message).await?;
     let opened = world.chain.open_session(request, signature).await?;
     succeeded(&opened)?;
     assert!(has(&opened, "UsageSubscription", "UsageCharged", ""));
