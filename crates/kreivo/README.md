@@ -47,8 +47,8 @@ A `Receipt` is returned for a failed dispatch too, since its fee was paid. An
 - A request that times out is not cancelled and may still complete. There is no
   recovery of a submission interrupted by a restart yet.
 - Nothing follows finalized blocks for notifications yet.
-- The mock's payment asset is not created here yet. The spike shows how: one
-  storage write of `Assets.Asset` and a mint by the operator.
+- The mock's payment asset is not created here yet. It takes one storage write
+  of `Assets.Asset` and a mint by the operator.
 - A saved fork holds its head and state only. Save it when the process stops;
   a crash loses the blocks since the last save.
 - A fork builds every block as the first of a core, so it accepts
