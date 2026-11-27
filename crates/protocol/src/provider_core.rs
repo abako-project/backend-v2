@@ -1,4 +1,4 @@
-//! Private provider protocol for SPEC-0015. These are not public REST request DTOs.
+//! Private provider protocol. These are not public REST request DTOs.
 use crate::{CalendarDefinition, OperationId, PayloadHash, Qualifications};
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};

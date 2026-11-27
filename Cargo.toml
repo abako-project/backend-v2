@@ -19,7 +19,7 @@ repository = "https://github.com/abako-project/backend-v2"
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 protocol = { version = "0.1.0", path = "crates/protocol" }
 kreivo = { version = "0.1.0", path = "crates/kreivo" }
-# GPL-3.0-or-later, see SPEC-0016. The revision is on virto-sdk's main.
+# GPL-3.0-or-later, see docs/security/supply-chain.md. The revision is on virto-sdk's main.
 sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", rev = "58df5839c5e54a5d30ed1f43efd29fbaf30b10c5", default-features = false, features = ["std"] }
 pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "58df5839c5e54a5d30ed1f43efd29fbaf30b10c5", default-features = false, features = ["std"] }
 smol = "2.0.2"

@@ -2,7 +2,7 @@
 
 The backend's client for Kreivo, built on
 [sube](https://github.com/virto-network/virto-sdk/tree/main/crates/sube). It is
-stage 1 of [SPEC-0016](../../specs/0016-kreivo-chain-backend/spec.md): nothing
+the first stage of [moving the backend to Kreivo](https://github.com/abako-project/backend-v2/issues/46): nothing
 in the API uses it yet, and the wallet and contract-provider services are
 unchanged.
 

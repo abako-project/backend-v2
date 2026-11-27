@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 #[test]
 fn creation_metadata_sha256_matches_independent_vectors_and_binds_context() -> TestResult {
     let fixture: Value = serde_json::from_str(include_str!(
-        "../../../specs/0015-adapter-core-boundary/creation-metadata-vectors.json"
+        "../../../crates/protocol/vectors/creation-metadata-vectors.json"
     ))?;
     for vector in fixture["vectors"].as_array().ok_or("vectors missing")? {
         let record: CreationMetadataRecordV1 = serde_json::from_value(vector["record"].clone())?;

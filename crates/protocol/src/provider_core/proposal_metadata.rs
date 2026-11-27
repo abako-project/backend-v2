@@ -152,9 +152,8 @@ mod tests {
     #[test]
     fn proposal_record_codec_matches_independent_operation_vectors()
     -> Result<(), Box<dyn std::error::Error>> {
-        let fixture: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../../specs/0015-adapter-core-boundary/proposal-metadata-vectors.json"
-        ))?;
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../../vectors/proposal-metadata-vectors.json"))?;
         for vector in fixture["vectors"].as_array().ok_or("vectors")? {
             let record: ProposalMetadataRecordV1 =
                 serde_json::from_value(vector["record"].clone())?;

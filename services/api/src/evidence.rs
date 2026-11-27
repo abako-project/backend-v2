@@ -512,7 +512,7 @@ mod tests {
     fn commitment_vector_binds_context_kind_author_and_exact_bytes()
     -> Result<(), Box<dyn std::error::Error>> {
         let vector: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../specs/0014-evidence-commitments/hash-vectors.json"
+            "../../../crates/protocol/vectors/evidence-hash-vectors.json"
         ))?;
         let record = Record {
             version: 1,

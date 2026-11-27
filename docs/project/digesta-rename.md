@@ -1,8 +1,7 @@
 # Digesta rename
 
 The product is Digesta. Current branding, API metadata, frontend configuration,
-local defaults, tests and release package names use that name. Task RENAME-001
-implements [SPEC-0009](../../specs/0009-digesta-rename/spec.md).
+local defaults, tests and release package names use that name.
 
 ## Published images
 

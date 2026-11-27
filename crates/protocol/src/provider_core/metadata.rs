@@ -165,9 +165,8 @@ mod tests {
     #[test]
     fn creation_metadata_codec_matches_independent_signed_vectors()
     -> Result<(), Box<dyn std::error::Error>> {
-        let fixture: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../../specs/0015-adapter-core-boundary/creation-metadata-vectors.json"
-        ))?;
+        let fixture: serde_json::Value =
+            serde_json::from_str(include_str!("../../vectors/creation-metadata-vectors.json"))?;
         for vector in fixture["vectors"].as_array().ok_or("vectors missing")? {
             let record: CreationMetadataRecordV1 =
                 serde_json::from_value(vector["record"].clone())?;

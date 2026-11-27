@@ -10,12 +10,11 @@ with the problem, intended outcome and relevant acceptance checks. Keep changes
 small enough to review independently. Describe compatibility and data impact
 when there is any.
 
-A substantial feature or changed business rule needs one approved feature note
-in `specs/`. Include scope, requirements, acceptance criteria and unresolved
-questions. Add a separate design, threat model or migration plan only when needed.
-Existing approved requirements and accepted ADRs remain authoritative; update
-requirements explicitly rather than silently changing behavior. See the
-[specification guide](specs/README.md).
+A substantial feature or changed business rule starts as a GitHub issue with its
+scope, requirements, acceptance criteria and open questions, and the owner
+approves it there. Progress, decisions and research stay in that issue and its
+PRs. The repository holds only documentation of what the code is and does, next
+to the code it describes: change it in the PR that changes the behavior.
 
 Use a normal feature branch, for example:
 
@@ -49,7 +48,7 @@ an actual requirement.
 ## Review and approval
 
 Explain the change, why it is needed, its compatibility impact and observed
-verification. Link a feature note when one applies. Put commands and results in
+verification. Link the issue when there is one. Put commands and results in
 the PR; report checks that failed or could not run. Keep current operational instructions in the relevant guide; record development
 evidence and persistent blockers in the PR instead of adding milestone documents.
 

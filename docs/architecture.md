@@ -48,7 +48,7 @@ Catalog name admission uses the existing operation queue. Skill uniqueness follo
 Rust whitespace-collapse/lowercase and full normalized-byte comparison. Pending
 uncertain submissions retain reservations. Actual IDs and skill origin are confirmed
 in core; the API does not predict them from a stale snapshot. Details and signed
-encodings are in the [ownership requirements](../specs/0015-adapter-core-boundary/spec.md).
+encodings are in the [ownership note](https://github.com/abako-project/backend-v2/blob/af0c1cf1192c93bc6bd4c3b03b62057f35a318ae/specs/0015-adapter-core-boundary/spec.md).
 
 Task creation/deletion and membership changes are core transactions, including
 empty tasks. Core owns the actual global allocator; the API keeps an integrity

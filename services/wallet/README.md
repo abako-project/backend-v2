@@ -1,6 +1,6 @@
 # Custody service
 
-Implements SPEC-0001 for local mock use. It has no provider client and never submits
+Custodial signing for local mock use. It has no provider client and never submits
 transactions. Only the custody database contains encrypted seeds; public responses
 contain wallet metadata, job status and signatures.
 

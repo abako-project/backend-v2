@@ -37,7 +37,7 @@ async fn empty_project(
 #[test]
 fn proposal_sha256_vectors_preserve_exact_text_and_context() -> TestResult {
     let fixture: Value = serde_json::from_str(include_str!(
-        "../../../specs/0015-adapter-core-boundary/proposal-metadata-vectors.json"
+        "../../../crates/protocol/vectors/proposal-metadata-vectors.json"
     ))?;
     for vector in fixture["vectors"].as_array().ok_or("vectors")? {
         let record: ProposalMetadataRecordV1 = serde_json::from_value(vector["record"].clone())?;

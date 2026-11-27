@@ -245,7 +245,7 @@ Only while that rejection remains current, the client or coordinator may call
 `disputeId` is in the receipt. Anyone can then call
 `GET /api/disputes/{disputeId}` without login. The other party may call
 `POST /api/disputes/{disputeId}/response` once with an evidence reference.
-No API exists to resolve or unlock the case. See [SPEC-0005](../specs/0005-dispute-opening/spec.md).
+No API exists to resolve or unlock the case.
 
 ## Run the executable flow
 
