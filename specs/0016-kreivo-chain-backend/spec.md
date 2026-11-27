@@ -1,25 +1,31 @@
 # SPEC-0016: Kreivo as the only backend, through sube, with pallet-pass identity
 
-Status: DRAFT. Requested by the owner on 2026-11-20, who decided
-[six questions](#decisions) the same day and two more on 2026-11-25. Stage 1
-proceeds on those answers. Stages 2 and 3 wait for the owner's approval of this
-note: they change authentication and the public API and remove services. Stage
-3 also waits for the [contract changes](#contract-changes) that finding 10
-calls for. The first of them,
-[contracts#23](https://github.com/abako-dev/contracts/pull/23), are merged and
-the backend pins them (findings 15 to 17). With them one approval still needs
-a whole core; stage 2 does not wait for that (decision 9). The packing of
-Project and the calendar (decision 8) is merged as
-[contracts#24](https://github.com/abako-dev/contracts/pull/24) at `27e109e`,
-with the weekly cap the owner confirmed. With it every transaction of the
-scenario fits an ordinary block (findings 18 to 24), and the backend pins it
+Status: APPROVED — the owner approved stages 1 to 4 on 2026-11-27. Stage 5,
+live Kreivo, is approved separately. Requested by the owner on 2026-11-20; the
+[decisions](#decisions) carry their dates. The public API stays as it is,
+password login included, and of a user's keys the backend keeps a session key.
+Stages 2 to 4 change how users are authenticated, bring signing into the API
+and remove services.
+The contracts fit ordinary blocks since
+[contracts#24](https://github.com/abako-dev/contracts/pull/24) at `27e109e`
+(findings 18 to 24), which the backend pins
 ([#44](https://github.com/abako-project/backend-v2/pull/44)). Nothing here
 authorizes publishing or deploying.
 
-When approved this supersedes SPEC-0001 (custodial signing) and the passkey
-section of SPEC-0004, and replaces the execution, authority and persistence
-parts of SPEC-0013. SPEC-0015's ownership split (API content, contract facts)
-and the marketplace rules of SPEC-0003/0005–0008 are unchanged.
+When approved this supersedes:
+
+- SPEC-0001 (custodial signing), and in it REQ-014, "Passwords and other login
+  credentials shall not derive, encrypt, replace, or determine the custodial
+  signing seed": a password here determines a device key. Its second sentence
+  stays true: changing credentials preserves the account.
+- The passkey section of SPEC-0004 (AUTH-001) where it has the API verify the
+  credential and excludes chain signatures and `Pass.register`.
+- The execution, authority and persistence parts of SPEC-0013.
+- The words "custodial wallet" and "custody account" in the descriptions of
+  `contracts/openapi.json`.
+
+SPEC-0015's ownership split (API content, contract facts) and the marketplace
+rules of SPEC-0003/0005–0008 are unchanged.
 
 ## Outcome
 
@@ -29,8 +35,13 @@ connection string selects the chain:
 
 | `KREIVO_URL` | Chain | Use |
 |---|---|---|
-| `fork:<snapshot>` | In-process fork of Kreivo (sube-fork), instant blocks | Local development, tests, the mock-backed preview |
+| `fork:<snapshot>` | In-process fork of Kreivo (sube-fork), instant blocks | Local development, tests, the mock that frontends integrate against |
 | `wss://…` | A Kreivo node | Live |
+
+The public REST/JSON and SSE API does not change: its routes, fields, statuses,
+error codes and cookie session stay, so a frontend built for the present
+backend works against this one ([compatibility](#compatibility)). What changes
+is behind it.
 
 The fork runs the real Kreivo runtime, so the same extrinsics, pallet-pass
 checks, contract limits and fees apply in both. `services/wallet` and
@@ -38,10 +49,14 @@ checks, contract limits and fees apply in both. `services/wallet` and
 HTTP interfaces, the service token, the isolated polkadot-sdk workspace and its
 advisory exceptions.
 
-Users are pallet-pass accounts. A passkey (WebAuthn) or a wallet key
-(SubstrateKey) is registered on chain as a device; the chain, not the API,
-verifies every credential. Passwords, Argon2, `webauthn-rs` ceremonies and
-custodial seeds go away.
+Users are pallet-pass accounts, and the chain verifies every credential. A
+password is a key device derived from it; a passkey is a WebAuthn device. The
+API holds one session key per login, limited to `Contracts.call`, and keeps no
+other key of a user beyond the request or ceremony that needs it. Custodial seeds and the API's own verification of passwords and
+passkeys go away.
+
+The first delivery is the mock: the API on a fork, for frontends to integrate.
+Live Kreivo is stage 5.
 
 ## What the spike established
 
@@ -330,55 +345,195 @@ code. `main.rs` is the first run, `bin/market.rs` the marketplace,
 
 ## Requirements
 
+### Compatibility
+
+- `contracts/openapi.json` changes in descriptions, and the passkey routes
+  gain the 409, 429 and 503 answers that other routes already document, since
+  they now wait for a transaction. The contract tests of `crates/protocol`
+  stay as they are, and a new test checks that the router and the document
+  list the same routes.
+- `scripts/poc-e2e.py` and `scripts/seed-dev-users.py` keep their requests to
+  the public API and what they assert of its answers. What they do to the
+  services changes: how the stack starts, the wallet's metrics they read, and
+  the proxy that drops one of the provider's replies, which becomes a restart
+  of the API between storing an extrinsic and learning its outcome.
+- Two values change with the fresh data the switch needs: `accountId` is the
+  pass account, and `providerInstanceId` names the chain and the Dao instance.
+- On a fork a write takes as long as today. On a live chain it takes a block
+  and its finality; no public field promises a time.
+- One thing a user notices: a session lasts 15 minutes, the longest Kreivo
+  allows today, where it lasts a day now. After it the API answers as it does
+  for an expired session, and the user logs in again.
+
 ### Chain access
 
 - A `kreivo` crate owns the sube connection on one thread and exposes `Send`
   handles with bounded queues. It prepares, submits and tracks extrinsics,
   dry-runs and reads contracts with `ContractsApi_call`, and follows finalized
   blocks. No other code holds a sube handle.
+- A submission returns once the transaction is sent, and its inclusion and
+  finality are reported as they happen, so reads and dry-runs do not wait
+  behind a transaction. The crate today runs one request at a time and waits
+  for finality.
 - Fork support is a cargo feature. The mock build used by Compose, tests and
   the preview enables it; the live image does not, and links neither smoldot
   nor the dev operations.
 - Startup checks the genesis hash, that the configured Dao exists with the pinned
   code hash, and that the runtime has pallet-pass, pallet-contracts and the
   asset extension. A mismatch fails startup.
-- In fork mode a first start deploys and seeds the contracts, funds the
-  operator and mints the mock payment asset. Fork state persists with
-  PostgreSQL; a store that does not match the fork fails startup instead of being
-  reset.
+- In fork mode a first start deploys and seeds the contracts, registers the
+  administrator and mints the mock payment asset. Fork state persists with
+  PostgreSQL and is saved with every block the API relies on; a store that
+  does not match the fork fails startup instead of being reset.
+- The fork's clock follows wall time, since sessions, calendars and receipts
+  use the chain's time.
 - ABI routing (`ProviderCommand` to contract and input) moves out of the
   provider into shared code without reproducing business rules.
 
 ### Identity and sessions
 
-- A principal is a pass account. Its user ID is the hash of the normalized
-  username; display data stays in PostgreSQL keyed by account.
-- Registration: the browser's device attests a challenge bound to a recent block;
-  the operator submits `Pass.register`. Login: the device authenticates a
-  `Pass.add_session_key_with_filter` extrinsic. Finalized success is the
-  authentication; the API verifies no device signature itself.
-- The API session keeps its HttpOnly cookie and CSRF token. It cannot outlive
-  the on-chain session; renewing needs a fresh device assertion.
-- Session keys are limited to `Contracts.call` and are never `Admin`.
+Every auth route keeps its path, request and response.
+
+- **A principal is a pass account.** Its user ID is the BLAKE2b-256 hash of
+  the normalized username, and its address is derived from that without a
+  transaction, so registration returns `accountId` as it does today. Display
+  data stays in PostgreSQL. PostgreSQL, not the chain, records who registered
+  here; a username that already has a pass account on Kreivo answers
+  `username_taken`.
+- **A password is a key device.** The API derives a 32-byte sr25519 seed with
+  Argon2id from the password, a random salt per user and a secret the process
+  is given at start, passed as the function's own secret input. PostgreSQL
+  keeps the salt, the parameters and the device's public key. It keeps no
+  password hash and no seed.
+- **The device key is derived when a request carries the password and dropped
+  when the request ends**: registration, login, a password change, removing a
+  passkey. Adding a passkey is the exception. It takes two requests and the
+  second carries no password, so the key is kept in memory with the ceremony
+  for its five minutes at most.
+- **Registration** derives the key, has the pass account registered with it as
+  the first device, and opens a session. **Login** derives the key, refuses a
+  wrong password by comparing public keys (`invalid_credentials`, without a
+  transaction), and opens a session.
+- **A password change** is one batch that adds the device of the new password,
+  with a new salt, and then removes the old one. The new salt is stored before
+  the batch is sent and the old one kept until it is final. `accountId` does
+  not change.
+- **A passkey is a WebAuthn device**, added by the password device with a
+  filter that allows contract calls and opening sessions, never as an admin
+  device. The routes are today's: an addition to a password account,
+  registered and removed with `currentPassword`, and a login by username. The
+  API checks the origin, relying party and user verification of the browser's
+  answer before submitting, since the chain does not check them on a login.
+  PostgreSQL keeps each credential's ID and creation time.
+- **A session key per login**, limited to `Contracts.call` and never an admin
+  key. The session cookie and CSRF token are unchanged.
+- **The cookie session ends with the chain's session**: 15 minutes on Kreivo
+  today, a day once Kreivo allows it ([Kreivo changes](#kreivo-changes)). The
+  chain removes a session only when it expires, so a logout drops the key and
+  the cookie and leaves the session to run out. An account has ten sessions
+  at a time; an eleventh login within 15 minutes answers `capacity_exceeded`.
+- **Session keys are kept in memory** (decision 18). A restart of the API ends
+  every session, and the API runs as one instance.
+- **The administrator** is the pass account of the bootstrap username, with
+  the password of the bootstrap file. It is the Dao's operator and acts through
+  its session key like any user. There is one, as today. At the first start
+  the account is registered, then given its balance, then made the deployer
+  of the Dao: an address that already holds a balance cannot be registered.
+- **Lost credentials are not recovered by the API.** pallet-pass has no
+  recovery call; Kreivo governance decides case by case (decision 15).
+
+### Fees, deposits and onboarding
+
+A transaction's fee and the storage deposit of a contract call fall on the pass
+account. What Kreivo offers, read in the runtime of spec 136 and not yet run:
+
+- **Fees.** Governance publishes a usage-subscription offer and a community
+  subscribes. A member of that community then pays no fee while the
+  community's pool has room for the transaction's declared weight. The gas
+  limit is therefore sized from the dry-run. The per-membership gas tank of
+  earlier runtimes was removed at spec 135.
+- **Storage deposits are not covered.** A contract call locks 6,666,666,660
+  planck (0.0067 KSM) per storage entry it adds, from the caller's native
+  balance: 200,145,999,654 planck (0.20 KSM) for `register_worker` in the
+  measured scenario, and 4.44 KSM over its 193 transactions.
+- **Registering a pass account** is open to any signed account, which pays the
+  fee and a hold of 43,999,989 planck (0.000044 KSM) for its first account and
+  10,666,656 planck for each further one.
+
+The design, in two steps:
+
+1. **On the mock**, the onboarding account registers each pass account, and
+   the API then gives the new account its native balance with a fork
+   operation. The onboarding account is a key the API makes at the first
+   start and funds the same way. No community is involved. This is the first
+   delivery, and it does not prove the fee path, the membership or the funding
+   of deposits.
+2. **With memberships** (stage 4, before live): the organization is a Kreivo
+   community with a usage subscription, and its users are members without
+   voting power. An onboarding account held by the API registers each pass
+   account as a plain signer, adds it to the community through a proxy limited
+   to `Communities.add_member`, and tops up its balance for deposits from its
+   own, up to a cap per account. The order is always register, add, fund: an
+   address that already holds a balance cannot be registered.
+
+### Keys and dependencies
+
+What the backend holds:
+
+| Key | Held | For |
+|---|---|---|
+| A session key per login | In memory, for the session's lifetime | Contract calls as the user |
+| A password's device key | In memory, while a request carries the password and for the five minutes of a passkey registration | Opening sessions, changing devices |
+| The derivation secret | Given to the process at start | Deriving device keys from passwords |
+| The onboarding account's key | A file | Registering accounts; from stage 4, adding members and topping up deposits |
+
+New in the API, approved with this note: sr25519 signing (`subxt-signer`, in
+the wallet today), the keyed use of Argon2id (`argon2`, already in the API),
+and a reader of WebAuthn registrations, chosen in stage 1 and reviewed as a
+dependency then. The `kreivo` crate brings sube and the pass crates under
+decision 2.
 
 ### Operations
 
-- Business writes keep the public operation reference and polling. The chain
-  nonce, mortality, finality and events replace the envelope nonce, provider
-  generation, `SignedContractCallV1` and SQLite receipts.
-- The exact signed extrinsic is stored before submission. After an
-  interruption the same bytes are resubmitted or their inclusion is found;
-  an operation is `OutcomeUnknown` until that resolves, and never replaced by a
-  new extrinsic while it could still be included.
-- A dry-run precedes submission to size gas and reject domain errors early. A
-  failed dispatch is a rejected operation with its fee paid.
+- Business writes keep the public operation reference, polling, statuses and
+  receipt. Each field has a source on the chain:
+
+  | Public promise | Source |
+  |---|---|
+  | `AwaitingSignature`, `ReadyToSubmit`, `Submitted`, `Finalized` | Preparing (dry-run, session key present); the signed extrinsic is stored; sent; final and visible to reads |
+  | `receipt.origin`, `nonce` | The pass account and its nonce |
+  | `receipt.providerInstanceId` | Set when the Dao is deployed, with a random part, so a fork made again is a new instance |
+  | `receipt.finalizedAt` | The timestamp of the including block, which is the contract's time |
+  | `receipt.createdEntityId` | The dry-run's effect: IDs are passed by the caller or derived from the seed it passes |
+  | `receipt.outcome` `Failed(code)` | The dry-run's error code. An operation the dry-run refuses ends `Finalized` with that code and is not submitted: its receipt carries the account's nonce, which is not used up, and the time of the block the dry-run ran on |
+  | Event cursors, notifications, recipients | The API keeps the event log in PostgreSQL and assigns cursors at finality, from the effect stored with the extrinsic |
+  | Idempotency, one operation in flight per account, queue caps | Unchanged |
+
+- The exact signed extrinsic and the dry-run's effect are stored before
+  submission. After an interruption the same bytes are resubmitted or their
+  inclusion is found; an operation is `OutcomeUnknown` until that resolves,
+  and its mortality bounds how long that can last.
+- A call that reverts on the chain after a clean dry-run, runs out of gas or
+  exceeds its deposit limit ends `Finalized` and `Failed` with a general code,
+  since a reverted call leaves no return value. Every call carries an explicit
+  deposit limit.
+- On a fork the dry-run and the submission are one step, so the effect,
+  including an allocated task ID, is exact. A live chain needs contract events
+  for that (stage 5).
+- Transactions a device signs (login, password change, passkeys) go through
+  the same queue of the account, since they use its nonce.
+- The seed of a selection is generated by the API, as the provider does today.
 - Exact money rules are unchanged: checked integers, decimal strings.
 
 ### Reads and notifications
 
-- Reads use contract messages at a finalized block, not pinned storage layouts.
-  Enumerations must be bounded before data outgrows a dry-run.
-- Notifications derive from finalized chain data. Until the contracts emit
+- Reads keep the shape of today's snapshot. It is built from contract messages
+  at a finalized block and kept in memory, and refreshed when a finalized
+  block calls the Dao or a Project. Today the whole state is fetched on most
+  requests and once a second per event stream. How much a refresh costs as the
+  organization grows is not measured.
+- An operation is reported `Finalized` only once the reads include its block.
+- Notifications derive from the API's event log. Until the contracts emit
   events, only operations submitted by this API produce them.
 
 ## Contract changes
@@ -421,8 +576,49 @@ the code of every contract it calls.
    approved (decision 8) and merged in contracts#24; the Dao indexes and
    Dao's copies are proposed.
 
-The acceptance line for these is the first bullet under [acceptance](#acceptance),
-measured again with `spike/src/bin/market.rs`.
+10. **Name the operator.** The Dao's operator is the account that deployed
+    it. On Kreivo a contract is instantiated by its community's account
+    (finding 2), so the operator becomes a constructor argument that the
+    operator can hand over. The mock does not need it: there the
+    administrator's pass account deploys the Dao with a fork operation.
+
+The acceptance line for items 1 to 9 is the first bullet under
+[acceptance](#acceptance), measured again with `spike/src/bin/market.rs`.
+Items 7 and 10 and the seeding of finding 3 are needed for live Kreivo, not
+for the mock.
+
+### Kreivo changes
+
+Read in the runtime of spec 136 (frame-contrib `4d16b1e`); none is made yet.
+
+1. **Longer sessions.** `MaxSessionDuration` is 150 relay chain blocks, 15
+   minutes. It becomes at least the cookie session's 24 hours, 14,400 blocks.
+2. **A session its owner can end.** An account has ten session slots and only
+   Root removes a session before it expires, so day-long sessions run out. The
+   account or the session key removes its own session, which is also what a
+   logout needs. Failing that, more slots than the 15 cookie sessions the API
+   allows a principal.
+3. **A proxy type for onboarding** that allows `Communities.add_member` and
+   nothing else. The existing types are `Any`, `NonTransfer`, `CancelProxy`,
+   three for assets and `Collator`.
+4. **Votes by rank.** The community decides by rank, and a regular user, a
+   client for example, has rank 0 and no voting power (decision 19). The
+   communities pallet may need adjustments for that: it was not read through.
+
+What the owner sets up on live Kreivo, after the runtime upgrade:
+
+- Through governance, a usage-subscription offer.
+- The project's community: registered (0.5 KSM), subscribed to the offer, with
+  membership stock issued (one existential deposit each, at most 256 a call)
+  and its voting rules.
+- The onboarding account: a proxy of the community of the type above, with a
+  balance for registrations and top-ups.
+- The Dao and Project code published and instantiated through the contracts
+  store, after contract changes 7 and 10 and with the catalog seeded in
+  separate transactions.
+- The payment asset the Dao uses.
+
+A fork taken after that carries all of it.
 
 ### Packed storage
 
@@ -539,18 +735,37 @@ used: the same teams, IDs, reservations and balances as the earlier contracts.
 1. **Chain client and mock.** Wallet and provider untouched. Done: the
    marketplace measured on the fork, and the [`kreivo` crate](../../crates/kreivo/README.md)
    with contract calls, key devices, sessions and the fork's dev operations.
-   Left: the mock's bootstrap (asset, seed, operator), ABI routing shared with
-   the provider, following finalized blocks, and WebAuthn devices.
-2. **API on the chain.** Reads, operations, pass registration and login, new
-   auth routes, `poc-e2e.py` and seed scripts rewritten. Fresh data only, as
-   SPEC-0015 already allows. Does not wait for the contract changes
-   (decision 9); waits for the approval of this note.
-3. **Removal.** Delete `services/wallet` and `services/contract-provider`, their
-   images, Compose services, secrets, policy files and documents.
-   Waits for the scenario to fit ordinary blocks (decisions 5 and 9).
-4. **Live readiness**, separately approved: contract events, split catalog
-   seeding, community deployment, funding of fees and deposits, recovery against
-   a real node, browser WebAuthn and wallet signing.
+   Left, experiments first:
+   - A password device registers, opens a session, adds a passkey with a
+     filter and changes the password.
+   - A passkey end to end, with a software authenticator and with a browser.
+   - The mock's first start in the order the administrator needs: register,
+     fund, deploy the Dao as that account.
+   - A privileged call on the fork through the runtime's dry-run API, which
+     stage 4 needs.
+   - Then the crate: submissions that do not wait, following finalized blocks,
+     recovery of an interrupted submission, the wall clock, saving the fork
+     with each block, WebAuthn devices and device filters, the mock's
+     bootstrap, and the shared ABI routing.
+2. **API on the fork.** Waits for the approval of this note.
+   - A test that the router and `contracts/openapi.json` list the same routes.
+   - One interface in the API in front of every wallet and provider call
+     (about twenty call sites), with today's services behind it and the test
+     fake implementing it. No behaviour changes.
+   - Kreivo behind that interface, chosen by configuration: passwords, then
+     passkeys, reads, writes, notifications.
+   - Done when the API's tests and the end-to-end scenarios pass on the fork
+     with their requests and assertions unchanged.
+3. **Switch and removal.** Compose, the preview and CI run the fork. Delete
+   `services/wallet` and `services/contract-provider`, their images, Compose
+   services, secrets, policy files and documents. Fresh data.
+4. **Memberships on the fork.** The community, its subscription and the
+   onboarding account, set up with privileged fork operations or taken from
+   live Kreivo once the owner has set it up there. Users then pay no fee and
+   are topped up for deposits as on live.
+5. **Live readiness**, separately approved: the Kreivo changes and setup,
+   contract changes 7 and 10, split catalog seeding, recovery against a real
+   node, whether login waits for inclusion or finality, and wallet signing.
 
 Each stage ends with the independent review SPEC-0013 requires.
 
@@ -562,8 +777,13 @@ Each stage ends with the independent review SPEC-0013 requires.
   [`results/market-final.out`](results/market-final.out) for the earlier
   contracts, and in finding 15 for contracts#23. With contracts#24 the list
   is empty (finding 18).
-- The public gateway flow passes in fork mode from registration to settlement
-  with a passkey device.
+- `contracts/openapi.json` differs from today's only in descriptions, and the
+  contract tests of `crates/protocol` pass unchanged.
+- The end-to-end scenarios and the seed script pass in fork mode with their
+  requests and assertions unchanged, from registration to settlement, with a
+  password and with a passkey.
+- A password change keeps `accountId`, and the old password no longer opens a
+  session.
 - Invalid credential, expired session, call outside the session filter, replay,
   restart mid-submission and a fork that does not match PostgreSQL are exercised.
 - `scripts/verify.sh app` runs the chain tests against a pinned snapshot.
@@ -582,12 +802,14 @@ Decided by the owner on 2026-11-20:
 2. **The source stays Apache-2.0 and takes the GPL crates.** `deny.toml` gets
    exceptions for the named virto-sdk crates and their git source. A built API
    binary or image links them and is distributed under GPL-3.0-or-later.
-3. **The API holds a session key per login**, in memory, limited to
-   `Contracts.call` and expiring on chain within 15 minutes. Business routes keep
-   their shape. Password and `webauthn-rs` routes are removed, registration and
-   login become two-step device ceremonies, and `accountId` is the pass account;
-   both frontends change. A browser-held key remains the live target.
-4. **Wallet login is in the first cut.** Kreivo's substrate-keys authenticator
+3. **The API holds a session key per login**, limited to `Contracts.call`.
+   Business routes keep their shape and `accountId` is the pass account. The
+   same day's choice to remove the password routes and make login a device
+   ceremony in the browser was replaced on 2026-11-27 (decisions 10 to 12). A
+   browser-held key remains the live target.
+4. **Wallet login needs the authenticator to accept wrapped signatures.**
+   With passwords kept (decision 12) it is no longer part of the first
+   delivery and moves to stage 5. Kreivo's substrate-keys authenticator
    learns the `<Bytes>` wrapping. The change was merged in
    [pass-authenticators#36](https://github.com/virto-network/pass-authenticators/pull/36).
    On a fork running a spec-136 runtime built with it, wrapped signatures
@@ -645,6 +867,34 @@ Decided by the owner on 2026-11-25:
    of finding 17 still apply: about a hundred workers. Stage 2 still needs the
    approval of this note.
 
+Decided by the owner on 2026-11-26 and 2026-11-27:
+
+10. **The public API should not break.** Ideally a frontend does not notice
+    the switch. Changes are kept to the minimum, but nothing is kept that
+    works against the chain's design, authentication above all.
+11. **"We only want to handle temporary session keys in the backend."** What
+    the backend holds under this design is listed under
+    [keys and dependencies](#keys-and-dependencies).
+12. **Passwords stay for now**, as a key derived from the password and
+    registered as the account's device. Removing them needs a longer
+    discussion with product.
+13. **Onboarding has a backend account**, a proxy with limited permissions.
+14. **"Runtime changes should be fine"**, asked about longer sessions, a
+    session its owner can end and the onboarding proxy type
+    ([Kreivo changes](#kreivo-changes)). They come later: for now the backend
+    works with 15-minute sessions.
+15. **Lost credentials are not handled now.** Kreivo governance can help.
+16. **Users join the project's community without voting power.**
+17. **The first deployment is the mock on a fork**, where accounts and setup
+    are edited directly. The owner creates the project's community on live
+    Kreivo and can fund the Dao's account at first; the fork can then be taken
+    from that state.
+18. **Session keys are kept in memory for now.**
+19. **The community votes by rank.** Regular users have rank 0 and no voting
+    power; the communities pallet may need adjustments.
+20. **This note is approved**, and with it the new uses listed under
+    [keys and dependencies](#keys-and-dependencies).
+
 Open:
 
 7. **What the fork adds to the dependency findings.** Through smoldot:
@@ -652,14 +902,20 @@ Open:
    five other crates pending the owner's decision, and `libsecp256k1`, reported
    unmaintained. Neither is silenced. Both come only with the `fork` feature.
 
+Also open, from the design of 2026-11-27:
+
+- **The contract changes for live** (7 and 10, and the catalog seeding) and
+  the Kreivo changes: when they are made, and by whom.
+- **Who funds users' deposits on live, and the cap per account.**
+
 Defaults, unless the owner says otherwise:
 
-- **Operator key.** One key file in the API is the `Pass.register` registrar
-  and the Dao's controller for privileged messages, replacing the custody root
-  seed. It holds no user funds. A community origin replaces it on a live DAO.
-- **Effects without events.** Use the dry-run's effect to route the operation,
-  and read values that depend on execution-time state (allocated IDs, recipients)
-  back at the finalized block, until the contracts emit events.
+- **Operator.** The administrator's pass account is the Dao's operator
+  (requirements). The API holds no operator key. On live the operator is named
+  at deployment (contract change 10).
+- **Effects without events.** The dry-run's effect is stored with the
+  extrinsic and applied at finality. It is exact on a fork, where the dry-run
+  and the submission are one step; live needs contract events.
 - **Snapshot for CI.** A pinned 25 MB artifact with its hash, refreshed after
   Kreivo runtime upgrades, rather than a download from the live node per run.
 
@@ -667,7 +923,8 @@ Defaults, unless the owner says otherwise:
 
 - A session key held by the API can call any contract as the user until it
   expires, including with attached value; the filter restricts the call, not
-  its destination.
+  its destination. With the session changes
+  that is up to a day.
 - A transaction that needs a whole core waits for the first block of one and
   stops the collator building the other two. Several in a row slow the chain
   for everyone.
@@ -686,3 +943,21 @@ Defaults, unless the owner says otherwise:
 - Live latency is block time and finality, not milliseconds; login submits a
   transaction, and users need native balance before their first write.
 - sube-fork is 0.x and its state roots are not authoritative.
+- A password is an admin key of its account on a public chain. Whoever
+  guesses it can use the account outside the API, and the API cannot revoke
+  it. A copy of the database (salts and public keys) allows guessing offline
+  only together with the derivation secret. Losing a salt or that secret
+  locks the account, and pallet-pass has no recovery call.
+- While a request that carries a password runs, the API holds that account's
+  admin key, as the wallet service holds every key today.
+- Usernames are global on Kreivo. Anyone can register a username first, or
+  block it by sending its address the existential deposit, the
+  administrator's included.
+- Until stage 4 the mock gives accounts their balance directly, so the fee
+  path, onboarding and deposit funding are not exercised.
+- Topping up deposits hands out native balance: a worker's registration locks
+  0.20 KSM, and a user's device can move an unlocked balance out.
+- The design was read in the runtime's code. A password device with a
+  day-long session, a passkey with a filter, a member paying from its
+  community's pool through a session key, and privileged calls on the fork
+  have not been run.
