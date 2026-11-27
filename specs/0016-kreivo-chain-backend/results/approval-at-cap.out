@@ -1,0 +1,48 @@
+Team assignment with the candidates' weeks at the weekly cap, on the built contracts of abako-dev/contracts#24 at e218b0c,
+run in the embedded provider's runtime (pallet-contracts 51, 1 MiB of contract memory).
+Each PROBE line is printed by a temporary provider test. It deploys Dao alone, registers a coordinator and the candidates,
+and fills every week of every candidate with one reservation of one minute a round, raising the capacity by one each round.
+It then calls assign_team, the Dao part of an approval, as the controller with the provider's execution gas (128 MiB of
+proof) for one milestone with one requirement, and rolls it back. 'at 31' has one minute free in every week: the first
+line needs every week of every candidate, the second only the first week. 'at the cap' has 32 reservations in every week.
+An ordinary Kreivo transaction gets 2,446,677 bytes of proof.
+
+PROBE 4 candidates, 13 weeks at 31, one minute free in each (52 week entries): ok (40 bytes); proof 1088402 ref_time 12172310140
+PROBE 4 candidates, 13 weeks at 31, first week is enough: ok (40 bytes); proof 392810 ref_time 3691408588
+PROBE 4 candidates, 26 weeks at 31, one minute free in each (104 week entries): ok (40 bytes); proof 1841960 ref_time 21478668375
+PROBE 4 candidates, 26 weeks at 31, first week is enough: ok (40 bytes); proof 392810 ref_time 3691408588
+PROBE 4 candidates, 39 weeks at 31, one minute free in each (156 week entries): ok (40 bytes); proof 2595518 ref_time 30932624216
+PROBE 4 candidates, 39 weeks at 31, first week is enough: ok (40 bytes); proof 392810 ref_time 3691408588
+PROBE 4 candidates, 45 weeks at 31, one minute free in each (180 week entries): ok (40 bytes); proof 2943314 ref_time 35224590754
+PROBE 4 candidates, 45 weeks at 31, first week is enough: ok (40 bytes); proof 392810 ref_time 3691408588
+PROBE 4 candidates, 52 weeks at 31, one minute free in each (208 week entries): ok (40 bytes); proof 3349076 ref_time 40239892708
+PROBE 4 candidates, 52 weeks at 31, first week is enough: ok (40 bytes); proof 392810 ref_time 3691408588
+PROBE 4 candidates, 13 weeks at the cap (52 week entries): refused "no_available_candidate"; proof 899016 ref_time 8241704298
+PROBE 4 candidates, 26 weeks at the cap (104 week entries): refused "no_available_candidate"; proof 1504244 ref_time 14346410250
+PROBE 4 candidates, 39 weeks at the cap (156 week entries): refused "no_available_candidate"; proof 2109472 ref_time 20545873578
+PROBE 4 candidates, 45 weeks at the cap (180 week entries): refused "no_available_candidate"; proof 2388808 ref_time 23366621252
+PROBE 4 candidates, 52 weeks at the cap (208 week entries): refused "no_available_candidate"; proof 2714700 ref_time 26665501198
+PROBE 12 candidates, 4 weeks at 31, one minute free in each (48 week entries): ok (40 bytes); proof 1183152 ref_time 11500127245
+PROBE 12 candidates, 4 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 8 weeks at 31, one minute free in each (96 week entries): ok (40 bytes); proof 1785992 ref_time 18053255342
+PROBE 12 candidates, 8 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 12 weeks at 31, one minute free in each (144 week entries): ok (40 bytes); proof 2388832 ref_time 24708634383
+PROBE 12 candidates, 12 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 14 weeks at 31, one minute free in each (168 week entries): ok (40 bytes); proof 2690252 ref_time 27981487529
+PROBE 12 candidates, 14 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 16 weeks at 31, one minute free in each (192 week entries): ok (40 bytes); proof 2991672 ref_time 31251898215
+PROBE 12 candidates, 16 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 18 weeks at 31, one minute free in each (216 week entries): ok (40 bytes); proof 3293092 ref_time 34563111832
+PROBE 12 candidates, 18 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 20 weeks at 31, one minute free in each (240 week entries): ok (40 bytes); proof 3594512 ref_time 37838782620
+PROBE 12 candidates, 20 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 24 weeks at 31, one minute free in each (288 week entries): ok (40 bytes); proof 4197352 ref_time 44664966414
+PROBE 12 candidates, 24 weeks at 31, first week is enough: ok (40 bytes); proof 731022 ref_time 6643070846
+PROBE 12 candidates, 4 weeks at the cap (48 week entries): refused "no_available_candidate"; proof 1098068 ref_time 9760101803
+PROBE 12 candidates, 8 weeks at the cap (96 week entries): refused "no_available_candidate"; proof 1656740 ref_time 15345022727
+PROBE 12 candidates, 12 weeks at the cap (144 week entries): refused "no_available_candidate"; proof 2215412 ref_time 21012355273
+PROBE 12 candidates, 14 weeks at the cap (168 week entries): refused "no_available_candidate"; proof 2494748 ref_time 23805697035
+PROBE 12 candidates, 16 weeks at the cap (192 week entries): refused "no_available_candidate"; proof 2774084 ref_time 26597968647
+PROBE 12 candidates, 18 weeks at the cap (216 week entries): refused "no_available_candidate"; proof 3053420 ref_time 29393221571
+PROBE 12 candidates, 20 weeks at the cap (240 week entries): refused "no_available_candidate"; proof 3332756 ref_time 32190720551
+PROBE 12 candidates, 24 weeks at the cap (288 week entries): refused "no_available_candidate"; proof 3891428 ref_time 38021577053
