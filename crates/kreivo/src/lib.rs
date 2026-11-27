@@ -22,8 +22,10 @@ mod identity;
 mod mock;
 mod worker;
 
+use std::sync::Arc;
 use std::time::Duration;
 
+use libwallet::{Pair, Signer};
 use tokio::sync::{mpsc, oneshot};
 use zeroize::Zeroizing;
 
@@ -129,25 +131,43 @@ impl Receipt {
 }
 
 /// An sr25519 key this process holds: the operator's, or a session's.
+///
+/// Clones share the secret, which is wiped when the last one is dropped.
 #[derive(Clone)]
-pub struct Key(subxt_signer::sr25519::Keypair);
+pub struct Key {
+    pair: Arc<libwallet::any::Pair>,
+    account: AccountId32,
+}
 
 impl Key {
     /// The key of a 32-byte seed.
     pub fn from_seed(seed: &Zeroizing<[u8; 32]>) -> Result<Self> {
-        subxt_signer::sr25519::Keypair::from_secret_key(**seed)
-            .map(Self)
-            .map_err(|_| Error::Invalid("unusable key seed".into()))
+        let unusable = || Error::Invalid("unusable key seed".into());
+        let pair = <libwallet::any::Pair as Pair>::from_bytes(seed.as_slice())
+            .filter(|pair| matches!(pair, libwallet::any::Pair::Sr25519(_)))
+            .ok_or_else(unusable)?;
+        let public = <[u8; 32]>::try_from(pair.public().as_ref()).map_err(|_| unusable())?;
+        Ok(Self {
+            pair: Arc::new(pair),
+            account: AccountId32::from_bytes(public),
+        })
     }
 
     /// The account this key signs for.
     #[must_use]
-    pub fn account(&self) -> AccountId32 {
-        AccountId32::from_bytes(self.0.public_key().0)
+    pub const fn account(&self) -> AccountId32 {
+        self.account
     }
 
-    pub(crate) fn sign(&self, bytes: &[u8]) -> [u8; 64] {
-        self.0.sign(bytes).0
+    /// Sign `bytes` with this key.
+    pub async fn sign(&self, bytes: &[u8]) -> Result<[u8; 64]> {
+        let signature = self
+            .pair
+            .sign_msg(bytes)
+            .await
+            .map_err(|error| Error::Invalid(format!("the key did not sign: {error}")))?;
+        <[u8; 64]>::try_from(signature.as_ref())
+            .map_err(|_| Error::Decode("a signature that is not 64 bytes".into()))
     }
 }
 
@@ -326,5 +346,51 @@ impl From<sube::Error> for Error {
             }
             _ => Self::Unavailable(error.to_string()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use libwallet::Signer;
+
+    use super::{Key, Zeroizing};
+
+    type Outcome = core::result::Result<(), Box<dyn std::error::Error>>;
+
+    /// The accounts of two seeds, as every release of this crate derived them.
+    /// A stored device key or operator account depends on them.
+    #[test]
+    fn a_seed_gives_the_same_account() -> Outcome {
+        let repeated = Key::from_seed(&Zeroizing::new([7; 32]))?;
+        assert_eq!(
+            repeated.account().into_bytes(),
+            [
+                124, 15, 70, 157, 59, 211, 64, 186, 231, 24, 32, 63, 163, 12, 160, 113, 165, 227,
+                124, 117, 30, 137, 29, 189, 237, 131, 123, 33, 61, 69, 217, 29
+            ]
+        );
+        let mut counting = Zeroizing::new([0; 32]);
+        for (byte, value) in counting.iter_mut().zip(0..) {
+            *byte = value;
+        }
+        assert_eq!(
+            Key::from_seed(&counting)?.account().into_bytes(),
+            [
+                226, 17, 23, 121, 152, 22, 24, 112, 94, 202, 206, 161, 175, 111, 249, 53, 11, 206,
+                43, 45, 204, 208, 62, 12, 62, 1, 235, 12, 130, 61, 38, 102
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_signature_verifies_for_its_message_only() -> Outcome {
+        let key = Key::from_seed(&Zeroizing::new([7; 32]))?;
+        let signature = smol::block_on(key.sign(b"a message"))?;
+        assert!(smol::block_on(key.pair.verify(b"a message", signature)));
+        assert!(!smol::block_on(
+            key.pair.verify(b"another message", signature)
+        ));
+        Ok(())
     }
 }

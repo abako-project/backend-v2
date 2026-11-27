@@ -2401,13 +2401,14 @@ name = "kreivo"
 version = "0.1.0"
 dependencies = [
  "blake2 0.10.6",
+ "libwallet",
  "parity-scale-codec",
  "pass",
  "protocol",
+ "schnorrkel",
  "serde_json",
  "smol",
  "sube",
- "subxt-signer",
  "thiserror 2.0.20",
  "tokio",
  "tracing",
@@ -2628,6 +2629,18 @@ dependencies = [
  "cc",
  "pkg-config",
  "vcpkg",
+]
+
+[[package]]
+name = "libwallet"
+version = "0.4.0"
+source = "git+https://github.com/virto-network/virto-sdk?rev=58df5839c5e54a5d30ed1f43efd29fbaf30b10c5#58df5839c5e54a5d30ed1f43efd29fbaf30b10c5"
+dependencies = [
+ "arrayvec 0.7.8",
+ "log",
+ "rand_chacha 0.3.1",
+ "schnorrkel",
+ "zeroize",
 ]
 
 [[package]]

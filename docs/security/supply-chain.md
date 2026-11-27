@@ -27,7 +27,7 @@ rejects the unmaintained `paste` and `proc-macro-error2` packages. These were no
 silenced by the update. The separate provider policy retains its previously
 approved exceptions and December 1 expiry; see its [scope](../../services/contract-provider/policy/README.md).
 
-The `kreivo` crate ([Kreivo backend](https://github.com/abako-project/backend-v2/issues/46)) adds `sube` and `pass` from the virto-sdk Git repository at a pinned
+The `kreivo` crate ([Kreivo backend](https://github.com/abako-project/backend-v2/issues/46)) adds `sube`, `pass` and `libwallet` from the virto-sdk Git repository at a pinned
 revision. They and `scale-serialization` are GPL-3.0-or-later, and the root
 policy allows that license for those crates by name, with `sube-fork` and
 `smoldot` under the crate's development-only `fork` feature. A binary that links

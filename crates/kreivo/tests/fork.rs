@@ -21,7 +21,6 @@ use protocol::provider_core::{
 use protocol::{
     AccountId32, CalendarDefinition, Minutes, OperationId, PayloadHash, Qualifications,
 };
-use subxt_signer::sr25519::Keypair;
 use zeroize::Zeroizing;
 
 type Outcome<T = ()> = Result<T, Box<dyn Error>>;
@@ -199,19 +198,19 @@ async fn world() -> Outcome<World> {
 }
 
 /// A user's wallet key, which they register as their pass device.
-struct Device(Keypair);
+struct Device(Key);
 
 impl Device {
     fn new(seed: u8) -> Outcome<Self> {
-        Ok(Self(Keypair::from_secret_key([seed; 32])?))
+        Ok(Self(key(seed)?))
     }
 
     fn id(&self) -> AccountId32 {
-        AccountId32::from_bytes(self.0.public_key().0)
+        self.0.account()
     }
 
-    fn sign(&self, message: &[u8]) -> [u8; 64] {
-        self.0.sign(message).0
+    async fn sign(&self, message: &[u8]) -> Outcome<[u8; 64]> {
+        Ok(self.0.sign(message).await?)
     }
 }
 
@@ -221,7 +220,7 @@ async fn enroll(world: &World, name: &str, device: &Device) -> Outcome<AccountId
     let account = enrollment.account;
     let signed = DeviceKey {
         public: device.id(),
-        signature: device.sign(&enrollment.message),
+        signature: device.sign(&enrollment.message).await?,
     };
     succeeded(
         &world
@@ -245,7 +244,7 @@ async fn login(world: &World, name: &str, device: &Device, seed: u8) -> Outcome<
         .chain
         .session_request(UserId::of(name), device.id(), session.account())
         .await?;
-    let signature = device.sign(&request.message);
+    let signature = device.sign(&request.message).await?;
     let account = request.account;
     let opened = world.chain.open_session(request, signature).await?;
     succeeded(&opened)?;
@@ -319,7 +318,7 @@ async fn the_chain_verifies_devices() -> Outcome {
     let enrollment = world.chain.enrollment(UserId::of("alice")).await?;
     let wrong = DeviceKey {
         public: device.id(),
-        signature: device.sign(b"something else"),
+        signature: device.sign(b"something else").await?,
     };
     let refused = world
         .chain
@@ -339,7 +338,7 @@ async fn the_chain_verifies_devices() -> Outcome {
     assert_eq!(request.account, alice);
     let forged = world
         .chain
-        .open_session(request, device.sign(b"something else"))
+        .open_session(request, device.sign(b"something else").await?)
         .await;
     assert!(
         matches!(forged, Err(kreivo::Error::Rejected(_))),
