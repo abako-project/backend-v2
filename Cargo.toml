@@ -22,9 +22,9 @@ protocol = { version = "0.1.0", path = "crates/protocol" }
 kreivo = { version = "0.1.0", path = "crates/kreivo" }
 chain-provider = { version = "0.1.0", path = "crates/chain-provider" }
 # GPL-3.0-or-later, see docs/security/supply-chain.md. The revision is on virto-sdk's main.
-sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", rev = "58df5839c5e54a5d30ed1f43efd29fbaf30b10c5", default-features = false, features = ["std"] }
-pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "58df5839c5e54a5d30ed1f43efd29fbaf30b10c5", default-features = false, features = ["std"] }
-libwallet = { version = "0.4.0", git = "https://github.com/virto-network/virto-sdk", rev = "58df5839c5e54a5d30ed1f43efd29fbaf30b10c5", default-features = false, features = ["sr25519"] }
+sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", rev = "fd465f43bd9ebb605831fda63a53c28e8804206f", default-features = false, features = ["std"] }
+pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "fd465f43bd9ebb605831fda63a53c28e8804206f", default-features = false, features = ["std"] }
+libwallet = { version = "0.4.0", git = "https://github.com/virto-network/virto-sdk", rev = "fd465f43bd9ebb605831fda63a53c28e8804206f", default-features = false, features = ["sr25519", "rand"] }
 smol = "2.0.2"
 blake2 = { version = "0.10.6", default-features = false }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
@@ -44,7 +44,6 @@ serde_cbor_2 = "0.13.0"
 base64 = "0.22.1"
 tower = { version = "0.5.3", default-features = false, features = ["util"] }
 rand = "0.10.3"
-schnorrkel = { version = "0.11.5", default-features = false, features = ["getrandom"] }
 subxt-signer = { version = "0.51.1", default-features = false, features = ["sr25519", "std"] }
 parity-scale-codec = { version = "3.7.5", features = ["derive"] }
 chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc", "zeroize"] }

@@ -170,7 +170,7 @@ impl Key {
             .await
             .map_err(|error| Error::Invalid(format!("the key did not sign: {error}")))?;
         <[u8; 64]>::try_from(signature.as_ref())
-            .map_err(|_| Error::Decode("a signature that is not 64 bytes".into()))
+            .map_err(|_| Error::Invalid("the key's signature is not 64 bytes".into()))
     }
 }
 
@@ -455,7 +455,8 @@ impl From<sube::Error> for Error {
             | sube::Error::Mapping(_)
             | sube::Error::CallNotFound
             | sube::Error::PalletNotFound(_)
-            | sube::Error::MissingExtensionValue(_) => Self::Invalid(error.to_string()),
+            | sube::Error::MissingExtensionValue(_)
+            | sube::Error::Signing(_) => Self::Invalid(error.to_string()),
             sube::Error::Decode(_) | sube::Error::BadMetadata => Self::Decode(error.to_string()),
             sube::Error::OperationFailed(reason) if reason.starts_with("tx invalid") => {
                 Self::Rejected(reason)
