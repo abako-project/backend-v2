@@ -1,7 +1,7 @@
 ## Change
 
-What problem does this solve, and what behavior changes? Link the issue or approved
-feature note when applicable.
+What problem does this solve, and what behavior changes? Link the issue when
+there is one.
 
 ## Compatibility and operations
 

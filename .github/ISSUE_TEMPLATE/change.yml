@@ -19,4 +19,4 @@ body:
     id: context
     attributes:
       label: Context and compatibility
-      description: Relevant feature note, constraints, API or data impact.
+      description: Related issues, constraints, API or data impact.

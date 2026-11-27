@@ -5,11 +5,11 @@ use serde_json::Value;
 fn catalog_and_reason_vectors_preserve_context_and_unicode() -> TestResult {
     for (fixture, catalog) in [
         (
-            include_str!("../../../specs/0015-adapter-core-boundary/catalog-metadata-vectors.json"),
+            include_str!("../../../crates/protocol/vectors/catalog-metadata-vectors.json"),
             true,
         ),
         (
-            include_str!("../../../specs/0015-adapter-core-boundary/reason-metadata-vectors.json"),
+            include_str!("../../../crates/protocol/vectors/reason-metadata-vectors.json"),
             false,
         ),
     ] {

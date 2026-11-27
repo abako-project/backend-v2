@@ -25,8 +25,7 @@ Implemented behavior is not a claim of deployment or production readiness.
 
 The API, wallet and provider remain separate services. Both application
 contracts use ordinary ink storage; no custom paging helper or onchain URL parser
-is used. Metadata and task ownership are described in [architecture](architecture.md)
-and the [requirements](../specs/README.md).
+is used. Metadata and task ownership are described in [architecture](architecture.md).
 
 ## Not delivered
 

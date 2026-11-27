@@ -85,7 +85,7 @@ against disposable PostgreSQL. The [verification guide](ci/README.md) also cover
 contract execution, dependency policy, containers and browser limits. Use on-disk
 `TMPDIR` and Cargo output directories when `/tmp` is RAM-backed.
 
-[Approved requirements](specs/README.md) define business behavior.
+Features and their requirements are planned in [GitHub issues](https://github.com/abako-project/backend-v2/issues); the repository documents what the code does.
 [Contributing](CONTRIBUTING.md) describes changes and review.
 [Recovery](docs/operations/disaster-recovery.md) and [security findings](docs/security/supply-chain.md) cover operational limits.
 Record commands, results and tested revisions in PRs; historical development notes

@@ -19,7 +19,7 @@ Restoring only mock state or only adapter state can invalidate operation history
 
 The preview guide records a verified isolated restore for that mock deployment.
 Automated encrypted backups, retention, production restore drills, key-version
-recovery and regional failover remain undefined. Master-key rotation remains an open SPEC-0001 reconciliation item; no rotation command is available.
+recovery and regional failover remain undefined. Master-key rotation remains open; no rotation command is available.
 
 Directory names, project text, proposal documents and task content live in
 adapter PostgreSQL. A provider checkpoint cannot reconstruct them. Preserve all
