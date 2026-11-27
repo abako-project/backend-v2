@@ -97,6 +97,48 @@ pub(crate) struct Config {
     pub(crate) admin_password: Zeroizing<String>,
     pub(crate) openapi: String,
     pub(crate) platform: protocol::PlatformProfile,
+    /// Set when the contracts run on Kreivo instead of the provider service.
+    pub(crate) chain: Option<ChainConfig>,
+}
+/// The contracts on a fork of Kreivo, in this process.
+pub(crate) struct ChainConfig {
+    /// The snapshot of Kreivo the first start forks.
+    pub(crate) snapshot: std::path::PathBuf,
+    /// Where the fork and its state are saved.
+    pub(crate) data_dir: std::path::PathBuf,
+    /// The directory of the Dao and Project bundles.
+    pub(crate) contracts_dir: std::path::PathBuf,
+    /// The secret every device key is derived with.
+    pub(crate) derivation_secret: Zeroizing<String>,
+    /// The ID of a community to set up on the fork and make every account a
+    /// member of, so that its usage subscription pays their fees.
+    pub(crate) community: Option<u16>,
+}
+impl ChainConfig {
+    /// The chain's settings, if `KREIVO_URL` asks for one.
+    fn from_env(
+        secret: &impl Fn(&'static str) -> Result<Zeroizing<String>, Error>,
+    ) -> Result<Option<Self>, Error> {
+        let url = match env::var("KREIVO_URL") {
+            Ok(url) if !url.is_empty() => url,
+            _ => return Ok(None),
+        };
+        let derivation_secret = secret("DERIVATION_SECRET_FILE")?;
+        if derivation_secret.len() < 32 {
+            return Err(Error::Config);
+        }
+        let directory = |name| env::var_os(name).map(Into::into).ok_or(Error::Config);
+        Ok(Some(Self {
+            snapshot: url.strip_prefix("fork:").ok_or(Error::Config)?.into(),
+            data_dir: directory("KREIVO_DATA_DIR")?,
+            contracts_dir: directory("KREIVO_CONTRACTS_DIR")?,
+            derivation_secret,
+            community: match env::var("KREIVO_COMMUNITY") {
+                Ok(id) => Some(id.parse().map_err(|_| Error::Config)?),
+                Err(_) => None,
+            },
+        }))
+    }
 }
 impl Config {
     pub(crate) fn from_env() -> Result<Self, Error> {
@@ -158,17 +200,28 @@ impl Config {
                 Ok("false") | Err(_) => false,
                 _ => return Err(Error::Config),
             };
-        let service_token = required_secret("INTERNAL_SERVICE_TOKEN_FILE")?;
-        if service_token.len() < 32 {
-            return Err(Error::Config);
-        }
+        let chain = ChainConfig::from_env(&required_secret)?;
+        // With the chain in this process there are no private services to reach.
+        let (custody_url, provider_url, service_token) = if chain.is_some() {
+            (String::new(), String::new(), Zeroizing::new(String::new()))
+        } else {
+            let service_token = required_secret("INTERNAL_SERVICE_TOKEN_FILE")?;
+            if service_token.len() < 32 {
+                return Err(Error::Config);
+            }
+            (
+                internal_url("CUSTODY_URL")?,
+                internal_url("MOCK_PROVIDER_URL")?,
+                service_token,
+            )
+        };
         Ok(Self {
             bind_addr: env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".into()),
             database_url: env::var("ADAPTER_DATABASE_URL").unwrap_or_else(|_| {
                 "postgres://digesta:digesta-local-only@postgres:5432/digesta_adapter".into()
             }),
-            custody_url: internal_url("CUSTODY_URL")?,
-            provider_url: internal_url("MOCK_PROVIDER_URL")?,
+            custody_url,
+            provider_url,
             service_token,
             allowed_origins: origins,
             cookie_secure,
@@ -182,6 +235,7 @@ impl Config {
                     .as_deref()
                     .map(std::path::Path::new),
             )?,
+            chain,
         })
     }
 }
@@ -189,6 +243,14 @@ pub(crate) struct App {
     pub(crate) config: Config,
     pub(crate) db: PgPool,
     pub(crate) client: reqwest::Client,
+    /// The contracts on Kreivo, when they are not behind the provider service.
+    pub(crate) chain: Option<chain_provider::Provider>,
+    /// The passkey ceremonies under way on the chain.
+    pub(crate) ceremonies:
+        std::sync::Mutex<std::collections::HashMap<String, crate::auth::passkeys::chain::Ceremony>>,
+    /// Held while a password change is on its way to the chain, and while
+    /// one whose answer was lost is settled.
+    pub(crate) credentials: Arc<tokio::sync::Mutex<()>>,
     pub(crate) password_slots: Arc<Semaphore>,
     pub(crate) request_slots: Semaphore,
     pub(crate) stream_slots: Arc<Semaphore>,
@@ -230,36 +292,136 @@ impl App {
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .map_err(|_| Error::Config)?;
+        let chain = match &config.chain {
+            Some(chain) => {
+                crate::auth::passkeys::chain::check_relying_party()?;
+                // The database and the saved fork describe one marketplace: a
+                // new one beside an old other is refused before anything is
+                // written, not repaired. A fork is new until its first start
+                // is over, and until then only the administrator exists.
+                let resumed = chain_provider::Provider::saved(&chain.data_dir);
+                // Only a record this mode wrote is written again: an
+                // administrator of the service mode is left alone and refused.
+                let devices = format!("{}%", crate::auth::DEVICE_PREFIX);
+                let (principals, administrators, unfinished): (i64, i64, i64) = sqlx::query_as(
+                    "SELECT COUNT(*), COUNT(*) FILTER (WHERE username = $1 AND is_admin), COUNT(*) FILTER (WHERE is_admin AND account_id IS NULL AND password_hash LIKE $2) FROM principals",
+                )
+                .bind(config.admin_username.to_ascii_lowercase())
+                .bind(&devices)
+                .fetch_one(&db)
+                .await?;
+                // A saved fork has its administrator here. A new fork has
+                // nobody, or the administrator of a first start that did not
+                // finish, who is written again.
+                let leftover = principals == 1 && unfinished == 1;
+                if (resumed && administrators != 1) || (!resumed && principals > 0 && !leftover) {
+                    tracing::error!(
+                        resumed,
+                        "the database and the saved fork do not belong together"
+                    );
+                    return Err(Error::Config);
+                }
+                if !resumed && leftover {
+                    sqlx::query("DELETE FROM principals WHERE is_admin AND account_id IS NULL AND password_hash LIKE $1")
+                        .bind(&devices)
+                        .execute(&db)
+                        .await?;
+                }
+                // The administrator's pass account is the Dao's operator.
+                let (device, _) = crate::auth::bootstrap_device(&db, &config).await?;
+                // A session's key lives in this process: none survives a restart.
+                sqlx::query("DELETE FROM sessions").execute(&db).await?;
+                let provider = chain_provider::Provider::open(
+                    chain_provider::Config {
+                        snapshot: chain.snapshot.clone(),
+                        data_dir: chain.data_dir.clone(),
+                        contracts_dir: chain.contracts_dir.clone(),
+                        mock_funding: config.enable_mock_funding,
+                        operator_user: config.admin_username.to_ascii_lowercase(),
+                        community: chain.community,
+                    },
+                    device.as_ref(),
+                )
+                .await
+                .map_err(|error| {
+                    tracing::error!(%error, "the chain could not be started");
+                    Error::Config
+                })?;
+                Some(provider)
+            }
+            None => None,
+        };
         Ok(Self {
             config,
             db,
             client,
+            chain,
+            ceremonies: std::sync::Mutex::default(),
+            credentials: Arc::default(),
             password_slots: Arc::new(Semaphore::new(4)),
             request_slots: Semaphore::new(128),
             stream_slots: Arc::new(Semaphore::new(256)),
         })
     }
-    pub(crate) fn internal(
+    /// Send a request to a private service, or answer it from the chain in
+    /// this process when there is one.
+    pub(crate) async fn send(
         &self,
         method: reqwest::Method,
         base: &str,
         path: &str,
-    ) -> reqwest::RequestBuilder {
-        self.client
+        body: Option<Vec<u8>>,
+    ) -> Result<InternalResponse, Error> {
+        if let Some(chain) = &self.chain {
+            use tower::ServiceExt;
+            let router = chain.router().map_err(|_| Error::Dependency)?;
+            let request = axum::http::Request::builder()
+                .method(method)
+                .uri(path)
+                .header(
+                    axum::http::header::AUTHORIZATION,
+                    format!("Bearer {}", chain.token()),
+                )
+                .header(axum::http::header::CONTENT_TYPE, "application/json")
+                .body(axum::body::Body::from(body.unwrap_or_default()))
+                .map_err(|_| Error::Internal)?;
+            let response = router
+                .oneshot(request)
+                .await
+                .map_err(|_| Error::Dependency)?;
+            let status = response.status();
+            let body = axum::body::to_bytes(response.into_body(), RESPONSE_LIMIT)
+                .await
+                .map_err(|_| Error::Dependency)?
+                .to_vec();
+            return Ok(InternalResponse { status, body });
+        }
+        let mut request = self
+            .client
             .request(method, format!("{base}{path}"))
-            .bearer_auth(self.config.service_token.as_str())
+            .bearer_auth(self.config.service_token.as_str());
+        if let Some(body) = body {
+            request = request
+                .header(reqwest::header::CONTENT_TYPE, "application/json")
+                .body(body);
+        }
+        let response = request.send().await.map_err(|_| Error::Dependency)?;
+        let status = response.status();
+        let body = if status.is_success() {
+            bounded_response(response).await?
+        } else {
+            Vec::new()
+        };
+        Ok(InternalResponse { status, body })
     }
     pub(crate) async fn get<T: DeserializeOwned>(
         &self,
         base: &str,
         path: &str,
     ) -> Result<T, Error> {
-        let response = self
-            .internal(reqwest::Method::GET, base, path)
-            .send()
-            .await
-            .map_err(|_| Error::Dependency)?;
-        decode_response(response).await
+        self.send(reqwest::Method::GET, base, path, None)
+            .await?
+            .decode()
     }
     pub(crate) async fn post<B: Serialize, T: DeserializeOwned>(
         &self,
@@ -267,13 +429,14 @@ impl App {
         path: &str,
         body: &B,
     ) -> Result<T, Error> {
-        let response = self
-            .internal(reqwest::Method::POST, base, path)
-            .json(body)
-            .send()
-            .await
-            .map_err(|_| Error::Dependency)?;
-        decode_response(response).await
+        self.send(
+            reqwest::Method::POST,
+            base,
+            path,
+            Some(serde_json::to_vec(body)?),
+        )
+        .await?
+        .decode()
     }
     pub(crate) async fn snapshot(&self) -> Result<CoreSnapshot, Error> {
         let snapshot: CoreSnapshot = self
@@ -296,23 +459,28 @@ impl App {
         Ok(())
     }
 }
-pub(crate) async fn decode_response<T: DeserializeOwned>(
-    response: reqwest::Response,
-) -> Result<T, Error> {
-    let bytes = bounded_response(response).await?;
-    serde_json::from_slice(&bytes).map_err(|_| Error::Dependency)
+/// The answer of a private service.
+pub(crate) struct InternalResponse {
+    pub(crate) status: StatusCode,
+    body: Vec<u8>,
 }
+impl InternalResponse {
+    /// The JSON body of a successful answer.
+    pub(crate) fn decode<T: DeserializeOwned>(self) -> Result<T, Error> {
+        if self.status == StatusCode::NOT_FOUND {
+            return Err(Error::NotFound);
+        }
+        if !self.status.is_success() {
+            tracing::warn!(status = %self.status, "internal service returned an unsuccessful response");
+            return Err(Error::Dependency);
+        }
+        serde_json::from_slice(&self.body).map_err(|_| Error::Dependency)
+    }
+}
+// ponytail: bounded whole snapshot for this POC; paginate provider reads as data grows.
+const RESPONSE_LIMIT: usize = 32 * 1024 * 1024;
 /// Bound responses from private services before decoding their payloads.
-pub(crate) async fn bounded_response(mut response: reqwest::Response) -> Result<Vec<u8>, Error> {
-    const RESPONSE_LIMIT: usize = 32 * 1024 * 1024;
-    if response.status() == StatusCode::NOT_FOUND {
-        return Err(Error::NotFound);
-    }
-    if !response.status().is_success() {
-        tracing::warn!(status = %response.status(), "internal service returned an unsuccessful response");
-        return Err(Error::Dependency);
-    }
-    // ponytail: bounded whole snapshot for this POC; paginate provider reads as data grows.
+async fn bounded_response(mut response: reqwest::Response) -> Result<Vec<u8>, Error> {
     if response
         .content_length()
         .is_some_and(|size| size > RESPONSE_LIMIT as u64)

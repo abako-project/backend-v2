@@ -12,7 +12,7 @@
 
 use std::error::Error;
 
-use kreivo::{Authority, Chain, DeviceKey, DryRun, Key, Receipt, UserId, Weight, message};
+use kreivo::{Authority, Chain, DeviceKey, DryRun, Key, Origin, Receipt, UserId, Weight, message};
 use parity_scale_codec::Decode;
 use protocol::provider_core::{
     CatalogEntryCore, MetadataCommitmentV1, RegisterWorkerCoreRequest, SkillRequestCore,
@@ -388,6 +388,430 @@ async fn a_session_key_calls_contracts_as_the_pass_account() -> Outcome {
 
     let registered = worker(&world.chain, world.dao, alice).await?;
     assert_eq!(registered.map(|worker| worker.account), Some(alice));
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs KREIVO_FORK_SNAPSHOT"]
+async fn a_pass_account_registered_first_deploys_and_operates_the_dao() -> Outcome {
+    let chain = Chain::connect(&format!("fork:{}", snapshot()?)).await?;
+    let start = chain.info().await?.head.number;
+    let registrar = key(1)?;
+    chain
+        .mock()
+        .endow(registrar.account(), 100_000 * UNIT)
+        .await?;
+
+    // An address that already holds a balance cannot become a pass account.
+    let device = Device::new(7)?;
+    let early = chain.enrollment(UserId::of("funded-first")).await?;
+    chain.mock().endow(early.account, UNIT).await?;
+    let signed = DeviceKey {
+        public: device.id(),
+        signature: device.sign(&early.message),
+    };
+    let refused = chain.register(registrar.clone(), early, signed).await?;
+    assert_eq!(
+        refused.failure.as_deref(),
+        Some("Pass::AccountAlreadyRegistered")
+    );
+
+    // So the administrator is registered, then funded, then deploys.
+    let enrollment = chain.enrollment(UserId::of("admin")).await?;
+    let admin = enrollment.account;
+    let signed = DeviceKey {
+        public: device.id(),
+        signature: device.sign(&enrollment.message),
+    };
+    succeeded(
+        &chain
+            .register(registrar.clone(), enrollment, signed)
+            .await?,
+    )?;
+    // More than Kreivo's issuance before the fork: endowments count in it.
+    succeeded(
+        &chain
+            .transfer(registrar.clone(), admin, 10_000 * UNIT)
+            .await?,
+    )?;
+    let dao = chain
+        .mock()
+        .deploy(
+            admin,
+            code("dao")?,
+            message("new", (admin, admin, catalog()?)),
+            b"digesta".to_vec(),
+            CONSTRUCTOR_GAS,
+        )
+        .await?;
+    let project_code = chain.mock().upload(admin, code("project")?).await?;
+    let world = World {
+        chain,
+        operator: registrar,
+        dao,
+        start,
+    };
+
+    // Only the operator sets the Project code: the registrar is refused, and
+    // the administrator's session key is not.
+    let input = message("configure_project_code", project_code);
+    let as_registrar = world
+        .chain
+        .dry_run(world.operator.account(), dao, input.clone())
+        .await?;
+    let refused = as_registrar.outcome.as_ref().map_err(Clone::clone)?;
+    assert!(refused.reverted, "a stranger configured the Dao");
+    let as_admin = login(&world, "admin", &device, 9).await?;
+    let receipt = transact(&world.chain, as_admin, admin, dao, input).await?;
+    assert!(has(&receipt, "Contracts", "Called", &admin.to_string()));
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs KREIVO_FORK_SNAPSHOT"]
+async fn the_fork_is_read_in_place_and_follows_the_clock() -> Outcome {
+    let world = world().await?;
+    let dao = world.dao;
+    let operator = world.operator.account();
+
+    // A message and the contract's own storage, read on the chain thread.
+    let (workers, root, before) = world
+        .chain
+        .mock()
+        .read(move |reader| {
+            let workers = reader.query(operator, dao, &message("workers", ()));
+            // ink! keeps the root struct under the four zero bytes of its key.
+            let root = reader.contract_storage(dao, &[0, 0, 0, 0]);
+            (workers, root, reader.timestamp())
+        })
+        .await?;
+    assert!(!workers?.reverted);
+    assert!(root?.is_some(), "the Dao stores its root");
+    assert!(before? > 1_700_000_000_000);
+
+    // An hour later by the wall clock.
+    for hours in [1_u64, 10] {
+        let before = world
+            .chain
+            .mock()
+            .read(|reader| reader.timestamp())
+            .await??;
+        let head = world.chain.info().await?.head.number;
+        world
+            .chain
+            .mock()
+            .follow_clock(before + hours * 3_600_000)
+            .await?;
+        let after = world
+            .chain
+            .mock()
+            .read(|reader| reader.timestamp())
+            .await??;
+        // The fork lands on the relay block that holds the asked time.
+        assert_eq!(after, before + hours * 3_600_000);
+        assert!(world.chain.info().await?.head.number > head);
+    }
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs KREIVO_FORK_SNAPSHOT"]
+async fn a_device_is_replaced_in_one_transaction() -> Outcome {
+    let world = world().await?;
+    let old = Device::new(7)?;
+    let new = Device::new(8)?;
+    let alice = enroll(&world, "alice", &old).await?;
+
+    // The new device signs an enrollment, the old one the replacement.
+    let enrollment = world.chain.enrollment(UserId::of("alice")).await?;
+    let signed = DeviceKey {
+        public: new.id(),
+        signature: new.sign(&enrollment.message),
+    };
+    let request = world
+        .chain
+        .replacement_request(old.id(), enrollment, signed)
+        .await?;
+    assert_eq!(request.account, alice);
+    let signature = old.sign(&request.message);
+    let replaced = world.chain.open_session(request, signature).await?;
+    succeeded(&replaced)?;
+    assert!(has(&replaced, "Pass", "DeviceRemoved", ""));
+
+    // The new device opens sessions; the old one no longer does.
+    login(&world, "alice", &new, 9).await?;
+    let request = world
+        .chain
+        .session_request(UserId::of("alice"), old.id(), key(10)?.account())
+        .await?;
+    let signature = old.sign(&request.message);
+    assert!(world.chain.open_session(request, signature).await.is_err());
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs KREIVO_FORK_SNAPSHOT"]
+async fn a_kept_session_lasts_until_it_is_ended() -> Outcome {
+    let world = world().await?;
+    let device = Device::new(7)?;
+    let alice = enroll(&world, "alice", &device).await?;
+    let as_alice = login(&world, "alice", &device, 9).await?;
+    let Authority::Session { key: session, .. } = &as_alice else {
+        return Err("login returns a session".into());
+    };
+    let session = session.account();
+    let calendar = || {
+        message(
+            "set_calendar",
+            CalendarDefinition {
+                default_weekly_minutes: Minutes::new(300),
+                overrides: vec![],
+            },
+        )
+    };
+    transact(
+        &world.chain,
+        as_alice.clone(),
+        alice,
+        world.dao,
+        message("register_worker", (registration(), [1_u8; 16])),
+    )
+    .await?;
+
+    // Kept, it outlives the relay blocks of a session.
+    world.chain.mock().keep_session(session).await?;
+    world.chain.mock().advance(200).await?;
+    transact(&world.chain, as_alice.clone(), alice, world.dao, calendar()).await?;
+
+    // Ended, the chain refuses what its key signs.
+    world.chain.mock().end_session(session).await?;
+    let run = world.chain.dry_run(alice, world.dao, calendar()).await?;
+    let refused = world
+        .chain
+        .call(
+            as_alice,
+            world.dao,
+            calendar(),
+            run.gas_required.with_margin(),
+        )
+        .await;
+    assert!(
+        matches!(refused, Err(kreivo::Error::Rejected(_))),
+        "{refused:?}"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs KREIVO_FORK_SNAPSHOT"]
+async fn a_call_locks_no_more_deposit_than_its_limit() -> Outcome {
+    let world = world().await?;
+    let device = Device::new(7)?;
+    let alice = enroll(&world, "alice", &device).await?;
+    let as_alice = login(&world, "alice", &device, 9).await?;
+    let input = message("register_worker", (registration(), [1_u8; 16]));
+    let run = world.chain.dry_run(alice, world.dao, input.clone()).await?;
+    assert!(run.storage_deposit > 0, "registering stores something");
+    let gas = run.gas_required.with_margin();
+
+    // Under what the call needs, the chain includes it and fails it.
+    let short = world
+        .chain
+        .call_within(
+            as_alice.clone(),
+            world.dao,
+            input.clone(),
+            gas,
+            run.storage_deposit - 1,
+        )
+        .await?;
+    assert!(short.failure.is_some(), "the call fit a smaller deposit");
+    assert_eq!(worker(&world.chain, world.dao, alice).await?, None);
+
+    // With what the dry-run reported, it succeeds.
+    let exact = world
+        .chain
+        .call_within(as_alice, world.dao, input, gas, run.storage_deposit)
+        .await?;
+    succeeded(&exact)?;
+    assert!(worker(&world.chain, world.dao, alice).await?.is_some());
+    Ok(())
+}
+
+/// The account of the community with this ID: the pallet's ID, then the
+/// community's.
+fn community_account(id: u16) -> AccountId32 {
+    let mut bytes = [0; 32];
+    bytes[..4].copy_from_slice(b"modl");
+    bytes[4..12].copy_from_slice(b"kv/cmtys");
+    bytes[12..14].copy_from_slice(&id.to_le_bytes());
+    AccountId32::from_bytes(bytes)
+}
+
+/// What governance and a community do on Kreivo, on the fork: a community
+/// with funds, a usage-subscription offer, the community's subscription to
+/// it and two memberships to give. Returns the community's account.
+async fn subscribed_community(world: &World, community: u16) -> Outcome<AccountId32> {
+    let mock = world.chain.mock();
+    let account = community_account(community);
+    mock.dispatch(
+        Origin::Root,
+        "communitiesManager/register".into(),
+        // The name is "Digesta".
+        format!(
+            "(community_id:{community};name:0x44696765737461;first_admin:MultiAddress::Id({});\
+             maybe_decision_method:Option::None;maybe_track_info:Option::None)",
+            world.operator.account(),
+        ),
+    )
+    .await?;
+    mock.dispatch(
+        Origin::Root,
+        "balances/force_set_balance".into(),
+        format!(
+            "(who:MultiAddress::Id({account});new_free:{})",
+            1_000 * UNIT
+        ),
+    )
+    .await?;
+    mock.dispatch(
+        Origin::Root,
+        "usageSubscription/publish_offer".into(),
+        format!(
+            "(kind:OfferKind::Standard;terms:(allowance:(ref_time:1000000000000;proof_size:10000000);\
+             usage_period:600;price:(asset:FungibleAssetLocation::Here(0);amount:{});\
+             billing_period:432000;term:Option::None;min_commitment:Option::None;grace:43200))",
+            UNIT / 100
+        ),
+    )
+    .await?;
+    mock.dispatch(
+        Origin::Signed(account),
+        "usageSubscription/subscribe".into(),
+        "(offer:0;converts_into:Option::None)".into(),
+    )
+    .await?;
+    mock.dispatch(
+        Origin::Signed(account),
+        "communitiesManager/issue_memberships".into(),
+        "(amount:2)".into(),
+    )
+    .await?;
+    Ok(account)
+}
+
+#[tokio::test]
+#[ignore = "needs KREIVO_FORK_SNAPSHOT"]
+async fn a_member_without_balance_pays_fees_from_its_community() -> Outcome {
+    let world = world().await?;
+    let mock = world.chain.mock();
+    let community = subscribed_community(&world, 4242).await?;
+
+    // A pass account with nothing: registered, not funded.
+    let device = Device::new(7)?;
+    let enrollment = world.chain.enrollment(UserId::of("alice")).await?;
+    let alice = enrollment.account;
+    let signed = DeviceKey {
+        public: device.id(),
+        signature: device.sign(&enrollment.message),
+    };
+    succeeded(
+        &world
+            .chain
+            .register(world.operator.clone(), enrollment, signed)
+            .await?,
+    )?;
+    assert_eq!(mock.free_balance(alice).await?, 0);
+
+    // Outside the community it cannot even open a session.
+    let request = world
+        .chain
+        .session_request(UserId::of("alice"), device.id(), key(9)?.account())
+        .await?;
+    let signature = device.sign(&request.message);
+    let unpaid = world.chain.open_session(request, signature).await;
+    assert!(
+        matches!(&unpaid, Err(kreivo::Error::Rejected(reason)) if reason.contains("Payment")),
+        "{unpaid:?}"
+    );
+
+    // A member opens it, and the community's pool pays.
+    let admit = |account: AccountId32| {
+        mock.dispatch(
+            Origin::Signed(community),
+            "communities/add_member".into(),
+            format!("(who:MultiAddress::Id({account}))"),
+        )
+    };
+    admit(alice).await?;
+    // The community issued two memberships: a third member finds none, and
+    // the failed call is named.
+    admit(key(11)?.account()).await?;
+    let full = admit(key(12)?.account()).await;
+    assert!(
+        matches!(&full, Err(kreivo::Error::Rejected(reason)) if reason.ends_with("Communities::CommunityAtCapacity")),
+        "{full:?}"
+    );
+    let session = key(10)?;
+    let request = world
+        .chain
+        .session_request(UserId::of("alice"), device.id(), session.account())
+        .await?;
+    let signature = device.sign(&request.message);
+    let opened = world.chain.open_session(request, signature).await?;
+    succeeded(&opened)?;
+    assert!(has(&opened, "UsageSubscription", "UsageCharged", ""));
+    assert!(!has(
+        &opened,
+        "TransactionPayment",
+        "TransactionFeePaid",
+        ""
+    ));
+    assert_eq!(mock.free_balance(alice).await?, 0);
+
+    // Its session key calls a contract on the pool too, but what the call
+    // stores needs a deposit, and the pool does not pay deposits.
+    let as_alice = Authority::Session {
+        account: alice,
+        key: session,
+    };
+    let input = message("register_worker", (registration(), [1_u8; 16]));
+    let broke = world.chain.dry_run(alice, world.dao, input.clone()).await?;
+    assert!(broke.outcome.is_err(), "{:?}", broke.outcome);
+
+    // With a balance for the deposit, the call stores what it needs, and
+    // the fee still comes from the pool: only the deposit leaves the balance.
+    let balance = 10 * UNIT;
+    succeeded(
+        &world
+            .chain
+            .transfer(world.operator.clone(), alice, balance)
+            .await?,
+    )?;
+    let run = world.chain.dry_run(alice, world.dao, input.clone()).await?;
+    assert!(run.storage_deposit > 0);
+    let stored = world
+        .chain
+        .call_within(
+            as_alice,
+            world.dao,
+            input,
+            run.gas_required.with_margin(),
+            run.storage_deposit,
+        )
+        .await?;
+    succeeded(&stored)?;
+    assert!(has(&stored, "UsageSubscription", "UsageCharged", ""));
+    assert!(!has(
+        &stored,
+        "TransactionPayment",
+        "TransactionFeePaid",
+        ""
+    ));
+    assert_eq!(
+        mock.free_balance(alice).await?,
+        balance - run.storage_deposit
+    );
     Ok(())
 }
 

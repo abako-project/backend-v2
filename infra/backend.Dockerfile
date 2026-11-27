@@ -30,6 +30,8 @@ USER 65532:65532
 FROM runtime AS api
 COPY --from=build /out/api /usr/local/bin/api
 COPY contracts/openapi.json /app/contracts/openapi.json
+# The Dao and Project bundles the API deploys on a fork of Kreivo.
+COPY services/contract-provider/fixtures/dao.contract services/contract-provider/fixtures/project.contract /app/bundles/
 ENTRYPOINT ["/usr/local/bin/api"]
 
 FROM runtime AS wallet

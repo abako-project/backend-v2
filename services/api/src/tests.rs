@@ -355,6 +355,7 @@ fn test_config(database_url: String, internal: &Server) -> Result<Config, Error>
         admin_password: Zeroizing::new(PASSWORD.into()),
         openapi: "{}".into(),
         platform: crate::platform::load(None)?,
+        chain: None,
     })
 }
 async fn register(app: &App, name: &str) -> Result<(Session, String), Box<dyn std::error::Error>> {
@@ -1828,5 +1829,368 @@ async fn task_initialization_is_repeatable_and_refuses_missing_content_after_cor
         0
     );
     internal.finish().await?;
+    Ok(())
+}
+
+/// The API with the contracts on a fork of Kreivo, in this process.
+async fn chain_app(snapshot: &str, data_dir: &std::path::Path) -> Result<Arc<App>, Error> {
+    let base = std::env::var("TEST_ADAPTER_DATABASE_URL").map_err(|_| Error::Config)?;
+    let schema = format!(
+        "adapter_test_{:032x}",
+        u128::from_le_bytes(crate::state::random()?)
+    );
+    let admin = sqlx::PgPool::connect(&base).await?;
+    // `schema` contains only a fixed prefix and locally generated lowercase hex digits.
+    sqlx::query(sqlx::AssertSqlSafe(format!("CREATE SCHEMA {schema}")))
+        .execute(&admin)
+        .await?;
+    admin.close().await;
+    let separator = if base.contains('?') { '&' } else { '?' };
+    let app = Arc::new(
+        App::new(Config {
+            bind_addr: "127.0.0.1:0".into(),
+            database_url: format!("{base}{separator}options=-csearch_path%3D{schema}"),
+            custody_url: String::new(),
+            provider_url: String::new(),
+            service_token: Zeroizing::new(String::new()),
+            allowed_origins: BTreeSet::from(["http://localhost:8088".into()]),
+            cookie_secure: false,
+            enable_mock_funding: true,
+            dispute_channel_allow_participants: false,
+            admin_username: "admin".into(),
+            admin_password: Zeroizing::new(PASSWORD.into()),
+            openapi: "{}".into(),
+            platform: crate::platform::load(None)?,
+            chain: Some(crate::state::ChainConfig {
+                snapshot: snapshot.into(),
+                data_dir: data_dir.into(),
+                contracts_dir: concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/../contract-provider/fixtures"
+                )
+                .into(),
+                derivation_secret: Zeroizing::new(
+                    "a-derivation-secret-for-tests-only-0123456789".into(),
+                ),
+                community: Some(4242),
+            }),
+        })
+        .await?,
+    );
+    auth::bootstrap(&app).await?;
+    Ok(app)
+}
+
+/// On a fork: a password registers a pass account, a passkey is added to it
+/// and logs in, and the passkey's session signs a command. Needs a snapshot:
+/// `KREIVO_FORK_SNAPSHOT=<path> cargo test -p api --release -- --ignored on_a_fork`.
+#[tokio::test]
+#[ignore = "needs KREIVO_FORK_SNAPSHOT"]
+async fn on_a_fork_a_passkey_logs_in_and_its_session_signs() -> TestResult {
+    use webauthn_authenticator_rs::{WebauthnAuthenticator, softpasskey::SoftPasskey};
+    use webauthn_rs::prelude::{CreationChallengeResponse, RequestChallengeResponse, Url};
+
+    const ORIGIN: &str = "http://localhost:8088";
+    const SECOND: &str = "a-second-adapter-test-password";
+    const THIRD: &str = "a-third-adapter-test-password!";
+    let snapshot = std::env::var("KREIVO_FORK_SNAPSHOT")?;
+    let data_dir = std::env::temp_dir().join(format!("api-chain-test-{}", std::process::id()));
+    if data_dir.exists() {
+        std::fs::remove_dir_all(&data_dir)?;
+    }
+    let app = chain_app(&snapshot, &data_dir).await?;
+    let (stop, stopping) = tokio::sync::watch::channel(false);
+    let worker = tokio::spawn(crate::operations::run(app.clone(), stopping));
+    let adapter = Server::start(http::router(app.clone())).await?;
+    let client = reqwest::Client::new();
+    let url = |path: &str| format!("{}{path}", adapter.url);
+    let cookie_of = |response: &reqwest::Response| -> Result<String, Box<dyn std::error::Error>> {
+        Ok(response
+            .headers()
+            .get(header::SET_COOKIE)
+            .ok_or("session cookie missing")?
+            .to_str()?
+            .split(';')
+            .next()
+            .ok_or("session cookie missing")?
+            .to_owned())
+    };
+
+    // A password registers the account; its session answers at once.
+    let response = client
+        .post(url("/api/auth/register"))
+        .header(header::ORIGIN, ORIGIN)
+        .json(
+            &serde_json::json!({"username": "alice", "password": PASSWORD, "displayName": "Alice"}),
+        )
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let cookie = cookie_of(&response)?;
+    let session: serde_json::Value = response.json().await?;
+
+    // The existing passkey routes add a passkey to it.
+    let wrong = client
+        .post(url("/api/auth/passkeys/register/options"))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", session["csrfToken"].as_str().ok_or("csrf")?)
+        .json(&serde_json::json!({"currentPassword": "not the password at all"}))
+        .send()
+        .await?;
+    assert_eq!(wrong.status(), StatusCode::UNAUTHORIZED);
+    let response = client
+        .post(url("/api/auth/passkeys/register/options"))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", session["csrfToken"].as_str().ok_or("csrf")?)
+        .json(&serde_json::json!({"currentPassword": PASSWORD}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    let registration: serde_json::Value = response.json().await?;
+    let mut authenticator = WebauthnAuthenticator::new(SoftPasskey::new(true));
+    let origin = Url::parse(ORIGIN)?;
+    let options: CreationChallengeResponse =
+        serde_json::from_value(registration["options"].clone())?;
+    let credential = authenticator
+        .do_registration(origin.clone(), options)
+        .map_err(|error| format!("create: {error:?}"))?;
+    let response = client
+        .post(url("/api/auth/passkeys/register/verify"))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", session["csrfToken"].as_str().ok_or("csrf")?)
+        .json(&serde_json::json!({"ceremonyId": registration["ceremonyId"], "credential": credential}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::CREATED);
+    let listed: serde_json::Value = client
+        .get(url("/api/auth/passkeys"))
+        .header(header::COOKIE, &cookie)
+        .send()
+        .await?
+        .json()
+        .await?;
+    assert_eq!(listed.as_array().map(Vec::len), Some(1));
+
+    // A registration cut short leaves a row that is not confirmed. Listing
+    // asks the chain: the passkey it has is confirmed again, and one it
+    // never got is forgotten.
+    // Only a registration that can no longer be on its way is judged.
+    sqlx::query("UPDATE passkey_credentials SET passkey_json = '{\"pending\":true}', created_at = created_at - 600")
+        .execute(&app.db)
+        .await?;
+    sqlx::query("INSERT INTO passkey_credentials(credential_ref, credential_id, principal_id, passkey_json, created_at) SELECT 'never-added', '\\x0102'::bytea, principal_id, '{\"pending\":true}', 0 FROM principals WHERE username = 'alice'")
+        .execute(&app.db)
+        .await?;
+    let reconciled: serde_json::Value = client
+        .get(url("/api/auth/passkeys"))
+        .header(header::COOKIE, &cookie)
+        .send()
+        .await?
+        .json()
+        .await?;
+    assert_eq!(reconciled.as_array().map(Vec::len), Some(1));
+    assert_eq!(reconciled[0]["id"], listed[0]["id"]);
+    let confirmed: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM passkey_credentials WHERE passkey_json::jsonb ? 'device'",
+    )
+    .fetch_one(&app.db)
+    .await?;
+    assert_eq!(confirmed, 1);
+
+    // The passkey logs in: the same account, a new session. The account is
+    // a member of the community, whose pool pays for opening it.
+    let chain = app.chain.as_ref().ok_or("no chain")?;
+    let account: protocol::AccountId32 = session["accountId"].as_str().ok_or("account")?.parse()?;
+    let balance = chain.balance(account).await?;
+    let response = client
+        .post(url("/api/auth/passkeys/login/options"))
+        .header(header::ORIGIN, ORIGIN)
+        .json(&serde_json::json!({"username": "alice"}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    let login: serde_json::Value = response.json().await?;
+    let options: RequestChallengeResponse = serde_json::from_value(login["options"].clone())?;
+    let assertion = authenticator
+        .do_authentication(origin, options)
+        .map_err(|error| format!("get: {error:?}"))?;
+    let response = client
+        .post(url("/api/auth/passkeys/login/verify"))
+        .header(header::ORIGIN, ORIGIN)
+        .json(&serde_json::json!({"ceremonyId": login["ceremonyId"], "credential": assertion}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    let passkey_cookie = cookie_of(&response)?;
+    let passkey_session: serde_json::Value = response.json().await?;
+    assert_eq!(passkey_session["accountId"], session["accountId"]);
+    assert_ne!(passkey_cookie, cookie);
+    assert_eq!(chain.balance(account).await?, balance, "the member paid");
+
+    // Its session signs a command, which the chain executes.
+    let response = client
+        .post(url("/api/workers"))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &passkey_cookie)
+        .header(
+            "X-CSRF-Token",
+            passkey_session["csrfToken"].as_str().ok_or("csrf")?,
+        )
+        .json(&serde_json::json!({
+            "displayName": "Alice",
+            "qualifications": {"roleIds": [3], "skillIds": [1]},
+            "calendar": {"defaultWeeklyMinutes": 600, "overrides": []},
+        }))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::ACCEPTED);
+    let operation: serde_json::Value = response.json().await?;
+    let path = format!(
+        "/api/operations/{}",
+        operation["operationId"].as_str().ok_or("operation")?
+    );
+    let mut outcome = serde_json::Value::Null;
+    for _ in 0..200 {
+        let view: serde_json::Value = client
+            .get(url(&path))
+            .header(header::COOKIE, &passkey_cookie)
+            .send()
+            .await?
+            .json()
+            .await?;
+        if view["status"] == "Finalized" {
+            outcome = view["receipt"]["outcome"].clone();
+            break;
+        }
+        assert!(
+            !matches!(view["status"].as_str(), Some("Rejected" | "Expired")),
+            "{view}"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    assert_eq!(outcome["type"], "Success", "{outcome}");
+    let workers: serde_json::Value = client
+        .get(url("/api/workers"))
+        .header(header::COOKIE, &passkey_cookie)
+        .send()
+        .await?
+        .json()
+        .await?;
+    assert!(
+        workers.as_array().is_some_and(|workers| workers
+            .iter()
+            .any(|worker| worker["account"] == session["accountId"])),
+        "{workers}"
+    );
+
+    // Removed with the password, the passkey no longer logs in.
+    let reference = listed[0]["id"].as_str().ok_or("passkey id")?;
+    let response = client
+        .post(url(&format!("/api/auth/passkeys/{reference}/remove")))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", session["csrfToken"].as_str().ok_or("csrf")?)
+        .json(&serde_json::json!({"currentPassword": PASSWORD}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    let response = client
+        .post(url("/api/auth/passkeys/login/options"))
+        .header(header::ORIGIN, ORIGIN)
+        .json(&serde_json::json!({"username": "alice"}))
+        .send()
+        .await?;
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+    // A password change replaces the device: the old password is refused
+    // from then on and the account is the same.
+    let login = |password: &'static str| {
+        client
+            .post(url("/api/auth/login"))
+            .header(header::ORIGIN, ORIGIN)
+            .json(&serde_json::json!({"username": "alice", "password": password}))
+            .send()
+    };
+    // A login that arrives while the change is on its way waits for it or
+    // comes before it: it never undoes the record of the new device.
+    let change = client
+        .post(url("/api/auth/password"))
+        .header(header::ORIGIN, ORIGIN)
+        .header(header::COOKIE, &cookie)
+        .header("X-CSRF-Token", session["csrfToken"].as_str().ok_or("csrf")?)
+        .json(&serde_json::json!({"currentPassword": PASSWORD, "newPassword": SECOND}))
+        .send();
+    let meanwhile = async {
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        login(PASSWORD).await
+    };
+    let (response, during) = tokio::join!(change, meanwhile);
+    assert_eq!(response?.status(), StatusCode::NO_CONTENT);
+    assert!(
+        [StatusCode::OK, StatusCode::UNAUTHORIZED].contains(&during?.status()),
+        "a login during a password change"
+    );
+    let unsettled: Option<String> =
+        sqlx::query_scalar("SELECT password_hash_next FROM principals WHERE username = 'alice'")
+            .fetch_one(&app.db)
+            .await?;
+    assert_eq!(unsettled, None);
+    assert_eq!(login(PASSWORD).await?.status(), StatusCode::UNAUTHORIZED);
+    let response = login(SECOND).await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    let again: serde_json::Value = response.json().await?;
+    assert_eq!(again["accountId"], session["accountId"]);
+
+    // A change whose answer was lost left a record of a device the chain
+    // never got: a login settles it, and the password that stands still works.
+    let chain = app.chain.as_ref().ok_or("no chain")?;
+    let stored: String =
+        sqlx::query_scalar("SELECT password_hash FROM principals WHERE username = 'alice'")
+            .fetch_one(&app.db)
+            .await?;
+    let (lost, _) = crate::auth::new_device(&app, Zeroizing::new(THIRD.into())).await?;
+    sqlx::query("UPDATE principals SET password_hash_next = $1 WHERE username = 'alice'")
+        .bind(&lost)
+        .execute(&app.db)
+        .await?;
+    assert_eq!(login(THIRD).await?.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(login(SECOND).await?.status(), StatusCode::OK);
+    let pending: Option<String> =
+        sqlx::query_scalar("SELECT password_hash_next FROM principals WHERE username = 'alice'")
+            .fetch_one(&app.db)
+            .await?;
+    assert_eq!(pending, None);
+
+    // And one the chain did take, though the database never heard: the next
+    // login finds the new device on the chain and the new password stands.
+    let old = crate::auth::unlock_device(&app, Zeroizing::new(SECOND.into()), &stored)
+        .await?
+        .ok_or("the current password unlocks its device")?;
+    let (next, new) = crate::auth::new_device(&app, Zeroizing::new(THIRD.into())).await?;
+    sqlx::query("UPDATE principals SET password_hash_next = $1 WHERE username = 'alice'")
+        .bind(&next)
+        .execute(&app.db)
+        .await?;
+    chain.replace_device("alice", &old, &new).await?;
+    assert_eq!(login(SECOND).await?.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(login(THIRD).await?.status(), StatusCode::OK);
+    let settled: (String, Option<String>) = sqlx::query_as(
+        "SELECT password_hash, password_hash_next FROM principals WHERE username = 'alice'",
+    )
+    .fetch_one(&app.db)
+    .await?;
+    assert_eq!(settled, (next, None));
+
+    // An empty database beside this fork is another marketplace's: refused.
+    assert!(matches!(
+        chain_app(&snapshot, &data_dir).await.err(),
+        Some(Error::Config)
+    ));
+    stop.send(true)?;
+    worker.await??;
+    std::fs::remove_dir_all(&data_dir)?;
     Ok(())
 }

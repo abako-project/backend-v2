@@ -776,22 +776,18 @@ async fn advance(app: &App, job: &mut Job, time: i64) -> Result<(), Error> {
     job.status = ProviderOperationStatus::Submitted;
     save(app, job, false, None).await?;
     let response = app
-        .internal(
+        .send(
             reqwest::Method::POST,
             &app.config.provider_url,
             "/internal/contracts/call",
+            Some(serde_json::to_vec(&signed)?),
         )
-        .json(&signed)
-        .send()
-        .await
-        .map_err(|_| Error::Dependency)?;
-    if response.status().is_success() {
-        return finalize(job, &call, &crate::state::decode_response(response).await?);
+        .await?;
+    let status = response.status;
+    if status.is_success() {
+        return finalize(job, &call, &response.decode()?);
     }
-    if !prior_submission
-        && response.status().is_client_error()
-        && !matches!(response.status().as_u16(), 408 | 429)
-    {
+    if !prior_submission && status.is_client_error() && !matches!(status.as_u16(), 408 | 429) {
         // A first, explicit HTTP rejection establishes no execution of this immutable call.
         job.terminal(ProviderOperationStatus::Rejected, "provider_rejected");
         return Ok(());
