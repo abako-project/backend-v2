@@ -23,6 +23,25 @@ Implemented behavior is not a claim of deployment or production readiness.
 | Providers | One embedded ink runtime with one WASM authority |
 | Recovery | Fresh development initialization, atomic persistence and restart |
 
+### On a fork of Kreivo
+
+[Running on Kreivo](https://github.com/abako-project/backend-v2/issues/46) is in the
+source beside the three services, chosen by configuration. With `KREIVO_URL`
+set the API runs the same contracts on an in-process fork of Kreivo and needs
+neither the wallet nor the provider:
+
+| Area | Behavior on a fork |
+|---|---|
+| Identity | A user is a pallet-pass account. A password is its device, derived when a request carries it; a passkey is a second, restricted device. The chain verifies both |
+| Signing | The API holds a session key per account, in memory, limited to contract calls. A session lasts 15 minutes |
+| Marketplace | The same public routes, operations, receipts and notifications. The end-to-end scenarios pass with their requests unchanged; the step that loses a reply of the provider is skipped |
+| Fees | With `KREIVO_COMMUNITY` set, every account joins a community whose usage subscription pays its fees, as on Kreivo. Storage deposits come from the account's balance |
+| Storage | The fork and the provider's records are saved beside PostgreSQL after every command and every account transaction that succeeds |
+
+It is a development mode: nothing is submitted to live Kreivo, accounts get
+their balance directly, and continuous integration does not run it, since no
+snapshot of Kreivo is pinned yet. The three services are still the default.
+
 The API, wallet and provider remain separate services. Both application
 contracts use ordinary ink storage; no custom paging helper or onchain URL parser
 is used. Metadata and task ownership are described in [architecture](architecture.md).

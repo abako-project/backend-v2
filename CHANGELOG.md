@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- Added a mode in which the API runs the contracts on an in-process fork of
+  Kreivo, without the wallet and provider services. Set
+  `KREIVO_URL`; see `services/api/README.md` and `infra/README.md`. Users are
+  pallet-pass accounts, a password is the account's device and a passkey a
+  restricted one, and the API keeps only session keys. The public API is the
+  same. The default is unchanged.
+- `contracts/openapi.json` lists the 409, 429, 500 and 503 answers the
+  passkey routes can give. No request or response body changes.
+- On a fork, `KREIVO_COMMUNITY` sets up a community with a usage subscription
+  and admits every account to it, so that its pool pays their fees.
+- Added the `chain-provider` crate and extended `kreivo` with fork reads,
+  device replacement, passkeys and privileged fork calls.
+- `scripts/poc-e2e.py --kreivo-snapshot <file>` runs the scenarios against the
+  API on a fork.
 - Renamed the product to Digesta, including backend image packages, browser
   configuration, session cookie and local development defaults. GHCR uses the
   repository owner's namespace. See `docs/project/digesta-rename.md` before

@@ -54,6 +54,47 @@ persistent filesystem if you need longer-lived local data. Never rerun secret
 generation over an existing environment. This deployment uses the current file-backed
 custody key, not an HSM or the discussed envelope-encryption/rotation design.
 
+## On a fork of Kreivo
+
+Part of [moving the backend to Kreivo](https://github.com/abako-project/backend-v2/issues/46), in progress.
+`compose.kreivo.yaml` is the same gateway, frontend and PostgreSQL with one
+backend process: the API runs the contracts on a fork of Kreivo and needs
+neither the wallet nor the provider. It has its own Compose project name and
+database volume, since its data is not the other stack's.
+
+It needs a snapshot of Kreivo, about 25 MB, made with the `fork_snapshot`
+example of [sube](https://github.com/virto-network/virto-sdk/tree/main/crates/sube),
+and two secrets:
+
+```sh
+export LOCAL_UID="$(id -u)" LOCAL_GID="$(id -g)"
+export DIGESTA_LOCAL_DIR="$(mktemp -d /tmp/digesta-kreivo.XXXXXX)"
+export KREIVO_SNAPSHOT=/path/to/kreivo.snap
+install -d -m 700 "$DIGESTA_LOCAL_DIR/secrets" "$DIGESTA_LOCAL_DIR/data/chain"
+(umask 077
+ python3 -c 'import secrets; print(secrets.token_urlsafe(24))' > "$DIGESTA_LOCAL_DIR/secrets/bootstrap-admin-password"
+ python3 -c 'import secrets; print(secrets.token_hex(32))' > "$DIGESTA_LOCAL_DIR/secrets/derivation-secret")
+docker compose -f infra/compose.kreivo.yaml config --quiet
+docker compose -f infra/compose.kreivo.yaml up --build -d --wait
+```
+
+The first start takes a minute or more: the API sets the contracts up and
+brings the fork's clock from the day of the snapshot to today. Later starts
+resume the fork saved under `data/chain`.
+
+- **Keep the three together.** The PostgreSQL volume, `data/chain` and the
+  derivation secret describe one marketplace. Losing the secret locks every
+  account; resetting one of the stores without the others leaves an API that
+  refuses to start or accounts that cannot log in. `KREIVO_COMMUNITY` belongs
+  to them too: `data/chain` starts again only with the value it was first
+  started with.
+- **Sessions last 15 minutes** and end when the API restarts.
+- **A passkey belongs to one host.** Set `WEBAUTHN_RP_ID` to the host of the
+  page that uses passkeys and `WEBAUTHN_ORIGIN` to its origin. The API does
+  not start if the two disagree.
+- **This stack always has a community.** `KREIVO_COMMUNITY` is 4242 unless
+  set to another ID; the API alone runs without one when it is unset.
+
 ## Another frontend
 
 Both frontends consume the same `/api` REST and authenticated SSE contract. Leptos does not run inside the adapter and has no server-function dependency. Its runtime API URL is supplied by `/config.js`, which defaults to `window.DIGESTA_API_BASE = "/api"`; changing the URL requires no backend rebuild. A different public config can be mounted read-only at `/etc/digesta/config.js` in the frontend container. Never put secrets in that file.
