@@ -824,10 +824,68 @@ def run(binaries, scenario=exercise, provider_binary=None):
         print(f"PASS contracts {scenario.__name__}: signed REST lifecycle")
 
 
+class NoProxy:
+    """The API on a fork has no provider service whose reply could be lost.
+
+    The scenario's replay of the same operation must still return the same result.
+    """
+
+    drop_next = False
+    dropped = 1
+
+
+def run_on_fork(binaries, snapshot, scenario=exercise):
+    """The same scenarios against one API process that runs the contracts on a Kreivo fork."""
+    with ExitStack() as stack:
+        directory = Path(stack.enter_context(tempfile.TemporaryDirectory(prefix="digesta-e2e-fork-")))
+        admin_password, derivation_secret = secrets.token_urlsafe(24), secrets.token_hex(32)
+        (directory / "bootstrap-admin-password").write_text(admin_password)
+        (directory / "derivation-secret").write_text(derivation_secret)
+        Client.secret_markers = (("bootstrap-admin-password", admin_password.encode()),
+                                 ("derivation-secret", derivation_secret.encode()))
+        logs = []
+        log = stack.enter_context(tempfile.TemporaryFile())
+        logs.append(("api", log))
+        port = available_port()
+        process = subprocess.Popen([str(binaries / "api")], cwd=ROOT, stdout=log, stderr=log, env={
+            **os.environ, "BIND_ADDR": f"127.0.0.1:{port}",
+            "ADAPTER_DATABASE_URL": temporary_postgres(stack, directory),
+            "KREIVO_URL": f"fork:{snapshot}",
+            "KREIVO_DATA_DIR": str(directory / "chain"),
+            "KREIVO_CONTRACTS_DIR": str(ROOT / "services/contract-provider/fixtures"),
+            "DERIVATION_SECRET_FILE": str(directory / "derivation-secret"),
+            "ALLOWED_ORIGINS": ",".join(ORIGINS), "COOKIE_SECURE": "false",
+            "ENABLE_MOCK_FUNDING": "true",
+            "BOOTSTRAP_ADMIN_USERNAME": "admin",
+            "BOOTSTRAP_ADMIN_PASSWORD_FILE": str(directory / "bootstrap-admin-password"),
+            "OPENAPI_PATH": str(ROOT / "contracts/openapi.json"),
+        })
+        stack.callback(stop_process, process)
+        adapter = Client(f"http://127.0.0.1:{port}")
+        # The first start sets the contracts up and brings the fork's clock to today.
+        deadline = time.monotonic() + 600
+        while True:
+            require(process.poll() is None, "the API exited before becoming ready")
+            require(time.monotonic() < deadline, "the API was not ready within 600 seconds")
+            try:
+                adapter.request("GET", "/ready", expected=(200, 204))
+                break
+            except (OSError, AssertionError):
+                time.sleep(0.5)
+        scenario(adapter.base, admin_password, NoProxy())
+        scan_secret_logs(logs)
+        print(f"PASS fork {scenario.__name__}: REST lifecycle on a Kreivo fork")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--binaries", type=Path, default=ROOT / "target/debug")
     parser.add_argument("--provider-binary", type=Path, help="explicit contract-provider executable")
+    parser.add_argument("--kreivo-snapshot", type=Path,
+                        help="run the API on a fork of this Kreivo snapshot, without wallet and provider")
     arguments = parser.parse_args()
     for scenario in (exercise, exercise_multi_milestone, exercise_dispute, exercise_auxiliary):
-        run(arguments.binaries.resolve(), scenario, arguments.provider_binary)
+        if arguments.kreivo_snapshot:
+            run_on_fork(arguments.binaries.resolve(), arguments.kreivo_snapshot.resolve(), scenario)
+        else:
+            run(arguments.binaries.resolve(), scenario, arguments.provider_binary)

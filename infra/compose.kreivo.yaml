@@ -1,0 +1,133 @@
+# The API on a fork of Kreivo, without the wallet and provider services.
+# For local development. See infra/README.md.
+name: digesta-kreivo-local
+
+x-backend: &backend
+  user: "${LOCAL_UID:?Set LOCAL_UID to your non-root user ID}:${LOCAL_GID:?Set LOCAL_GID to your group ID}"
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  init: true
+  tmpfs: ["/tmp:rw,noexec,nosuid,size=64m"]
+  stop_grace_period: 20s
+
+services:
+  postgres:
+    image: postgres:17.11-alpine3.24
+    environment:
+      POSTGRES_USER: digesta
+      POSTGRES_DB: digesta_adapter
+      POSTGRES_PASSWORD: ${ADAPTER_POSTGRES_PASSWORD:-digesta-local-only}
+    volumes:
+      - adapter-postgres-data:/var/lib/postgresql/data
+    networks: [backend]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U digesta -d digesta_adapter"]
+      interval: 5s
+      timeout: 3s
+      start_period: 15s
+      retries: 12
+
+  api:
+    <<: *backend
+    image: digesta-api:local
+    build:
+      context: ..
+      dockerfile: infra/backend.Dockerfile
+      target: api
+    environment:
+      BIND_ADDR: 0.0.0.0:8080
+      ADAPTER_DATABASE_URL: ${ADAPTER_DATABASE_URL:-postgres://digesta:digesta-local-only@postgres:5432/digesta_adapter}
+      OPENAPI_PATH: /app/contracts/openapi.json
+      KREIVO_URL: fork:/run/kreivo/kreivo.snap
+      KREIVO_DATA_DIR: /data
+      KREIVO_CONTRACTS_DIR: /app/bundles
+      DERIVATION_SECRET_FILE: /run/secrets/derivation-secret
+      KREIVO_COMMUNITY: ${KREIVO_COMMUNITY:-4242}
+      BOOTSTRAP_ADMIN_USERNAME: admin
+      BOOTSTRAP_ADMIN_PASSWORD_FILE: /run/secrets/bootstrap-admin-password
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8088,http://127.0.0.1:8088}
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-localhost}
+      WEBAUTHN_ORIGIN: ${WEBAUTHN_ORIGIN:-http://localhost:8088}
+      COOKIE_SECURE: "false"
+      ENABLE_MOCK_FUNDING: ${ENABLE_MOCK_FUNDING:-false}
+      DISPUTE_CHANNEL_ALLOW_PARTICIPANTS: ${DISPUTE_CHANNEL_ALLOW_PARTICIPANTS:-false}
+    secrets: [derivation-secret, bootstrap-admin-password]
+    volumes:
+      - type: bind
+        source: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/data/chain
+        target: /data
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${KREIVO_SNAPSHOT:?Set KREIVO_SNAPSHOT to a snapshot of Kreivo}
+        target: /run/kreivo/kreivo.snap
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [edge, backend]
+    depends_on:
+      postgres: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, curl, --fail, --silent, --output, /dev/null, http://127.0.0.1:8080/health]
+      interval: 5s
+      timeout: 3s
+      # The first start sets the contracts up and brings the fork's clock to today.
+      start_period: 600s
+      retries: 12
+
+  frontend:
+    image: digesta-example-web:local
+    build:
+      context: ..
+      dockerfile: infra/frontend.Dockerfile
+    user: "101:101"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m"]
+    networks: [edge]
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/health]
+      interval: 5s
+      timeout: 3s
+      start_period: 5s
+      retries: 12
+
+  gateway:
+    image: nginx:1.28.3-alpine
+    user: "101:101"
+    entrypoint: [nginx]
+    command: [-g, "daemon off;"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: ["/tmp:rw,noexec,nosuid,size=32m"]
+    ports: ["127.0.0.1:8088:8080"]
+    volumes:
+      - type: bind
+        source: ./nginx/gateway.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [edge]
+    depends_on:
+      api: {condition: service_healthy}
+      frontend: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/]
+      interval: 5s
+      timeout: 3s
+      start_period: 5s
+      retries: 12
+
+networks:
+  edge: {}
+  backend: {internal: true}
+
+volumes:
+  adapter-postgres-data: {}
+
+secrets:
+  derivation-secret:
+    file: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/secrets/derivation-secret
+  bootstrap-admin-password:
+    file: ${DIGESTA_LOCAL_DIR:?Set DIGESTA_LOCAL_DIR outside the repository}/secrets/bootstrap-admin-password

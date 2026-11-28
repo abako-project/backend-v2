@@ -183,8 +183,9 @@ impl State {
         contract: AccountId32,
         input: &[u8],
         gas: Weight,
+        deposit: Option<u128>,
     ) -> Result<Receipt> {
-        let call = self.contracts_call(contract, input, gas)?;
+        let call = self.contracts_call(contract, input, gas, deposit)?;
         match authority {
             Authority::Key(key) => self.submit(&call, &key.signer()).await,
             Authority::Session { account, key } => {
@@ -204,7 +205,12 @@ impl State {
         to: AccountId32,
         amount: u128,
     ) -> Result<Receipt> {
-        let call = self.sube.prepare_call(
+        let call = self.transfer_call(to, amount)?;
+        self.submit(&call, &from.signer()).await
+    }
+
+    pub(crate) fn transfer_call(&self, to: AccountId32, amount: u128) -> Result<PreparedCall> {
+        Ok(self.sube.prepare_call(
             "balances/transfer_keep_alive",
             &DynValue::obj(&[
                 (
@@ -213,7 +219,22 @@ impl State {
                 ),
                 ("value", DynValue::U128(amount)),
             ]),
-        )?;
-        self.submit(&call, &from.signer()).await
+        )?)
+    }
+
+    #[cfg(feature = "fork")]
+    pub(crate) async fn mint(
+        &mut self,
+        issuer: &Key,
+        to: AccountId32,
+        amount: u128,
+    ) -> Result<Receipt> {
+        let body = format!(
+            "(id:{};beneficiary:MultiAddress::Id({});amount:{amount})",
+            crate::mock::PAYMENT_ASSET,
+            hex0x(to.as_bytes())
+        );
+        let call = self.sube.prepare_call("assets/mint", &sube::Text(&body))?;
+        self.submit(&call, &issuer.signer()).await
     }
 }

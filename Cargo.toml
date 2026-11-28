@@ -4,6 +4,7 @@ members = [
   "crates/bloque-rs",
   "crates/protocol",
   "crates/kreivo",
+  "crates/chain-provider",
   "services/wallet",
   "services/api",
   "apps/example-web",
@@ -19,6 +20,7 @@ repository = "https://github.com/abako-project/backend-v2"
 bloque = { version = "0.1.0", path = "crates/bloque-rs" }
 protocol = { version = "0.1.0", path = "crates/protocol" }
 kreivo = { version = "0.1.0", path = "crates/kreivo" }
+chain-provider = { version = "0.1.0", path = "crates/chain-provider" }
 # GPL-3.0-or-later, see docs/security/supply-chain.md. The revision is on virto-sdk's main.
 sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", rev = "fd465f43bd9ebb605831fda63a53c28e8804206f", default-features = false, features = ["std"] }
 pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "fd465f43bd9ebb605831fda63a53c28e8804206f", default-features = false, features = ["std"] }
@@ -38,6 +40,9 @@ reqwest = { version = "0.13.4", default-features = false, features = ["json", "q
 tokio-stream = { version = "0.1.18", features = ["sync", "time"] }
 uuid = { version = "1.24.1", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4.3"
+serde_cbor_2 = "0.13.0"
+base64 = "0.22.1"
+tower = { version = "0.5.3", default-features = false, features = ["util"] }
 rand = "0.10.3"
 subxt-signer = { version = "0.51.1", default-features = false, features = ["sr25519", "std"] }
 parity-scale-codec = { version = "3.7.5", features = ["derive"] }

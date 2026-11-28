@@ -30,9 +30,12 @@ use tokio::sync::{mpsc, oneshot};
 use zeroize::Zeroizing;
 
 pub use contracts::{DryRun, Returned, Weight, message};
-pub use identity::{DeviceKey, Enrollment, SessionRequest, UserId};
+pub use identity::{
+    DeviceKey, Enrollment, PasskeyAssertion, PasskeyRegistration, SessionRequest, UserId,
+    passkey_device,
+};
 #[cfg(feature = "fork")]
-pub use mock::Mock;
+pub use mock::{Mock, Origin, Reader};
 pub use protocol::AccountId32;
 use worker::{Job, State};
 
@@ -269,13 +272,40 @@ impl Chain {
         input: Vec<u8>,
         gas: Weight,
     ) -> Result<Receipt> {
-        self.run(async move |state| state.call(&authority, contract, &input, gas).await)
+        self.run(async move |state| state.call(&authority, contract, &input, gas, None).await)
             .await
+    }
+
+    /// Like [`Chain::call`], but the call fails if it would lock more than
+    /// `deposit` as storage deposit. Both limits come from a
+    /// [`Chain::dry_run`].
+    pub async fn call_within(
+        &self,
+        authority: Authority,
+        contract: AccountId32,
+        input: Vec<u8>,
+        gas: Weight,
+        deposit: u128,
+    ) -> Result<Receipt> {
+        self.run(async move |state| {
+            state
+                .call(&authority, contract, &input, gas, Some(deposit))
+                .await
+        })
+        .await
     }
 
     /// Move native balance from `from`, keeping its account alive.
     pub async fn transfer(&self, from: Key, to: AccountId32, amount: u128) -> Result<Receipt> {
         self.run(async move |state| state.transfer(&from, to, amount).await)
+            .await
+    }
+
+    /// Mint `amount` of the fork's payment asset to `to`, signed by its
+    /// issuer. See [`Mock::create_asset`].
+    #[cfg(feature = "fork")]
+    pub async fn mint(&self, issuer: Key, to: AccountId32, amount: u128) -> Result<Receipt> {
+        self.run(async move |state| state.mint(&issuer, to, amount).await)
             .await
     }
 
@@ -297,6 +327,24 @@ impl Chain {
             .await
     }
 
+    /// Register the pass account of `enrollment` like [`Chain::register`] and
+    /// give it `funds` of the registrar's balance in the same transaction, so
+    /// that no account is left registered and unable to pay.
+    pub async fn register_funded(
+        &self,
+        registrar: Key,
+        enrollment: Enrollment,
+        device: DeviceKey,
+        funds: u128,
+    ) -> Result<Receipt> {
+        self.run(async move |state| {
+            state
+                .register_funded(&registrar, &enrollment, &device, funds)
+                .await
+        })
+        .await
+    }
+
     /// Start opening a session for `user`: what their `device` must sign to
     /// let the key of `session` call contracts as the pass account.
     pub async fn session_request(
@@ -306,6 +354,74 @@ impl Chain {
         session: AccountId32,
     ) -> Result<SessionRequest> {
         self.run(async move |state| state.session_request(user, device, session).await)
+            .await
+    }
+
+    /// Start replacing the device `old` of a pass account with the device
+    /// that signed `enrollment`, as when a password changes: what `old` must
+    /// sign. Submit it with [`Chain::open_session`], which takes any request a
+    /// device authorizes. The new device becomes an admin device and the old
+    /// one is removed in the same transaction.
+    pub async fn replacement_request(
+        &self,
+        old: AccountId32,
+        enrollment: Enrollment,
+        new: DeviceKey,
+    ) -> Result<SessionRequest> {
+        self.run(async move |state| state.replacement_request(old, &enrollment, &new).await)
+            .await
+    }
+
+    /// Start adding a passkey to a pass account: what its admin device
+    /// `admin` must sign. `enrollment` carried the challenge the passkey was
+    /// created with. Submit it with [`Chain::open_session`]. The passkey may
+    /// call contracts and open sessions, and nothing else.
+    pub async fn passkey_addition_request(
+        &self,
+        admin: AccountId32,
+        enrollment: Enrollment,
+        passkey: PasskeyRegistration,
+    ) -> Result<SessionRequest> {
+        self.run(async move |state| {
+            state
+                .passkey_addition_request(admin, &enrollment, &passkey)
+                .await
+        })
+        .await
+    }
+
+    /// Start removing `device` from `user`'s pass account: what its admin
+    /// device `admin` must sign. Submit it with [`Chain::open_session`].
+    pub async fn removal_request(
+        &self,
+        user: UserId,
+        admin: AccountId32,
+        device: AccountId32,
+    ) -> Result<SessionRequest> {
+        self.run(async move |state| state.removal_request(user, admin, device).await)
+            .await
+    }
+
+    /// Start opening a session with the passkey `device`: its
+    /// [`SessionRequest::challenge`] is what the passkey must sign.
+    pub async fn passkey_session_request(
+        &self,
+        user: UserId,
+        device: AccountId32,
+        session: AccountId32,
+    ) -> Result<SessionRequest> {
+        self.run(async move |state| state.passkey_session_request(user, device, session).await)
+            .await
+    }
+
+    /// Open the session of `request` with what the passkey answered. The
+    /// chain verifies it.
+    pub async fn open_passkey_session(
+        &self,
+        request: SessionRequest,
+        assertion: PasskeyAssertion,
+    ) -> Result<Receipt> {
+        self.run(async move |state| state.open_passkey_session(&request, &assertion).await)
             .await
     }
 
@@ -342,7 +458,7 @@ impl From<sube::Error> for Error {
             | sube::Error::MissingExtensionValue(_)
             | sube::Error::Signing(_) => Self::Invalid(error.to_string()),
             sube::Error::Decode(_) | sube::Error::BadMetadata => Self::Decode(error.to_string()),
-            sube::Error::OperationFailed(reason) if reason.contains("invalid") => {
+            sube::Error::OperationFailed(reason) if reason.starts_with("tx invalid") => {
                 Self::Rejected(reason)
             }
             _ => Self::Unavailable(error.to_string()),

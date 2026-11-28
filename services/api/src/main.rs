@@ -47,6 +47,24 @@ async fn main() -> Result<(), Error> {
     let mut tasks = JoinSet::new();
     tasks.spawn(operations::run(app.clone(), stopping.clone()));
     tasks.spawn(notifications::run(app.clone(), stopping.clone()));
+    if let Some(chain) = app.chain.clone() {
+        // The fork's clock moves only when asked: keep it on the wall clock,
+        // so that sessions end and weeks turn while nothing is submitted.
+        let mut stopping = stopping.clone();
+        let ticking = app.clone();
+        tasks.spawn(async move {
+            loop {
+                tokio::select! {
+                    () = tokio::time::sleep(Duration::from_secs(30)) => {}
+                    _ = stopping.changed() => return Ok(()),
+                }
+                auth::passkeys::chain::purge(&ticking);
+                if let Err(error) = chain.tick().await {
+                    tracing::warn!(%error, "the fork's clock was not moved");
+                }
+            }
+        });
+    }
     let mut server_stop = stopping;
     tasks.spawn(async move {
         axum::serve(listener, http::router(app))
@@ -103,5 +121,7 @@ async fn shutdown() -> Result<(), Error> {
     tokio::signal::ctrl_c().await.map_err(Error::from)
 }
 
+#[cfg(test)]
+mod route_tests;
 #[cfg(test)]
 mod tests;

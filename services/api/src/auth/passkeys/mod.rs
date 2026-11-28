@@ -1,4 +1,5 @@
 //! Server-side `WebAuthn` ceremonies for the adapter's existing principals.
+pub(crate) mod chain;
 mod store;
 
 use super::{Session, create_session, ensure_wallet, username, verify_password};
@@ -100,6 +101,11 @@ pub(crate) async fn register_options(
     Extension(session): Extension<Session>,
     Json(request): Json<RegisterOptionsRequest>,
 ) -> Result<Json<CeremonyOptions<CreationChallengeResponse>>, Error> {
+    if let Some(chain) = &app.chain {
+        return chain::register_options(&app, chain, &session, request.current_password)
+            .await
+            .map(Json);
+    }
     reauthenticate(&app, &session, request.current_password).await?;
     let principal = session.view.principal_id;
     let user_id = Uuid::new_v4().to_string();
@@ -136,6 +142,9 @@ pub(crate) async fn register_verify(
     Extension(session): Extension<Session>,
     Json(request): Json<RegisterVerifyRequest>,
 ) -> Result<StatusCode, Error> {
+    if let Some(chain) = &app.chain {
+        return chain::register_verify(&app, chain, &session, request).await;
+    }
     let state = store::consume_ceremony(
         &app.db,
         &request.ceremony_id,
@@ -172,6 +181,9 @@ pub(crate) async fn list(
     State(app): State<Arc<App>>,
     Extension(session): Extension<Session>,
 ) -> Result<Json<Vec<PasskeyView>>, Error> {
+    if let Some(chain) = &app.chain {
+        chain::reconcile(&app, chain, session.view.principal_id).await?;
+    }
     let rows = sqlx::query("SELECT credential_ref, created_at FROM passkey_credentials WHERE principal_id = $1 ORDER BY created_at, credential_ref")
         .bind(session.view.principal_id.to_string()).fetch_all(&app.db).await?;
     rows.into_iter()
@@ -191,6 +203,16 @@ pub(crate) async fn remove(
     Path(credential_ref): Path<String>,
     Json(request): Json<RemoveRequest>,
 ) -> Result<StatusCode, Error> {
+    if let Some(chain) = &app.chain {
+        return chain::remove(
+            &app,
+            chain,
+            &session,
+            credential_ref,
+            request.current_password,
+        )
+        .await;
+    }
     reauthenticate(&app, &session, request.current_password).await?;
     let result = sqlx::query(
         "DELETE FROM passkey_credentials WHERE credential_ref = $1 AND principal_id = $2",
@@ -218,11 +240,16 @@ pub(crate) async fn login_options(
 ) -> Result<Json<CeremonyOptions<RequestChallengeResponse>>, Error> {
     let name = username(&request.username).map_err(|_| Error::Unauthorized)?;
     let row = sqlx::query("SELECT principal_id FROM principals WHERE username = $1")
-        .bind(name)
+        .bind(&name)
         .fetch_optional(&app.db)
         .await?
         .ok_or(Error::Unauthorized)?;
     let principal: PrincipalId = parse(row.try_get("principal_id")?)?;
+    if let Some(chain) = &app.chain {
+        return chain::login_options(&app, chain, principal, &name)
+            .await
+            .map(Json);
+    }
     begin_login(&app, principal).await.map(Json)
 }
 
@@ -258,6 +285,9 @@ pub(crate) async fn login_verify(
     State(app): State<Arc<App>>,
     Json(request): Json<LoginVerifyRequest>,
 ) -> Result<Response, Error> {
+    if let Some(chain) = &app.chain {
+        return chain::login_verify(&app, chain, request).await;
+    }
     let (principal, state) = store::consume_login(&app.db, &request.ceremony_id).await?;
     let state = serde_json::from_str(&state)?;
     let permit = app

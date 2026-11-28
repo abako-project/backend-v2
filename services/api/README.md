@@ -53,6 +53,55 @@ for local HTTP. The funding flag exposes fixture-only `/api/admin/fund`; a
 normal mock deployment uses simulated Bramp deposit requests. `/health` and `/ready`
 are internal deployment probes, not public gateway routes.
 
+### On a fork of Kreivo
+
+Part of [moving the backend to Kreivo](https://github.com/abako-project/backend-v2/issues/46), in
+progress. With `KREIVO_URL` set, the API needs neither the wallet nor the
+provider service: it runs the contracts on a fork of Kreivo in its own process
+([chain-provider](../../crates/chain-provider/README.md)), and `CUSTODY_URL`,
+`MOCK_PROVIDER_URL` and `INTERNAL_SERVICE_TOKEN_FILE` are not read.
+
+- `KREIVO_URL`: `fork:<path to a snapshot of Kreivo>`.
+- `KREIVO_DATA_DIR`: where the fork and its state are saved. Keep it with the
+  database: they describe the same marketplace.
+- `KREIVO_CONTRACTS_DIR`: the directory of `dao.contract` and `project.contract`.
+- `DERIVATION_SECRET_FILE`: a secret of at least 32 bytes that every password's
+  device key is derived with. Losing it locks every account.
+- `KREIVO_COMMUNITY` (optional): the ID of a community to set up on the fork
+  at the first start, with a usage subscription, and to admit every account
+  to. Its pool then pays the accounts' fees, as for the members of a
+  subscribed community on Kreivo. Without it accounts pay their own fees from
+  the balance they are given. Storage deposits come from that balance either
+  way. The community is set up at the first start only: a saved fork starts
+  again only with the same setting.
+
+In this mode a user is a pallet-pass account and their password is its device:
+the API derives the device key from the password when a request carries it,
+and keeps a session key per account, in memory. While a passkey is being
+added it also keeps the password's device key, for five minutes at most. A
+passkey is a second device, limited to contract calls and to opening
+sessions; the chain verifies its answers. A session lasts 15 minutes, the
+longest Kreivo allows today, and a restart ends every session. A login opens
+a new session, unless the same device opened one with more than ten minutes
+left, which it shares: its cookie then lasts that session's remainder. The
+public routes and their answers are the same; the session cookie's lifetime
+is the session's, not the 24 hours `contracts/openapi.json` describes.
+
+- The administrator's pass account is the Dao's operator. Its first device
+  comes from the bootstrap password, at the first start.
+- A passkey works only on the page whose host is `WEBAUTHN_RP_ID`: the chain
+  ties a passkey to the host of the page that created it. The API does not
+  start unless `WEBAUTHN_RP_ID` is the host of `WEBAUTHN_ORIGIN`.
+- The administrator's commands come from the administrator's own pass
+  account, not from a separate system wallet.
+- `ENABLE_MOCK_FUNDING` reaches the Dao at the fork's first start only.
+- A command whose submission ends without saying whether it was included is
+  sent again, and can then run twice or be recorded as refused though it
+  took effect ([limits](../../crates/chain-provider/README.md#limits)).
+- A login with a passkey uses the passkey registered last.
+- A password that is lost cannot be reset: nothing but its device, or a
+  passkey for the calls a passkey may make, speaks for the account.
+
 A fresh PostgreSQL schema is initialized before admission; compatible state reopens,
 and unmarked existing schemas are rejected without modifying their data. `/ready` checks PostgreSQL and internal
 dependencies. Argon2 work runs on blocking workers with
@@ -98,7 +147,8 @@ cargo clippy -p api --all-targets --all-features --locked -- -D warnings
 Adapter tests require a disposable PostgreSQL instance via
 `TEST_ADAPTER_DATABASE_URL`; see `src/tests.rs`. The integrated
 `scripts/poc-e2e.py` starts its own temporary PostgreSQL instance and uses real
-signing services and the contract provider.
+signing services and the contract provider, or with `--kreivo-snapshot` the
+API alone on a fork.
 
 ## Code map
 

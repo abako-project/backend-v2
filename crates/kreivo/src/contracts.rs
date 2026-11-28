@@ -113,6 +113,20 @@ pub(crate) fn hex0x(bytes: &[u8]) -> String {
     format!("0x{}", hex(bytes))
 }
 
+/// The parameters of `ContractsApi::call(origin, dest, value, gas_limit,
+/// storage_deposit_limit, input_data)` for a dry-run.
+pub(crate) fn call_parameters(caller: AccountId32, contract: AccountId32, input: &[u8]) -> Vec<u8> {
+    (
+        caller.as_bytes(),
+        contract.as_bytes(),
+        0_u128,
+        Some(DRY_RUN_GAS),
+        None::<u128>,
+        input,
+    )
+        .encode()
+}
+
 impl State {
     pub(crate) async fn dry_run(
         &mut self,
@@ -120,16 +134,7 @@ impl State {
         contract: AccountId32,
         input: &[u8],
     ) -> Result<DryRun> {
-        // ContractsApi::call(origin, dest, value, gas_limit, storage_deposit_limit, input_data)
-        let parameters = (
-            caller.as_bytes(),
-            contract.as_bytes(),
-            0_u128,
-            Some(DRY_RUN_GAS),
-            None::<u128>,
-            input,
-        )
-            .encode();
+        let parameters = call_parameters(caller, contract, input);
         let output = self.runtime_api("ContractsApi_call", &parameters).await?;
         let (gas_required, storage_deposit, outcome) =
             decode_result(&output, |input| ExecReturnValue::decode(input))?;
@@ -143,12 +148,15 @@ impl State {
         })
     }
 
-    /// `Contracts.call` with no value attached and no deposit limit.
+    /// `Contracts.call` with no value attached. `deposit` is the most the
+    /// call may lock as storage deposit; without one the chain's default
+    /// limit applies.
     pub(crate) fn contracts_call(
         &self,
         contract: AccountId32,
         input: &[u8],
         gas: Weight,
+        deposit: Option<u128>,
     ) -> Result<PreparedCall> {
         let body = DynValue::obj(&[
             (
@@ -163,7 +171,11 @@ impl State {
                     ("proof_size", DynValue::U64(gas.proof_size)),
                 ]),
             ),
-            ("storage_deposit_limit", DynValue::Null),
+            // A bare value for an `Option` field is encoded as `Some(value)`.
+            (
+                "storage_deposit_limit",
+                deposit.map_or(DynValue::Null, DynValue::U128),
+            ),
             ("data", DynValue::Bytes(input.to_vec())),
         ]);
         Ok(self.sube.prepare_call("contracts/call", &body)?)

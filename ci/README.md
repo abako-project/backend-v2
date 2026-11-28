@@ -41,6 +41,31 @@ python3 scripts/poc-e2e.py --provider-binary services/contract-provider/target/d
 These are API checks. Browser behavior and the external frontend require a
 separate walkthrough.
 
+## On a fork of Kreivo
+
+The checks of the API on a fork need a snapshot of Kreivo, about
+25 MB, which is not in the repository, so `scripts/verify.sh app` and
+continuous integration do not run them: their tests are ignored without it.
+Make a snapshot with the `fork_snapshot` example of
+[sube](https://github.com/virto-network/virto-sdk/tree/main/crates/sube), then:
+
+```sh
+export KREIVO_FORK_SNAPSHOT=/path/to/kreivo.snap
+cargo test -p kreivo --all-features --release --locked -- --include-ignored
+cargo test -p chain-provider --features fork --release --locked -- --include-ignored
+python3 scripts/test_postgres.py cargo test -p api --release --locked -- --ignored on_a_fork
+cargo build -p api --release --locked
+python3 scripts/poc-e2e.py --binaries target/release --kreivo-snapshot "$KREIVO_FORK_SNAPSHOT"
+KREIVO_COMMUNITY=4242 python3 scripts/poc-e2e.py --binaries target/release --kreivo-snapshot "$KREIVO_FORK_SNAPSHOT"
+```
+
+The last line runs the scenarios with every account in a community whose
+usage subscription pays its fees.
+
+Use a release build: the fork runs Kreivo's runtime in an interpreter. Each
+start of a fork brings its clock from the day of the snapshot to today, which
+takes about a minute with a week-old snapshot.
+
 ## Embedded contract provider
 
 The SDK is a separate workspace. Its functional gate and dependency-policy gate

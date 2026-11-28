@@ -15,8 +15,8 @@ allow = [
   "Unicode-3.0",
   "Zlib",
 ]
-# The `kreivo` crate links these virto-sdk crates, and smoldot under
-# the development-only `fork` feature. The source here stays Apache-2.0; a
+# The `kreivo` crate links these virto-sdk crates, and smoldot under its
+# `fork` feature, which the API enables. The source here stays Apache-2.0; a
 # binary built with them is distributed under GPL-3.0-or-later.
 exceptions = [
   { allow = ["GPL-3.0-or-later"], crate = "sube" },

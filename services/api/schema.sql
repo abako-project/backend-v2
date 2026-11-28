@@ -6,6 +6,8 @@ CREATE TABLE principals (
     principal_id TEXT PRIMARY KEY,
     username TEXT NOT NULL UNIQUE,
     password_hash TEXT NOT NULL,
+    -- The device of a password change the chain has not confirmed yet.
+    password_hash_next TEXT,
     display_name TEXT NOT NULL,
     is_admin BOOLEAN NOT NULL,
     wallet_id TEXT UNIQUE,
