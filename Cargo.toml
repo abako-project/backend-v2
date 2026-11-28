@@ -26,7 +26,7 @@ sube = { version = "1.0.0", git = "https://github.com/virto-network/virto-sdk", 
 pass = { version = "0.1.0", git = "https://github.com/virto-network/virto-sdk", rev = "fd465f43bd9ebb605831fda63a53c28e8804206f", default-features = false, features = ["std"] }
 libwallet = { version = "0.4.0", git = "https://github.com/virto-network/virto-sdk", rev = "fd465f43bd9ebb605831fda63a53c28e8804206f", default-features = false, features = ["sr25519", "rand"] }
 smol = "2.0.2"
-blake2 = { version = "0.10.6", default-features = false }
+blake2 = { version = "0.11.0", default-features = false }
 axum = { version = "0.8.9", default-features = false, features = ["http1", "json", "query", "tokio"] }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net", "sync", "time", "signal"] }
 sqlx = { version = "=0.9.0", git = "https://github.com/transact-rs/sqlx", branch = "main", default-features = false, features = ["runtime-tokio"] }
@@ -41,7 +41,7 @@ tokio-stream = { version = "0.1.18", features = ["sync", "time"] }
 uuid = { version = "1.24.1", default-features = false, features = ["std", "serde"] }
 getrandom = "0.4.3"
 serde_cbor_2 = "0.13.0"
-base64 = "0.22.1"
+base64 = "0.23.1"
 tower = { version = "0.5.3", default-features = false, features = ["util"] }
 rand = "0.10.3"
 subxt-signer = { version = "0.51.1", default-features = false, features = ["sr25519", "std"] }
@@ -49,10 +49,10 @@ parity-scale-codec = { version = "3.7.5", features = ["derive"] }
 chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc", "zeroize"] }
 zeroize = { version = "1.9.0", features = ["derive"] }
 argon2 = { version = "0.5.3", default-features = false, features = ["std", "zeroize"] }
-sha2 = "0.10.9"
+sha2 = "0.11.0"
 time = { version = "0.3.55", default-features = false, features = ["parsing", "large-dates"] }
 leptos = { version = "0.8.19", default-features = false, features = ["csr"] }
-gloo-net = { version = "0.7.0", default-features = false, features = ["http", "json"] }
+gloo-net = { version = "0.8.0", default-features = false, features = ["http", "json"] }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
